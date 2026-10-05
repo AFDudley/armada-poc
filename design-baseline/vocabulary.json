@@ -1,0 +1,6005 @@
+{
+  "armadaTokensJsonLeafCount": 248,
+  "colors": [
+    {
+      "count": 31977,
+      "matchedTokens": [
+        "--primitives-color-white-full",
+        "--semantic-color-text-primary",
+        "--semantic-component-button-primary-text",
+        "--semantic-component-button-secondary-text",
+        "--semantic-component-button-ghost-text",
+        "--semantic-component-button-ghost-text-hover",
+        "--semantic-component-navitem-default-text-hover",
+        "--semantic-component-navitem-active-text",
+        "--semantic-component-tag-label"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(255, 255, 255)"
+    },
+    {
+      "count": 8367,
+      "matchedTokens": [
+        "--semantic-component-button-primary-border",
+        "--semantic-component-button-secondary-bg",
+        "--semantic-component-button-ghost-bg",
+        "--semantic-component-navitem-default-bg"
+      ],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920",
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "count": 6417,
+      "matchedTokens": [
+        "--primitives-color-white-mid",
+        "--semantic-color-text-muted",
+        "--semantic-component-navitem-default-text"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgba(255, 255, 255, 0.45)"
+    },
+    {
+      "count": 3616,
+      "matchedTokens": [
+        "--primitives-color-purple-900",
+        "--semantic-color-brand-deep",
+        "--semantic-component-button-gradient-text"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(41, 20, 51)"
+    },
+    {
+      "count": 3579,
+      "matchedTokens": [],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920",
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "oklch(1 0 0 / 0.12)"
+    },
+    {
+      "count": 1646,
+      "matchedTokens": [
+        "--semantic-color-border-default"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgba(255, 255, 255, 0.07)"
+    },
+    {
+      "count": 1368,
+      "matchedTokens": [
+        "--primitives-color-white-low",
+        "--semantic-color-text-dim"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgba(255, 255, 255, 0.18)"
+    },
+    {
+      "count": 988,
+      "matchedTokens": [
+        "--primitives-color-neutral-400",
+        "--semantic-component-button-primary-text-disabled",
+        "--semantic-component-button-secondary-text-disabled",
+        "--semantic-component-button-gradient-text-disabled"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(92, 88, 105)"
+    },
+    {
+      "count": 978,
+      "matchedTokens": [],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920",
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "oklab(0.7 -0.0964181 -0.114907 / 0.3)"
+    },
+    {
+      "count": 624,
+      "matchedTokens": [],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920",
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "oklch(0.96 0.005 240)"
+    },
+    {
+      "count": 600,
+      "matchedTokens": [
+        "--semantic-component-button-secondary-border"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgba(255, 255, 255, 0.14)"
+    },
+    {
+      "count": 456,
+      "matchedTokens": [
+        "--primitives-fontSize-xs",
+        "--primitives-fontSize-sm",
+        "--primitives-fontSize-base",
+        "--primitives-fontSize-md",
+        "--primitives-fontSize-lg",
+        "--primitives-fontSize-xl",
+        "--primitives-fontSize-2xl",
+        "--primitives-fontSize-3xl",
+        "--primitives-fontSize-4xl",
+        "--primitives-fontSize-5xl",
+        "--primitives-fontSize-6xl",
+        "--primitives-fontSize-7xl",
+        "--primitives-fontSize-8xl",
+        "--primitives-fontWeight-regular",
+        "--primitives-fontWeight-medium",
+        "--primitives-fontWeight-semibold",
+        "--primitives-fontFamily-display",
+        "--primitives-fontFamily-ui",
+        "--primitives-fontFamily-mono",
+        "--primitives-lineHeight-none",
+        "--primitives-lineHeight-tight",
+        "--primitives-lineHeight-snug",
+        "--primitives-lineHeight-normal",
+        "--primitives-lineHeight-relaxed",
+        "--primitives-letterSpacing-tighter",
+        "--primitives-letterSpacing-tight",
+        "--primitives-letterSpacing-normal",
+        "--primitives-letterSpacing-wide",
+        "--primitives-letterSpacing-wider",
+        "--primitives-letterSpacing-widest",
+        "--primitives-spacing-1",
+        "--primitives-spacing-2",
+        "--primitives-spacing-3",
+        "--primitives-spacing-4",
+        "--primitives-spacing-5",
+        "--primitives-spacing-6",
+        "--primitives-spacing-8",
+        "--primitives-spacing-10",
+        "--primitives-spacing-11",
+        "--primitives-spacing-12",
+        "--primitives-spacing-16",
+        "--primitives-spacing-20",
+        "--primitives-spacing-24",
+        "--primitives-borderRadius-xs",
+        "--primitives-borderRadius-sm",
+        "--primitives-borderRadius-md",
+        "--primitives-borderRadius-lg",
+        "--primitives-borderRadius-xl",
+        "--primitives-borderRadius-full",
+        "--primitives-borderWidth-default",
+        "--semantic-spacing-card-padding",
+        "--semantic-spacing-section-gap",
+        "--semantic-spacing-component-gap",
+        "--semantic-borderRadius-card",
+        "--semantic-borderRadius-item",
+        "--semantic-borderRadius-modal",
+        "--semantic-borderRadius-button",
+        "--semantic-borderRadius-input",
+        "--semantic-borderRadius-badge",
+        "--semantic-component-button-primary-sm-height",
+        "--semantic-component-button-primary-sm-padding-x",
+        "--semantic-component-button-primary-sm-padding-x-icon",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-primary-sm-icon-gap",
+        "--semantic-component-button-primary-sm-radius",
+        "--semantic-component-button-primary-md-height",
+        "--semantic-component-button-primary-md-padding-x",
+        "--semantic-component-button-primary-md-padding-x-icon",
+        "--semantic-component-button-primary-md-font-size",
+        "--semantic-component-button-primary-md-icon-gap",
+        "--semantic-component-button-primary-md-radius",
+        "--semantic-component-button-primary-lg-height",
+        "--semantic-component-button-primary-lg-padding-x",
+        "--semantic-component-button-primary-lg-padding-x-icon",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-primary-lg-icon-gap",
+        "--semantic-component-button-primary-lg-radius",
+        "--semantic-component-button-secondary-sm-height",
+        "--semantic-component-button-secondary-sm-padding-x",
+        "--semantic-component-button-secondary-sm-padding-x-icon",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-button-secondary-sm-icon-gap",
+        "--semantic-component-button-secondary-sm-radius",
+        "--semantic-component-button-secondary-md-height",
+        "--semantic-component-button-secondary-md-padding-x",
+        "--semantic-component-button-secondary-md-padding-x-icon",
+        "--semantic-component-button-secondary-md-font-size",
+        "--semantic-component-button-secondary-md-icon-gap",
+        "--semantic-component-button-secondary-md-radius",
+        "--semantic-component-button-secondary-lg-height",
+        "--semantic-component-button-secondary-lg-padding-x",
+        "--semantic-component-button-secondary-lg-padding-x-icon",
+        "--semantic-component-button-secondary-lg-font-size",
+        "--semantic-component-button-secondary-lg-icon-gap",
+        "--semantic-component-button-secondary-lg-radius",
+        "--semantic-component-button-ghost-sm-height",
+        "--semantic-component-button-ghost-sm-padding-x",
+        "--semantic-component-button-ghost-sm-padding-x-icon",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-ghost-sm-icon-gap",
+        "--semantic-component-button-ghost-sm-radius",
+        "--semantic-component-button-ghost-md-height",
+        "--semantic-component-button-ghost-md-padding-x",
+        "--semantic-component-button-ghost-md-padding-x-icon",
+        "--semantic-component-button-ghost-md-font-size",
+        "--semantic-component-button-ghost-md-icon-gap",
+        "--semantic-component-button-ghost-md-radius",
+        "--semantic-component-button-ghost-lg-height",
+        "--semantic-component-button-ghost-lg-padding-x",
+        "--semantic-component-button-ghost-lg-padding-x-icon",
+        "--semantic-component-button-ghost-lg-font-size",
+        "--semantic-component-button-ghost-lg-icon-gap",
+        "--semantic-component-button-ghost-lg-radius",
+        "--semantic-component-navbar-height",
+        "--semantic-component-navbar-padding-x",
+        "--semantic-component-navbar-gap",
+        "--semantic-component-navitem-height",
+        "--semantic-component-navitem-padding-x",
+        "--semantic-component-navitem-padding-y",
+        "--semantic-component-navitem-radius",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-padding-x",
+        "--semantic-component-tag-padding-y",
+        "--semantic-component-tag-gap",
+        "--semantic-component-tag-height",
+        "--semantic-component-tag-radius",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-dot-size"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(0, 0, 0)"
+    },
+    {
+      "count": 299,
+      "matchedTokens": [
+        "--semantic-component-tag-bg"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(32, 32, 34)"
+    },
+    {
+      "count": 228,
+      "matchedTokens": [],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgba(16, 16, 16, 0.3)"
+    },
+    {
+      "count": 224,
+      "matchedTokens": [
+        "--primitives-color-white-70",
+        "--semantic-color-text-secondary"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgba(255, 255, 255, 0.7)"
+    },
+    {
+      "count": 134,
+      "matchedTokens": [
+        "--primitives-color-purple-500",
+        "--semantic-color-brand-lavender",
+        "--semantic-color-border-focus",
+        "--semantic-color-text-lavender",
+        "--semantic-component-button-gradient-default-to",
+        "--semantic-component-tag-dot-lavender"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(196, 145, 229)"
+    },
+    {
+      "count": 113,
+      "matchedTokens": [
+        "--primitives-color-neutral-50",
+        "--semantic-color-surface-default"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(21, 20, 22)"
+    },
+    {
+      "count": 110,
+      "matchedTokens": [
+        "--primitives-color-neutral-100",
+        "--semantic-color-surface-raised",
+        "--semantic-color-surface-hover",
+        "--semantic-component-button-primary-bg-disabled",
+        "--semantic-component-button-secondary-bg-hover",
+        "--semantic-component-button-ghost-bg-hover"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(29, 28, 31)"
+    },
+    {
+      "count": 95,
+      "matchedTokens": [
+        "--primitives-color-status-error",
+        "--semantic-color-status-error",
+        "--semantic-component-tag-dot-error"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(248, 113, 113)"
+    },
+    {
+      "count": 95,
+      "matchedTokens": [
+        "--primitives-color-status-success",
+        "--semantic-color-status-success"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(52, 211, 153)"
+    },
+    {
+      "count": 74,
+      "matchedTokens": [
+        "--primitives-color-violet-500",
+        "--semantic-color-brand-action",
+        "--semantic-component-button-primary-bg"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(82, 39, 202)"
+    },
+    {
+      "count": 66,
+      "matchedTokens": [],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "color(srgb 0.0823529 0.0784314 0.0862745 / 0.72)"
+    },
+    {
+      "count": 57,
+      "matchedTokens": [],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "color(srgb 0.768627 0.568627 0.898039 / 0.28)"
+    },
+    {
+      "count": 57,
+      "matchedTokens": [
+        "--semantic-component-tag-dot-active"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(177, 255, 94)"
+    },
+    {
+      "count": 50,
+      "matchedTokens": [
+        "--primitives-color-neutral-0",
+        "--semantic-color-surface-bg"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(14, 13, 15)"
+    },
+    {
+      "count": 47,
+      "matchedTokens": [
+        "--primitives-color-neutral-200",
+        "--semantic-component-button-secondary-bg-active",
+        "--semantic-component-button-ghost-bg-active",
+        "--semantic-component-navbar-bg"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(42, 40, 48)"
+    },
+    {
+      "count": 38,
+      "matchedTokens": [
+        "--primitives-color-status-warning",
+        "--semantic-color-status-warning",
+        "--semantic-component-tag-dot-warning"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(251, 191, 36)"
+    },
+    {
+      "count": 24,
+      "matchedTokens": [],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "color(srgb 1 1 1 / 0.08)"
+    },
+    {
+      "count": 19,
+      "matchedTokens": [
+        "--semantic-component-tag-dot-neutral"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(153, 144, 169)"
+    },
+    {
+      "count": 19,
+      "matchedTokens": [
+        "--primitives-color-amber-500",
+        "--semantic-color-brand-amber-dark"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(217, 150, 64)"
+    },
+    {
+      "count": 19,
+      "matchedTokens": [
+        "--semantic-color-brand-gradient-rose",
+        "--semantic-component-button-gradient-default-mid"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(243, 157, 176)"
+    },
+    {
+      "count": 19,
+      "matchedTokens": [
+        "--primitives-color-amber-300",
+        "--semantic-color-brand-amber",
+        "--semantic-color-text-amber",
+        "--semantic-component-button-gradient-default-from"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(243, 208, 160)"
+    },
+    {
+      "count": 19,
+      "matchedTokens": [
+        "--primitives-color-status-info",
+        "--semantic-color-status-info"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgb(96, 165, 250)"
+    },
+    {
+      "count": 18,
+      "matchedTokens": [],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "rgba(255, 255, 255, 0.12)"
+    },
+    {
+      "count": 9,
+      "matchedTokens": [],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "color(srgb 0.113725 0.109804 0.121569 / 0.58)"
+    },
+    {
+      "count": 9,
+      "matchedTokens": [],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920"
+      ],
+      "value": "oklch(0.18 0.008 240)"
+    },
+    {
+      "count": 9,
+      "matchedTokens": [],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920"
+      ],
+      "value": "oklch(0.64 0.21 25)"
+    },
+    {
+      "count": 9,
+      "matchedTokens": [],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920"
+      ],
+      "value": "oklch(0.7 0.012 240)"
+    },
+    {
+      "count": 9,
+      "matchedTokens": [
+        "--semantic-component-navitem-active-bg"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "rgba(196, 145, 229, 0.2)"
+    },
+    {
+      "count": 8,
+      "matchedTokens": [
+        "--semantic-component-button-secondary-border-hover"
+      ],
+      "states": [
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375"
+      ],
+      "value": "rgba(255, 255, 255, 0.28)"
+    },
+    {
+      "count": 6,
+      "matchedTokens": [],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "color(srgb 0.113725 0.109804 0.121569 / 0.55)"
+    },
+    {
+      "count": 2,
+      "matchedTokens": [
+        "--semantic-component-navitem-default-bg-hover"
+      ],
+      "states": [
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375"
+      ],
+      "value": "rgb(33, 31, 36)"
+    },
+    {
+      "count": 2,
+      "matchedTokens": [
+        "--primitives-color-violet-600",
+        "--semantic-component-button-primary-bg-hover"
+      ],
+      "states": [
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375"
+      ],
+      "value": "rgb(67, 31, 176)"
+    }
+  ],
+  "fontTuples": [
+    {
+      "count": 2630,
+      "matchedTokens": [
+        "--primitives-fontSize-md",
+        "--primitives-fontWeight-regular",
+        "--semantic-component-button-ghost-lg-font-size",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-secondary-lg-font-size"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 15px / 400 / 22.5px / normal"
+    },
+    {
+      "count": 1539,
+      "matchedTokens": [
+        "--primitives-fontWeight-medium",
+        "--semantic-component-button-ghost-md-font-size",
+        "--semantic-component-button-primary-md-font-size",
+        "--semantic-component-button-secondary-md-font-size"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 14px / 500 / normal / 0.14px"
+    },
+    {
+      "count": 912,
+      "matchedTokens": [
+        "--primitives-fontSize-sm",
+        "--primitives-fontWeight-regular"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 11px / 400 / 16.5px / normal"
+    },
+    {
+      "count": 723,
+      "matchedTokens": [
+        "--primitives-fontSize-md",
+        "--primitives-fontWeight-regular",
+        "--semantic-component-button-ghost-lg-font-size",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-secondary-lg-font-size"
+      ],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920",
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "Geist, ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\" / 15px / 400 / 22.5px / normal"
+    },
+    {
+      "count": 441,
+      "matchedTokens": [
+        "--primitives-borderRadius-xl",
+        "--primitives-fontWeight-medium",
+        "--primitives-letterSpacing-wider",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-lg-icon-gap",
+        "--semantic-component-button-ghost-md-icon-gap",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-ghost-sm-icon-gap",
+        "--semantic-component-button-primary-lg-icon-gap",
+        "--semantic-component-button-primary-md-icon-gap",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-primary-sm-icon-gap",
+        "--semantic-component-button-secondary-lg-icon-gap",
+        "--semantic-component-button-secondary-md-icon-gap",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-button-secondary-sm-icon-gap",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 12px / 500 / 18px / 0.72px"
+    },
+    {
+      "count": 380,
+      "matchedTokens": [
+        "--primitives-borderRadius-xl",
+        "--primitives-fontWeight-medium",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 12px / 500 / normal / 0.12px"
+    },
+    {
+      "count": 380,
+      "matchedTokens": [
+        "--primitives-fontSize-md",
+        "--primitives-fontWeight-medium",
+        "--semantic-component-button-ghost-lg-font-size",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-secondary-lg-font-size"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 15px / 500 / normal / 0.15px"
+    },
+    {
+      "count": 294,
+      "matchedTokens": [
+        "--primitives-fontSize-xs",
+        "--primitives-fontWeight-medium",
+        "--primitives-letterSpacing-widest",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x",
+        "--semantic-spacing-component-gap"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 10px / 500 / 15px / 1.2px"
+    },
+    {
+      "count": 237,
+      "matchedTokens": [
+        "--primitives-fontSize-base",
+        "--primitives-fontWeight-regular"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 13px / 400 / 19.5px / normal"
+    },
+    {
+      "count": 209,
+      "matchedTokens": [
+        "--primitives-fontSize-2xl",
+        "--primitives-fontWeight-medium",
+        "--primitives-spacing-6",
+        "--semantic-component-tag-height"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 24px / 500 / 36px / normal"
+    },
+    {
+      "count": 198,
+      "matchedTokens": [
+        "--primitives-borderWidth-default",
+        "--primitives-fontSize-base",
+        "--primitives-lineHeight-none",
+        "--semantic-component-navitem-radius"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 13px / 700 / 13px / normal"
+    },
+    {
+      "count": 171,
+      "matchedTokens": [
+        "--primitives-borderRadius-xl",
+        "--primitives-fontWeight-medium",
+        "--primitives-letterSpacing-wide",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-navitem-padding-y",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 12px / 500 / normal / 0.24px"
+    },
+    {
+      "count": 117,
+      "matchedTokens": [
+        "--primitives-borderWidth-default",
+        "--primitives-fontSize-base",
+        "--primitives-lineHeight-none",
+        "--semantic-component-navitem-radius"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-hover@1920",
+        "showcase/navitem-hover@1920",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-rich-open@1920"
+      ],
+      "value": "Geist, sans-serif / 13px / 300 / 13px / normal"
+    },
+    {
+      "count": 114,
+      "matchedTokens": [
+        "--primitives-fontFamily-ui",
+        "--primitives-fontSize-xs",
+        "--primitives-fontWeight-medium",
+        "--primitives-letterSpacing-widest",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x",
+        "--semantic-spacing-component-gap"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist / 10px / 500 / 15px / 1.2px"
+    },
+    {
+      "count": 114,
+      "matchedTokens": [
+        "--primitives-fontWeight-regular"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 13.3333px / 400 / normal / normal"
+    },
+    {
+      "count": 81,
+      "matchedTokens": [
+        "--primitives-borderWidth-default",
+        "--primitives-fontSize-xs",
+        "--primitives-fontWeight-medium",
+        "--primitives-letterSpacing-widest",
+        "--primitives-lineHeight-none",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-navitem-radius",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x",
+        "--semantic-spacing-component-gap"
+      ],
+      "states": [
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 10px / 500 / 10px / 1.2px"
+    },
+    {
+      "count": 66,
+      "matchedTokens": [
+        "--primitives-borderWidth-default",
+        "--primitives-fontSize-4xl",
+        "--primitives-fontWeight-regular",
+        "--primitives-lineHeight-none",
+        "--primitives-spacing-11",
+        "--semantic-component-navitem-radius"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 44px / 400 / 44px / normal"
+    },
+    {
+      "count": 57,
+      "matchedTokens": [
+        "--primitives-fontFamily-ui",
+        "--primitives-fontSize-md",
+        "--primitives-fontWeight-medium",
+        "--semantic-component-button-ghost-lg-font-size",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-secondary-lg-font-size"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist / 15px / 500 / normal / normal"
+    },
+    {
+      "count": 54,
+      "matchedTokens": [
+        "--primitives-fontWeight-medium",
+        "--semantic-component-button-ghost-md-font-size",
+        "--semantic-component-button-primary-md-font-size",
+        "--semantic-component-button-secondary-md-font-size"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "Geist, sans-serif / 14px / 500 / 21px / 0.14px"
+    },
+    {
+      "count": 47,
+      "matchedTokens": [
+        "--primitives-fontSize-xl",
+        "--primitives-fontWeight-medium",
+        "--primitives-spacing-5",
+        "--semantic-borderRadius-modal"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist, sans-serif / 20px / 500 / 30px / normal"
+    },
+    {
+      "count": 45,
+      "matchedTokens": [
+        "--primitives-borderRadius-xl",
+        "--primitives-fontWeight-medium",
+        "--primitives-spacing-1",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-navbar-gap",
+        "--semantic-component-navbar-padding-x",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x",
+        "--semantic-component-tag-padding-y"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "Geist, sans-serif / 12px / 500 / 18px / 0.48px"
+    },
+    {
+      "count": 38,
+      "matchedTokens": [
+        "--primitives-fontFamily-ui",
+        "--primitives-fontSize-base",
+        "--primitives-fontWeight-regular"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist / 13px / 400 / normal / normal"
+    },
+    {
+      "count": 19,
+      "matchedTokens": [
+        "--primitives-fontSize-base",
+        "--primitives-fontWeight-regular"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "ui-monospace, \"SF Mono\", Menlo, monospace / 13px / 400 / 19.5px / normal"
+    },
+    {
+      "count": 18,
+      "matchedTokens": [
+        "--primitives-borderRadius-xl",
+        "--primitives-fontWeight-medium",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "Geist, sans-serif / 12px / 500 / 18px / 1.2px"
+    },
+    {
+      "count": 10,
+      "matchedTokens": [
+        "--primitives-fontFamily-ui",
+        "--primitives-fontSize-base",
+        "--primitives-fontWeight-regular"
+      ],
+      "states": [
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist / 13px / 400 / 19.5px / normal"
+    },
+    {
+      "count": 9,
+      "matchedTokens": [
+        "--primitives-fontSize-2xl",
+        "--primitives-fontWeight-regular",
+        "--primitives-spacing-6",
+        "--semantic-component-tag-height"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "\"Charis SIL\", Georgia, serif / 24px / 400 / 27.6px / normal"
+    },
+    {
+      "count": 9,
+      "matchedTokens": [
+        "--primitives-fontSize-lg",
+        "--primitives-fontWeight-medium"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "Geist, sans-serif / 17px / 500 / 25.5px / normal"
+    },
+    {
+      "count": 6,
+      "matchedTokens": [
+        "--primitives-fontSize-md",
+        "--primitives-fontWeight-regular",
+        "--semantic-component-button-ghost-lg-font-size",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-secondary-lg-font-size"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "\"Geist Mono\", ui-monospace, SFMono-Regular, Menlo, monospace / 15px / 400 / 22.5px / normal"
+    },
+    {
+      "count": 6,
+      "matchedTokens": [
+        "--primitives-borderRadius-xl",
+        "--primitives-fontWeight-medium",
+        "--primitives-spacing-3",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-padding-x"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "Geist, sans-serif / 12px / 500 / 18px / normal"
+    },
+    {
+      "count": 3,
+      "matchedTokens": [
+        "--primitives-fontSize-lg",
+        "--primitives-fontWeight-regular"
+      ],
+      "states": [
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767"
+      ],
+      "value": "\"Geist Mono\", ui-monospace, SFMono-Regular, Menlo, monospace / 17px / 400 / 25.5px / normal"
+    },
+    {
+      "count": 2,
+      "matchedTokens": [
+        "--primitives-fontFamily-ui",
+        "--primitives-fontSize-base",
+        "--primitives-fontWeight-medium"
+      ],
+      "states": [
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "Geist / 13px / 500 / 19.5px / normal"
+    }
+  ],
+  "radii": [
+    {
+      "count": 2048,
+      "matchedTokens": [
+        "--primitives-borderRadius-full",
+        "--semantic-borderRadius-button",
+        "--semantic-component-button-primary-sm-radius",
+        "--semantic-component-button-primary-md-radius",
+        "--semantic-component-button-primary-lg-radius",
+        "--semantic-component-button-secondary-sm-radius",
+        "--semantic-component-button-secondary-md-radius",
+        "--semantic-component-button-secondary-lg-radius",
+        "--semantic-component-button-ghost-sm-radius",
+        "--semantic-component-button-ghost-md-radius",
+        "--semantic-component-button-ghost-lg-radius"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "999px"
+    },
+    {
+      "count": 1560,
+      "matchedTokens": [
+        "--semantic-component-navitem-radius"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "100px"
+    },
+    {
+      "count": 1528,
+      "matchedTokens": [
+        "--primitives-spacing-2",
+        "--primitives-borderRadius-lg",
+        "--semantic-borderRadius-card",
+        "--semantic-borderRadius-item",
+        "--semantic-component-tag-gap",
+        "--semantic-component-tag-radius",
+        "--semantic-component-tag-dot-size"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "8px"
+    },
+    {
+      "count": 920,
+      "matchedTokens": [
+        "--primitives-borderRadius-xs",
+        "--semantic-component-navitem-padding-y"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "2px"
+    },
+    {
+      "count": 912,
+      "matchedTokens": [
+        "--primitives-borderRadius-md",
+        "--semantic-borderRadius-input",
+        "--semantic-component-button-primary-sm-icon-gap",
+        "--semantic-component-button-primary-md-icon-gap",
+        "--semantic-component-button-primary-lg-icon-gap",
+        "--semantic-component-button-secondary-sm-icon-gap",
+        "--semantic-component-button-secondary-md-icon-gap",
+        "--semantic-component-button-secondary-lg-icon-gap",
+        "--semantic-component-button-ghost-sm-icon-gap",
+        "--semantic-component-button-ghost-md-icon-gap",
+        "--semantic-component-button-ghost-lg-icon-gap"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "6px"
+    },
+    {
+      "count": 568,
+      "matchedTokens": [],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "50%"
+    },
+    {
+      "count": 264,
+      "matchedTokens": [
+        "--primitives-fontSize-md",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-secondary-lg-font-size",
+        "--semantic-component-button-ghost-lg-font-size"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "15px"
+    },
+    {
+      "count": 76,
+      "matchedTokens": [
+        "--primitives-spacing-1",
+        "--primitives-borderRadius-sm",
+        "--semantic-borderRadius-badge",
+        "--semantic-component-navbar-padding-x",
+        "--semantic-component-navbar-gap",
+        "--semantic-component-tag-padding-y"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "4px"
+    },
+    {
+      "count": 36,
+      "matchedTokens": [
+        "--primitives-color-purple-50",
+        "--primitives-color-purple-100",
+        "--primitives-color-purple-200",
+        "--primitives-color-purple-300",
+        "--primitives-color-purple-400",
+        "--primitives-color-purple-500",
+        "--primitives-color-purple-600",
+        "--primitives-color-purple-700",
+        "--primitives-color-purple-800",
+        "--primitives-color-purple-900",
+        "--primitives-color-violet-500",
+        "--primitives-color-violet-600",
+        "--primitives-color-violet-700",
+        "--primitives-color-amber-50",
+        "--primitives-color-amber-100",
+        "--primitives-color-amber-200",
+        "--primitives-color-amber-300",
+        "--primitives-color-amber-400",
+        "--primitives-color-amber-500",
+        "--primitives-color-amber-600",
+        "--primitives-color-amber-700",
+        "--primitives-color-amber-800",
+        "--primitives-color-amber-900",
+        "--primitives-color-neutral-0",
+        "--primitives-color-neutral-50",
+        "--primitives-color-neutral-100",
+        "--primitives-color-neutral-200",
+        "--primitives-color-neutral-300",
+        "--primitives-color-neutral-400",
+        "--primitives-color-neutral-500",
+        "--primitives-color-neutral-600",
+        "--primitives-color-neutral-700",
+        "--primitives-color-neutral-800",
+        "--primitives-color-white-low",
+        "--primitives-color-white-mid",
+        "--primitives-color-white-high",
+        "--primitives-color-white-70",
+        "--primitives-color-white-full",
+        "--primitives-color-status-success",
+        "--primitives-color-status-warning",
+        "--primitives-color-status-error",
+        "--primitives-color-status-info",
+        "--primitives-fontFamily-display",
+        "--primitives-fontFamily-ui",
+        "--primitives-fontFamily-mono",
+        "--primitives-lineHeight-none",
+        "--primitives-lineHeight-tight",
+        "--primitives-lineHeight-snug",
+        "--primitives-lineHeight-normal",
+        "--primitives-lineHeight-relaxed",
+        "--primitives-letterSpacing-tighter",
+        "--primitives-letterSpacing-tight",
+        "--primitives-letterSpacing-normal",
+        "--primitives-letterSpacing-wide",
+        "--primitives-letterSpacing-wider",
+        "--primitives-letterSpacing-widest",
+        "--primitives-spacing-1",
+        "--primitives-spacing-2",
+        "--primitives-spacing-3",
+        "--primitives-spacing-4",
+        "--primitives-spacing-5",
+        "--primitives-spacing-6",
+        "--primitives-spacing-8",
+        "--primitives-spacing-10",
+        "--primitives-spacing-11",
+        "--primitives-spacing-12",
+        "--primitives-spacing-16",
+        "--primitives-spacing-20",
+        "--primitives-spacing-24",
+        "--semantic-color-brand-deep",
+        "--semantic-color-brand-lavender",
+        "--semantic-color-brand-action",
+        "--semantic-color-brand-amber",
+        "--semantic-color-brand-amber-dark",
+        "--semantic-color-brand-gradient-rose",
+        "--semantic-color-surface-bg",
+        "--semantic-color-surface-default",
+        "--semantic-color-surface-raised",
+        "--semantic-color-surface-hover",
+        "--semantic-color-border-default",
+        "--semantic-color-border-lavender",
+        "--semantic-color-border-amber",
+        "--semantic-color-border-focus",
+        "--semantic-color-text-primary",
+        "--semantic-color-text-secondary",
+        "--semantic-color-text-muted",
+        "--semantic-color-text-dim",
+        "--semantic-color-text-lavender",
+        "--semantic-color-text-amber",
+        "--semantic-color-status-success",
+        "--semantic-color-status-warning",
+        "--semantic-color-status-error",
+        "--semantic-color-status-info",
+        "--semantic-spacing-card-padding",
+        "--semantic-spacing-section-gap",
+        "--semantic-spacing-component-gap",
+        "--semantic-component-button-primary-bg",
+        "--semantic-component-button-primary-bg-hover",
+        "--semantic-component-button-primary-bg-active",
+        "--semantic-component-button-primary-bg-disabled",
+        "--semantic-component-button-primary-text",
+        "--semantic-component-button-primary-text-disabled",
+        "--semantic-component-button-primary-border",
+        "--semantic-component-button-primary-sm-height",
+        "--semantic-component-button-primary-sm-padding-x",
+        "--semantic-component-button-primary-sm-padding-x-icon",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-primary-sm-icon-gap",
+        "--semantic-component-button-primary-md-height",
+        "--semantic-component-button-primary-md-padding-x",
+        "--semantic-component-button-primary-md-padding-x-icon",
+        "--semantic-component-button-primary-md-font-size",
+        "--semantic-component-button-primary-md-icon-gap",
+        "--semantic-component-button-primary-lg-height",
+        "--semantic-component-button-primary-lg-padding-x",
+        "--semantic-component-button-primary-lg-padding-x-icon",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-primary-lg-icon-gap",
+        "--semantic-component-button-secondary-bg",
+        "--semantic-component-button-secondary-bg-hover",
+        "--semantic-component-button-secondary-bg-active",
+        "--semantic-component-button-secondary-text",
+        "--semantic-component-button-secondary-text-disabled",
+        "--semantic-component-button-secondary-border",
+        "--semantic-component-button-secondary-border-hover",
+        "--semantic-component-button-secondary-sm-height",
+        "--semantic-component-button-secondary-sm-padding-x",
+        "--semantic-component-button-secondary-sm-padding-x-icon",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-button-secondary-sm-icon-gap",
+        "--semantic-component-button-secondary-md-height",
+        "--semantic-component-button-secondary-md-padding-x",
+        "--semantic-component-button-secondary-md-padding-x-icon",
+        "--semantic-component-button-secondary-md-font-size",
+        "--semantic-component-button-secondary-md-icon-gap",
+        "--semantic-component-button-secondary-lg-height",
+        "--semantic-component-button-secondary-lg-padding-x",
+        "--semantic-component-button-secondary-lg-padding-x-icon",
+        "--semantic-component-button-secondary-lg-font-size",
+        "--semantic-component-button-secondary-lg-icon-gap",
+        "--semantic-component-button-ghost-bg",
+        "--semantic-component-button-ghost-bg-hover",
+        "--semantic-component-button-ghost-bg-active",
+        "--semantic-component-button-ghost-text",
+        "--semantic-component-button-ghost-text-hover",
+        "--semantic-component-button-ghost-sm-height",
+        "--semantic-component-button-ghost-sm-padding-x",
+        "--semantic-component-button-ghost-sm-padding-x-icon",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-ghost-sm-icon-gap",
+        "--semantic-component-button-ghost-md-height",
+        "--semantic-component-button-ghost-md-padding-x",
+        "--semantic-component-button-ghost-md-padding-x-icon",
+        "--semantic-component-button-ghost-md-font-size",
+        "--semantic-component-button-ghost-md-icon-gap",
+        "--semantic-component-button-ghost-lg-height",
+        "--semantic-component-button-ghost-lg-padding-x",
+        "--semantic-component-button-ghost-lg-padding-x-icon",
+        "--semantic-component-button-ghost-lg-font-size",
+        "--semantic-component-button-ghost-lg-icon-gap",
+        "--semantic-component-button-gradient-text",
+        "--semantic-component-button-gradient-text-disabled",
+        "--semantic-component-button-gradient-default-from",
+        "--semantic-component-button-gradient-default-mid",
+        "--semantic-component-button-gradient-default-to",
+        "--semantic-component-button-gradient-hover-from",
+        "--semantic-component-button-gradient-hover-mid",
+        "--semantic-component-button-gradient-hover-to",
+        "--semantic-component-button-gradient-active-from",
+        "--semantic-component-button-gradient-active-mid",
+        "--semantic-component-button-gradient-active-to",
+        "--semantic-component-navbar-bg",
+        "--semantic-component-navbar-height",
+        "--semantic-component-navbar-padding-x",
+        "--semantic-component-navbar-gap",
+        "--semantic-component-navitem-default-bg",
+        "--semantic-component-navitem-default-bg-hover",
+        "--semantic-component-navitem-default-text",
+        "--semantic-component-navitem-default-text-hover",
+        "--semantic-component-navitem-active-bg",
+        "--semantic-component-navitem-active-text",
+        "--semantic-component-navitem-height",
+        "--semantic-component-navitem-padding-x",
+        "--semantic-component-navitem-padding-y",
+        "--semantic-component-navitem-radius",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-bg",
+        "--semantic-component-tag-label",
+        "--semantic-component-tag-padding-x",
+        "--semantic-component-tag-padding-y",
+        "--semantic-component-tag-gap",
+        "--semantic-component-tag-height",
+        "--semantic-component-tag-radius",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-dot-size",
+        "--semantic-component-tag-dot-active",
+        "--semantic-component-tag-dot-warning",
+        "--semantic-component-tag-dot-error",
+        "--semantic-component-tag-dot-neutral",
+        "--semantic-component-tag-dot-lavender"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "16px"
+    },
+    {
+      "count": 24,
+      "matchedTokens": [
+        "--primitives-spacing-3",
+        "--primitives-borderRadius-xl",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-padding-x",
+        "--semantic-component-tag-font-size"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920"
+      ],
+      "value": "12px"
+    },
+    {
+      "count": 24,
+      "matchedTokens": [],
+      "states": [
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "9999px"
+    },
+    {
+      "count": 12,
+      "matchedTokens": [
+        "--primitives-fontSize-xl",
+        "--primitives-spacing-5",
+        "--semantic-borderRadius-modal"
+      ],
+      "states": [
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767"
+      ],
+      "value": "20px"
+    }
+  ],
+  "shadows": [
+    {
+      "count": 4,
+      "matchedTokens": [],
+      "states": [
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "rgba(0, 0, 0, 0.32) 0px 8px 24px 0px"
+    },
+    {
+      "count": 2,
+      "matchedTokens": [],
+      "states": [
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375"
+      ],
+      "value": "rgb(196, 145, 229) 0px 0px 0px 2px"
+    }
+  ],
+  "spacing": [
+    {
+      "count": 3053,
+      "matchedTokens": [
+        "--primitives-spacing-1",
+        "--primitives-borderRadius-sm",
+        "--semantic-borderRadius-badge",
+        "--semantic-component-navbar-padding-x",
+        "--semantic-component-navbar-gap",
+        "--semantic-component-tag-padding-y"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "4px"
+    },
+    {
+      "count": 2190,
+      "matchedTokens": [
+        "--primitives-color-purple-50",
+        "--primitives-color-purple-100",
+        "--primitives-color-purple-200",
+        "--primitives-color-purple-300",
+        "--primitives-color-purple-400",
+        "--primitives-color-purple-500",
+        "--primitives-color-purple-600",
+        "--primitives-color-purple-700",
+        "--primitives-color-purple-800",
+        "--primitives-color-purple-900",
+        "--primitives-color-violet-500",
+        "--primitives-color-violet-600",
+        "--primitives-color-violet-700",
+        "--primitives-color-amber-50",
+        "--primitives-color-amber-100",
+        "--primitives-color-amber-200",
+        "--primitives-color-amber-300",
+        "--primitives-color-amber-400",
+        "--primitives-color-amber-500",
+        "--primitives-color-amber-600",
+        "--primitives-color-amber-700",
+        "--primitives-color-amber-800",
+        "--primitives-color-amber-900",
+        "--primitives-color-neutral-0",
+        "--primitives-color-neutral-50",
+        "--primitives-color-neutral-100",
+        "--primitives-color-neutral-200",
+        "--primitives-color-neutral-300",
+        "--primitives-color-neutral-400",
+        "--primitives-color-neutral-500",
+        "--primitives-color-neutral-600",
+        "--primitives-color-neutral-700",
+        "--primitives-color-neutral-800",
+        "--primitives-color-white-low",
+        "--primitives-color-white-mid",
+        "--primitives-color-white-high",
+        "--primitives-color-white-70",
+        "--primitives-color-white-full",
+        "--primitives-color-status-success",
+        "--primitives-color-status-warning",
+        "--primitives-color-status-error",
+        "--primitives-color-status-info",
+        "--primitives-fontFamily-display",
+        "--primitives-fontFamily-ui",
+        "--primitives-fontFamily-mono",
+        "--primitives-lineHeight-none",
+        "--primitives-lineHeight-tight",
+        "--primitives-lineHeight-snug",
+        "--primitives-lineHeight-normal",
+        "--primitives-lineHeight-relaxed",
+        "--primitives-letterSpacing-tighter",
+        "--primitives-letterSpacing-tight",
+        "--primitives-letterSpacing-normal",
+        "--primitives-letterSpacing-wide",
+        "--primitives-letterSpacing-wider",
+        "--primitives-letterSpacing-widest",
+        "--primitives-spacing-1",
+        "--primitives-spacing-2",
+        "--primitives-spacing-3",
+        "--primitives-spacing-4",
+        "--primitives-spacing-5",
+        "--primitives-spacing-6",
+        "--primitives-spacing-8",
+        "--primitives-spacing-10",
+        "--primitives-spacing-11",
+        "--primitives-spacing-12",
+        "--primitives-spacing-16",
+        "--primitives-spacing-20",
+        "--primitives-spacing-24",
+        "--semantic-color-brand-deep",
+        "--semantic-color-brand-lavender",
+        "--semantic-color-brand-action",
+        "--semantic-color-brand-amber",
+        "--semantic-color-brand-amber-dark",
+        "--semantic-color-brand-gradient-rose",
+        "--semantic-color-surface-bg",
+        "--semantic-color-surface-default",
+        "--semantic-color-surface-raised",
+        "--semantic-color-surface-hover",
+        "--semantic-color-border-default",
+        "--semantic-color-border-lavender",
+        "--semantic-color-border-amber",
+        "--semantic-color-border-focus",
+        "--semantic-color-text-primary",
+        "--semantic-color-text-secondary",
+        "--semantic-color-text-muted",
+        "--semantic-color-text-dim",
+        "--semantic-color-text-lavender",
+        "--semantic-color-text-amber",
+        "--semantic-color-status-success",
+        "--semantic-color-status-warning",
+        "--semantic-color-status-error",
+        "--semantic-color-status-info",
+        "--semantic-spacing-card-padding",
+        "--semantic-spacing-section-gap",
+        "--semantic-spacing-component-gap",
+        "--semantic-component-button-primary-bg",
+        "--semantic-component-button-primary-bg-hover",
+        "--semantic-component-button-primary-bg-active",
+        "--semantic-component-button-primary-bg-disabled",
+        "--semantic-component-button-primary-text",
+        "--semantic-component-button-primary-text-disabled",
+        "--semantic-component-button-primary-border",
+        "--semantic-component-button-primary-sm-height",
+        "--semantic-component-button-primary-sm-padding-x",
+        "--semantic-component-button-primary-sm-padding-x-icon",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-primary-sm-icon-gap",
+        "--semantic-component-button-primary-md-height",
+        "--semantic-component-button-primary-md-padding-x",
+        "--semantic-component-button-primary-md-padding-x-icon",
+        "--semantic-component-button-primary-md-font-size",
+        "--semantic-component-button-primary-md-icon-gap",
+        "--semantic-component-button-primary-lg-height",
+        "--semantic-component-button-primary-lg-padding-x",
+        "--semantic-component-button-primary-lg-padding-x-icon",
+        "--semantic-component-button-primary-lg-font-size",
+        "--semantic-component-button-primary-lg-icon-gap",
+        "--semantic-component-button-secondary-bg",
+        "--semantic-component-button-secondary-bg-hover",
+        "--semantic-component-button-secondary-bg-active",
+        "--semantic-component-button-secondary-text",
+        "--semantic-component-button-secondary-text-disabled",
+        "--semantic-component-button-secondary-border",
+        "--semantic-component-button-secondary-border-hover",
+        "--semantic-component-button-secondary-sm-height",
+        "--semantic-component-button-secondary-sm-padding-x",
+        "--semantic-component-button-secondary-sm-padding-x-icon",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-button-secondary-sm-icon-gap",
+        "--semantic-component-button-secondary-md-height",
+        "--semantic-component-button-secondary-md-padding-x",
+        "--semantic-component-button-secondary-md-padding-x-icon",
+        "--semantic-component-button-secondary-md-font-size",
+        "--semantic-component-button-secondary-md-icon-gap",
+        "--semantic-component-button-secondary-lg-height",
+        "--semantic-component-button-secondary-lg-padding-x",
+        "--semantic-component-button-secondary-lg-padding-x-icon",
+        "--semantic-component-button-secondary-lg-font-size",
+        "--semantic-component-button-secondary-lg-icon-gap",
+        "--semantic-component-button-ghost-bg",
+        "--semantic-component-button-ghost-bg-hover",
+        "--semantic-component-button-ghost-bg-active",
+        "--semantic-component-button-ghost-text",
+        "--semantic-component-button-ghost-text-hover",
+        "--semantic-component-button-ghost-sm-height",
+        "--semantic-component-button-ghost-sm-padding-x",
+        "--semantic-component-button-ghost-sm-padding-x-icon",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-button-ghost-sm-icon-gap",
+        "--semantic-component-button-ghost-md-height",
+        "--semantic-component-button-ghost-md-padding-x",
+        "--semantic-component-button-ghost-md-padding-x-icon",
+        "--semantic-component-button-ghost-md-font-size",
+        "--semantic-component-button-ghost-md-icon-gap",
+        "--semantic-component-button-ghost-lg-height",
+        "--semantic-component-button-ghost-lg-padding-x",
+        "--semantic-component-button-ghost-lg-padding-x-icon",
+        "--semantic-component-button-ghost-lg-font-size",
+        "--semantic-component-button-ghost-lg-icon-gap",
+        "--semantic-component-button-gradient-text",
+        "--semantic-component-button-gradient-text-disabled",
+        "--semantic-component-button-gradient-default-from",
+        "--semantic-component-button-gradient-default-mid",
+        "--semantic-component-button-gradient-default-to",
+        "--semantic-component-button-gradient-hover-from",
+        "--semantic-component-button-gradient-hover-mid",
+        "--semantic-component-button-gradient-hover-to",
+        "--semantic-component-button-gradient-active-from",
+        "--semantic-component-button-gradient-active-mid",
+        "--semantic-component-button-gradient-active-to",
+        "--semantic-component-navbar-bg",
+        "--semantic-component-navbar-height",
+        "--semantic-component-navbar-padding-x",
+        "--semantic-component-navbar-gap",
+        "--semantic-component-navitem-default-bg",
+        "--semantic-component-navitem-default-bg-hover",
+        "--semantic-component-navitem-default-text",
+        "--semantic-component-navitem-default-text-hover",
+        "--semantic-component-navitem-active-bg",
+        "--semantic-component-navitem-active-text",
+        "--semantic-component-navitem-height",
+        "--semantic-component-navitem-padding-x",
+        "--semantic-component-navitem-padding-y",
+        "--semantic-component-navitem-radius",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-bg",
+        "--semantic-component-tag-label",
+        "--semantic-component-tag-padding-x",
+        "--semantic-component-tag-padding-y",
+        "--semantic-component-tag-gap",
+        "--semantic-component-tag-height",
+        "--semantic-component-tag-radius",
+        "--semantic-component-tag-font-size",
+        "--semantic-component-tag-dot-size",
+        "--semantic-component-tag-dot-active",
+        "--semantic-component-tag-dot-warning",
+        "--semantic-component-tag-dot-error",
+        "--semantic-component-tag-dot-neutral",
+        "--semantic-component-tag-dot-lavender"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "16px"
+    },
+    {
+      "count": 1846,
+      "matchedTokens": [
+        "--primitives-spacing-3",
+        "--primitives-borderRadius-xl",
+        "--semantic-component-button-primary-sm-font-size",
+        "--semantic-component-button-secondary-sm-font-size",
+        "--semantic-component-button-ghost-sm-font-size",
+        "--semantic-component-navitem-font-size",
+        "--semantic-component-tag-padding-x",
+        "--semantic-component-tag-font-size"
+      ],
+      "states": [
+        "committer/deploy-error@1100",
+        "committer/deploy-error@1440",
+        "committer/deploy-error@1920",
+        "committer/deploy-error@375",
+        "committer/deploy-error@720",
+        "committer/deploy-error@767",
+        "committer/deploy-error@768",
+        "committer/deploy-error@900",
+        "committer/deploy-error@920",
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "12px"
+    },
+    {
+      "count": 1779,
+      "matchedTokens": [
+        "--primitives-spacing-2",
+        "--primitives-borderRadius-lg",
+        "--semantic-borderRadius-card",
+        "--semantic-borderRadius-item",
+        "--semantic-component-tag-gap",
+        "--semantic-component-tag-radius",
+        "--semantic-component-tag-dot-size"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "8px"
+    },
+    {
+      "count": 1111,
+      "matchedTokens": [
+        "--primitives-fontSize-2xl",
+        "--primitives-spacing-6",
+        "--semantic-component-tag-height"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "24px"
+    },
+    {
+      "count": 817,
+      "matchedTokens": [
+        "--primitives-fontSize-xl",
+        "--primitives-spacing-5",
+        "--semantic-borderRadius-modal"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "20px"
+    },
+    {
+      "count": 358,
+      "matchedTokens": [
+        "--semantic-component-navitem-padding-x"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "18px"
+    },
+    {
+      "count": 358,
+      "matchedTokens": [
+        "--primitives-borderRadius-xs",
+        "--semantic-component-navitem-padding-y"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "2px"
+    },
+    {
+      "count": 209,
+      "matchedTokens": [
+        "--primitives-fontSize-6xl",
+        "--primitives-spacing-16"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "64px"
+    },
+    {
+      "count": 126,
+      "matchedTokens": [],
+      "states": [
+        "showcase/base@1920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-hover@1920",
+        "showcase/navitem-hover@1920",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-rich-open@1920"
+      ],
+      "value": "378px"
+    },
+    {
+      "count": 90,
+      "matchedTokens": [
+        "--primitives-spacing-10",
+        "--semantic-component-navbar-height"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "40px"
+    },
+    {
+      "count": 84,
+      "matchedTokens": [
+        "--primitives-spacing-12"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-hover@1920",
+        "showcase/navitem-hover@1920",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-rich-open@1920"
+      ],
+      "value": "48px"
+    },
+    {
+      "count": 76,
+      "matchedTokens": [
+        "--semantic-component-button-primary-lg-padding-x",
+        "--semantic-component-button-secondary-lg-padding-x",
+        "--semantic-component-button-ghost-lg-padding-x"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "28px"
+    },
+    {
+      "count": 56,
+      "matchedTokens": [
+        "--primitives-fontSize-3xl",
+        "--primitives-spacing-8",
+        "--semantic-component-navitem-height"
+      ],
+      "states": [
+        "committer/prelaunch@1100",
+        "committer/prelaunch@1440",
+        "committer/prelaunch@1920",
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "committer/prelaunch@768",
+        "committer/prelaunch@900",
+        "committer/prelaunch@920",
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "32px"
+    },
+    {
+      "count": 38,
+      "matchedTokens": [
+        "--primitives-borderWidth-default"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "1px"
+    },
+    {
+      "count": 38,
+      "matchedTokens": [
+        "--primitives-borderRadius-md",
+        "--semantic-borderRadius-input",
+        "--semantic-component-button-primary-sm-icon-gap",
+        "--semantic-component-button-primary-md-icon-gap",
+        "--semantic-component-button-primary-lg-icon-gap",
+        "--semantic-component-button-secondary-sm-icon-gap",
+        "--semantic-component-button-secondary-md-icon-gap",
+        "--semantic-component-button-secondary-lg-icon-gap",
+        "--semantic-component-button-ghost-sm-icon-gap",
+        "--semantic-component-button-ghost-md-icon-gap",
+        "--semantic-component-button-ghost-lg-icon-gap"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "6px"
+    },
+    {
+      "count": 38,
+      "matchedTokens": [
+        "--primitives-fontSize-8xl",
+        "--primitives-spacing-24"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "96px"
+    },
+    {
+      "count": 22,
+      "matchedTokens": [],
+      "states": [
+        "showcase/base@1440"
+      ],
+      "value": "138px"
+    },
+    {
+      "count": 19,
+      "matchedTokens": [
+        "--primitives-fontSize-5xl"
+      ],
+      "states": [
+        "showcase/base@1100",
+        "showcase/base@1440",
+        "showcase/base@1920",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/base@768",
+        "showcase/base@900",
+        "showcase/base@920",
+        "showcase/button-primary-focus@1920",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@1920",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@1920",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@1920",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "60px"
+    },
+    {
+      "count": 19,
+      "matchedTokens": [],
+      "states": [
+        "committer/prelaunch@375",
+        "committer/prelaunch@720",
+        "committer/prelaunch@767",
+        "showcase/base@375",
+        "showcase/base@720",
+        "showcase/base@767",
+        "showcase/button-primary-focus@375",
+        "showcase/button-primary-hover@375",
+        "showcase/navitem-hover@375",
+        "showcase/tooltip-centered-open@375",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "8px 12px"
+    },
+    {
+      "count": 6,
+      "matchedTokens": [],
+      "states": [
+        "showcase/tooltip-rich-open@1920",
+        "showcase/tooltip-rich-open@375"
+      ],
+      "value": "7px"
+    }
+  ],
+  "tokenCount": 238,
+  "tokens": [
+    {
+      "candidates": [
+        "rgb(245, 238, 251)",
+        "16px",
+        "#f5eefb"
+      ],
+      "name": "--primitives-color-purple-50",
+      "rawValue": "#f5eefb"
+    },
+    {
+      "candidates": [
+        "rgb(232, 212, 246)",
+        "16px",
+        "#e8d4f6"
+      ],
+      "name": "--primitives-color-purple-100",
+      "rawValue": "#e8d4f6"
+    },
+    {
+      "candidates": [
+        "rgb(212, 175, 240)",
+        "16px",
+        "#d4aff0"
+      ],
+      "name": "--primitives-color-purple-200",
+      "rawValue": "#d4aff0"
+    },
+    {
+      "candidates": [
+        "rgb(190, 135, 233)",
+        "16px",
+        "#be87e9"
+      ],
+      "name": "--primitives-color-purple-300",
+      "rawValue": "#be87e9"
+    },
+    {
+      "candidates": [
+        "rgb(176, 111, 223)",
+        "16px",
+        "#b06fdf"
+      ],
+      "name": "--primitives-color-purple-400",
+      "rawValue": "#b06fdf"
+    },
+    {
+      "candidates": [
+        "rgb(196, 145, 229)",
+        "16px",
+        "#c491e5"
+      ],
+      "name": "--primitives-color-purple-500",
+      "rawValue": "#c491e5"
+    },
+    {
+      "candidates": [
+        "rgb(155, 108, 200)",
+        "16px",
+        "#9b6cc8"
+      ],
+      "name": "--primitives-color-purple-600",
+      "rawValue": "#9b6cc8"
+    },
+    {
+      "candidates": [
+        "rgb(107, 63, 160)",
+        "16px",
+        "#6b3fa0"
+      ],
+      "name": "--primitives-color-purple-700",
+      "rawValue": "#6b3fa0"
+    },
+    {
+      "candidates": [
+        "rgb(69, 37, 112)",
+        "16px",
+        "#452570"
+      ],
+      "name": "--primitives-color-purple-800",
+      "rawValue": "#452570"
+    },
+    {
+      "candidates": [
+        "rgb(41, 20, 51)",
+        "16px",
+        "#291433"
+      ],
+      "name": "--primitives-color-purple-900",
+      "rawValue": "#291433"
+    },
+    {
+      "candidates": [
+        "rgb(82, 39, 202)",
+        "16px",
+        "#5227ca"
+      ],
+      "name": "--primitives-color-violet-500",
+      "rawValue": "#5227ca"
+    },
+    {
+      "candidates": [
+        "rgb(67, 31, 176)",
+        "16px",
+        "#431fb0"
+      ],
+      "name": "--primitives-color-violet-600",
+      "rawValue": "#431fb0"
+    },
+    {
+      "candidates": [
+        "rgb(54, 24, 148)",
+        "16px",
+        "#361894"
+      ],
+      "name": "--primitives-color-violet-700",
+      "rawValue": "#361894"
+    },
+    {
+      "candidates": [
+        "rgb(253, 246, 236)",
+        "16px",
+        "#fdf6ec"
+      ],
+      "name": "--primitives-color-amber-50",
+      "rawValue": "#fdf6ec"
+    },
+    {
+      "candidates": [
+        "rgb(250, 235, 212)",
+        "16px",
+        "#faebd4"
+      ],
+      "name": "--primitives-color-amber-100",
+      "rawValue": "#faebd4"
+    },
+    {
+      "candidates": [
+        "rgb(245, 217, 174)",
+        "16px",
+        "#f5d9ae"
+      ],
+      "name": "--primitives-color-amber-200",
+      "rawValue": "#f5d9ae"
+    },
+    {
+      "candidates": [
+        "rgb(243, 208, 160)",
+        "16px",
+        "#f3d0a0"
+      ],
+      "name": "--primitives-color-amber-300",
+      "rawValue": "#f3d0a0"
+    },
+    {
+      "candidates": [
+        "rgb(234, 184, 106)",
+        "16px",
+        "#eab86a"
+      ],
+      "name": "--primitives-color-amber-400",
+      "rawValue": "#eab86a"
+    },
+    {
+      "candidates": [
+        "rgb(217, 150, 64)",
+        "16px",
+        "#d99640"
+      ],
+      "name": "--primitives-color-amber-500",
+      "rawValue": "#d99640"
+    },
+    {
+      "candidates": [
+        "rgb(184, 122, 40)",
+        "16px",
+        "#b87a28"
+      ],
+      "name": "--primitives-color-amber-600",
+      "rawValue": "#b87a28"
+    },
+    {
+      "candidates": [
+        "rgb(143, 94, 28)",
+        "16px",
+        "#8f5e1c"
+      ],
+      "name": "--primitives-color-amber-700",
+      "rawValue": "#8f5e1c"
+    },
+    {
+      "candidates": [
+        "rgb(99, 66, 19)",
+        "16px",
+        "#634213"
+      ],
+      "name": "--primitives-color-amber-800",
+      "rawValue": "#634213"
+    },
+    {
+      "candidates": [
+        "rgb(61, 40, 11)",
+        "16px",
+        "#3d280b"
+      ],
+      "name": "--primitives-color-amber-900",
+      "rawValue": "#3d280b"
+    },
+    {
+      "candidates": [
+        "rgb(14, 13, 15)",
+        "16px",
+        "#0e0d0f"
+      ],
+      "name": "--primitives-color-neutral-0",
+      "rawValue": "#0e0d0f"
+    },
+    {
+      "candidates": [
+        "rgb(21, 20, 22)",
+        "16px",
+        "#151416"
+      ],
+      "name": "--primitives-color-neutral-50",
+      "rawValue": "#151416"
+    },
+    {
+      "candidates": [
+        "rgb(29, 28, 31)",
+        "16px",
+        "#1d1c1f"
+      ],
+      "name": "--primitives-color-neutral-100",
+      "rawValue": "#1d1c1f"
+    },
+    {
+      "candidates": [
+        "rgb(42, 40, 48)",
+        "16px",
+        "#2a2830"
+      ],
+      "name": "--primitives-color-neutral-200",
+      "rawValue": "#2a2830"
+    },
+    {
+      "candidates": [
+        "rgb(61, 58, 69)",
+        "16px",
+        "#3d3a45"
+      ],
+      "name": "--primitives-color-neutral-300",
+      "rawValue": "#3d3a45"
+    },
+    {
+      "candidates": [
+        "rgb(92, 88, 105)",
+        "16px",
+        "#5c5869"
+      ],
+      "name": "--primitives-color-neutral-400",
+      "rawValue": "#5c5869"
+    },
+    {
+      "candidates": [
+        "rgb(125, 122, 138)",
+        "16px",
+        "#7d7a8a"
+      ],
+      "name": "--primitives-color-neutral-500",
+      "rawValue": "#7d7a8a"
+    },
+    {
+      "candidates": [
+        "rgb(157, 154, 170)",
+        "16px",
+        "#9d9aaa"
+      ],
+      "name": "--primitives-color-neutral-600",
+      "rawValue": "#9d9aaa"
+    },
+    {
+      "candidates": [
+        "rgb(192, 190, 206)",
+        "16px",
+        "#c0bece"
+      ],
+      "name": "--primitives-color-neutral-700",
+      "rawValue": "#c0bece"
+    },
+    {
+      "candidates": [
+        "rgb(224, 222, 234)",
+        "16px",
+        "#e0deea"
+      ],
+      "name": "--primitives-color-neutral-800",
+      "rawValue": "#e0deea"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.18)",
+        "16px",
+        "rgba(255,255,255,0.18)"
+      ],
+      "name": "--primitives-color-white-low",
+      "rawValue": "rgba(255,255,255,0.18)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.45)",
+        "16px",
+        "rgba(255,255,255,0.45)"
+      ],
+      "name": "--primitives-color-white-mid",
+      "rawValue": "rgba(255,255,255,0.45)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.87)",
+        "16px",
+        "rgba(255,255,255,0.87)"
+      ],
+      "name": "--primitives-color-white-high",
+      "rawValue": "rgba(255,255,255,0.87)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.7)",
+        "16px",
+        "rgba(255,255,255,0.7)"
+      ],
+      "name": "--primitives-color-white-70",
+      "rawValue": "rgba(255,255,255,0.7)"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "#ffffff"
+      ],
+      "name": "--primitives-color-white-full",
+      "rawValue": "#ffffff"
+    },
+    {
+      "candidates": [
+        "rgb(52, 211, 153)",
+        "16px",
+        "#34d399"
+      ],
+      "name": "--primitives-color-status-success",
+      "rawValue": "#34d399"
+    },
+    {
+      "candidates": [
+        "rgb(251, 191, 36)",
+        "16px",
+        "#fbbf24"
+      ],
+      "name": "--primitives-color-status-warning",
+      "rawValue": "#fbbf24"
+    },
+    {
+      "candidates": [
+        "rgb(248, 113, 113)",
+        "16px",
+        "#f87171"
+      ],
+      "name": "--primitives-color-status-error",
+      "rawValue": "#f87171"
+    },
+    {
+      "candidates": [
+        "rgb(96, 165, 250)",
+        "16px",
+        "#60a5fa"
+      ],
+      "name": "--primitives-color-status-info",
+      "rawValue": "#60a5fa"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "10px",
+        "ratio:10.0000",
+        "10"
+      ],
+      "name": "--primitives-fontSize-xs",
+      "rawValue": "10"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "11px",
+        "ratio:11.0000",
+        "11"
+      ],
+      "name": "--primitives-fontSize-sm",
+      "rawValue": "11"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "13px",
+        "ratio:13.0000",
+        "13"
+      ],
+      "name": "--primitives-fontSize-base",
+      "rawValue": "13"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "15px",
+        "ratio:15.0000",
+        "15"
+      ],
+      "name": "--primitives-fontSize-md",
+      "rawValue": "15"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "17px",
+        "ratio:17.0000",
+        "17"
+      ],
+      "name": "--primitives-fontSize-lg",
+      "rawValue": "17"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "20px",
+        "ratio:20.0000",
+        "20"
+      ],
+      "name": "--primitives-fontSize-xl",
+      "rawValue": "20"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "24px",
+        "ratio:24.0000",
+        "24"
+      ],
+      "name": "--primitives-fontSize-2xl",
+      "rawValue": "24"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "32px",
+        "ratio:32.0000",
+        "32"
+      ],
+      "name": "--primitives-fontSize-3xl",
+      "rawValue": "32"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "44px",
+        "ratio:44.0000",
+        "44"
+      ],
+      "name": "--primitives-fontSize-4xl",
+      "rawValue": "44"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "60px",
+        "ratio:60.0000",
+        "60"
+      ],
+      "name": "--primitives-fontSize-5xl",
+      "rawValue": "60"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "64px",
+        "ratio:64.0000",
+        "64"
+      ],
+      "name": "--primitives-fontSize-6xl",
+      "rawValue": "64"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "80px",
+        "ratio:80.0000",
+        "80"
+      ],
+      "name": "--primitives-fontSize-7xl",
+      "rawValue": "80"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "96px",
+        "ratio:96.0000",
+        "96"
+      ],
+      "name": "--primitives-fontSize-8xl",
+      "rawValue": "96"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "400px",
+        "ratio:400.0000",
+        "400"
+      ],
+      "name": "--primitives-fontWeight-regular",
+      "rawValue": "400"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "500px",
+        "ratio:500.0000",
+        "500"
+      ],
+      "name": "--primitives-fontWeight-medium",
+      "rawValue": "500"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "600px",
+        "ratio:600.0000",
+        "600"
+      ],
+      "name": "--primitives-fontWeight-semibold",
+      "rawValue": "600"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "Charis SIL"
+      ],
+      "name": "--primitives-fontFamily-display",
+      "rawValue": "Charis SIL"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "Geist"
+      ],
+      "name": "--primitives-fontFamily-ui",
+      "rawValue": "Geist"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "Geist Mono"
+      ],
+      "name": "--primitives-fontFamily-mono",
+      "rawValue": "Geist Mono"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:1.0000",
+        "100%"
+      ],
+      "name": "--primitives-lineHeight-none",
+      "rawValue": "100%"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:1.1000",
+        "110%"
+      ],
+      "name": "--primitives-lineHeight-tight",
+      "rawValue": "110%"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:1.2000",
+        "120%"
+      ],
+      "name": "--primitives-lineHeight-snug",
+      "rawValue": "120%"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:1.4000",
+        "140%"
+      ],
+      "name": "--primitives-lineHeight-normal",
+      "rawValue": "140%"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:1.6000",
+        "160%"
+      ],
+      "name": "--primitives-lineHeight-relaxed",
+      "rawValue": "160%"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:-0.0200",
+        "-0.02em"
+      ],
+      "name": "--primitives-letterSpacing-tighter",
+      "rawValue": "-0.02em"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:-0.0100",
+        "-0.01em"
+      ],
+      "name": "--primitives-letterSpacing-tight",
+      "rawValue": "-0.01em"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0000",
+        "0em"
+      ],
+      "name": "--primitives-letterSpacing-normal",
+      "rawValue": "0em"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0200",
+        "0.02em"
+      ],
+      "name": "--primitives-letterSpacing-wide",
+      "rawValue": "0.02em"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "0.06em"
+      ],
+      "name": "--primitives-letterSpacing-wider",
+      "rawValue": "0.06em"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "0.12em"
+      ],
+      "name": "--primitives-letterSpacing-widest",
+      "rawValue": "0.12em"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0400",
+        "4px"
+      ],
+      "name": "--primitives-spacing-1",
+      "rawValue": "4px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0800",
+        "8px"
+      ],
+      "name": "--primitives-spacing-2",
+      "rawValue": "8px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "12px"
+      ],
+      "name": "--primitives-spacing-3",
+      "rawValue": "12px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1600"
+      ],
+      "name": "--primitives-spacing-4",
+      "rawValue": "16px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2000",
+        "20px"
+      ],
+      "name": "--primitives-spacing-5",
+      "rawValue": "20px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "24px"
+      ],
+      "name": "--primitives-spacing-6",
+      "rawValue": "24px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.3200",
+        "32px"
+      ],
+      "name": "--primitives-spacing-8",
+      "rawValue": "32px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4000",
+        "40px"
+      ],
+      "name": "--primitives-spacing-10",
+      "rawValue": "40px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4400",
+        "44px"
+      ],
+      "name": "--primitives-spacing-11",
+      "rawValue": "44px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4800",
+        "48px"
+      ],
+      "name": "--primitives-spacing-12",
+      "rawValue": "48px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.6400",
+        "64px"
+      ],
+      "name": "--primitives-spacing-16",
+      "rawValue": "64px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.8000",
+        "80px"
+      ],
+      "name": "--primitives-spacing-20",
+      "rawValue": "80px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.9600",
+        "96px"
+      ],
+      "name": "--primitives-spacing-24",
+      "rawValue": "96px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "2px",
+        "ratio:2.0000",
+        "2"
+      ],
+      "name": "--primitives-borderRadius-xs",
+      "rawValue": "2"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "4px",
+        "ratio:4.0000",
+        "4"
+      ],
+      "name": "--primitives-borderRadius-sm",
+      "rawValue": "4"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "6px",
+        "ratio:6.0000",
+        "6"
+      ],
+      "name": "--primitives-borderRadius-md",
+      "rawValue": "6"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "8px",
+        "ratio:8.0000",
+        "8"
+      ],
+      "name": "--primitives-borderRadius-lg",
+      "rawValue": "8"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "12px",
+        "ratio:12.0000",
+        "12"
+      ],
+      "name": "--primitives-borderRadius-xl",
+      "rawValue": "12"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "999"
+      ],
+      "name": "--primitives-borderRadius-full",
+      "rawValue": "999"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "1px",
+        "ratio:1.0000",
+        "1"
+      ],
+      "name": "--primitives-borderWidth-default",
+      "rawValue": "1"
+    },
+    {
+      "candidates": [
+        "rgb(41, 20, 51)",
+        "16px",
+        "var(--primitives-color-purple-900)"
+      ],
+      "name": "--semantic-color-brand-deep",
+      "rawValue": "var(--primitives-color-purple-900)"
+    },
+    {
+      "candidates": [
+        "rgb(196, 145, 229)",
+        "16px",
+        "var(--primitives-color-purple-500)"
+      ],
+      "name": "--semantic-color-brand-lavender",
+      "rawValue": "var(--primitives-color-purple-500)"
+    },
+    {
+      "candidates": [
+        "rgb(82, 39, 202)",
+        "16px",
+        "var(--primitives-color-violet-500)"
+      ],
+      "name": "--semantic-color-brand-action",
+      "rawValue": "var(--primitives-color-violet-500)"
+    },
+    {
+      "candidates": [
+        "rgb(243, 208, 160)",
+        "16px",
+        "var(--primitives-color-amber-300)"
+      ],
+      "name": "--semantic-color-brand-amber",
+      "rawValue": "var(--primitives-color-amber-300)"
+    },
+    {
+      "candidates": [
+        "rgb(217, 150, 64)",
+        "16px",
+        "var(--primitives-color-amber-500)"
+      ],
+      "name": "--semantic-color-brand-amber-dark",
+      "rawValue": "var(--primitives-color-amber-500)"
+    },
+    {
+      "candidates": [
+        "rgb(243, 157, 176)",
+        "16px",
+        "#f39db0"
+      ],
+      "name": "--semantic-color-brand-gradient-rose",
+      "rawValue": "#f39db0"
+    },
+    {
+      "candidates": [
+        "rgb(14, 13, 15)",
+        "16px",
+        "var(--primitives-color-neutral-0)"
+      ],
+      "name": "--semantic-color-surface-bg",
+      "rawValue": "var(--primitives-color-neutral-0)"
+    },
+    {
+      "candidates": [
+        "rgb(21, 20, 22)",
+        "16px",
+        "var(--primitives-color-neutral-50)"
+      ],
+      "name": "--semantic-color-surface-default",
+      "rawValue": "var(--primitives-color-neutral-50)"
+    },
+    {
+      "candidates": [
+        "rgb(29, 28, 31)",
+        "16px",
+        "var(--primitives-color-neutral-100)"
+      ],
+      "name": "--semantic-color-surface-raised",
+      "rawValue": "var(--primitives-color-neutral-100)"
+    },
+    {
+      "candidates": [
+        "rgb(29, 28, 31)",
+        "16px",
+        "var(--primitives-color-neutral-100)"
+      ],
+      "name": "--semantic-color-surface-hover",
+      "rawValue": "var(--primitives-color-neutral-100)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.07)",
+        "16px",
+        "rgba(255,255,255,0.07)"
+      ],
+      "name": "--semantic-color-border-default",
+      "rawValue": "rgba(255,255,255,0.07)"
+    },
+    {
+      "candidates": [
+        "rgba(196, 145, 229, 0.14)",
+        "16px",
+        "rgba(196,145,229,0.14)"
+      ],
+      "name": "--semantic-color-border-lavender",
+      "rawValue": "rgba(196,145,229,0.14)"
+    },
+    {
+      "candidates": [
+        "rgba(243, 208, 160, 0.14)",
+        "16px",
+        "rgba(243,208,160,0.14)"
+      ],
+      "name": "--semantic-color-border-amber",
+      "rawValue": "rgba(243,208,160,0.14)"
+    },
+    {
+      "candidates": [
+        "rgb(196, 145, 229)",
+        "16px",
+        "var(--primitives-color-purple-500)"
+      ],
+      "name": "--semantic-color-border-focus",
+      "rawValue": "var(--primitives-color-purple-500)"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "var(--primitives-color-white-full)"
+      ],
+      "name": "--semantic-color-text-primary",
+      "rawValue": "var(--primitives-color-white-full)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.7)",
+        "16px",
+        "var(--primitives-color-white-70)"
+      ],
+      "name": "--semantic-color-text-secondary",
+      "rawValue": "var(--primitives-color-white-70)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.45)",
+        "16px",
+        "var(--primitives-color-white-mid)"
+      ],
+      "name": "--semantic-color-text-muted",
+      "rawValue": "var(--primitives-color-white-mid)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.18)",
+        "16px",
+        "var(--primitives-color-white-low)"
+      ],
+      "name": "--semantic-color-text-dim",
+      "rawValue": "var(--primitives-color-white-low)"
+    },
+    {
+      "candidates": [
+        "rgb(196, 145, 229)",
+        "16px",
+        "var(--primitives-color-purple-500)"
+      ],
+      "name": "--semantic-color-text-lavender",
+      "rawValue": "var(--primitives-color-purple-500)"
+    },
+    {
+      "candidates": [
+        "rgb(243, 208, 160)",
+        "16px",
+        "var(--primitives-color-amber-300)"
+      ],
+      "name": "--semantic-color-text-amber",
+      "rawValue": "var(--primitives-color-amber-300)"
+    },
+    {
+      "candidates": [
+        "rgb(52, 211, 153)",
+        "16px",
+        "#34d399"
+      ],
+      "name": "--semantic-color-status-success",
+      "rawValue": "#34d399"
+    },
+    {
+      "candidates": [
+        "rgb(251, 191, 36)",
+        "16px",
+        "#fbbf24"
+      ],
+      "name": "--semantic-color-status-warning",
+      "rawValue": "#fbbf24"
+    },
+    {
+      "candidates": [
+        "rgb(248, 113, 113)",
+        "16px",
+        "#f87171"
+      ],
+      "name": "--semantic-color-status-error",
+      "rawValue": "#f87171"
+    },
+    {
+      "candidates": [
+        "rgb(96, 165, 250)",
+        "16px",
+        "#60a5fa"
+      ],
+      "name": "--semantic-color-status-info",
+      "rawValue": "#60a5fa"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "var(--primitives-spacing-6)"
+      ],
+      "name": "--semantic-spacing-card-padding",
+      "rawValue": "var(--primitives-spacing-6)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4000",
+        "var(--primitives-spacing-10)"
+      ],
+      "name": "--semantic-spacing-section-gap",
+      "rawValue": "var(--primitives-spacing-10)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "var(--primitives-spacing-3)"
+      ],
+      "name": "--semantic-spacing-component-gap",
+      "rawValue": "var(--primitives-spacing-3)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "8px",
+        "ratio:8.0000",
+        "var(--primitives-borderRadius-lg)"
+      ],
+      "name": "--semantic-borderRadius-card",
+      "rawValue": "var(--primitives-borderRadius-lg)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "8px",
+        "ratio:8.0000",
+        "8"
+      ],
+      "name": "--semantic-borderRadius-item",
+      "rawValue": "8"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "20px",
+        "ratio:20.0000",
+        "20"
+      ],
+      "name": "--semantic-borderRadius-modal",
+      "rawValue": "20"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-borderRadius-button",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "6px",
+        "ratio:6.0000",
+        "var(--primitives-borderRadius-md)"
+      ],
+      "name": "--semantic-borderRadius-input",
+      "rawValue": "var(--primitives-borderRadius-md)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "4px",
+        "ratio:4.0000",
+        "var(--primitives-borderRadius-sm)"
+      ],
+      "name": "--semantic-borderRadius-badge",
+      "rawValue": "var(--primitives-borderRadius-sm)"
+    },
+    {
+      "candidates": [
+        "rgb(82, 39, 202)",
+        "16px",
+        "var(--semantic-color-brand-action)"
+      ],
+      "name": "--semantic-component-button-primary-bg",
+      "rawValue": "var(--semantic-color-brand-action)"
+    },
+    {
+      "candidates": [
+        "rgb(67, 31, 176)",
+        "16px",
+        "var(--primitives-color-violet-600)"
+      ],
+      "name": "--semantic-component-button-primary-bg-hover",
+      "rawValue": "var(--primitives-color-violet-600)"
+    },
+    {
+      "candidates": [
+        "rgb(54, 24, 148)",
+        "16px",
+        "var(--primitives-color-violet-700)"
+      ],
+      "name": "--semantic-component-button-primary-bg-active",
+      "rawValue": "var(--primitives-color-violet-700)"
+    },
+    {
+      "candidates": [
+        "rgb(29, 28, 31)",
+        "16px",
+        "var(--primitives-color-neutral-100)"
+      ],
+      "name": "--semantic-component-button-primary-bg-disabled",
+      "rawValue": "var(--primitives-color-neutral-100)"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "#ffffff"
+      ],
+      "name": "--semantic-component-button-primary-text",
+      "rawValue": "#ffffff"
+    },
+    {
+      "candidates": [
+        "rgb(92, 88, 105)",
+        "16px",
+        "var(--primitives-color-neutral-400)"
+      ],
+      "name": "--semantic-component-button-primary-text-disabled",
+      "rawValue": "var(--primitives-color-neutral-400)"
+    },
+    {
+      "candidates": [
+        "rgba(0, 0, 0, 0)",
+        "16px",
+        "rgba(0,0,0,0)"
+      ],
+      "name": "--semantic-component-button-primary-border",
+      "rawValue": "rgba(0,0,0,0)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.3200",
+        "var(--primitives-spacing-8)"
+      ],
+      "name": "--semantic-component-button-primary-sm-height",
+      "rawValue": "var(--primitives-spacing-8)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1600",
+        "var(--primitives-spacing-4)"
+      ],
+      "name": "--semantic-component-button-primary-sm-padding-x",
+      "rawValue": "var(--primitives-spacing-4)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1600"
+      ],
+      "name": "--semantic-component-button-primary-sm-padding-x-icon",
+      "rawValue": "16px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "12px"
+      ],
+      "name": "--semantic-component-button-primary-sm-font-size",
+      "rawValue": "12px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-primary-sm-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-primary-sm-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4000",
+        "var(--primitives-spacing-10)"
+      ],
+      "name": "--semantic-component-button-primary-md-height",
+      "rawValue": "var(--primitives-spacing-10)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "var(--primitives-spacing-6)"
+      ],
+      "name": "--semantic-component-button-primary-md-padding-x",
+      "rawValue": "var(--primitives-spacing-6)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2000",
+        "var(--primitives-spacing-5)"
+      ],
+      "name": "--semantic-component-button-primary-md-padding-x-icon",
+      "rawValue": "var(--primitives-spacing-5)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1400",
+        "14px"
+      ],
+      "name": "--semantic-component-button-primary-md-font-size",
+      "rawValue": "14px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-primary-md-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-primary-md-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4800",
+        "var(--primitives-spacing-12)"
+      ],
+      "name": "--semantic-component-button-primary-lg-height",
+      "rawValue": "var(--primitives-spacing-12)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2800",
+        "28px"
+      ],
+      "name": "--semantic-component-button-primary-lg-padding-x",
+      "rawValue": "28px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "var(--primitives-spacing-6)"
+      ],
+      "name": "--semantic-component-button-primary-lg-padding-x-icon",
+      "rawValue": "var(--primitives-spacing-6)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1500",
+        "15px"
+      ],
+      "name": "--semantic-component-button-primary-lg-font-size",
+      "rawValue": "15px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-primary-lg-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-primary-lg-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgba(0, 0, 0, 0)",
+        "16px",
+        "rgba(0,0,0,0)"
+      ],
+      "name": "--semantic-component-button-secondary-bg",
+      "rawValue": "rgba(0,0,0,0)"
+    },
+    {
+      "candidates": [
+        "rgb(29, 28, 31)",
+        "16px",
+        "var(--primitives-color-neutral-100)"
+      ],
+      "name": "--semantic-component-button-secondary-bg-hover",
+      "rawValue": "var(--primitives-color-neutral-100)"
+    },
+    {
+      "candidates": [
+        "rgb(42, 40, 48)",
+        "16px",
+        "var(--primitives-color-neutral-200)"
+      ],
+      "name": "--semantic-component-button-secondary-bg-active",
+      "rawValue": "var(--primitives-color-neutral-200)"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "var(--primitives-color-white-full)"
+      ],
+      "name": "--semantic-component-button-secondary-text",
+      "rawValue": "var(--primitives-color-white-full)"
+    },
+    {
+      "candidates": [
+        "rgb(92, 88, 105)",
+        "16px",
+        "var(--primitives-color-neutral-400)"
+      ],
+      "name": "--semantic-component-button-secondary-text-disabled",
+      "rawValue": "var(--primitives-color-neutral-400)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.14)",
+        "16px",
+        "rgba(255,255,255,0.14)"
+      ],
+      "name": "--semantic-component-button-secondary-border",
+      "rawValue": "rgba(255,255,255,0.14)"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.28)",
+        "16px",
+        "rgba(255,255,255,0.28)"
+      ],
+      "name": "--semantic-component-button-secondary-border-hover",
+      "rawValue": "rgba(255,255,255,0.28)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.3200",
+        "var(--primitives-spacing-8)"
+      ],
+      "name": "--semantic-component-button-secondary-sm-height",
+      "rawValue": "var(--primitives-spacing-8)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1600",
+        "var(--primitives-spacing-4)"
+      ],
+      "name": "--semantic-component-button-secondary-sm-padding-x",
+      "rawValue": "var(--primitives-spacing-4)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1600"
+      ],
+      "name": "--semantic-component-button-secondary-sm-padding-x-icon",
+      "rawValue": "16px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "12px"
+      ],
+      "name": "--semantic-component-button-secondary-sm-font-size",
+      "rawValue": "12px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-secondary-sm-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-secondary-sm-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4000",
+        "var(--primitives-spacing-10)"
+      ],
+      "name": "--semantic-component-button-secondary-md-height",
+      "rawValue": "var(--primitives-spacing-10)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "var(--primitives-spacing-6)"
+      ],
+      "name": "--semantic-component-button-secondary-md-padding-x",
+      "rawValue": "var(--primitives-spacing-6)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2000",
+        "var(--primitives-spacing-5)"
+      ],
+      "name": "--semantic-component-button-secondary-md-padding-x-icon",
+      "rawValue": "var(--primitives-spacing-5)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1400",
+        "14px"
+      ],
+      "name": "--semantic-component-button-secondary-md-font-size",
+      "rawValue": "14px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-secondary-md-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-secondary-md-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4800",
+        "var(--primitives-spacing-12)"
+      ],
+      "name": "--semantic-component-button-secondary-lg-height",
+      "rawValue": "var(--primitives-spacing-12)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2800",
+        "28px"
+      ],
+      "name": "--semantic-component-button-secondary-lg-padding-x",
+      "rawValue": "28px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "var(--primitives-spacing-6)"
+      ],
+      "name": "--semantic-component-button-secondary-lg-padding-x-icon",
+      "rawValue": "var(--primitives-spacing-6)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1500",
+        "15px"
+      ],
+      "name": "--semantic-component-button-secondary-lg-font-size",
+      "rawValue": "15px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-secondary-lg-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-secondary-lg-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgba(0, 0, 0, 0)",
+        "16px",
+        "rgba(0,0,0,0)"
+      ],
+      "name": "--semantic-component-button-ghost-bg",
+      "rawValue": "rgba(0,0,0,0)"
+    },
+    {
+      "candidates": [
+        "rgb(29, 28, 31)",
+        "16px",
+        "var(--primitives-color-neutral-100)"
+      ],
+      "name": "--semantic-component-button-ghost-bg-hover",
+      "rawValue": "var(--primitives-color-neutral-100)"
+    },
+    {
+      "candidates": [
+        "rgb(42, 40, 48)",
+        "16px",
+        "var(--primitives-color-neutral-200)"
+      ],
+      "name": "--semantic-component-button-ghost-bg-active",
+      "rawValue": "var(--primitives-color-neutral-200)"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "var(--semantic-component-button-secondary-text)"
+      ],
+      "name": "--semantic-component-button-ghost-text",
+      "rawValue": "var(--semantic-component-button-secondary-text)"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "var(--semantic-component-button-secondary-text)"
+      ],
+      "name": "--semantic-component-button-ghost-text-hover",
+      "rawValue": "var(--semantic-component-button-secondary-text)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.3200",
+        "var(--primitives-spacing-8)"
+      ],
+      "name": "--semantic-component-button-ghost-sm-height",
+      "rawValue": "var(--primitives-spacing-8)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1600",
+        "var(--primitives-spacing-4)"
+      ],
+      "name": "--semantic-component-button-ghost-sm-padding-x",
+      "rawValue": "var(--primitives-spacing-4)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1600"
+      ],
+      "name": "--semantic-component-button-ghost-sm-padding-x-icon",
+      "rawValue": "16px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "12px"
+      ],
+      "name": "--semantic-component-button-ghost-sm-font-size",
+      "rawValue": "12px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-ghost-sm-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-ghost-sm-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4000",
+        "var(--primitives-spacing-10)"
+      ],
+      "name": "--semantic-component-button-ghost-md-height",
+      "rawValue": "var(--primitives-spacing-10)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "var(--primitives-spacing-6)"
+      ],
+      "name": "--semantic-component-button-ghost-md-padding-x",
+      "rawValue": "var(--primitives-spacing-6)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2000",
+        "var(--primitives-spacing-5)"
+      ],
+      "name": "--semantic-component-button-ghost-md-padding-x-icon",
+      "rawValue": "var(--primitives-spacing-5)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1400",
+        "14px"
+      ],
+      "name": "--semantic-component-button-ghost-md-font-size",
+      "rawValue": "14px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-ghost-md-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-ghost-md-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4800",
+        "var(--primitives-spacing-12)"
+      ],
+      "name": "--semantic-component-button-ghost-lg-height",
+      "rawValue": "var(--primitives-spacing-12)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2800",
+        "28px"
+      ],
+      "name": "--semantic-component-button-ghost-lg-padding-x",
+      "rawValue": "28px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "var(--primitives-spacing-6)"
+      ],
+      "name": "--semantic-component-button-ghost-lg-padding-x-icon",
+      "rawValue": "var(--primitives-spacing-6)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1500",
+        "15px"
+      ],
+      "name": "--semantic-component-button-ghost-lg-font-size",
+      "rawValue": "15px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0600",
+        "6px"
+      ],
+      "name": "--semantic-component-button-ghost-lg-icon-gap",
+      "rawValue": "6px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "999px",
+        "ratio:999.0000",
+        "var(--primitives-borderRadius-full)"
+      ],
+      "name": "--semantic-component-button-ghost-lg-radius",
+      "rawValue": "var(--primitives-borderRadius-full)"
+    },
+    {
+      "candidates": [
+        "rgb(41, 20, 51)",
+        "16px",
+        "var(--primitives-color-purple-900)"
+      ],
+      "name": "--semantic-component-button-gradient-text",
+      "rawValue": "var(--primitives-color-purple-900)"
+    },
+    {
+      "candidates": [
+        "rgb(92, 88, 105)",
+        "16px",
+        "var(--primitives-color-neutral-400)"
+      ],
+      "name": "--semantic-component-button-gradient-text-disabled",
+      "rawValue": "var(--primitives-color-neutral-400)"
+    },
+    {
+      "candidates": [
+        "rgb(243, 208, 160)",
+        "16px",
+        "var(--semantic-color-brand-amber)"
+      ],
+      "name": "--semantic-component-button-gradient-default-from",
+      "rawValue": "var(--semantic-color-brand-amber)"
+    },
+    {
+      "candidates": [
+        "rgb(243, 157, 176)",
+        "16px",
+        "var(--semantic-color-brand-gradient-rose)"
+      ],
+      "name": "--semantic-component-button-gradient-default-mid",
+      "rawValue": "var(--semantic-color-brand-gradient-rose)"
+    },
+    {
+      "candidates": [
+        "rgb(196, 145, 229)",
+        "16px",
+        "var(--semantic-color-brand-lavender)"
+      ],
+      "name": "--semantic-component-button-gradient-default-to",
+      "rawValue": "var(--semantic-color-brand-lavender)"
+    },
+    {
+      "candidates": [
+        "rgb(245, 217, 174)",
+        "16px",
+        "var(--primitives-color-amber-200)"
+      ],
+      "name": "--semantic-component-button-gradient-hover-from",
+      "rawValue": "var(--primitives-color-amber-200)"
+    },
+    {
+      "candidates": [
+        "color(srgb 0.96 0.673333 0.736667)",
+        "16px",
+        "color-mix(in srgb, var(--semantic-color-brand-gradient-rose) 85%, white)"
+      ],
+      "name": "--semantic-component-button-gradient-hover-mid",
+      "rawValue": "color-mix(in srgb, var(--semantic-color-brand-gradient-rose) 85%, white)"
+    },
+    {
+      "candidates": [
+        "rgb(212, 175, 240)",
+        "16px",
+        "var(--primitives-color-purple-200)"
+      ],
+      "name": "--semantic-component-button-gradient-hover-to",
+      "rawValue": "var(--primitives-color-purple-200)"
+    },
+    {
+      "candidates": [
+        "rgb(234, 184, 106)",
+        "16px",
+        "var(--primitives-color-amber-400)"
+      ],
+      "name": "--semantic-component-button-gradient-active-from",
+      "rawValue": "var(--primitives-color-amber-400)"
+    },
+    {
+      "candidates": [
+        "color(srgb 0.81 0.523333 0.586667)",
+        "16px",
+        "color-mix(in srgb, var(--semantic-color-brand-gradient-rose) 85%, black)"
+      ],
+      "name": "--semantic-component-button-gradient-active-mid",
+      "rawValue": "color-mix(in srgb, var(--semantic-color-brand-gradient-rose) 85%, black)"
+    },
+    {
+      "candidates": [
+        "rgb(176, 111, 223)",
+        "16px",
+        "var(--primitives-color-purple-400)"
+      ],
+      "name": "--semantic-component-button-gradient-active-to",
+      "rawValue": "var(--primitives-color-purple-400)"
+    },
+    {
+      "candidates": [
+        "rgb(42, 40, 48)",
+        "16px",
+        "var(--primitives-color-neutral-200)"
+      ],
+      "name": "--semantic-component-navbar-bg",
+      "rawValue": "var(--primitives-color-neutral-200)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.4000",
+        "40px"
+      ],
+      "name": "--semantic-component-navbar-height",
+      "rawValue": "40px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0400",
+        "4px"
+      ],
+      "name": "--semantic-component-navbar-padding-x",
+      "rawValue": "4px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0400",
+        "4px"
+      ],
+      "name": "--semantic-component-navbar-gap",
+      "rawValue": "4px"
+    },
+    {
+      "candidates": [
+        "rgba(0, 0, 0, 0)",
+        "16px",
+        "rgba(0,0,0,0)"
+      ],
+      "name": "--semantic-component-navitem-default-bg",
+      "rawValue": "rgba(0,0,0,0)"
+    },
+    {
+      "candidates": [
+        "rgb(33, 31, 36)",
+        "16px",
+        "#211f24"
+      ],
+      "name": "--semantic-component-navitem-default-bg-hover",
+      "rawValue": "#211f24"
+    },
+    {
+      "candidates": [
+        "rgba(255, 255, 255, 0.45)",
+        "16px",
+        "var(--primitives-color-white-mid)"
+      ],
+      "name": "--semantic-component-navitem-default-text",
+      "rawValue": "var(--primitives-color-white-mid)"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "var(--primitives-color-white-full)"
+      ],
+      "name": "--semantic-component-navitem-default-text-hover",
+      "rawValue": "var(--primitives-color-white-full)"
+    },
+    {
+      "candidates": [
+        "rgba(196, 145, 229, 0.2)",
+        "16px",
+        "rgba(196,145,229,0.2)"
+      ],
+      "name": "--semantic-component-navitem-active-bg",
+      "rawValue": "rgba(196,145,229,0.2)"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "var(--primitives-color-white-full)"
+      ],
+      "name": "--semantic-component-navitem-active-text",
+      "rawValue": "var(--primitives-color-white-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.3200",
+        "32px"
+      ],
+      "name": "--semantic-component-navitem-height",
+      "rawValue": "32px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1800",
+        "18px"
+      ],
+      "name": "--semantic-component-navitem-padding-x",
+      "rawValue": "18px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0200",
+        "2px"
+      ],
+      "name": "--semantic-component-navitem-padding-y",
+      "rawValue": "2px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:1.0000",
+        "100px"
+      ],
+      "name": "--semantic-component-navitem-radius",
+      "rawValue": "100px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "12px"
+      ],
+      "name": "--semantic-component-navitem-font-size",
+      "rawValue": "12px"
+    },
+    {
+      "candidates": [
+        "rgb(32, 32, 34)",
+        "16px",
+        "#202022"
+      ],
+      "name": "--semantic-component-tag-bg",
+      "rawValue": "#202022"
+    },
+    {
+      "candidates": [
+        "rgb(255, 255, 255)",
+        "16px",
+        "var(--primitives-color-white-full)"
+      ],
+      "name": "--semantic-component-tag-label",
+      "rawValue": "var(--primitives-color-white-full)"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "12px"
+      ],
+      "name": "--semantic-component-tag-padding-x",
+      "rawValue": "12px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0400",
+        "4px"
+      ],
+      "name": "--semantic-component-tag-padding-y",
+      "rawValue": "4px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0800",
+        "8px"
+      ],
+      "name": "--semantic-component-tag-gap",
+      "rawValue": "8px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.2400",
+        "24px"
+      ],
+      "name": "--semantic-component-tag-height",
+      "rawValue": "24px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0800",
+        "8px"
+      ],
+      "name": "--semantic-component-tag-radius",
+      "rawValue": "8px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.1200",
+        "12px"
+      ],
+      "name": "--semantic-component-tag-font-size",
+      "rawValue": "12px"
+    },
+    {
+      "candidates": [
+        "rgb(0, 0, 0)",
+        "16px",
+        "ratio:0.0800",
+        "8px"
+      ],
+      "name": "--semantic-component-tag-dot-size",
+      "rawValue": "8px"
+    },
+    {
+      "candidates": [
+        "rgb(177, 255, 94)",
+        "16px",
+        "#b1ff5e"
+      ],
+      "name": "--semantic-component-tag-dot-active",
+      "rawValue": "#b1ff5e"
+    },
+    {
+      "candidates": [
+        "rgb(251, 191, 36)",
+        "16px",
+        "#fbbf24"
+      ],
+      "name": "--semantic-component-tag-dot-warning",
+      "rawValue": "#fbbf24"
+    },
+    {
+      "candidates": [
+        "rgb(248, 113, 113)",
+        "16px",
+        "#f87171"
+      ],
+      "name": "--semantic-component-tag-dot-error",
+      "rawValue": "#f87171"
+    },
+    {
+      "candidates": [
+        "rgb(153, 144, 169)",
+        "16px",
+        "#9990a9"
+      ],
+      "name": "--semantic-component-tag-dot-neutral",
+      "rawValue": "#9990a9"
+    },
+    {
+      "candidates": [
+        "rgb(196, 145, 229)",
+        "16px",
+        "var(--semantic-color-brand-lavender)"
+      ],
+      "name": "--semantic-component-tag-dot-lavender",
+      "rawValue": "var(--semantic-color-brand-lavender)"
+    }
+  ],
+  "unmatchedCount": 21
+}

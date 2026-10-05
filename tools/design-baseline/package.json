@@ -1,0 +1,20 @@
+{
+  "name": "@armada/design-baseline",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Playwright tooling that renders the committer and @armada/ui showcase from production builds and extracts deterministic computed-style baselines for the design-system migration (design/rendered-baseline).",
+  "scripts": {
+    "capture": "tsx src/run.ts",
+    "capture:committer": "tsx src/run.ts --target=committer",
+    "capture:showcase": "tsx src/run.ts --target=showcase",
+    "compare": "tsx src/compare.ts",
+    "vocabulary": "tsx src/vocabulary.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "playwright": "^1.63.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.3"
+  }
+}
