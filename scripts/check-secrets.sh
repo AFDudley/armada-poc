@@ -17,6 +17,7 @@ ALLOWED_FILES=(
   "specs/TX_SIGNING.md"             # BN254 field-order, Baby Jubjub subgroup order, and boundary test vectors (publicly known math)
   "config/secrets.env.template"  # Placeholder mnemonic ("word word word..."); real secret lives in gitignored secrets.env
   "relayer/test/modules/railgun-wallet.test.ts"  # Anvil's publicly-known test mnemonic — required to prove deterministic derivation
+  "tools/design-baseline/src/anvil.ts"  # Anvil's publicly-known test mnemonic — in-container isolated test chain only
   "scripts/multicall3-bytecode.ts"  # Canonical Multicall3 public runtime bytecode (not a key) — etched onto local Anvil
   "scripts/capture/vectors/keyset-vectors.json"  # Phase 0 keyset vectors derived from FIXED TEST SEEDS (not real secrets); the live-testnet crosscheck stores only the public 0zk address
   "scripts/capture/spike-claim-as-transfer.ts"  # Phase 0 spike — publicly-known Anvil + BIP-39 test mnemonics only
