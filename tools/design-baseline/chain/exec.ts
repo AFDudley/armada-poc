@@ -16,9 +16,24 @@ const REPO_ROOT = path.resolve(__dirname, "../../..");
 
 type Action =
   | { op: "addSeeds"; indices: number[] }
+  | { op: "fundUsdc"; indices: number[] }
   | { op: "advanceToWindowStart" }
   | { op: "advancePastWindowEnd" }
   | { op: "bulkCommit"; startIndex: number; count: number; hop: number; capUsd: number }
+  // Hop-0's allocation is ceiling-capped at 47% of saleSize regardless of how much hop-0
+  // oversubscribes (ArmadaCrowdfund._computeHopAllocations) — at BASE_SALE ($1.2M) that ceiling is
+  // only $564,000, well under MIN_SALE ($1M) on its own. Reaching a genuine (non-refund-mode)
+  // finalize needs real hop-1 demand too, which requires an on-chain `invite(invitee, inviterHop)`
+  // from an already-eligible address before the invitee can `commit()` at the next hop.
+  | {
+      op: "inviteAndCommit";
+      inviterIndices: number[];
+      inviterHop: number;
+      inviteesPerInviter: number;
+      inviteeStartIndex: number;
+      hop: number;
+      capUsd: number;
+    }
   | { op: "finalize" }
   | { op: "cancel" }
   | { op: "printState" };
@@ -51,7 +66,29 @@ async function main() {
         const addresses = action.indices.map((i) => signers[i].address);
         const tx = await crowdfund.addSeeds(addresses);
         await tx.wait();
-        log("addSeeds", `added ${addresses.length} seed(s): ${addresses.join(", ")}`);
+        // Whitelisting alone does not fund the wallet — the real UI commit flow (approve +
+        // commit, driven interactively) checks the connected wallet's actual USDC balance
+        // (`overBalance` in Step2Commit.tsx), so every seeded address needs USDC on hand before
+        // "Review" can ever be enabled. $1,000,000 comfortably exceeds any per-hop cap.
+        const fundAmount = ethers.parseUnits("1000000", 6);
+        for (const address of addresses) {
+          const mintTx = await usdc.mint(address, fundAmount);
+          await mintTx.wait();
+        }
+        log("addSeeds", `added ${addresses.length} seed(s), funded $1,000,000 USDC each: ${addresses.join(", ")}`);
+        break;
+      }
+      case "fundUsdc": {
+        // For addresses that become eligible WITHOUT a direct `addSeeds` whitelist call (e.g. an
+        // invite-link redeemer, pre-validated by the signed link itself) — same $1,000,000 mint
+        // as `addSeeds`, factored out so both paths fund identically rather than drifting.
+        const addresses = action.indices.map((i) => signers[i].address);
+        const fundAmount = ethers.parseUnits("1000000", 6);
+        for (const address of addresses) {
+          const mintTx = await usdc.mint(address, fundAmount);
+          await mintTx.wait();
+        }
+        log("fundUsdc", `funded $1,000,000 USDC each: ${addresses.join(", ")}`);
         break;
       }
       case "advanceToWindowStart": {
@@ -98,6 +135,35 @@ async function main() {
           "bulkCommit",
           `${participants.length} participant(s) x $${action.capUsd.toLocaleString()} = ` +
             `$${(participants.length * action.capUsd).toLocaleString()} (hop ${action.hop})`,
+        );
+        break;
+      }
+      case "inviteAndCommit": {
+        const amount = ethers.parseUnits(action.capUsd.toString(), 6);
+        let nextInviteeIndex = action.inviteeStartIndex;
+        const invitees: typeof signers = [];
+        for (const inviterIndex of action.inviterIndices) {
+          const inviter = signers[inviterIndex];
+          for (let k = 0; k < action.inviteesPerInviter; k++) {
+            const invitee = signers[nextInviteeIndex];
+            nextInviteeIndex++;
+            const inviteTx = await crowdfund.connect(inviter).invite(invitee.address, action.inviterHop);
+            await inviteTx.wait();
+            invitees.push(invitee);
+          }
+        }
+        for (const invitee of invitees) {
+          const mintTx = await usdc.mint(invitee.address, amount);
+          await mintTx.wait();
+          const appTx = await usdc.connect(invitee).approve(crowdfundAddr, amount);
+          await appTx.wait();
+          const cmtTx = await crowdfund.connect(invitee).commit(action.hop, amount);
+          await cmtTx.wait();
+        }
+        log(
+          "inviteAndCommit",
+          `${invitees.length} invitee(s) from ${action.inviterIndices.length} inviter(s) (hop ${action.inviterHop}→${action.hop}) x $${action.capUsd.toLocaleString()} = ` +
+            `$${(invitees.length * action.capUsd).toLocaleString()}`,
         );
         break;
       }

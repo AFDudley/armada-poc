@@ -6,7 +6,14 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 
 export const ANVIL_RPC_URL = 'http://127.0.0.1:8545'
-export const ANVIL_MNEMONIC = 'test test test test test test test test test test test junk'
+// No `--mnemonic`/`--mnemonic-seed-unsafe` flag is passed below — Anvil's own built-in default
+// (used whenever neither flag is given) deterministically derives the SAME well-known test
+// accounts every start (account 0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266), which is exactly
+// the account `config/local.env`'s committed `DEPLOYER_PRIVATE_KEY` controls — the repo's own
+// deploy scripts (`source config/local.env && npm run deploy:*`, reused verbatim by chainPlan.ts)
+// need that account funded to pay gas. This tool never writes a mnemonic phrase or private key of
+// its own anywhere; `getAccounts()` below reads whichever addresses Anvil generated back via
+// `eth_accounts` rather than deriving or duplicating them.
 // Fixed genesis block timestamp — 2023-11-14T22:13:20Z. Any value works (nothing anchors to a
 // real calendar date); fixing it means the FIRST block's timestamp doesn't depend on wall-clock
 // time at anvil startup, and every subsequent block's timestamp (auto-mine assigns
@@ -15,7 +22,7 @@ export const ANVIL_MNEMONIC = 'test test test test test test test test test test
 // many transactions this pipeline sends — not of when it happened to run. See README.md
 // "Determinism" for the one thing this does NOT cover (the device-clock-anchored countdown text).
 export const ANVIL_GENESIS_TIMESTAMP = 1_700_000_000
-export const ANVIL_ACCOUNT_COUNT = 120
+export const ANVIL_ACCOUNT_COUNT = 200
 
 function delay(ms: number): Promise<void> {
   const { promise, resolve } = Promise.withResolvers<void>()
@@ -46,7 +53,6 @@ export async function startAnvil(): Promise<ChildProcess> {
       '--host', '127.0.0.1',
       '--port', '8545',
       '--chain-id', '31337',
-      '--mnemonic', ANVIL_MNEMONIC,
       '--accounts', String(ANVIL_ACCOUNT_COUNT),
       '--balance', '10000',
       '--timestamp', String(ANVIL_GENESIS_TIMESTAMP),
@@ -87,7 +93,7 @@ export async function stopAnvil(child: ChildProcess): Promise<void> {
  * `http://127.0.0.1:8545` inside THIS process is really our own freshly-started Anvil — not some
  * other process that happened to answer on the port. Aborts the whole pipeline otherwise.
  */
-export async function assertChainIdentity(): Promise<void> {
+export async function assertChainIdentity(): Promise<{ chainId: string; clientVersion: string }> {
   const chainId = await rpc('eth_chainId')
   const clientVersion = await rpc('web3_clientVersion')
   if (chainId !== '0x7a69') {
@@ -97,6 +103,7 @@ export async function assertChainIdentity(): Promise<void> {
     throw new Error(`REFUSING TO CONTINUE: web3_clientVersion returned ${String(clientVersion)}, expected to contain "anvil"`)
   }
   console.log(`[anvil] identity confirmed — chainId=${chainId} clientVersion=${clientVersion}`)
+  return { chainId, clientVersion }
 }
 
 /** Returns Anvil's mnemonic-derived account addresses in index order (account 0 first) — reused

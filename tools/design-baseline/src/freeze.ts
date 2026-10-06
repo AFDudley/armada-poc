@@ -47,6 +47,8 @@ export async function freezeMotion(page: Page): Promise<void> {
 /** Navigate then inject the freeze stylesheet (addStyleTag only applies to the
  *  current document, so it must run after each goto). */
 export async function gotoFrozen(page: Page, url: string): Promise<void> {
-  await page.goto(url, { waitUntil: 'networkidle' })
+  // 60s, not Playwright's 30s default — the `main` scenario's finalized/claim states load event
+  // history for 160+ on-chain participants, which can keep the network busy past 30s.
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 60_000 })
   await page.addStyleTag({ content: FREEZE_CSS })
 }

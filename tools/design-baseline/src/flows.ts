@@ -78,12 +78,27 @@ export async function approveAndCommit(page: Page): Promise<void> {
   await page.getByText('Confirmed', { exact: false }).first().waitFor({ timeout: 30_000 }).catch(() => undefined)
 }
 
-/** Reads the full visible body text — used to extract the generated invite link URL (its exact
- *  text content isn't behind a stable selector we've mapped, but it's the only `/invite?` URL on
- *  the page). */
+/** Reads the generated invite link's full ABSOLUTE URL straight from the DOM. The confirmation
+ *  screen's `.createdLinkPath` element carries it as `title={createdLink.link}` (the visible text
+ *  is just the path — `inviteLinkPath()` in InviteActionScreen.tsx strips the origin for
+ *  display). The My Position "Your invites" list (`InvitesCard.tsx`) ALSO renders a `title`
+ *  attribute for the same pending invite via `MiddleTruncateText`, but with the PATH ONLY (no
+ *  origin) — both are visible simultaneously, so matching on "starts with http" (not just
+ *  "contains /invite?") is required to land on the confirmation screen's element, not that one.
+ *  Reading the attribute directly also sidesteps `document.body.innerText`, which can insert a
+ *  spurious line break mid-string for long unbroken hex runs under this screen's `word-break`
+ *  CSS. */
 export async function extractInviteLinkFromPage(page: Page): Promise<string> {
-  const bodyText = await page.evaluate(() => document.body.innerText)
-  const match = bodyText.match(/https?:\/\/[^\s]*\/invite\?[^\s]+/)
-  if (!match) throw new Error(`no invite link found in page text:\n${bodyText.slice(0, 2000)}`)
-  return match[0]
+  const result = await page.evaluate(() => {
+    const all: string[] = []
+    for (const el of document.querySelectorAll<HTMLElement>('[title]')) {
+      const title = el.getAttribute('title') ?? ''
+      if (/\/invite\?/.test(title)) all.push(title)
+    }
+    return { all, link: all.find((t) => /^https?:\/\//.test(t)) ?? null }
+  })
+  if (!result.link) {
+    throw new Error(`no invite link found. candidate titles: ${JSON.stringify(result.all)}`)
+  }
+  return result.link
 }

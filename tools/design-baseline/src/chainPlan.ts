@@ -30,9 +30,19 @@ export interface CrowdfundDeploymentManifest {
 
 export type ChainAction =
   | { op: 'addSeeds'; indices: number[] }
+  | { op: 'fundUsdc'; indices: number[] }
   | { op: 'advanceToWindowStart' }
   | { op: 'advancePastWindowEnd' }
   | { op: 'bulkCommit'; startIndex: number; count: number; hop: number; capUsd: number }
+  | {
+      op: 'inviteAndCommit'
+      inviterIndices: number[]
+      inviterHop: number
+      inviteesPerInviter: number
+      inviteeStartIndex: number
+      hop: number
+      capUsd: number
+    }
   | { op: 'finalize' }
   | { op: 'cancel' }
   | { op: 'printState' }

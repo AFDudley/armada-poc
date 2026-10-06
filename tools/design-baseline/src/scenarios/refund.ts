@@ -7,6 +7,7 @@ import { VIEWPORTS, INTERACTION_VIEWPORTS } from '../breakpoints.ts'
 import { freezeMotion } from '../freeze.ts'
 import { installInjectedWallet } from '../wallet.ts'
 import { openCommitter, captureAcrossViewports } from '../scenarioHelpers.ts'
+import type { CaptureResult } from '../capture.ts'
 import { connectWallet, openParticipate, passParticipateIntroIfPresent, fillMaxAmountAndReview, approveAndCommit, logVisibleHeadings } from '../flows.ts'
 import { runChainPlan } from '../chainPlan.ts'
 import { ANVIL_RPC_URL, getAccounts } from '../anvil.ts'
@@ -18,7 +19,12 @@ export async function runRefundScenario(
   browser: Browser,
   previewUrl: string,
   outDir: string,
-): Promise<void> {
+): Promise<CaptureResult[]> {
+  const results: CaptureResult[] = []
+  const capture = async (page: Parameters<typeof captureAcrossViewports>[0], state: string, viewports: typeof VIEWPORTS) => {
+    results.push(...(await captureAcrossViewports(page, outDir, state, viewports)))
+  }
+
   const accounts = await getAccounts()
   const walletZ = accounts[1]
 
@@ -49,19 +55,20 @@ export async function runRefundScenario(
 
   await openCommitter(page, previewUrl, '/')
   await connectWallet(page)
-  await captureAcrossViewports(page, outDir, 'refund-mode-hero', VIEWPORTS)
+  await capture(page, 'refund-mode-hero', VIEWPORTS)
 
   await openCommitter(page, previewUrl, '/?view=claim')
   await connectWallet(page)
   await logVisibleHeadings(page, 'refund scenario — claim intro')
-  await captureAcrossViewports(page, outDir, 'refund-mode-claim-intro', INTERACTION_VIEWPORTS)
+  await capture(page, 'refund-mode-claim-intro', INTERACTION_VIEWPORTS)
 
   await page.getByRole('button', { name: /^Claim .* refund$/ }).click()
   await page.getByRole('button', { name: 'Done', exact: true }).waitFor({ timeout: 30_000 })
-  await captureAcrossViewports(page, outDir, 'refund-mode-claim-done', INTERACTION_VIEWPORTS)
+  await capture(page, 'refund-mode-claim-done', INTERACTION_VIEWPORTS)
 
   await openCommitter(page, previewUrl, '/?view=myposition')
-  await captureAcrossViewports(page, outDir, 'refund-mode-my-position', VIEWPORTS)
+  await capture(page, 'refund-mode-my-position', VIEWPORTS)
 
   await ctx.close()
+  return results
 }

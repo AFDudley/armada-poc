@@ -1,12 +1,15 @@
-// ABOUTME: CLI entry point — builds+previews the committer and/or showcase targets and
-// ABOUTME: captures every defined state×viewport into design-baseline/<target>/.
+// ABOUTME: Chain-free capture driver — builds+previews the committer and/or showcase targets and
+// ABOUTME: captures every defined state×viewport into design-baseline/<target>/. `captureCommitter`
+// ABOUTME: / `captureShowcase` are the reusable entry points (used by pipeline.ts for the single
+// ABOUTME: documented `docker/run.sh` command); `main()` below is a thin CLI wrapper for standalone
+// ABOUTME: regeneration (`npx tsx src/run.ts`).
 
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { launchChromium } from './browser.ts'
 import { runBuild, startPreview } from './proc.ts'
 import { gotoFrozen, freezeMotion } from './freeze.ts'
-import { captureState } from './capture.ts'
+import { captureState, type CaptureResult } from './capture.ts'
 import { COMMITTER_WORKSPACE, COMMITTER_STATES } from './targets/committer.ts'
 import { SHOWCASE_WORKSPACE, SHOWCASE_STATES } from './targets/showcase.ts'
 
@@ -36,15 +39,17 @@ function parseArgs(argv: readonly string[]): CliArgs {
   return { target, outDir }
 }
 
-async function captureCommitter(outDir: string): Promise<number> {
+/** Builds + captures both chain-free committer states (`prelaunch`, `deploy-error`) into
+ *  `outDir/committer/`. Returns one result per state×viewport. */
+export async function captureCommitter(repoRoot: string, outDir: string): Promise<CaptureResult[]> {
   const browser = await launchChromium()
-  let total = 0
+  const results: CaptureResult[] = []
   try {
     for (const state of COMMITTER_STATES) {
       console.log(`[committer] building "${state.name}" (${JSON.stringify(state.env)})`)
-      runBuild(REPO_ROOT, COMMITTER_WORKSPACE, state.env)
+      runBuild(repoRoot, COMMITTER_WORKSPACE, state.env)
 
-      const server = await startPreview(REPO_ROOT, COMMITTER_WORKSPACE, COMMITTER_PORT)
+      const server = await startPreview(repoRoot, COMMITTER_WORKSPACE, COMMITTER_PORT)
       try {
         const context = await browser.newContext()
         const page = await context.newPage()
@@ -54,7 +59,7 @@ async function captureCommitter(outDir: string): Promise<number> {
         for (const viewport of state.viewports) {
           const result = await captureState(page, path.join(outDir, 'committer'), state.name, viewport)
           console.log(`[committer] ${state.name}@${viewport.id} — ${result.elementCount} elements`)
-          total += 1
+          results.push(result)
         }
         await context.close()
       } finally {
@@ -64,14 +69,16 @@ async function captureCommitter(outDir: string): Promise<number> {
   } finally {
     await browser.close()
   }
-  return total
+  return results
 }
 
-async function captureShowcase(outDir: string): Promise<number> {
+/** Builds + captures every showcase layout/interaction state into `outDir/showcase/`. Returns
+ *  one result per state×viewport. */
+export async function captureShowcase(repoRoot: string, outDir: string): Promise<CaptureResult[]> {
   const browser = await launchChromium()
-  let total = 0
-  runBuild(REPO_ROOT, SHOWCASE_WORKSPACE, {})
-  const server = await startPreview(REPO_ROOT, SHOWCASE_WORKSPACE, SHOWCASE_PORT)
+  const results: CaptureResult[] = []
+  runBuild(repoRoot, SHOWCASE_WORKSPACE, {})
+  const server = await startPreview(repoRoot, SHOWCASE_WORKSPACE, SHOWCASE_PORT)
   try {
     for (const state of SHOWCASE_STATES) {
       const context = await browser.newContext()
@@ -88,7 +95,7 @@ async function captureShowcase(outDir: string): Promise<number> {
           state.prepare,
         )
         console.log(`[showcase] ${state.name}@${viewport.id} — ${result.elementCount} elements`)
-        total += 1
+        results.push(result)
       }
       await context.close()
     }
@@ -96,22 +103,26 @@ async function captureShowcase(outDir: string): Promise<number> {
     await server.stop()
     await browser.close()
   }
-  return total
+  return results
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
   let total = 0
   if (args.target === 'all' || args.target === 'committer') {
-    total += await captureCommitter(args.outDir)
+    total += (await captureCommitter(REPO_ROOT, args.outDir)).length
   }
   if (args.target === 'all' || args.target === 'showcase') {
-    total += await captureShowcase(args.outDir)
+    total += (await captureShowcase(REPO_ROOT, args.outDir)).length
   }
   console.log(`\ndone — ${total} state×viewport captures written under ${args.outDir}`)
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exitCode = 1
-})
+// Only run the CLI wrapper when this module is the direct entry point — pipeline.ts imports
+// `captureCommitter`/`captureShowcase` without wanting this to fire.
+if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) => {
+    console.error(err)
+    process.exitCode = 1
+  })
+}
