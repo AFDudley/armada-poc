@@ -22973,7 +22973,7 @@
       "path": "body>#root>main:nth-of-type(1)>section:nth-of-type(5)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)",
       "rect": {
         "height": 10,
-        "width": 115.59,
+        "width": 116.42,
         "x": 57,
         "y": 2212
       },
@@ -23050,7 +23050,7 @@
         "paddingTop": "0px",
         "pointerEvents": "none",
         "position": "absolute",
-        "right": "145.406px",
+        "right": "144.578px",
         "rowGap": "normal",
         "textAlign": "start",
         "textDecorationColor": "rgb(255, 255, 255)",
@@ -23060,11 +23060,11 @@
         "textTransform": "none",
         "top": "0px",
         "transform": "none",
-        "transformOrigin": "57.7969px 5px",
+        "transformOrigin": "58.2109px 5px",
         "transition": "all",
         "visibility": "visible",
         "whiteSpace": "normal",
-        "width": "115.594px",
+        "width": "116.422px",
         "zIndex": "1"
       }
     },
@@ -28319,7 +28319,7 @@
       "path": "body>#root>main:nth-of-type(1)>section:nth-of-type(5)>div:nth-of-type(4)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)",
       "rect": {
         "height": 10,
-        "width": 115.59,
+        "width": 116.42,
         "x": 57,
         "y": 2822
       },
@@ -28396,7 +28396,7 @@
         "paddingTop": "0px",
         "pointerEvents": "none",
         "position": "absolute",
-        "right": "145.406px",
+        "right": "144.578px",
         "rowGap": "normal",
         "textAlign": "start",
         "textDecorationColor": "rgb(255, 255, 255)",
@@ -28406,11 +28406,11 @@
         "textTransform": "none",
         "top": "0px",
         "transform": "none",
-        "transformOrigin": "57.7969px 5px",
+        "transformOrigin": "58.2109px 5px",
         "transition": "all",
         "visibility": "visible",
         "whiteSpace": "normal",
-        "width": "115.594px",
+        "width": "116.422px",
         "zIndex": "1"
       }
     },

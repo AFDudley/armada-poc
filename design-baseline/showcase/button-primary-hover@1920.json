@@ -22973,7 +22973,7 @@
       "path": "body>#root>main:nth-of-type(1)>section:nth-of-type(5)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)",
       "rect": {
         "height": 10,
-        "width": 253.25,
+        "width": 253.28,
         "x": 435,
         "y": 1573
       },
@@ -23050,7 +23050,7 @@
         "paddingTop": "0px",
         "pointerEvents": "none",
         "position": "absolute",
-        "right": "278.75px",
+        "right": "278.719px",
         "rowGap": "normal",
         "textAlign": "start",
         "textDecorationColor": "rgb(255, 255, 255)",
@@ -23060,11 +23060,11 @@
         "textTransform": "none",
         "top": "0px",
         "transform": "none",
-        "transformOrigin": "126.625px 5px",
+        "transformOrigin": "126.641px 5px",
         "transition": "all",
         "visibility": "visible",
         "whiteSpace": "normal",
-        "width": "253.25px",
+        "width": "253.281px",
         "zIndex": "1"
       }
     },
@@ -28319,7 +28319,7 @@
       "path": "body>#root>main:nth-of-type(1)>section:nth-of-type(5)>div:nth-of-type(4)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)",
       "rect": {
         "height": 10,
-        "width": 253.25,
+        "width": 253.28,
         "x": 435,
         "y": 2135
       },
@@ -28396,7 +28396,7 @@
         "paddingTop": "0px",
         "pointerEvents": "none",
         "position": "absolute",
-        "right": "278.75px",
+        "right": "278.719px",
         "rowGap": "normal",
         "textAlign": "start",
         "textDecorationColor": "rgb(255, 255, 255)",
@@ -28406,11 +28406,11 @@
         "textTransform": "none",
         "top": "0px",
         "transform": "none",
-        "transformOrigin": "126.625px 5px",
+        "transformOrigin": "126.641px 5px",
         "transition": "all",
         "visibility": "visible",
         "whiteSpace": "normal",
-        "width": "253.25px",
+        "width": "253.281px",
         "zIndex": "1"
       }
     },

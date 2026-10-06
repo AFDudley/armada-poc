@@ -1,0 +1,576 @@
+{
+  "runTimestamp": "2026-10-06T21-47-19Z",
+  "startedAt": "2026-10-06T21:48:14.057Z",
+  "finishedAt": "2026-10-06T21:56:20.956Z",
+  "durationMs": 486899,
+  "gitHead": "67aaea510b0dfb229ef8f08767b2335dea546979",
+  "dockerImageId": "sha256:763cd85f2464812aca2e60eda337d0ceeb14ebed2affe3e5d2428c4d55ae6faf",
+  "scenarioFilter": null,
+  "outDir": "/home/rix/code/git_puller/worktrees/armada-poc-interactive-baseline/design-baseline",
+  "anvilIdentity": {
+    "chainId": "0x7a69",
+    "clientVersion": "anvil/v1.8.3"
+  },
+  "chainFree": [
+    {
+      "target": "committer",
+      "states": [
+        {
+          "state": "prelaunch",
+          "viewports": [
+            "375",
+            "720",
+            "767",
+            "768",
+            "900",
+            "920",
+            "1100",
+            "1440",
+            "1920"
+          ],
+          "elementCounts": {
+            "375": 104,
+            "720": 104,
+            "767": 104,
+            "768": 108,
+            "900": 108,
+            "920": 108,
+            "1100": 108,
+            "1440": 108,
+            "1920": 108
+          }
+        },
+        {
+          "state": "deploy-error",
+          "viewports": [
+            "375",
+            "720",
+            "767",
+            "768",
+            "900",
+            "920",
+            "1100",
+            "1440",
+            "1920"
+          ],
+          "elementCounts": {
+            "375": 6,
+            "720": 6,
+            "767": 6,
+            "768": 6,
+            "900": 6,
+            "920": 6,
+            "1100": 6,
+            "1440": 6,
+            "1920": 6
+          }
+        }
+      ],
+      "pass": true,
+      "error": null
+    },
+    {
+      "target": "showcase",
+      "states": [
+        {
+          "state": "base",
+          "viewports": [
+            "375",
+            "720",
+            "767",
+            "768",
+            "900",
+            "920",
+            "1100",
+            "1440",
+            "1920"
+          ],
+          "elementCounts": {
+            "375": 415,
+            "720": 415,
+            "767": 415,
+            "768": 415,
+            "900": 415,
+            "920": 415,
+            "1100": 415,
+            "1440": 415,
+            "1920": 415
+          }
+        },
+        {
+          "state": "button-primary-hover",
+          "viewports": [
+            "375",
+            "1920"
+          ],
+          "elementCounts": {
+            "375": 415,
+            "1920": 415
+          }
+        },
+        {
+          "state": "button-primary-focus",
+          "viewports": [
+            "375",
+            "1920"
+          ],
+          "elementCounts": {
+            "375": 415,
+            "1920": 415
+          }
+        },
+        {
+          "state": "navitem-hover",
+          "viewports": [
+            "375",
+            "1920"
+          ],
+          "elementCounts": {
+            "375": 415,
+            "1920": 415
+          }
+        },
+        {
+          "state": "tooltip-centered-open",
+          "viewports": [
+            "375",
+            "1920"
+          ],
+          "elementCounts": {
+            "375": 417,
+            "1920": 417
+          }
+        },
+        {
+          "state": "tooltip-rich-open",
+          "viewports": [
+            "375",
+            "1920"
+          ],
+          "elementCounts": {
+            "375": 428,
+            "1920": 428
+          }
+        }
+      ],
+      "pass": true,
+      "error": null
+    }
+  ],
+  "interactive": {
+    "scenariosRun": [
+      "main",
+      "canceled",
+      "refund"
+    ],
+    "states": [
+      {
+        "state": "sale-open",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 105,
+          "720": 105,
+          "767": 105,
+          "768": 119,
+          "900": 119,
+          "920": 119,
+          "1100": 119,
+          "1440": 119,
+          "1920": 119
+        }
+      },
+      {
+        "state": "wallet-connected-no-position",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 106,
+          "720": 106,
+          "767": 106,
+          "768": 125,
+          "900": 125,
+          "920": 125,
+          "1100": 125,
+          "1440": 125,
+          "1920": 125
+        }
+      },
+      {
+        "state": "participate-review",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 149,
+          "1920": 165
+        }
+      },
+      {
+        "state": "participate-confirmation",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 202,
+          "1920": 219
+        }
+      },
+      {
+        "state": "my-position-seeded",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 101,
+          "720": 101,
+          "767": 101,
+          "768": 112,
+          "900": 112,
+          "920": 112,
+          "1100": 112,
+          "1440": 112,
+          "1920": 112
+        }
+      },
+      {
+        "state": "invite-method-picker",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 114,
+          "1920": 121
+        }
+      },
+      {
+        "state": "invite-link-generated",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 135,
+          "1920": 132
+        }
+      },
+      {
+        "state": "invite-redemption-landing",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 39,
+          "720": 39,
+          "767": 39,
+          "768": 39,
+          "900": 39,
+          "920": 39,
+          "1100": 39,
+          "1440": 39,
+          "1920": 39
+        }
+      },
+      {
+        "state": "invite-redemption-review",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 56,
+          "1920": 56
+        }
+      },
+      {
+        "state": "invite-redemption-confirmation",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 115,
+          "1920": 115
+        }
+      },
+      {
+        "state": "finalized-success",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 1065,
+          "720": 1065,
+          "767": 1065,
+          "768": 101,
+          "900": 101,
+          "920": 101,
+          "1100": 101,
+          "1440": 101,
+          "1920": 101
+        }
+      },
+      {
+        "state": "claim-intro",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 1113,
+          "1920": 159
+        }
+      },
+      {
+        "state": "claim-delegate",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 1084,
+          "1920": 130
+        }
+      },
+      {
+        "state": "claim-review",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 1091,
+          "1920": 137
+        }
+      },
+      {
+        "state": "claim-done",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 1122,
+          "1920": 168
+        }
+      },
+      {
+        "state": "my-position-claimed",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 76,
+          "720": 76,
+          "767": 76,
+          "768": 82,
+          "900": 82,
+          "920": 82,
+          "1100": 82,
+          "1440": 82,
+          "1920": 82
+        }
+      },
+      {
+        "state": "canceled-hero",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 100,
+          "720": 100,
+          "767": 100,
+          "768": 102,
+          "900": 102,
+          "920": 102,
+          "1100": 102,
+          "1440": 102,
+          "1920": 102
+        }
+      },
+      {
+        "state": "canceled-claim-intro",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 124,
+          "1920": 136
+        }
+      },
+      {
+        "state": "canceled-claim-done",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 149,
+          "1920": 161
+        }
+      },
+      {
+        "state": "canceled-my-position",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 76,
+          "720": 76,
+          "767": 76,
+          "768": 82,
+          "900": 82,
+          "920": 82,
+          "1100": 82,
+          "1440": 82,
+          "1920": 82
+        }
+      },
+      {
+        "state": "refund-mode-hero",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 98,
+          "720": 98,
+          "767": 98,
+          "768": 100,
+          "900": 100,
+          "920": 100,
+          "1100": 100,
+          "1440": 100,
+          "1920": 100
+        }
+      },
+      {
+        "state": "refund-mode-claim-intro",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 122,
+          "1920": 134
+        }
+      },
+      {
+        "state": "refund-mode-claim-done",
+        "viewports": [
+          "375",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 147,
+          "1920": 159
+        }
+      },
+      {
+        "state": "refund-mode-my-position",
+        "viewports": [
+          "375",
+          "720",
+          "767",
+          "768",
+          "900",
+          "920",
+          "1100",
+          "1440",
+          "1920"
+        ],
+        "elementCounts": {
+          "375": 76,
+          "720": 76,
+          "767": 76,
+          "768": 82,
+          "900": 82,
+          "920": 82,
+          "1100": 82,
+          "1440": 82,
+          "1920": 82
+        }
+      }
+    ],
+    "pass": true,
+    "error": null
+  },
+  "totalCaptures": 155
+}

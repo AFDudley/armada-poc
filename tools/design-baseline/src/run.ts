@@ -5,12 +5,13 @@
 // ABOUTME: regeneration (`npx tsx src/run.ts`).
 
 import path from 'node:path'
+import { rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { launchChromium } from './browser.ts'
 import { runBuild, startPreview } from './proc.ts'
 import { gotoFrozen, freezeMotion } from './freeze.ts'
 import { captureState, type CaptureResult } from './capture.ts'
-import { COMMITTER_WORKSPACE, COMMITTER_STATES } from './targets/committer.ts'
+import { COMMITTER_DIR, COMMITTER_WORKSPACE, COMMITTER_STATES } from './targets/committer.ts'
 import { SHOWCASE_WORKSPACE, SHOWCASE_STATES } from './targets/showcase.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -45,6 +46,13 @@ export async function captureCommitter(repoRoot: string, outDir: string): Promis
   const browser = await launchChromium()
   const results: CaptureResult[] = []
   try {
+    // Neither chain-free state should ever see a deployment manifest — `deploy-error` depends on
+    // its absence (that's the whole point of the state) and `prelaunch` never reads it either way.
+    // A stale `public/api/deployments/crowdfund-hub.json` can persist on disk from an EARLIER
+    // interactive run (`writeManifestForBuild` in manifest.ts, not gitignored, not host-cleaned)
+    // and would otherwise make `deploy-error`'s build non-deterministic across runs/hosts — so
+    // remove it unconditionally before either chain-free build.
+    rmSync(path.join(repoRoot, COMMITTER_DIR, 'public', 'api', 'deployments'), { recursive: true, force: true })
     for (const state of COMMITTER_STATES) {
       console.log(`[committer] building "${state.name}" (${JSON.stringify(state.env)})`)
       runBuild(repoRoot, COMMITTER_WORKSPACE, state.env)

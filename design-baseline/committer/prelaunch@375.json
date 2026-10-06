@@ -4955,7 +4955,7 @@
       "path": "body>#root>div:nth-of-type(1)>div:nth-of-type(1)>main:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)",
       "rect": {
         "height": 24,
-        "width": 166.44,
+        "width": 166.3,
         "x": 45,
         "y": 243
       },
@@ -5042,11 +5042,11 @@
         "textTransform": "none",
         "top": "0px",
         "transform": "none",
-        "transformOrigin": "83.2188px 12px",
+        "transformOrigin": "83.1484px 12px",
         "transition": "all",
         "visibility": "visible",
         "whiteSpace": "normal",
-        "width": "166.438px",
+        "width": "166.297px",
         "zIndex": "auto"
       }
     },
@@ -5054,7 +5054,7 @@
       "path": "body>#root>div:nth-of-type(1)>div:nth-of-type(1)>main:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)>span:nth-of-type(1)",
       "rect": {
         "height": 24,
-        "width": 166.44,
+        "width": 166.3,
         "x": 45,
         "y": 243
       },
@@ -5141,11 +5141,11 @@
         "textTransform": "uppercase",
         "top": "auto",
         "transform": "none",
-        "transformOrigin": "83.2188px 12px",
+        "transformOrigin": "83.1484px 12px",
         "transition": "all",
         "visibility": "visible",
         "whiteSpace": "nowrap",
-        "width": "166.438px",
+        "width": "166.297px",
         "zIndex": "auto"
       }
     },

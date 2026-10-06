@@ -20951,8 +20951,8 @@
         "letterSpacing": "normal",
         "lineHeight": "22.5px",
         "marginBottom": "64px",
-        "marginLeft": "378px",
-        "marginRight": "378px",
+        "marginLeft": "0px",
+        "marginRight": "0px",
         "marginTop": "0px",
         "maxHeight": "none",
         "maxWidth": "1100px",
@@ -22973,7 +22973,7 @@
       "path": "body>#root>main:nth-of-type(1)>section:nth-of-type(5)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)",
       "rect": {
         "height": 10,
-        "width": 253.16,
+        "width": 253.22,
         "x": 435,
         "y": 725
       },
@@ -23050,7 +23050,7 @@
         "paddingTop": "0px",
         "pointerEvents": "none",
         "position": "absolute",
-        "right": "278.844px",
+        "right": "278.781px",
         "rowGap": "normal",
         "textAlign": "start",
         "textDecorationColor": "rgb(255, 255, 255)",
@@ -23060,11 +23060,11 @@
         "textTransform": "none",
         "top": "0px",
         "transform": "none",
-        "transformOrigin": "126.578px 5px",
+        "transformOrigin": "126.609px 5px",
         "transition": "all",
         "visibility": "visible",
         "whiteSpace": "normal",
-        "width": "253.156px",
+        "width": "253.219px",
         "zIndex": "1"
       }
     },
@@ -28319,7 +28319,7 @@
       "path": "body>#root>main:nth-of-type(1)>section:nth-of-type(5)>div:nth-of-type(4)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)",
       "rect": {
         "height": 10,
-        "width": 253.16,
+        "width": 253.22,
         "x": 435,
         "y": 1287
       },
@@ -28396,7 +28396,7 @@
         "paddingTop": "0px",
         "pointerEvents": "none",
         "position": "absolute",
-        "right": "278.844px",
+        "right": "278.781px",
         "rowGap": "normal",
         "textAlign": "start",
         "textDecorationColor": "rgb(255, 255, 255)",
@@ -28406,11 +28406,11 @@
         "textTransform": "none",
         "top": "0px",
         "transform": "none",
-        "transformOrigin": "126.578px 5px",
+        "transformOrigin": "126.609px 5px",
         "transition": "all",
         "visibility": "visible",
         "whiteSpace": "normal",
-        "width": "253.156px",
+        "width": "253.219px",
         "zIndex": "1"
       }
     },
