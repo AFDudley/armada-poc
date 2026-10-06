@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ABOUTME: Container entrypoint — installs dependencies fresh inside the image's own Node
 # ABOUTME: runtime (native addons must match THIS container's Node ABI, not the host's), then
-# ABOUTME: runs the TypeScript orchestrator that drives anvil + Hardhat deploys + Playwright.
+# ABOUTME: runs the TypeScript pipeline that drives anvil + Hardhat deploys + Playwright for
+# ABOUTME: both chain-free and interactive captures, writing a timestamped run record.
 set -euo pipefail
 
 # The worktree's `.git` is a FILE pointing at an absolute host path inside the main repo clone's
@@ -28,5 +29,5 @@ echo "[entrypoint] npm install (tools/design-baseline)"
 echo "[entrypoint] hardhat compile"
 npm run compile
 
-echo "[entrypoint] running orchestrator: $*"
-exec npx tsx tools/design-baseline/src/orchestrate.ts "$@"
+echo "[entrypoint] running pipeline: $*"
+exec npx tsx tools/design-baseline/src/pipeline.ts "$@"

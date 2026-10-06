@@ -27,7 +27,7 @@ else
 fi
 
 IMAGE="design-baseline-runner:local"
-docker build -t "$IMAGE" -f "$SCRIPT_DIR/Dockerfile" "$WORKTREE_DIR"
+IMAGE_ID="$(docker build -q -t "$IMAGE" -f "$SCRIPT_DIR/Dockerfile" "$WORKTREE_DIR")"
 
 MOUNT_ARGS=(-v "$WORKTREE_DIR:$WORKTREE_DIR")
 if [[ -n "$MAIN_REPO_GIT_DIR" ]]; then
@@ -40,9 +40,22 @@ if [[ -d "$HOME/.cache/ms-playwright" ]]; then
   MOUNT_ARGS+=(-v "$HOME/.cache/ms-playwright:/root/.cache/ms-playwright:ro")
 fi
 
-exec docker run --rm \
+# A timestamped run directory, created on the HOST so `run.log` lands somewhere visible outside
+# the container even if the containerized pipeline itself fails before writing summary.json.
+RUN_TIMESTAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+RUN_DIR="$WORKTREE_DIR/design-baseline/runs/$RUN_TIMESTAMP"
+mkdir -p "$RUN_DIR"
+
+set +e
+docker run --rm \
   --network bridge \
   "${MOUNT_ARGS[@]}" \
   -e WORKTREE_DIR="$WORKTREE_DIR" \
+  -e DESIGN_BASELINE_IMAGE_ID="$IMAGE_ID" \
+  -e DESIGN_BASELINE_RUN_DIR="$RUN_DIR" \
+  -e DESIGN_BASELINE_RUN_TIMESTAMP="$RUN_TIMESTAMP" \
   -w "$WORKTREE_DIR" \
-  "$IMAGE" "$@"
+  "$IMAGE" "$@" 2>&1 | tee "$RUN_DIR/run.log"
+STATUS="${PIPESTATUS[0]}"
+set -e
+exit "$STATUS"

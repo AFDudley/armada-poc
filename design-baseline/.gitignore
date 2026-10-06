@@ -1,0 +1,3 @@
+# Each run's full container stdout/stderr (docker/run.sh) — large, non-deterministic timestamps
+# throughout; the structured record is runs/<ts>/summary.json, which stays tracked.
+runs/*/run.log
