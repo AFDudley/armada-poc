@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// ABOUTME: SNARK verification-key registry and proof-checking module for the privacy pool.
+// ABOUTME: SNARK verification-key registry and testing-mode toggle for the privacy pool.
 // ABOUTME: Executes exclusively via delegatecall from the PrivacyPool router, so all state
 // ABOUTME: lives in the router's storage (see PrivacyPoolStorage).
 pragma solidity ^0.8.17;
@@ -9,17 +9,16 @@ import "../interfaces/IVerifierModule.sol";
 import "../types/SnarkTypes.sol";
 
 /// @title VerifierModule
-/// @notice Verification-key registry keyed by circuit shape, plus Groth16 proof checking
-///         (behavior spec section 9).
+/// @notice Verification-key registry keyed by circuit shape (behavior spec section 9).
+///         Groth16 proof checking itself runs on the router, not here.
 /// @dev The registry maps `(nullifierCount, commitmentCount)` to a `VerifyingKey`. A key is
 ///      considered registered iff its `alpha1.x` coordinate is non-zero; any unregistered
 ///      shape reverts at verification time.
 ///
-///      NOTE (spec OQ-2): the live verification path is the router's own `verify`
-///      (`TransactModule` staticcalls the router, never this module). The `verify` below is
-///      deployed but unreachable in practice; it is kept behaviorally identical to the
-///      router copy — differing only in its key-not-set revert string — until the team
-///      consolidates the two implementations under OQ-2.
+///      NOTE (spec OQ-2, resolved by D-17): proof verification lives only in the router's
+///      `verify` (spec section 5.6; `TransactModule` staticcalls the router, never this
+///      module). This module's `verify` always reverts. The module holds the verification-key
+///      registry, `hashBoundParams`, and the testing-mode toggle.
 contract VerifierModule is PrivacyPoolStorage, IVerifierModule {
     /// @notice Emitted whenever a verification key is (re)registered for a circuit shape.
     event VerifyingKeySet(uint256 nullifiers, uint256 commitments, VerifyingKey verifyingKey);

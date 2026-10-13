@@ -301,9 +301,9 @@ No event is emitted. `treasury` has no setter (documented as immutable after ini
 
 1. `require(msg.sender == hookRouter || msg.sender == tokenMessenger, "PrivacyPool: Unauthorized caller")`.
 2. `require(finalityThresholdExecuted >= 2000, "PrivacyPool: Insufficient finality")` (`CCTPFinality.STANDARD`).
-3. `remoteDomain` and `sender` are **ignored** (**OQ-3**).
+3. The envelope `sender` is **ignored** (**OQ-3**). The source pool is authenticated in step 5.
 4. Shared processing: decode `messageBody` as a CCTP V2 burn message, extracting `(grossAmount, feeExecuted, hookData)` (reverts `"BurnMessageV2: message too short"` if the body is shorter than the fixed burn-message header). `actualAmount = grossAmount - feeExecuted` (checked subtraction).
-5. Decode `hookData` as `CCTPPayload`. If `messageType == SHIELD`: decode `ShieldData[]` (a note ARRAY post-drift, D-15) and `delegatecall` `ShieldModule.processIncomingShield(actualAmount, shieldNotes)` (§7.2). Otherwise revert `"PrivacyPool: Invalid message type"` (the Hub never accepts UNSHIELD payloads).
+5. Decode `hookData` as `CCTPPayload`. If `messageType == SHIELD`: `require(remotePools[remoteDomain] != 0, "PrivacyPool: unconfigured source domain")` and `require(burnMessage.messageSender == remotePools[remoteDomain], "PrivacyPool: untrusted source pool")`; then decode `ShieldData[]` (a note ARRAY post-drift, D-15) and `delegatecall` `ShieldModule.processIncomingShield(actualAmount, shieldNotes)` (§7.2). Otherwise revert `"PrivacyPool: Invalid message type"` (the Hub never accepts UNSHIELD payloads).
 6. Return `true`.
 
 **`handleReceiveUnfinalizedMessage(...)`** — selector `0x7c92f219`: identical except step 2 requires `finalityThresholdExecuted >= 1000` (`CCTPFinality.FAST`), reverting `"PrivacyPool: Finality below minimum"`.
@@ -333,7 +333,7 @@ All revert with `"PrivacyPool: Only owner"` unless `msg.sender == owner`.
 |---|---|---|
 | `getVerificationKey(uint256 n, uint256 m) returns (VerifyingKey)` | `0x7b12ae83` | Returns `verificationKeys[n][m]` (zero struct if unset). |
 | `verify(Transaction calldata) returns (bool)` | `0xee990783` | **This is the live verification path** (see §9.3 and **OQ-2**). |
-| `getInsertionTreeNumberAndStartingIndex(uint256) returns (uint256 treeNum, uint256 startIndex)` | `0x0c9c0c8d` | Returns `(treeNumber, nextLeafIndex)`. **Ignores its argument** — no rollover awareness (**OQ-1**). |
+| `getInsertionTreeNumberAndStartingIndex(uint256) returns (uint256 treeNum, uint256 startIndex)` | `0x0c9c0c8d` | If `nextLeafIndex + newCommitments > 2**16`, returns `(treeNumber + 1, 0)`; else `(treeNumber, nextLeafIndex)` — the same rollover rule as the module (§6.4). Guarded by `test-foundry/RolloverDesyncPoC.t.sol` (**OQ-1**, resolved). |
 | `insertLeaves(bytes32[])` | `0xdc52bf9f` | `require(msg.sender == address(this), "Only self")`, then `delegatecall` → `MerkleModule.insertLeaves` (§6.2). |
 
 Plus all auto-generated storage getters listed in §4.
@@ -386,7 +386,7 @@ Implementations MUST reproduce this tree byte-for-byte: identical roots for iden
 
 ### 6.4 `getInsertionTreeNumberAndStartingIndex(uint256 newCommitments)` — selector `0x0c9c0c8d`
 
-`view`. If `nextLeafIndex + newCommitments > 2**16`, returns `(treeNumber + 1, 0)`; else `(treeNumber, nextLeafIndex)`. **Note:** this rollover-aware implementation lives in the module and is only reachable via `delegatecall`, which the router never performs for this function — the router's own argument-ignoring view (§5.5) is what actually serves callers. See **OQ-1**.
+`view`. If `nextLeafIndex + newCommitments > 2**16`, returns `(treeNumber + 1, 0)`; else `(treeNumber, nextLeafIndex)`. **Note:** this module copy is only reachable via `delegatecall`, which the router never performs for this function — the router's own view (§5.5), which applies the same rollover rule, is what actually serves callers. See **OQ-1** (resolved).
 
 ---
 
@@ -407,7 +407,7 @@ Module-private constant `BASIS_POINTS = 10000`. All externals are `onlyDelegatec
    b. **Pull tokens & apply fee** (`_transferTokenIn`, §7.3) → `(adjustedPreimage, fee)`.
    c. `leaf[i] = commitmentHash(adjustedPreimage)`; collect ciphertext.
    (A failure on request `i` reverts the entire batch — the operation is atomic.)
-4. Read `(treeNum, startIndex)` from the router's `getInsertionTreeNumberAndStartingIndex(requests.length)` (**pre-insertion** values — **OQ-1**).
+4. Read `(treeNum, startIndex)` from the router's `getInsertionTreeNumberAndStartingIndex(requests.length)` (**pre-insertion** call; rollover-aware, so a batch that triggers rollover is reported at `(treeNumber + 1, 0)`).
 5. `emit Shield(treeNum, startIndex, adjustedPreimages[], ciphertext[], fees[])` — **before** tree insertion.
 6. Self-call `insertLeaves(leaves)` (§6.2).
 7. `lastEventBlock = block.number`.
@@ -461,7 +461,7 @@ All externals are `onlyDelegatecall`.
    a. `_validateTransaction` (§8.3); on failure revert `"TransactModule: " ++ reason`.
    b. `_accumulateAndNullify` (§8.4): marks nullifiers, emits `Nullified`, copies the first `commitmentCiphertext.length` entries of `commitments[]`/`commitmentCiphertext[]` into batch accumulators.
 6. **Second pass**, per transaction: if `unshield != NONE`, `_transferTokenOut(unshieldPreimage)` (§8.5). (Deliberately after *all* nullifiers are marked.)
-7. If `commitmentsCount > 0`: read position from router (**OQ-1**), `emit Transact(treeNum, startIndex, commitmentHashes[], ciphertext[])`, self-call `insertLeaves(commitmentHashes)`.
+7. If `commitmentsCount > 0`: read position from router (rollover-aware, §5.5), `emit Transact(treeNum, startIndex, commitmentHashes[], ciphertext[])`, self-call `insertLeaves(commitmentHashes)`.
 8. `lastEventBlock = block.number`.
 
 ### 8.2 `atomicCrossChainUnshield(Transaction calldata tx, uint32 destinationDomain, address finalRecipient, uint256 maxFee, bytes32 uniqueNonce) returns (uint64 nonce)` — selector `0xe8d1f224`
@@ -478,7 +478,7 @@ Post-drift (D-16): `destinationCaller` is no longer caller-supplied (pinned on-c
    - `tx.boundParams.adaptContract == address(0)` else `"TransactModule: unexpected adaptContract"`;
    - **Destination binding:** `CCTPBindingLib.verify(tx.boundParams.adaptParams, finalRecipient, destinationDomain, maxFee)` else `"TransactModule: destination not bound to proof"`. `adaptParams` must equal `keccak256(abi.encode(DOMAIN_TAG, recipient, domain, maxFee))` with `DOMAIN_TAG = keccak256("ArmadaCCTPUnshield.v1")` — since `adaptParams` is a SNARK public input (via `hashBoundParams`), this binds the plaintext destination tuple to the proof with no circuit change, and blocks hijacking a local unshield (adaptParams == 0) through this path;
    - `_validateTransaction(tx)` (§8.3), reverting `"TransactModule: " ++ reason`.
-   - **Note:** `unshieldPreimage.token` is **not** checked against `usdc` — the burn always burns `usdc` (**OQ-9**).
+   - **Known defect:** `unshieldPreimage.token` is **not** checked against `usdc`, yet the burn always burns `usdc` (**OQ-9**). Must be fixed before any deployment holding user funds; fix tracked separately.
 3. Process: if `boundParams.commitmentCiphertext.length > 0` — `_accumulateAndNullify` into fresh accumulators, read router position, `emit Transact(...)`, `insertLeaves`. Otherwise `_accumulateAndNullify` with empty arrays (nullifiers still marked; `Nullified` still emitted; no `Transact` event, no tree insertion).
 4. Burn & bridge:
    - `base = unshieldPreimage.value`; `fee = 0` (unshields are free, D-2).
@@ -597,15 +597,15 @@ For each nullifier `n`: `require(!nullifiers[boundParams.treeNumber][n], "Transa
 
 | ID | Question | Current behavior |
 |---|---|---|
-| **OQ-1** | `Shield`/`Transact` events report the **pre-insertion** `(treeNumber, startIndex)` from the router's argument-ignoring view. If a batch triggers tree rollover, the events name the old tree/index while leaves land in `treeNumber + 1` at index 0. Keep (frozen ABI behavior) or fix (accurate events)? Rollover requires >65,536 leaves. | Events may mislabel tree/index at rollover. |
+| **OQ-1** | ~~`Shield`/`Transact` events report the **pre-insertion** `(treeNumber, startIndex)` from the router's argument-ignoring view. If a batch triggers tree rollover, the events name the old tree/index while leaves land in `treeNumber + 1` at index 0.~~ **RESOLVED on main (#372):** the router's view applies the same rollover rule as the module (§5.5, §6.4), so events name the tree/index the leaves actually land in. Guarded by `test-foundry/RolloverDesyncPoC.t.sol`. | Events report the post-rollover position. |
 | **OQ-2** | ~~Verification logic exists twice: live copy on the router and a dead copy in VerifierModule.~~ **RESOLVED post-drift (D-17):** verification centralized on the router; the module's `verify` reverts. | Router copy is the only path. |
-| **OQ-3** | The CCTP handlers ignore the `sender` field and the source domain — any message that mints USDC to the pool with a SHIELD payload is accepted. Trust model relies on the hook router / TokenMessenger authentication only. Is that the intended security boundary? | `sender`/`remoteDomain` unauthenticated. |
+| **OQ-3** | The CCTP handlers authenticate the source domain (`remotePools[remoteDomain]` must be set) and the burn message's `messageSender` (must equal that remote pool), but ignore the envelope `sender`. **Decision pending security review — the current behaviour is not the intended trust boundary.** | Envelope `sender` unauthenticated. |
 | **OQ-4** | `tx.origin == VERIFICATION_BYPASS` returns `true` only *after* full verification and the VK-set check — it neither saves gas nor tolerates unset keys, and `tx.origin` semantics are deprecated-adjacent. Keep, move earlier, or drop? | Bypass checked last. |
 | **OQ-5** | `_getFee`'s exclusive (non-inclusive) branch is unreachable (unshield fee is gone). Drop it, or keep for parity? | Dead code present. |
 | **OQ-6** | ERC721/ERC1155 validation branches, `tokenIDMapping`, and `nftFee` are unreachable (both token in/out paths require ERC20). Keep types for ABI/event compatibility but drop the dead checks? | Dead NFT paths present. |
 | **OQ-7** | ~~`initialize` is permissionless first-call; if not invoked atomically at deployment it is front-runnable.~~ **RESOLVED post-drift (D-18):** `initialize` is gated to the deployer (private immutable captured in the constructor). | Deployer-only. |
 | **OQ-8** | `setTestingMode` emits `TestingModeSet` twice (once inside the module delegatecall, once on the router). Intentional or bug? | Double emission. |
-| **OQ-9** | `atomicCrossChainUnshield` does not require `unshieldPreimage.token == USDC` — a proof over a non-USDC note would still burn USDC. Add the check? | Token unchecked. |
+| **OQ-9** | **KNOWN DEFECT — must be fixed before any deployment holding user funds.** `atomicCrossChainUnshield` does not require `unshieldPreimage.token == USDC` — a proof over a non-USDC note would still burn USDC. Decision: add the check; fix tracked separately. | Token unchecked (defect). |
 | **OQ-10** | ~~`setShieldFee` allows up to 10000 bps (100%). Intended cap?~~ **RESOLVED post-drift:** `MAX_SHIELD_FEE_BPS = 1000` (10%) hard cap on the flat fee; the fee module caps every component at 10% (`MAX_BPS`) and the yield fee at 1–50%. | 10% cap. |
 | **OQ-11** | `testingMode` exists as a full proof bypass. Production expectation is removal (see deviation register D-3). Confirm removal plan and any staging-net needs. | Owner-toggleable bypass. |
 | **OQ-12** | `snarkSafetyVector` storage (slot 54) is never read or written. Retain as reserved (slot must stay either way) but drop the getter? | Dead public mapping. |

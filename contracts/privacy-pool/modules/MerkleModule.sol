@@ -122,8 +122,9 @@ contract MerkleModule is PrivacyPoolStorage, IMerkleModule {
 
     /// @notice Predicts where a future batch would be inserted.
     /// @dev Reachable only via delegatecall, which the router never performs for this
-    ///      function (the router serves its own rollover-ignoring view); retained because
-    ///      it is part of the deployed module surface. See spec OQ-1.
+    ///      function: the router serves callers with its own view, which applies the same
+    ///      rollover rule (guarded by test-foundry/RolloverDesyncPoC.t.sol). Retained because
+    ///      it is part of the deployed module surface. See spec OQ-1 (resolved).
     /// @param newCommitments Size of the hypothetical batch.
     /// @return treeNum Tree the batch would land in.
     /// @return startIndex First leaf index the batch would occupy.
