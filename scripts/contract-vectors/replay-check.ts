@@ -1,3 +1,5 @@
+// ABOUTME: Replays captured golden vectors against a running deployment and compares status,
+// ABOUTME: events and post-state reads with the recorded ones; exits non-zero on any mismatch.
 /**
  * Replay-check skeleton — Phase 1 deliverable that becomes the differential
  * harness in Phase 2c.
@@ -34,6 +36,7 @@ import { ethers } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 import { deployMock } from "./lib/mock-contracts";
+import { selectVectors } from "./lib/select-vectors";
 
 // Fixture dir overridable for the post-drift v2 corpus (see README §Post-drift v2 corpus):
 //   REPLAY_FIXTURES_DIR=test-foundry/fixtures/contract-vectors-v2
@@ -240,21 +243,16 @@ async function replayVector(id: string, ctx: any): Promise<boolean> {
 }
 
 async function main() {
-  // Args after `--`: vector ids, or --all for the full manifest order.
-  // --genesis additionally performs the capture-time genesis setup (mock
-  // deployment + funding + approvals) — required when replaying --all against
-  // a freshly booted fixturenet.
-  const argv = process.argv.slice(2).filter((a) => a !== "--");
-  // Hardhat v2 rejects `--flag` args after the script path (HH305), so the
-  // README's `-- --all --genesis` form never reaches us. Accept env-var
-  // equivalents as well: REPLAY_ALL=1, REPLAY_GENESIS=1.
-  if (process.env.REPLAY_ALL === "1") argv.push("--all");
-  if (process.env.REPLAY_GENESIS === "1") argv.push("--genesis");
-  const genesis = argv.includes("--genesis");
+  // Selection comes from the REPLAY_ALL / REPLAY_IDS / REPLAY_GENESIS env vars (Hardhat v2
+  // rejects `--flag` args after the script path, HH305); positional ids are still accepted.
+  // REPLAY_GENESIS performs the capture-time genesis setup (mock deployment + funding +
+  // approvals) — required when replaying against a freshly booted fixturenet.
   const manifest = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "manifest.json"), "utf-8"));
-  const ids = argv.includes("--all") || argv.length === 0 || (genesis && argv.length === 1)
-    ? manifest.vectors.map((v: any) => v.id)
-    : argv.filter((a: string) => a !== "--genesis");
+  const { ids, genesis } = selectVectors(
+    process.argv.slice(2),
+    process.env,
+    manifest.vectors.map((v: any) => v.id)
+  );
 
   const addressBook: Record<string, string> = manifest.addressBook;
   const pool = await ethers.getContractAt("PrivacyPool", addressBook.POOL);
