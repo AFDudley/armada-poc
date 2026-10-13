@@ -118,11 +118,12 @@ abstract contract PrivacyPoolStorage {
     // MERKLE TREE STATE (from Commitments.sol)
     // ══════════════════════════════════════════════════════════════════════════
 
-    /// @notice Depth of the merkle tree
+    /// @notice Depth of the merkle tree (2**16 = 65,536 leaves per tree)
     uint256 internal constant TREE_DEPTH = 16;
 
     /// @notice Zero value for empty leaves
-    /// @dev Consensus-critical value, pinned as a hard-coded literal (spec section 2).
+    /// @dev Consensus-critical value, pinned as a hard-coded literal (spec section 2): the
+    ///      empty-tree root and every higher-level zero node derive from it.
     ///      The public getter is part of the frozen ABI.
     bytes32 public constant ZERO_VALUE =
         0x0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc;
