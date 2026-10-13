@@ -8,18 +8,10 @@ pragma solidity ^0.8.17;
 uint256 constant SNARK_SCALAR_FIELD =
     21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
-// Level-0 zero leaf of the incremental Merkle tree. This value is a consensus
-// fact: the empty-tree root and every higher-level zero node derive from it,
-// so it is pinned here as a hard-coded literal.
-bytes32 constant ZERO_VALUE = 0x0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc;
-
 // Escape hatch for gas estimation: when `tx.origin` equals this address,
 // proof verification reports success so relayers can estimate fees without
 // producing a real proof.
 address constant VERIFICATION_BYPASS = 0x000000000000000000000000000000000000dEaD;
-
-// Depth of the incremental binary Merkle tree (2**16 = 65,536 leaves per tree).
-uint256 constant TREE_DEPTH = 16;
 
 /// @notice Token standards the commitment format can describe. Only ERC20 is exercised
 ///         by the live shield/unshield paths; the other variants remain for ABI
