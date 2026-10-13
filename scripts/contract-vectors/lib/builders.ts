@@ -1,3 +1,5 @@
+// ABOUTME: Calldata builders for golden-vector capture: ShieldRequest / Transaction structs,
+// ABOUTME: unshield-note Poseidon hashing and EIP-2612 permit signing.
 /**
  * Calldata builders for pool operations: ShieldRequest / Transaction structs,
  * unshield-note Poseidon hashing, and EIP-2612 permit signing.

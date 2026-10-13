@@ -16,7 +16,7 @@
  * the single review surface when a new wrapper is added. To extend in A5: add the selector +
  * its full function signature to the lists below; no other file needs to change.
  *
- * The Transaction struct shape MUST stay in sync with `contracts/railgun/logic/Globals.sol`.
+ * The Transaction struct shape MUST stay in sync with `contracts/privacy-pool/types/PoolTypes.sol`.
  * If those structs change, the ABI strings below need to change too — and ethers will throw a
  * decoder error at the first mismatched call, which is the right failure mode.
  */
@@ -62,7 +62,7 @@ export const WRAPPER_SELECTORS: ReadonlySet<string> = new Set([
 // ============ Shared struct fragments ============
 
 /**
- * Railgun Transaction struct ABI. Matches `contracts/railgun/logic/Globals.sol::Transaction`.
+ * Railgun Transaction struct ABI. Matches `contracts/privacy-pool/types/PoolTypes.sol::Transaction`.
  * Used both for the vanilla `transact(Transaction[])` and as the inner type carried by the
  * wrapper functions. The order MUST match the Solidity definition exactly — ethers decodes by
  * position, not by name.

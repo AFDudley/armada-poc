@@ -1,3 +1,5 @@
+// ABOUTME: Golden-vector capture for the post-drift delta corpus (v2, deviations D-15..D-18).
+// ABOUTME: Runs against a fresh fixturenet deployed from the current pool contracts.
 /**
  * Golden-vector capture — POST-DRIFT DELTA corpus (v2).
  *

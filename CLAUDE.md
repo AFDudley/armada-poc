@@ -61,7 +61,7 @@ VITE_NETWORK=sepolia VITE_DEPLOYMENT_INSTANCE=medi2 npm run crowdfund:committer
 The following are known security shortcuts inherited from the POC phase. They are tracked and will be addressed before production. **Do not create additional shortcuts like these:**
 
 - `setTestingMode()` in PrivacyPool bypasses ZK proof verification
-- `VERIFICATION_BYPASS` at `tx.origin == 0xdead` in Snark.sol
+- `VERIFICATION_BYPASS` at `tx.origin == 0xdead` (constant in `contracts/privacy-pool/types/PoolTypes.sol`, checked in `PrivacyPool.verify`)
 - Hardcoded Anvil private keys in config (acceptable for local only)
 - Shield fee formula mismatch between contract and SDK
 - ~~Missing `onlyDelegatecall` guards on pool modules~~ (Fixed: guards added to all module external functions)
@@ -74,7 +74,7 @@ When writing new code, follow production security practices even though these le
 
 - `npm install` without `--legacy-peer-deps` will fail due to Railgun SDK peer dependency conflicts.
 - Hardhat tests require Anvil chains running — if tests fail with connection/RPC errors, check `npm run chains`.
-- Changing anything in `contracts/railgun/logic/` can silently break ZK circuit compatibility. Contracts compile fine, but proofs fail at runtime.
+- Changing the pool's consensus-critical surface — `contracts/privacy-pool/types/` (struct layouts, `ZERO_VALUE`, Snark types), the router's `verify` public-input assembly, `hashBoundParams`, and Merkle hashing — can silently break ZK circuit compatibility. Contracts compile fine, but proofs fail at runtime. `specs/PRIVACY_POOL_CONTRACT.md` is the authority.
 - Deployment scripts must run in order (see Deployment Order below). Deploying a component before its dependencies will produce silent misconfigurations.
 - The Railgun SDK's LevelDB database (`data/railgun-db/`) can get into a stale state. If shield/transact operations fail unexpectedly after redeploying contracts, delete `data/railgun-db/` and restart.
 
@@ -162,7 +162,7 @@ If you need to redeploy a single component, understand its dependencies first.
 
 The following are intentional design decisions or inherited code that may look like they need fixing but should not be changed without explicit human approval:
 
-- **Railgun internals** (`contracts/railgun/logic/`) — Adapted from Railgun's open-source codebase. Changes break ZK circuit compatibility silently.
+- **Pool consensus-critical surface** — `contracts/privacy-pool/types/` (struct layouts, `ZERO_VALUE`, Snark types), the router's `verify` public-input assembly, `hashBoundParams`, and Merkle hashing, as specified in `specs/PRIVACY_POOL_CONTRACT.md`. Changes break ZK circuit compatibility silently.
 - **Non-standard ERC-4626 vault** (`ArmadaYieldVault`) — Intentionally deviates from the standard. Do not "fix" it to conform.
 - **Frozen Launch 1 interfaces** (`IShieldPauseController`, `IFeeCollector` in `contracts/governance/`) — These are consumed by immutable governance contracts deployed at the crowdfund launch. Once Launch 1 ships, changing their function signatures or semantics breaks the Launch 2 privacy-pool/fee-module integration. Treat as external ABI. See `.context/two-launch-feasibility.md`.
 - **Testing mode / verification bypass code** — These POC shortcuts exist in the codebase. Do not remove them (they're tracked), but never enable them without human instruction.

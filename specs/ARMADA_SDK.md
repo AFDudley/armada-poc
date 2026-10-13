@@ -130,7 +130,7 @@ commitments/notes on Sepolia and any prior deployment a wallet may rescan).
 | Merkle tree | depth 16, 65 536 leaves/tree, Poseidon hashLeftRight, `MERKLE_ZERO_VALUE`, multi-tree rollover |
 | Circuit shapes | the 19 compiled shapes (1×1 … per artifact set), flat `pathElements[N*16]`, signal names per PR #373 (`commitmentsOut` etc.) |
 | boundParams hashing | struct layout and hash as consumed by `armada-circuits` / verifier (`keccak256(abi.encode(boundParams)) % SNARK_SCALAR_FIELD` — stock Railgun; keccak on-chain, consumed as a field element by the circuit) |
-| Spend authorization message | Baby Jubjub EdDSA signature over `poseidon([merkleRoot, boundParamsHash, ...nullifiers, ...commitmentsOut])`, consumed as a private witness by the circuits (engine 9.5.1 `railgun-wallet` behavior; on-chain public-input ordering per `contracts/railgun/logic/Verifier.sol`) |
+| Spend authorization message | Baby Jubjub EdDSA signature over `poseidon([merkleRoot, boundParamsHash, ...nullifiers, ...commitmentsOut])`, consumed as a private witness by the circuits (engine 9.5.1 `railgun-wallet` behavior; on-chain public-input ordering per `specs/PRIVACY_POOL_CONTRACT.md` §5.6 / `PrivacyPool.verify`) |
 | TXIDVersion | `V2_PoseidonMerkle` retained as the version tag in storage and proof inputs |
 | Serialization | `TransactionStructV2` calldata layout for `transact()` |
 

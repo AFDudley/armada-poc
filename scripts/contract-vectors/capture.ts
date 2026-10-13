@@ -1,3 +1,5 @@
+// ABOUTME: Golden-vector capture harness (v1 corpus) for the privacy pool contracts.
+// ABOUTME: Records calldata, ordered events and state reads per vector against a fresh local fixturenet.
 /**
  * Golden-vector capture harness — Phase 1 of the contract implementation plan.
  *

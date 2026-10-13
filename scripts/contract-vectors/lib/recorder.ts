@@ -1,3 +1,5 @@
+// ABOUTME: Vector recording engine for golden-vector capture: per call, records calldata,
+// ABOUTME: ordered events and post-state reads into the vector JSON format.
 /**
  * Vector recording engine.
  *
