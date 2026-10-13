@@ -1,19 +1,14 @@
 /**
- * Chain Configuration
+ * Chain Configuration for Local Devnet
  *
- * Defines chain parameters for both local devnet (Anvil) and Sepolia testnet.
+ * Defines chain parameters for our local Anvil instances.
  * These chains are not in the SDK's default network config,
  * so we define them manually.
  *
- * Local devnet:
+ * Supports three chains:
  * - Hub Chain (31338) - Where the privacy pool is deployed
- * - Client Chain A (31337) - User-facing chain
- * - Client Chain B (31339) - Second client chain
- *
- * Sepolia testnet:
- * - Hub Chain (11155111) - Ethereum Sepolia
- * - Client A (84532) - Base Sepolia
- * - Client B (421614) - Arbitrum Sepolia
+ * - Client Chain A (31337) - User-facing chain for deposits/withdrawals
+ * - Client Chain B (31339) - Second client chain for multi-chain testing
  */
 
 import { ChainType, Chain } from "@railgun-community/shared-models";
@@ -53,54 +48,17 @@ export const HUB_RPC = "http://localhost:8546";
 export const CLIENT_RPC = "http://localhost:8545";
 export const CLIENT_B_RPC = "http://localhost:8547";
 
-// ============ Sepolia Chain Definitions ============
-
-/**
- * Sepolia Hub Chain - Ethereum Sepolia
- */
-export const SEPOLIA_HUB_CHAIN: Chain = {
-  type: ChainType.EVM,
-  id: 11155111,
-};
-
-/**
- * Sepolia Client A - Base Sepolia
- */
-export const SEPOLIA_CLIENT_A_CHAIN: Chain = {
-  type: ChainType.EVM,
-  id: 84532,
-};
-
-/**
- * Sepolia Client B - Arbitrum Sepolia
- */
-export const SEPOLIA_CLIENT_B_CHAIN: Chain = {
-  type: ChainType.EVM,
-  id: 421614,
-};
-
-// Sepolia RPC URLs (from env, with fallbacks)
-export const SEPOLIA_HUB_RPC = process.env.HUB_RPC ?? "https://sepolia.drpc.org";
-export const SEPOLIA_CLIENT_A_RPC = process.env.CLIENT_A_RPC ?? "https://sepolia.base.org";
-export const SEPOLIA_CLIENT_B_RPC = process.env.CLIENT_B_RPC ?? "https://sepolia-rollup.arbitrum.io/rpc";
-
 // ============ All Chains ============
 
 /**
  * Array of all supported chains
  */
-export const ALL_CHAINS: Chain[] = [
-  HUB_CHAIN, CLIENT_CHAIN, CLIENT_CHAIN_B,
-  SEPOLIA_HUB_CHAIN, SEPOLIA_CLIENT_A_CHAIN, SEPOLIA_CLIENT_B_CHAIN,
-];
+export const ALL_CHAINS: Chain[] = [HUB_CHAIN, CLIENT_CHAIN, CLIENT_CHAIN_B];
 
 /**
  * Array of all client chains (non-hub)
  */
-export const CLIENT_CHAINS: Chain[] = [
-  CLIENT_CHAIN, CLIENT_CHAIN_B,
-  SEPOLIA_CLIENT_A_CHAIN, SEPOLIA_CLIENT_B_CHAIN,
-];
+export const CLIENT_CHAINS: Chain[] = [CLIENT_CHAIN, CLIENT_CHAIN_B];
 
 // ============ Deployment Configuration ============
 
@@ -131,14 +89,9 @@ export const CLIENT_B_NETWORK_NAME = "LocalDevnetClientB";
  * Get chain by ID
  */
 export function getChainById(chainId: number): Chain | undefined {
-  // Local devnet
   if (chainId === HUB_CHAIN.id) return HUB_CHAIN;
   if (chainId === CLIENT_CHAIN.id) return CLIENT_CHAIN;
   if (chainId === CLIENT_CHAIN_B.id) return CLIENT_CHAIN_B;
-  // Sepolia testnet
-  if (chainId === SEPOLIA_HUB_CHAIN.id) return SEPOLIA_HUB_CHAIN;
-  if (chainId === SEPOLIA_CLIENT_A_CHAIN.id) return SEPOLIA_CLIENT_A_CHAIN;
-  if (chainId === SEPOLIA_CLIENT_B_CHAIN.id) return SEPOLIA_CLIENT_B_CHAIN;
   return undefined;
 }
 
@@ -146,14 +99,9 @@ export function getChainById(chainId: number): Chain | undefined {
  * Get RPC URL for chain
  */
 export function getRpcUrl(chain: Chain): string {
-  // Local devnet
   if (chain.id === HUB_CHAIN.id) return HUB_RPC;
   if (chain.id === CLIENT_CHAIN.id) return CLIENT_RPC;
   if (chain.id === CLIENT_CHAIN_B.id) return CLIENT_B_RPC;
-  // Sepolia testnet
-  if (chain.id === SEPOLIA_HUB_CHAIN.id) return SEPOLIA_HUB_RPC;
-  if (chain.id === SEPOLIA_CLIENT_A_CHAIN.id) return SEPOLIA_CLIENT_A_RPC;
-  if (chain.id === SEPOLIA_CLIENT_B_CHAIN.id) return SEPOLIA_CLIENT_B_RPC;
   throw new Error(`Unknown chain ID: ${chain.id}`);
 }
 
@@ -161,10 +109,7 @@ export function getRpcUrl(chain: Chain): string {
  * Check if chain is our hub chain
  */
 export function isHubChain(chain: Chain): boolean {
-  return (
-    (chain.id === HUB_CHAIN.id || chain.id === SEPOLIA_HUB_CHAIN.id) &&
-    chain.type === ChainType.EVM
-  );
+  return chain.id === HUB_CHAIN.id && chain.type === ChainType.EVM;
 }
 
 /**
@@ -172,8 +117,7 @@ export function isHubChain(chain: Chain): boolean {
  */
 export function isClientChain(chain: Chain): boolean {
   return (
-    (chain.id === CLIENT_CHAIN.id || chain.id === CLIENT_CHAIN_B.id ||
-     chain.id === SEPOLIA_CLIENT_A_CHAIN.id || chain.id === SEPOLIA_CLIENT_B_CHAIN.id) &&
+    (chain.id === CLIENT_CHAIN.id || chain.id === CLIENT_CHAIN_B.id) &&
     chain.type === ChainType.EVM
   );
 }
@@ -181,20 +125,10 @@ export function isClientChain(chain: Chain): boolean {
 /**
  * Get network name for chain
  */
-// Sepolia network names
-export const SEPOLIA_HUB_NETWORK_NAME = "SepoliaHub";
-export const SEPOLIA_CLIENT_A_NETWORK_NAME = "SepoliaClientA";
-export const SEPOLIA_CLIENT_B_NETWORK_NAME = "SepoliaClientB";
-
 export function getNetworkName(chain: Chain): string {
-  // Local devnet
   if (chain.id === HUB_CHAIN.id) return HUB_NETWORK_NAME;
   if (chain.id === CLIENT_CHAIN.id) return CLIENT_NETWORK_NAME;
   if (chain.id === CLIENT_CHAIN_B.id) return CLIENT_B_NETWORK_NAME;
-  // Sepolia testnet
-  if (chain.id === SEPOLIA_HUB_CHAIN.id) return SEPOLIA_HUB_NETWORK_NAME;
-  if (chain.id === SEPOLIA_CLIENT_A_CHAIN.id) return SEPOLIA_CLIENT_A_NETWORK_NAME;
-  if (chain.id === SEPOLIA_CLIENT_B_CHAIN.id) return SEPOLIA_CLIENT_B_NETWORK_NAME;
   throw new Error(`Unknown chain ID: ${chain.id}`);
 }
 
@@ -202,13 +136,8 @@ export function getNetworkName(chain: Chain): string {
  * Get deployment file name for chain
  */
 export function getDeploymentFileName(chain: Chain): string {
-  // Local devnet
   if (chain.id === HUB_CHAIN.id) return "hub.json";
   if (chain.id === CLIENT_CHAIN.id) return "client.json";
   if (chain.id === CLIENT_CHAIN_B.id) return "clientB.json";
-  // Sepolia testnet
-  if (chain.id === SEPOLIA_HUB_CHAIN.id) return "privacy-pool-hub-sepolia.json";
-  if (chain.id === SEPOLIA_CLIENT_A_CHAIN.id) return "privacy-pool-client-sepolia.json";
-  if (chain.id === SEPOLIA_CLIENT_B_CHAIN.id) return "privacy-pool-clientB-sepolia.json";
   throw new Error(`Unknown chain ID: ${chain.id}`);
 }

@@ -1,3 +1,5 @@
+// ABOUTME: End-to-end check of Armada circuits on Sepolia: shield, private transfer and unshield
+// ABOUTME: with proofs from the pinned Armada WASM/ZKEY, verified on-chain against the registered vkeys.
 /**
  * End-to-End Verification: Armada Circuits on Sepolia
  *
@@ -27,7 +29,8 @@ import { initializeProver } from '../../lib/sdk/prover';
 import { createShieldRequest, generateShieldPrivateKey } from '../../lib/sdk/shield';
 import { loadNetworkIntoEngine, scanWalletBalances } from '../../lib/sdk/network';
 import { createPrivateTransfer, createUnshield } from '../../lib/sdk/transfer';
-import { getChainById, getRpcUrl } from '../../lib/sdk/chain-config';
+import { getNetworkConfig } from '../../config/networks';
+import { ChainType, Chain } from '@railgun-community/shared-models';
 
 import { TXIDVersion, POI, POINodeInterface } from '@railgun-community/engine';
 
@@ -111,15 +114,15 @@ async function main() {
   clearDatabase();
   await initializeEngine('sepoliae2e');
 
-  const chain = getChainById(chainId);
-  if (!chain) throw new Error(`Chain ${chainId} not configured in chain-config.ts`);
-  console.log(`Chain: ${chain.type}:${chain.id}, RPC: ${getRpcUrl(chain)}`);
+  const chain: Chain = { type: ChainType.EVM, id: chainId };
+  const rpcUrl = getNetworkConfig().hub.rpc;
+  console.log(`Chain: ${chain.type}:${chain.id}, RPC: ${rpcUrl}`);
 
   await loadNetworkIntoEngine(
     chain,
     await privacyPool.getAddress(),
     ethers.ZeroAddress,
-    getRpcUrl(chain),
+    rpcUrl,
     deployments.deployBlock ?? 0,
   );
   await initializeProver();
