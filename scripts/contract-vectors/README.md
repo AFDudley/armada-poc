@@ -155,12 +155,13 @@ Compiled at capture time with the repo's bundled solc from inline sources
 
 ## Uncovered
 
-- **Merkle rollover (treeNumber > 0, I-3 / OQ-1):** needs >65,536 leaf
+- **Merkle rollover (treeNumber > 0, I-3):** needs >65,536 leaf
   insertions. Cheapest possible route is ~66+ max-size batch `insertLeaves`
   transactions (~1B+ cumulative gas) of pure filler — judged not cheap for the
   golden corpus. The rollover code path itself is covered indirectly by
   Foundry invariant/fuzz tests (`test-foundry/MerkleFuzz.t.sol`,
-  `PrivacyPoolInvariant.t.sol`). Recommendation for Phase 2: a dedicated
+  `PrivacyPoolInvariant.t.sol`), and the router/module event-position agreement at
+  the boundary by `RolloverDesyncPoC.t.sol` (OQ-1, resolved). Recommendation for Phase 2: a dedicated
   bulk-fill differential script that asserts roots/event labeling at the
   rollover boundary, separate from the golden corpus.
 - **Real SNARK verification:** bypassed by policy (see above). The VK-set

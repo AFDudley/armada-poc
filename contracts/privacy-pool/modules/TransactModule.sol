@@ -37,7 +37,7 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
     /// @dev Ordering is pinned by spec section 8.1: validate and nullify every transaction
     ///      FIRST, pay out unshields only after all nullifiers are marked, then insert the
     ///      accumulated commitments as one tree batch. The `Transact` event carries the
-    ///      PRE-insertion tree position (spec OQ-1). An emergency pause blocks everything;
+    ///      PRE-insertion tree position (rollover-aware, spec §5.5). An emergency pause blocks everything;
     ///      withdraw-only mode blocks pure transfers while letting unshields through.
     /// @param _transactions Transactions to process, in order. The batch is atomic.
     function transact(Transaction[] calldata _transactions) external override onlyDelegatecall {
@@ -108,10 +108,10 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
     /// @param finalRecipient Address that ultimately receives the USDC on the destination chain.
     /// @param maxFee Maximum CCTP relayer fee, in the burned token's units.
     /// @param uniqueNonce Opaque per-tx marker echoed into the CCTP hookData so off-chain wallets
-    ///        can match the destination delivery to this specific unshield. Not fund-relevant.
+    ///        can match the destination delivery to this specific unshield (issue #287). Not fund-relevant.
     /// @dev The CCTP destinationCaller is pinned to `remoteHookRouters[destinationDomain]` (not
     ///      caller-supplied), so the burn can only be delivered through the destination chain's
-    ///      hook router.
+    ///      hook router (issue #64).
     /// @return nonce Always 0 — the CCTP V2 burn call returns no nonce.
     function atomicCrossChainUnshield(
         Transaction calldata _transaction,
@@ -136,8 +136,9 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
     /// @notice Validates the routing inputs of an atomic cross-chain unshield.
     /// @dev Check order is pinned by spec section 8.2: not the local domain, non-zero
     ///      recipient, unshield output present, destination registered, then the full
-    ///      transaction validation. The unshield note's token is deliberately NOT checked
-    ///      against USDC — the burn always burns `usdc` (spec OQ-9).
+    ///      transaction validation. The unshield note's token is not checked against USDC
+    ///      even though the burn always burns `usdc` — known defect (spec OQ-9), fix tracked
+    ///      separately.
     function _validateAtomicUnshieldInputs(
         Transaction calldata _transaction,
         uint32 destinationDomain,
@@ -159,7 +160,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
         // Bind the CCTP destination tuple (recipient + domain + fee) to the proof. These are
         // plaintext arguments the SNARK does not otherwise cover; without binding, a relayer or
         // front-runner could resubmit the victim's identical proof with finalRecipient = attacker
-        // and steal every cross-chain exit. `boundParams.adaptParams` IS committed by the circuit,
+        // and steal every cross-chain exit (issue #364, generalized to the full tuple in #378).
+        // `boundParams.adaptParams` IS committed by the circuit,
         // so the prover sets it to CCTPBindingLib.encode(...) and we reject any mismatch here. This
         // also blocks hijacking a local unshield (adaptParams == 0) through this path. No circuit
         // change; destinationCaller is pinned on-chain separately.
@@ -391,7 +393,7 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
         // (its USDC is burned via CCTP on the atomic path, which does not call this function).
         // Blocking recipient == pool here stops the cross-path replay: submitting that same proof
         // through plain transact() would otherwise send USDC pool->pool, burn the note, and strand
-        // the funds. No legitimate local unshield targets the pool address.
+        // the funds (issue #364 cross-path replay). No legitimate local unshield targets the pool address.
         require(recipient != address(this), "TransactModule: unshield to pool");
 
         // Pay the full preimage value; the trailing zero keeps the 4-field event shape.
@@ -435,7 +437,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
 
     /// @notice Reverts while the emergency pause is active. No-op if no pause contract is
     ///         set or the emergency window is not open. This is the only check that can
-    ///         block unshields.
+    ///         block unshields: the post-wind-down Security Council emergency pause (single,
+    ///         non-renewable), which protects users from adapter issues discovered after wind-down.
     function _requireNotEmergencyPaused() internal view {
         if (shieldPauseContract == address(0)) return;
         require(

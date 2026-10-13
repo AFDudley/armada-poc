@@ -37,7 +37,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
     uint120 private constant BASIS_POINTS = 10000;
 
     /// @notice Shields one or more notes in a single atomic batch.
-    /// @dev Emits `Shield` with the PRE-insertion tree position (spec OQ-1) before the
+    /// @dev Emits `Shield` with the PRE-insertion tree position (rollover-aware, spec §5.5) before the
     ///      leaves are inserted, so wallets can scan logs in emission order. Any failed
     ///      check reverts the whole batch, including earlier token pulls.
     /// @param _shieldRequests Notes to shield, processed in order.
@@ -222,7 +222,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
     // ══════════════════════════════════════════════════════════════════════════
 
     /// @notice True if `caller` is a trusted yield adapter per the governance registry.
-    /// @dev Fee-exempt shield path. The gate is `authorized OR withdraw-only`, mirroring the
+    /// @dev Fee-exempt shield path (issue #370). The gate is `authorized OR withdraw-only`, mirroring the
     ///      yield adapter's own guard, so an adapter's wind-down exit re-shields stay fee-exempt
     ///      until it is fully deauthorized (at which point the adapter blocks itself, so there is
     ///      no dangling privilege). When adapterRegistry is unset, no caller is privileged. The
