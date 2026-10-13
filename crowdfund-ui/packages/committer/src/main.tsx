@@ -13,6 +13,7 @@ import { wagmiConfig } from '@/config/wagmi'
 import { getMockSizeFromUrl } from '@/appNav'
 import { initSentry, SentryErrorBoundary, isSentryEnabled } from '@/lib/sentry'
 import { installChunkReloadHandler } from '@/lib/chunkReload'
+import { installPolyfills } from '@/lib/polyfills'
 import { validateEnv } from '@/config/validateEnv'
 import { getPrelaunchOpensAt } from '@/config/prelaunch'
 import { DISCORD_URL } from '@/config/socials'
@@ -56,6 +57,10 @@ function CrashHelp({ eventId }: { eventId?: string }) {
     </div>
   )
 }
+
+// Before anything fetches: older Safari (iOS 15) lacks AbortSignal.timeout,
+// which the deployment-manifest and indexer fetches rely on.
+installPolyfills()
 
 initSentry()
 // A route chunk that fails to download (a phone dropping its connection
