@@ -437,8 +437,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
 
     /// @notice Reverts while the emergency pause is active. No-op if no pause contract is
     ///         set or the emergency window is not open. This is the only check that can
-    ///         block unshields: the post-wind-down Security Council emergency pause (single,
-    ///         non-renewable), which protects users from adapter issues discovered after wind-down.
+    ///         block unshields: the post-wind-down emergency pause, if the wired controller
+    ///         enables one (Launch 1's ShieldPauseController has it disabled, #589).
     function _requireNotEmergencyPaused() internal view {
         if (shieldPauseContract == address(0)) return;
         require(
