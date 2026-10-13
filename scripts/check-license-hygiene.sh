@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# ABOUTME: CI gate that keeps unlicensed/derivative vendored code out of contracts/ after the
+# ABOUTME: privacy pool rewrite (deleted legacy tree, SPDX identifiers, attribution strings).
 # License-hygiene gate for the privacy pool contract rewrite (M8).
 #
 # Fails CI if any unlicensed/derivative vendored code re-enters the tree:

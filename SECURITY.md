@@ -25,7 +25,7 @@ We ask that you do not publicly disclose the vulnerability until we have had a r
 
 ### In Scope
 
-- Smart contracts in `contracts/` (excluding `contracts/test/`, `contracts/railgun/`, `contracts/aave-mock/`, `contracts/cctp/`)
+- Smart contracts in `contracts/` (excluding `contracts/test/`, `contracts/aave-mock/`, `contracts/cctp/`)
 - Deployment scripts in `scripts/`
 - Relayer service in `relayer/`
 

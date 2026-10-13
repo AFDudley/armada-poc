@@ -1,3 +1,5 @@
+// ABOUTME: Shared utilities for the golden-vector capture harness (deterministic seeds,
+// ABOUTME: hex/bigint helpers, JSON serialization).
 /**
  * Shared utilities for the contract-vector capture harness.
  *

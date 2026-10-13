@@ -1,3 +1,5 @@
+// ABOUTME: Fabricates CCTP V2 MessageV2 / BurnMessageV2 bytes for the hub-side hook-handler
+// ABOUTME: golden vectors, matching the offset tables in contracts/cctp/ICCTPV2.sol.
 /**
  * CCTP V2 message fabrication for the hub-side hook-handler vectors.
  *

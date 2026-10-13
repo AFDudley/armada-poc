@@ -1,3 +1,5 @@
+// ABOUTME: Runtime-compiled helper contracts used only by the golden-vector capture harness
+// ABOUTME: to drive pool code paths that need a counterpart contract; not part of the deployed system.
 /**
  * Runtime-compiled capture-only helper contracts.
  *

@@ -1,5 +1,5 @@
-// One-off live smoke test: shield 1 USDC into the rewritten pool on Sepolia.
-// Not committed — proof-of-life for the Phase 4 deploy.
+// ABOUTME: One-off live smoke test: shield 1 USDC into the rewritten pool on Sepolia.
+// ABOUTME: Proof-of-life for the Phase 4 deploy; the addresses below are that deployment's.
 import { ethers } from "hardhat";
 
 const POOL = "0xc9e0ec323CB6638a307D560731e53Aa675C66e76";
