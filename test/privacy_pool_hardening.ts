@@ -701,6 +701,15 @@ describe("Privacy Pool Integration Hardening", function () {
       ).to.be.revertedWith("TransactModule: Cross-chain unshield must pay the pool");
     });
 
+    // WHY: an ERC-20 note's tokenSubID is not part of its commitment hash, so a submitter could put
+    // any value there and have it appear in the Unshield event. Canonical ERC-20 notes use 0.
+    it("rejects an ERC-20 unshield with a non-zero tokenSubID", async function () {
+      const root = await privacyPool.merkleRoot();
+      const tx = unshieldTx(BigInt(bobAddress), VALUE, root, "nonzero-subid");
+      tx.unshieldPreimage.token.tokenSubID = 7;
+      await expect(privacyPool.transact([tx])).to.be.revertedWith("TransactModule: Invalid Unshield Token");
+    });
+
     it("still allows a well-formed local unshield", async function () {
       const root = await privacyPool.merkleRoot();
       const before = await hubUsdc.balanceOf(charlieAddress);

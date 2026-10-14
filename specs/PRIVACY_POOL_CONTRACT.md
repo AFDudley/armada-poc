@@ -502,11 +502,14 @@ Post-drift (D-16): `destinationCaller` is no longer caller-supplied (pinned on-c
 | 5 | If `unshield != NONE`: `commitmentCiphertext.length == commitments.length - 1` | `"Invalid Ciphertext Length"` |
 | 5a | If `unshield != NONE`: `uint256(unshieldPreimage.npk) < SNARK_SCALAR_FIELD` | `"Invalid Unshield NPK"` |
 | 5b | If `unshield != NONE`: `unshieldPreimage.value > 0` | `"Invalid Unshield Value"` |
+| 5c | If `unshield != NONE` and the token is ERC-20: `unshieldPreimage.token.tokenSubID == 0` | `"Invalid Unshield Token"` |
 | 6 | If `unshield != NONE`: unshield-output hash check (below) | `"Invalid Unshield Note"` |
 | 7 | If `unshield == NONE`: `commitmentCiphertext.length == commitments.length` | `"Invalid Ciphertext Length"` |
 | 8 | Router `verify(tx) == true` | `"Invalid Proof"` |
 
 Steps 5a–5b detail: Poseidon reduces its inputs mod the field, so `npk` and `npk + k·q` produce the same commitment hash but truncate to different payout addresses (§8.5). Only a canonical `npk` is bound by the step-6 hash check. Both checks apply to every unshield type and to both entry points (`transact`, `atomicCrossChainUnshield`).
+
+Step 5c detail: an ERC-20 note's `tokenSubID` is not part of its hash (§2.2), so a non-zero value would otherwise pass unchecked into the `Unshield` event.
 
 Step 6 detail: for `REDIRECT`, hash a copy of `unshieldPreimage` with `npk` **replaced by** `bytes32(uint256(uint160(msg.sender)))`; otherwise hash `unshieldPreimage` as-is. The hash must equal `commitments[commitments.length - 1]`. (Consequence: an unshield transaction must have at least one commitment, since `commitments.length - 1` would underflow; for `REDIRECT` the payout still goes to the address encoded in the preimage's `npk`, §8.5 — the `msg.sender` binding is only a hash-check constraint.)
 
