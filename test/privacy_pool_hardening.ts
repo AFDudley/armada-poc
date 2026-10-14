@@ -710,6 +710,17 @@ describe("Privacy Pool Integration Hardening", function () {
       await expect(privacyPool.transact([tx])).to.be.revertedWith("TransactModule: Invalid Unshield Token");
     });
 
+    // WHY: real CCTP V2 requires maxFee < amount. Accepting maxFee == amount at the pool would only
+    // fail inside the burn on a real chain; reject it up front with a clear reason (#610).
+    it("rejects a cross-chain unshield whose maxFee equals the amount", async function () {
+      const root = await privacyPool.merkleRoot();
+      const tx = unshieldTx(BigInt(privacyPoolAddress), VALUE, root, "maxfee-equals-amount",
+        encodeCctpBinding(bobAddress, DOMAINS.client, VALUE));
+      await expect(
+        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, bobAddress, VALUE, ethers.ZeroHash)
+      ).to.be.revertedWith("TransactModule: maxFee must be below amount");
+    });
+
     it("still allows a well-formed local unshield", async function () {
       const root = await privacyPool.merkleRoot();
       const before = await hubUsdc.balanceOf(charlieAddress);

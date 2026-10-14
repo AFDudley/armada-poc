@@ -483,7 +483,7 @@ Post-drift (D-16): `destinationCaller` is no longer caller-supplied (pinned on-c
 3. Process: if `boundParams.commitmentCiphertext.length > 0` — `_accumulateAndNullify` into fresh accumulators, read router position, `emit Transact(...)`, `insertLeaves`. Otherwise `_accumulateAndNullify` with empty arrays (nullifiers still marked; `Nullified` still emitted; no `Transact` event, no tree insertion).
 4. Burn & bridge:
    - `base = unshieldPreimage.value`; `fee = 0` (unshields are free, D-2).
-   - `require(maxFee <= base, "TransactModule: maxFee exceeds base")`.
+   - `require(maxFee < base, "TransactModule: maxFee must be below amount")` — the same rule real CCTP V2 `depositForBurn` enforces, and that `PrivacyPoolClient` applies to shields.
    - `hookData = abi.encode(CCTPPayload(UNSHIELD, abi.encode(UnshieldData(finalRecipient, uniqueNonce))))`.
    - `IERC20(usdc).safeApprove(tokenMessenger, 0)` then `safeApprove(tokenMessenger, base)` — the zero-reset is required because OZ 4.9 `safeApprove` reverts on a non-zero→non-zero change, and a residual TokenMessenger allowance would otherwise brick later burns.
    - `finality = defaultFinalityThreshold > 0 ? defaultFinalityThreshold : 2000` (inlined).

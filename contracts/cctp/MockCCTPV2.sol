@@ -72,6 +72,7 @@ contract MockTokenMessengerV2 is ITokenMessengerV2 {
     ) external {
         require(burnToken == usdc, "Unsupported token");
         require(amount > 0, "Amount must be > 0");
+        require(maxFee < amount, "Max fee must be less than amount"); // real CCTP V2 rule
         require(mintRecipient != bytes32(0), "Invalid recipient");
 
         // Transfer and burn tokens
@@ -110,6 +111,7 @@ contract MockTokenMessengerV2 is ITokenMessengerV2 {
     ) external {
         require(burnToken == usdc, "Unsupported token");
         require(amount > 0, "Amount must be > 0");
+        require(maxFee < amount, "Max fee must be less than amount"); // real CCTP V2 rule
         require(mintRecipient != bytes32(0), "Invalid recipient");
         require(hookData.length > 0, "Hook data required");
 
