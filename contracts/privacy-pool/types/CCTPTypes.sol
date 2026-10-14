@@ -34,7 +34,8 @@ struct CCTPPayload {
  *      Token information is not included - Hub uses its local USDC address.
  *      A SHIELD payload carries an ARRAY of these: index 0 is the recipient's note (which absorbs
  *      the CCTP protocol fee on the Hub); any additional notes — e.g. a relayer fee note in the
- *      gasless cross-chain path — are minted at their full declared value.
+ *      gasless cross-chain path — are allocated their full declared value. Every note, fee notes
+ *      included, then pays the Hub shield fee.
  *
  * @param npk Note public key - Poseidon hash representing note ownership
  * @param value Amount being shielded (gross amount before CCTP fee deduction)
@@ -73,7 +74,8 @@ struct UnshieldData {
 library CCTPPayloadLib {
     /**
      * @notice Encode a shield payload (one or more notes) for CCTP hook data
-     * @dev `notes[0]` is the recipient note; any further notes are minted at full value on the Hub.
+     * @dev `notes[0]` is the recipient note; any further notes are allocated their full declared value
+     *      on the Hub (before the shield fee, which every note pays).
      */
     function encodeShield(ShieldData[] memory notes) internal pure returns (bytes memory) {
         return abi.encode(CCTPPayload({

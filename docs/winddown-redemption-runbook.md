@@ -72,6 +72,16 @@ The script refuses to run pre-trigger (except on local, for rehearsal), warns on
 balances, verifies the deployed router's `allTokens()` against the intended list, and
 writes a `redemption-router-*.json` manifest.
 
+**Vet every token in the printed list before confirming.** `sweepToken` is permissionless,
+so the list can include tokens nobody chose: junk sent to the treasury, or non-USDC shield
+fees. `redeemAll` reads `balanceOf` and transfers every token in the list, so a single token
+that reverts on either (malicious, paused, or blocklisting the redemption contract) makes
+`redeemAll` revert for **every** holder. For each token, confirm it is a known asset and that
+`balanceOf(redemption)` succeeds. The deploy script bakes in every swept token and has no
+exclusion option today, so if a token fails vetting, do not publish the router as the safe
+path. Instead, publish the vetted token list and point holders at `ArmadaRedemption.redeem`
+directly with that list.
+
 Then **verify the router's source code on the block explorer**. This is not optional:
 users are asked to approve ARM to a contract they have never seen, on a dead protocol —
 exactly the setting phishing thrives in. An unverifiable router should be treated as

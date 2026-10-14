@@ -243,8 +243,9 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
         // `Unshield` event keeps its 4-field shape for downstream log parsers.
         uint120 base = _transaction.unshieldPreimage.value;
 
-        // The relayer fee is carved out of the bridged amount, so it cannot exceed it
-        require(maxFee <= base, "TransactModule: maxFee exceeds base");
+        // The relayer fee is carved out of the bridged amount, so it must be strictly below it (the
+        // same rule real CCTP V2 depositForBurn enforces)
+        require(maxFee < base, "TransactModule: maxFee must be below amount");
 
         // Encode the hook payload the client-side pool will decode
         bytes memory hookData = CCTPPayloadLib.encodeUnshield(
@@ -330,6 +331,14 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
             }
             if (_transaction.unshieldPreimage.value == 0) {
                 return (false, "Invalid Unshield Value");
+            }
+            // An ERC-20 note's tokenSubID is not hashed, so only the canonical 0 is accepted; any
+            // other value would surface unchecked in the Unshield event.
+            if (
+                _transaction.unshieldPreimage.token.tokenType == TokenType.ERC20 &&
+                _transaction.unshieldPreimage.token.tokenSubID != 0
+            ) {
+                return (false, "Invalid Unshield Token");
             }
 
             // Verify unshield preimage hash

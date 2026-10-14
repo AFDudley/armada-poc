@@ -32,7 +32,9 @@ import {ShieldRequest, CommitmentPreimage, TokenType} from "./privacy-pool/types
  *     privileged relayer address on this contract. The fee recipient is per-transaction signed data.
  *   - The permit binds the spender to this wrapper, the amount to the summed note values, and adds a
  *     deadline; ERC20Permit's nonce protects the permit against replay, and the wrapper's own
- *     `nonces` mapping protects the intent against replay.
+ *     `nonces` mapping protects the intent against replay. If the permit has already been used
+ *     (e.g. someone submitted it from the mempool first), the wrapper proceeds on the existing
+ *     allowance: the signed intent, not the permit, bounds what is spent.
  *   - `SignatureChecker` accepts both EOA (ecrecover) and EIP-1271 (smart-account) intent signatures.
  *     Note: the EIP-2612 permit leg is ecrecover-only in real USDC, so full smart-account gasless
  *     shield remains gated by the permit path, not by this contract.
@@ -192,10 +194,18 @@ contract GaslessShieldWrapper is EIP712 {
         uint256 totalAmount,
         ShieldRequest[] calldata shieldRequests
     ) internal {
-        // 1. Permit gives the wrapper `totalAmount` allowance from `user`.
-        IERC20Permit(usdc).permit(
+        // 1. Permit gives the wrapper `totalAmount` allowance from `user`. The signed intent (checked
+        //    above), not the permit, authorizes this spend. The permit is public in the mempool, so
+        //    anyone may have submitted it already, consuming its nonce; tolerate a failed permit as long
+        //    as the allowance is in place.
+        try IERC20Permit(usdc).permit(
             params.user, address(this), totalAmount, params.deadline, params.permitV, params.permitR, params.permitS
-        );
+        ) {} catch {
+            require(
+                IERC20(usdc).allowance(params.user, address(this)) >= totalAmount,
+                "GaslessShieldWrapper: permit failed and allowance too low"
+            );
+        }
         // 2. Pull the full amount (all note values, gross of the pool's shield fee) into the wrapper.
         IERC20(usdc).safeTransferFrom(params.user, address(this), totalAmount);
         // 3. Approve the pool to pull from the wrapper. safeApprove(0, amount) is defensive against

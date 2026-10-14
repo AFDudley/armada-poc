@@ -84,8 +84,9 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
 
     /// @notice Processes a cross-chain shield-in after CCTP has minted USDC to the pool.
     /// @dev Reached only from the router's CCTP message handlers. The payload carries one or
-    ///      more notes: index 0 is the recipient note (it absorbs the CCTP protocol fee), and any
-    ///      further notes (e.g. a relayer fee note) are minted at their full declared value. All
+    ///      more notes: index 0 is the recipient note (it alone absorbs the CCTP protocol fee), and
+    ///      any further notes (e.g. a relayer fee note) are allocated their full declared value.
+    ///      Every note, fee notes included, then pays the shield fee. All
     ///      notes are inserted in one batch with a SINGLE Shield event, matching the local shield()
     ///      event shape. Fees (if any) settle out of the pool's own balance, and the fee-exemption
     ///      check inspects `msg.sender` — here the hook router or token messenger, which is
@@ -98,7 +99,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
         uint256 n = datas.length;
         require(n > 0, "ShieldModule: no shield notes");
 
-        // Fee notes (index >= 1) mint at full declared value; the recipient note absorbs them
+        // Fee notes (index >= 1) are allocated their full declared value; the recipient note absorbs them
         uint256 feeSum = 0;
         for (uint256 i = 1; i < n; i++) {
             feeSum += uint256(datas[i].value);

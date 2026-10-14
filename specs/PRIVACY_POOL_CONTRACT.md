@@ -414,7 +414,7 @@ Module-private constant `BASIS_POINTS = 10000`. All externals are `onlyDelegatec
 
 ### 7.2 `processIncomingShield(uint256 amount, ShieldData[] calldata datas)` — selector `0xffd149d4`
 
-Invoked by the router's CCTP handler after USDC has already been minted to the pool. Post-drift (D-15) the payload is a note ARRAY: index 0 is the recipient note (it absorbs the CCTP protocol fee); any further notes (e.g. a relayer fee note) mint at their full declared value.
+Invoked by the router's CCTP handler after USDC has already been minted to the pool. Post-drift (D-15) the payload is a note ARRAY: index 0 is the recipient note (it alone absorbs the CCTP protocol fee); any further notes (e.g. a relayer fee note) are allocated their full declared value. Every note, fee notes included, then pays the shield fee (§7.4).
 
 1. Same pause check as §7.1 step 1.
 2. `require(datas.length > 0, "ShieldModule: no shield notes")`.
@@ -483,7 +483,7 @@ Post-drift (D-16): `destinationCaller` is no longer caller-supplied (pinned on-c
 3. Process: if `boundParams.commitmentCiphertext.length > 0` — `_accumulateAndNullify` into fresh accumulators, read router position, `emit Transact(...)`, `insertLeaves`. Otherwise `_accumulateAndNullify` with empty arrays (nullifiers still marked; `Nullified` still emitted; no `Transact` event, no tree insertion).
 4. Burn & bridge:
    - `base = unshieldPreimage.value`; `fee = 0` (unshields are free, D-2).
-   - `require(maxFee <= base, "TransactModule: maxFee exceeds base")`.
+   - `require(maxFee < base, "TransactModule: maxFee must be below amount")` — the same rule real CCTP V2 `depositForBurn` enforces, and that `PrivacyPoolClient` applies to shields.
    - `hookData = abi.encode(CCTPPayload(UNSHIELD, abi.encode(UnshieldData(finalRecipient, uniqueNonce))))`.
    - `IERC20(usdc).safeApprove(tokenMessenger, 0)` then `safeApprove(tokenMessenger, base)` — the zero-reset is required because OZ 4.9 `safeApprove` reverts on a non-zero→non-zero change, and a residual TokenMessenger allowance would otherwise brick later burns.
    - `finality = defaultFinalityThreshold > 0 ? defaultFinalityThreshold : 2000` (inlined).
@@ -502,11 +502,14 @@ Post-drift (D-16): `destinationCaller` is no longer caller-supplied (pinned on-c
 | 5 | If `unshield != NONE`: `commitmentCiphertext.length == commitments.length - 1` | `"Invalid Ciphertext Length"` |
 | 5a | If `unshield != NONE`: `uint256(unshieldPreimage.npk) < SNARK_SCALAR_FIELD` | `"Invalid Unshield NPK"` |
 | 5b | If `unshield != NONE`: `unshieldPreimage.value > 0` | `"Invalid Unshield Value"` |
+| 5c | If `unshield != NONE` and the token is ERC-20: `unshieldPreimage.token.tokenSubID == 0` | `"Invalid Unshield Token"` |
 | 6 | If `unshield != NONE`: unshield-output hash check (below) | `"Invalid Unshield Note"` |
 | 7 | If `unshield == NONE`: `commitmentCiphertext.length == commitments.length` | `"Invalid Ciphertext Length"` |
 | 8 | Router `verify(tx) == true` | `"Invalid Proof"` |
 
 Steps 5a–5b detail: Poseidon reduces its inputs mod the field, so `npk` and `npk + k·q` produce the same commitment hash but truncate to different payout addresses (§8.5). Only a canonical `npk` is bound by the step-6 hash check. Both checks apply to every unshield type and to both entry points (`transact`, `atomicCrossChainUnshield`).
+
+Step 5c detail: an ERC-20 note's `tokenSubID` is not part of its hash (§2.2), so a non-zero value would otherwise pass unchecked into the `Unshield` event.
 
 Step 6 detail: for `REDIRECT`, hash a copy of `unshieldPreimage` with `npk` **replaced by** `bytes32(uint256(uint160(msg.sender)))`; otherwise hash `unshieldPreimage` as-is. The hash must equal `commitments[commitments.length - 1]`. (Consequence: an unshield transaction must have at least one commitment, since `commitments.length - 1` would underflow; for `REDIRECT` the payout still goes to the address encoded in the preimage's `npk`, §8.5 — the `msg.sender` binding is only a hash-check constraint.)
 

@@ -1029,7 +1029,7 @@ describe("Privacy Pool Adversarial", function () {
         privacyPool.atomicCrossChainUnshield(
           tx, DOMAINS.client, bobAddress, ethers.parseUnits("100", 6), ethers.ZeroHash
         )
-      ).to.be.revertedWith("TransactModule: maxFee exceeds base");
+      ).to.be.revertedWith("TransactModule: maxFee must be below amount");
     });
   });
 

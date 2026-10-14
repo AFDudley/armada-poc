@@ -701,6 +701,26 @@ describe("Privacy Pool Integration Hardening", function () {
       ).to.be.revertedWith("TransactModule: Cross-chain unshield must pay the pool");
     });
 
+    // WHY: an ERC-20 note's tokenSubID is not part of its commitment hash, so a submitter could put
+    // any value there and have it appear in the Unshield event. Canonical ERC-20 notes use 0.
+    it("rejects an ERC-20 unshield with a non-zero tokenSubID", async function () {
+      const root = await privacyPool.merkleRoot();
+      const tx = unshieldTx(BigInt(bobAddress), VALUE, root, "nonzero-subid");
+      tx.unshieldPreimage.token.tokenSubID = 7;
+      await expect(privacyPool.transact([tx])).to.be.revertedWith("TransactModule: Invalid Unshield Token");
+    });
+
+    // WHY: real CCTP V2 requires maxFee < amount. Accepting maxFee == amount at the pool would only
+    // fail inside the burn on a real chain; reject it up front with a clear reason (#610).
+    it("rejects a cross-chain unshield whose maxFee equals the amount", async function () {
+      const root = await privacyPool.merkleRoot();
+      const tx = unshieldTx(BigInt(privacyPoolAddress), VALUE, root, "maxfee-equals-amount",
+        encodeCctpBinding(bobAddress, DOMAINS.client, VALUE));
+      await expect(
+        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, bobAddress, VALUE, ethers.ZeroHash)
+      ).to.be.revertedWith("TransactModule: maxFee must be below amount");
+    });
+
     it("still allows a well-formed local unshield", async function () {
       const root = await privacyPool.merkleRoot();
       const before = await hubUsdc.balanceOf(charlieAddress);
@@ -799,6 +819,26 @@ describe("Privacy Pool Integration Hardening", function () {
       await expect(clientHookRouter.connect(relayer).relayWithHook(message, "0x"))
         .to.be.revertedWith("CCTPHookRouter: not a burn message");
       expect(await clientUsdc.balanceOf(charlieAddress)).to.equal(before);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Client shield amount bounds (#610 L2)
+  // ═══════════════════════════════════════════════════════════════════
+
+  describe("Client Shield Amount Bounds", function () {
+    // WHY: note values are uint120. A shield amount above that must revert, not be silently
+    // truncated into a note worth far less than the USDC burned.
+    it("reverts a cross-chain shield whose amount does not fit in uint120", async function () {
+      const amount = 1n << 120n;
+      await clientUsdc.mint(aliceAddress, amount);
+      await clientUsdc.connect(alice).approve(clientAddress, amount);
+      await expect(
+        privacyPoolClient.connect(alice).crossChainShield(
+          amount, 0, 0, validNpk("too-big"),
+          [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash], ethers.ZeroHash, ethers.ZeroAddress
+        )
+      ).to.be.revertedWith("SafeCast: value doesn't fit in 120 bits");
     });
   });
 
