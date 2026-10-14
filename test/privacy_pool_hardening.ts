@@ -803,6 +803,26 @@ describe("Privacy Pool Integration Hardening", function () {
   });
 
   // ═══════════════════════════════════════════════════════════════════
+  // Client shield amount bounds (#610 L2)
+  // ═══════════════════════════════════════════════════════════════════
+
+  describe("Client Shield Amount Bounds", function () {
+    // WHY: note values are uint120. A shield amount above that must revert, not be silently
+    // truncated into a note worth far less than the USDC burned.
+    it("reverts a cross-chain shield whose amount does not fit in uint120", async function () {
+      const amount = 1n << 120n;
+      await clientUsdc.mint(aliceAddress, amount);
+      await clientUsdc.connect(alice).approve(clientAddress, amount);
+      await expect(
+        privacyPoolClient.connect(alice).crossChainShield(
+          amount, 0, 0, validNpk("too-big"),
+          [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash], ethers.ZeroHash, ethers.ZeroAddress
+        )
+      ).to.be.revertedWith("SafeCast: value doesn't fit in 120 bits");
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
   // TEST 5: Batched transact with mixed operations
   // ═══════════════════════════════════════════════════════════════════
 

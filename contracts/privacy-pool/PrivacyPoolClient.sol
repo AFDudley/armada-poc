@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "./interfaces/IPrivacyPoolClient.sol";
 import "./types/CCTPTypes.sol";
@@ -158,7 +159,7 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
         ShieldData[] memory notes = new ShieldData[](1);
         notes[0] = ShieldData({
             npk: npk,
-            value: uint120(amount),
+            value: SafeCast.toUint120(amount), // reverts rather than truncating
             encryptedBundle: encryptedBundle,
             shieldKey: shieldKey,
             integrator: integrator
