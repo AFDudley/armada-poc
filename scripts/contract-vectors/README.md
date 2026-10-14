@@ -87,7 +87,7 @@ behavioral surface main absorbed after the v1 corpus (deviation register D-15..D
 registry-derived shield-fee exemption, token blocklist admin, remoteHookRouters pinning,
 multi-note cross-chain shield-in, destination-bound atomic unshield, deployer-gated
 initialize, and the reentrancy guard. It was captured from a fixturenet deployed from
-**current-main** contracts and replays 23/23 against the rewritten contracts.
+**current-main** contracts and replays 24/24 against the rewritten contracts.
 
 Replay the v2 corpus:
 
