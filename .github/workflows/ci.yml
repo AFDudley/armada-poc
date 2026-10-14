@@ -9,6 +9,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # License hygiene gate (M8): superseded legacy tree stays deleted;
+  # contracts carry no UNLICENSED SPDX / third-party attribution strings.
+  license-hygiene:
+    name: License Hygiene Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/check-license-hygiene.sh
+
   # Fast checks (no dependencies needed)
   anvil-address-check:
     name: Anvil Address Guard

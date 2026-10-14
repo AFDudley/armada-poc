@@ -388,7 +388,7 @@ through it (open question 8).
 
 ## 12. Repo constraints & landmines (read before touching code)
 
-- `contracts/railgun/logic/` is adapted Railgun — changes silently break ZK circuit
+- The pool's consensus-critical surface (`contracts/privacy-pool/types/` (struct layouts, `ZERO_VALUE`, Snark types), the router's `verify` public-input assembly, `hashBoundParams`, and Merkle hashing; see `specs/PRIVACY_POOL_CONTRACT.md`) — changes silently break ZK circuit
   compatibility. The signing/verification scheme is stock-compatible
   (`hashBoundParams` = keccak-mod-field on-chain is **stock**, not a divergence); keep it that
   way. Do not "improve" bound-params hashing.
