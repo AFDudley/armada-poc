@@ -534,6 +534,98 @@ describe("Privacy Pool Integration Hardening", function () {
   });
 
   // ═══════════════════════════════════════════════════════════════════
+  // Cross-chain unshield is USDC-only; the pool stays multi-asset
+  // ═══════════════════════════════════════════════════════════════════
+
+  describe("Cross-Chain Unshield Token Restriction", function () {
+    const NOTE_VALUE = ethers.parseUnits("40", 6);
+    let junk: Contract;
+    let junkAddr: string;
+
+    before(async function () {
+      // Any non-blocklisted ERC-20 can be shielded; this one stands in for an arbitrary token.
+      const MockUSDCV2 = await ethers.getContractFactory("MockUSDCV2");
+      junk = await MockUSDCV2.deploy("Junk", "JNK");
+      junkAddr = await junk.getAddress();
+      await junk.mint(aliceAddress, NOTE_VALUE * 2n);
+      await junk.connect(alice).approve(privacyPoolAddress, NOTE_VALUE * 2n);
+      await privacyPool.connect(alice).shield(
+        [makeShieldRequest(junkAddr, NOTE_VALUE * 2n, "junk-shield")],
+        ethers.ZeroAddress
+      );
+      // Make sure the pool also holds USDC that a mismatched burn could take.
+      await shieldAndGetRoot(bob, ethers.parseUnits("100", 6), "usdc-backing");
+    });
+
+    function xchainUnshieldOf(token: { tokenType: number; tokenAddress: string }, root: string, nullSeed: string) {
+      const tokenId = token.tokenType === 0
+        ? BigInt(token.tokenAddress)
+        : BigInt(ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
+            ["tuple(uint8,address,uint256)"], [[token.tokenType, token.tokenAddress, 0]]
+          ))) % SNARK_SCALAR_FIELD;
+      return makeTransaction({
+        merkleRoot: root,
+        nullifiers: [ethers.keccak256(ethers.toUtf8Bytes(nullSeed))],
+        commitments: [computeCommitmentHash(BigInt(privacyPoolAddress), tokenId, NOTE_VALUE)],
+        unshield: 1,
+        adaptParams: encodeCctpBinding(charlieAddress, DOMAINS.client, 0n),
+        unshieldPreimage: {
+          npk: ethers.zeroPadValue(privacyPoolAddress, 32),
+          token: { ...token, tokenSubID: 0 },
+          value: NOTE_VALUE,
+        },
+      });
+    }
+
+    // WHY: CCTP only bridges USDC and the burn always spends the pool's USDC, so a note of any
+    // other token must not be able to exit through this path — its value would be paid in USDC.
+    it("rejects a cross-chain unshield of a non-USDC note and leaves pool USDC untouched", async function () {
+      const root = await privacyPool.merkleRoot();
+      const poolUsdcBefore = await hubUsdc.balanceOf(privacyPoolAddress);
+
+      const tx = xchainUnshieldOf({ tokenType: 0, tokenAddress: junkAddr }, root, "junk-xchain-null");
+      await expect(
+        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, charlieAddress, 0, ethers.ZeroHash)
+      ).to.be.revertedWith("TransactModule: Cross-chain unshield is USDC-only");
+
+      expect(await hubUsdc.balanceOf(privacyPoolAddress)).to.equal(poolUsdcBefore);
+    });
+
+    // WHY: the USDC address alone is not enough — a non-ERC20 note type must not pass either.
+    it("rejects a non-ERC20 note that names the USDC address", async function () {
+      const root = await privacyPool.merkleRoot();
+      const tx = xchainUnshieldOf(
+        { tokenType: 1, tokenAddress: await hubUsdc.getAddress() }, root, "erc721-usdc-null"
+      );
+      await expect(
+        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, charlieAddress, 0, ethers.ZeroHash)
+      ).to.be.revertedWith("TransactModule: Cross-chain unshield is USDC-only");
+    });
+
+    // WHY: the restriction is on the CCTP exit only; the pool stays multi-asset, so the same
+    // non-USDC note must still unshield locally in its own token.
+    it("still unshields a non-USDC note locally in its own token", async function () {
+      const root = await privacyPool.merkleRoot();
+      const npk = ethers.zeroPadValue(charlieAddress, 32);
+      const tx = makeTransaction({
+        merkleRoot: root,
+        nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("junk-local-null"))],
+        commitments: [computeCommitmentHash(BigInt(charlieAddress), BigInt(junkAddr), NOTE_VALUE)],
+        unshield: 1,
+        unshieldPreimage: {
+          npk,
+          token: { tokenType: 0, tokenAddress: junkAddr, tokenSubID: 0 },
+          value: NOTE_VALUE,
+        },
+      });
+
+      const before = await junk.balanceOf(charlieAddress);
+      await privacyPool.transact([tx]);
+      expect((await junk.balanceOf(charlieAddress)) - before).to.equal(NOTE_VALUE);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
   // TEST 5: Batched transact with mixed operations
   // ═══════════════════════════════════════════════════════════════════
 

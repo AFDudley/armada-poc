@@ -473,12 +473,12 @@ Post-drift (D-16): `destinationCaller` is no longer caller-supplied (pinned on-c
    - `destinationDomain != localDomain` else `"TransactModule: Use local unshield"`;
    - `finalRecipient != address(0)` else `"TransactModule: Invalid recipient"`;
    - `tx.boundParams.unshield != NONE` else `"TransactModule: Must include unshield"`;
+   - `tx.unshieldPreimage.token.tokenType == ERC20 && tx.unshieldPreimage.token.tokenAddress == usdc` else `"TransactModule: Cross-chain unshield is USDC-only"` — the burn always spends `usdc`, so only a USDC note may exit through CCTP (**OQ-9**, resolved). Other tokens still unshield locally (§8.1);
    - `remotePools[destinationDomain] != bytes32(0)` else `"TransactModule: Unknown destination"`;
    - `remoteHookRouters[destinationDomain] != bytes32(0)` else `"TransactModule: Hook router not configured"`;
    - `tx.boundParams.adaptContract == address(0)` else `"TransactModule: unexpected adaptContract"`;
    - **Destination binding:** `CCTPBindingLib.verify(tx.boundParams.adaptParams, finalRecipient, destinationDomain, maxFee)` else `"TransactModule: destination not bound to proof"`. `adaptParams` must equal `keccak256(abi.encode(DOMAIN_TAG, recipient, domain, maxFee))` with `DOMAIN_TAG = keccak256("ArmadaCCTPUnshield.v1")` — since `adaptParams` is a SNARK public input (via `hashBoundParams`), this binds the plaintext destination tuple to the proof with no circuit change, and blocks hijacking a local unshield (adaptParams == 0) through this path;
    - `_validateTransaction(tx)` (§8.3), reverting `"TransactModule: " ++ reason`.
-   - **Known defect:** `unshieldPreimage.token` is **not** checked against `usdc`, yet the burn always burns `usdc` (**OQ-9**). Must be fixed before any deployment holding user funds; fix tracked separately.
 3. Process: if `boundParams.commitmentCiphertext.length > 0` — `_accumulateAndNullify` into fresh accumulators, read router position, `emit Transact(...)`, `insertLeaves`. Otherwise `_accumulateAndNullify` with empty arrays (nullifiers still marked; `Nullified` still emitted; no `Transact` event, no tree insertion).
 4. Burn & bridge:
    - `base = unshieldPreimage.value`; `fee = 0` (unshields are free, D-2).
@@ -605,7 +605,7 @@ For each nullifier `n`: `require(!nullifiers[boundParams.treeNumber][n], "Transa
 | **OQ-6** | ERC721/ERC1155 validation branches, `tokenIDMapping`, and `nftFee` are unreachable (both token in/out paths require ERC20). Keep types for ABI/event compatibility but drop the dead checks? | Dead NFT paths present. |
 | **OQ-7** | ~~`initialize` is permissionless first-call; if not invoked atomically at deployment it is front-runnable.~~ **RESOLVED post-drift (D-18):** `initialize` is gated to the deployer (private immutable captured in the constructor). | Deployer-only. |
 | **OQ-8** | `setTestingMode` emits `TestingModeSet` twice (once inside the module delegatecall, once on the router). Intentional or bug? | Double emission. |
-| **OQ-9** | **KNOWN DEFECT — must be fixed before any deployment holding user funds.** `atomicCrossChainUnshield` does not require `unshieldPreimage.token == USDC` — a proof over a non-USDC note would still burn USDC. Decision: add the check; fix tracked separately. | Token unchecked (defect). |
+| **OQ-9** | ~~`atomicCrossChainUnshield` does not require `unshieldPreimage.token == USDC` — a proof over a non-USDC note would still burn USDC.~~ **RESOLVED:** the unshield note must be an ERC-20 USDC note (§8.2), else `"TransactModule: Cross-chain unshield is USDC-only"`. The pool stays multi-asset; other tokens unshield locally. | USDC-only cross-chain exit. |
 | **OQ-10** | ~~`setShieldFee` allows up to 10000 bps (100%). Intended cap?~~ **RESOLVED post-drift:** `MAX_SHIELD_FEE_BPS = 1000` (10%) hard cap on the flat fee; the fee module caps every component at 10% (`MAX_BPS`) and the yield fee at 1–50%. | 10% cap. |
 | **OQ-11** | `testingMode` exists as a full proof bypass. Production expectation is removal (see deviation register D-3). Confirm removal plan and any staging-net needs. | Owner-toggleable bypass. |
 | **OQ-12** | `snarkSafetyVector` storage (slot 54) is never read or written. Retain as reserved (slot must stay either way) but drop the getter? | Dead public mapping. |
