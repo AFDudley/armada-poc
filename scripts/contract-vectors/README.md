@@ -93,7 +93,8 @@ It was re-captured on 2026-10-14 from `main` @ `1f416cff` (the rewritten contrac
 issue #606), because #606 requires a cross-chain unshield's `npk` to be the pool (D-21) and the
 original cross-chain vectors used an EOA. Only those three vectors changed in substance
 (`npk`, commitment hash, calldata); block numbers, tx hashes and gas shifted throughout. It
-replays 24/24 against the #606 contracts (gas +270 on the cross-chain unshield path).
+replays 24/24 against the contracts with #606 and the OQ-9 USDC check (gas +795 on the
+cross-chain unshield path, +239 on local unshield).
 
 Replay the v2 corpus:
 
