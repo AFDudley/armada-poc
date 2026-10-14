@@ -478,6 +478,7 @@ Post-drift (D-16): `destinationCaller` is no longer caller-supplied (pinned on-c
    - `remoteHookRouters[destinationDomain] != bytes32(0)` else `"TransactModule: Hook router not configured"`;
    - `tx.boundParams.adaptContract == address(0)` else `"TransactModule: unexpected adaptContract"`;
    - **Destination binding:** `CCTPBindingLib.verify(tx.boundParams.adaptParams, finalRecipient, destinationDomain, maxFee)` else `"TransactModule: destination not bound to proof"`. `adaptParams` must equal `keccak256(abi.encode(DOMAIN_TAG, recipient, domain, maxFee))` with `DOMAIN_TAG = keccak256("ArmadaCCTPUnshield.v1")` — since `adaptParams` is a SNARK public input (via `hashBoundParams`), this binds the plaintext destination tuple to the proof with no circuit change, and blocks hijacking a local unshield (adaptParams == 0) through this path;
+   - `tx.unshieldPreimage.npk == bytes32(uint256(uint160(address(this))))` else `"TransactModule: Cross-chain unshield must pay the pool"` — keeps cross-chain and local-unshield proofs disjoint, which the §8.5 unshield-to-pool guard relies on;
    - `_validateTransaction(tx)` (§8.3), reverting `"TransactModule: " ++ reason`.
 3. Process: if `boundParams.commitmentCiphertext.length > 0` — `_accumulateAndNullify` into fresh accumulators, read router position, `emit Transact(...)`, `insertLeaves`. Otherwise `_accumulateAndNullify` with empty arrays (nullifiers still marked; `Nullified` still emitted; no `Transact` event, no tree insertion).
 4. Burn & bridge:
@@ -499,9 +500,13 @@ Post-drift (D-16): `destinationCaller` is no longer caller-supplied (pinned on-c
 | 3 | `boundParams.chainID == block.chainid` | `"ChainID mismatch"` |
 | 4 | `rootHistory[boundParams.treeNumber][tx.merkleRoot] == true` | `"Invalid Merkle Root"` |
 | 5 | If `unshield != NONE`: `commitmentCiphertext.length == commitments.length - 1` | `"Invalid Ciphertext Length"` |
+| 5a | If `unshield != NONE`: `uint256(unshieldPreimage.npk) < SNARK_SCALAR_FIELD` | `"Invalid Unshield NPK"` |
+| 5b | If `unshield != NONE`: `unshieldPreimage.value > 0` | `"Invalid Unshield Value"` |
 | 6 | If `unshield != NONE`: unshield-output hash check (below) | `"Invalid Unshield Note"` |
 | 7 | If `unshield == NONE`: `commitmentCiphertext.length == commitments.length` | `"Invalid Ciphertext Length"` |
 | 8 | Router `verify(tx) == true` | `"Invalid Proof"` |
+
+Steps 5a–5b detail: Poseidon reduces its inputs mod the field, so `npk` and `npk + k·q` produce the same commitment hash but truncate to different payout addresses (§8.5). Only a canonical `npk` is bound by the step-6 hash check. Both checks apply to every unshield type and to both entry points (`transact`, `atomicCrossChainUnshield`).
 
 Step 6 detail: for `REDIRECT`, hash a copy of `unshieldPreimage` with `npk` **replaced by** `bytes32(uint256(uint160(msg.sender)))`; otherwise hash `unshieldPreimage` as-is. The hash must equal `commitments[commitments.length - 1]`. (Consequence: an unshield transaction must have at least one commitment, since `commitments.length - 1` would underflow; for `REDIRECT` the payout still goes to the address encoded in the preimage's `npk`, §8.5 — the `msg.sender` binding is only a hash-check constraint.)
 
@@ -585,7 +590,7 @@ For each nullifier `n`: `require(!nullifiers[boundParams.treeNumber][n], "Transa
 - **I-4 (Nullifier uniqueness):** `nullifiers[treeNumber][n]` transitions `false → true` at most once; reuse reverts (`"TransactModule: Note already spent"`). Nullifiers are scoped to `boundParams.treeNumber` (uint16, widened to uint256 for the mapping key).
 - **I-5 (Shield conservation):** for each local shield, tokens pulled from the user equal `base + feePaid`; the inserted commitment's value equals `base`. For cross-chain shields, `commitmentValue + feesPaid == amountReceived`. Proven for the flat-fee path in `armada-lean/ArmadaLean/Fee.lean` (`fee_conservation`).
 - **I-6 (Transact conservation):** value conservation across inputs/outputs is enforced by the SNARK; the contract contributes: local unshield pays exactly `unshieldPreimage.value`; cross-chain unshield burns exactly `unshieldPreimage.value` of USDC.
-- **I-7 (Bounded values):** note values are `uint120`; `npk < SNARK_SCALAR_FIELD` on shield.
+- **I-7 (Bounded values):** note values are `uint120`; `npk < SNARK_SCALAR_FIELD` on shield and on unshield; unshield value `> 0`.
 - **I-8 (Atomicity):** any failed check reverts the entire user call, including all token movements, nullifier marks, tree inserts, and events of that call.
 - **I-9 (Module confinement):** module code never executes against module storage (`onlyDelegatecall`); tree mutation is reachable only via the router's self-call gate (`"Only self"`).
 - **I-10 (Fee bounds):** flat `shieldFee ≤ 10000` bps; at 50 bps, shields below 200 base units pay zero fee (floor division — Lean `fee_zero_below_threshold`).

@@ -86,8 +86,15 @@ address-book substitution (see TODOs in `replay-check.ts`).
 behavioral surface main absorbed after the v1 corpus (deviation register D-15..D-18):
 registry-derived shield-fee exemption, token blocklist admin, remoteHookRouters pinning,
 multi-note cross-chain shield-in, destination-bound atomic unshield, deployer-gated
-initialize, and the reentrancy guard. It was captured from a fixturenet deployed from
-**current-main** contracts and replays 24/24 against the rewritten contracts.
+initialize, and the reentrancy guard. It was first captured from a fixturenet deployed from
+the pre-rewrite contracts and replayed 24/24 against the rewritten contracts.
+
+It was re-captured on 2026-10-14 from `main` @ `1f416cff` (the rewritten contracts, before
+issue #606), because #606 requires a cross-chain unshield's `npk` to be the pool (D-21) and the
+original cross-chain vectors used an EOA. Only those three vectors changed in substance
+(`npk`, commitment hash, calldata); block numbers, tx hashes and gas shifted throughout. It
+replays 24/24 against the contracts with #606 and the OQ-9 USDC check (gas +795 on the
+cross-chain unshield path, +239 on local unshield).
 
 Replay the v2 corpus:
 

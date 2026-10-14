@@ -67,9 +67,9 @@
   },
   "result": {
     "status": 1,
-    "txHash": "0xef55a7eeb4983fb396437022c15f2e9895cb7ad7b15d6c0f37e39046332729d9",
-    "blockNumber": 122,
-    "gasUsed": "0xcc744",
+    "txHash": "0xf7deff1717213d78a86677bbe09d5d39b9064ad1dc831fe54fb2f57927b943fc",
+    "blockNumber": 124,
+    "gasUsed": "0xcc6ef",
     "returnData": null,
     "revert": null,
     "events": [
@@ -105,7 +105,7 @@
     "pool.treeNumber": "0x0",
     "pool.nextLeafIndex": "0x1",
     "pool.merkleRoot": "0x133f21b0171163ca5e4ad691296915cec2258131db105230cb0ff38ccf1962ac",
-    "pool.lastEventBlock": "0x7a",
+    "pool.lastEventBlock": "0x7c",
     "usdc.balanceOf[POOL]": "0x1312d00",
     "usdc.balanceOf[ALICE]": "0x2540be400",
     "usdc.balanceOf[BOB]": "0x3b9aca00",
@@ -143,5 +143,5 @@
       "MALICIOUS_TOKEN": "0xdbC43Ba45381e02825b14322cDdd15eC4B3164E6"
     }
   },
-  "capturedAt": "2026-10-01T11:33:45.206Z"
+  "capturedAt": "2026-10-14T13:56:08.895Z"
 }

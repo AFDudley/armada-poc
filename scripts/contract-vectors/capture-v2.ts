@@ -442,7 +442,9 @@ async function main() {
       chainId,
       unshield: UnshieldType.NORMAL,
       unshieldPreimage: {
-        npk: ethers.zeroPadValue(bob.address, 32),
+        // A cross-chain unshield always pays out to the pool, which then burns via CCTP; the
+        // pool rejects any other npk on this path (D-21). The final recipient is bound in adaptParams.
+        npk: ethers.zeroPadValue(book.POOL, 32),
         token: erc20Token(book.USDC),
         value: base,
       },

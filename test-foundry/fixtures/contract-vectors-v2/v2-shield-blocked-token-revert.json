@@ -55,7 +55,7 @@
     "pool.treeNumber": "0x0",
     "pool.nextLeafIndex": "0x2",
     "pool.merkleRoot": "0x281ca60c48f66c59afc21f4489fa7a93d01f4378330ed1ebfc5632d1ca79dd10",
-    "pool.lastEventBlock": "0x7b",
+    "pool.lastEventBlock": "0x7d",
     "usdc.balanceOf[POOL]": "0x260d360",
     "usdc.balanceOf[ALICE]": "0x2540be400",
     "usdc.balanceOf[BOB]": "0x3a699d00",
@@ -66,8 +66,8 @@
   },
   "result": {
     "status": 0,
-    "txHash": "0xd11952bf48c2e794fe3ef1917675f03b4379368794ebdf4a54f2ee4119571464",
-    "blockNumber": 125,
+    "txHash": "0xff46cecd5888e9dced6df3d5097fff05f30c149c6e5bccf5c01d8505f4a90079",
+    "blockNumber": 127,
     "gasUsed": "0xeeae",
     "returnData": null,
     "revert": {
@@ -81,7 +81,7 @@
     "pool.treeNumber": "0x0",
     "pool.nextLeafIndex": "0x2",
     "pool.merkleRoot": "0x281ca60c48f66c59afc21f4489fa7a93d01f4378330ed1ebfc5632d1ca79dd10",
-    "pool.lastEventBlock": "0x7b",
+    "pool.lastEventBlock": "0x7d",
     "usdc.balanceOf[POOL]": "0x260d360",
     "usdc.balanceOf[ALICE]": "0x2540be400",
     "usdc.balanceOf[BOB]": "0x3a699d00",
@@ -119,5 +119,5 @@
       "MALICIOUS_TOKEN": "0xdbC43Ba45381e02825b14322cDdd15eC4B3164E6"
     }
   },
-  "capturedAt": "2026-10-01T11:33:48.201Z"
+  "capturedAt": "2026-10-14T13:56:11.919Z"
 }
