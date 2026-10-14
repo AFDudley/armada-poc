@@ -135,10 +135,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
 
     /// @notice Validates the routing inputs of an atomic cross-chain unshield.
     /// @dev Check order is pinned by spec section 8.2: not the local domain, non-zero
-    ///      recipient, unshield output present, destination registered, then the full
-    ///      transaction validation. The unshield note's token is not checked against USDC
-    ///      even though the burn always burns `usdc` — known defect (spec OQ-9), fix tracked
-    ///      separately.
+    ///      recipient, unshield output present, unshield note is USDC, destination
+    ///      registered, then the full transaction validation.
     function _validateAtomicUnshieldInputs(
         Transaction calldata _transaction,
         uint32 destinationDomain,
@@ -150,6 +148,14 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
         require(
             _transaction.boundParams.unshield != UnshieldType.NONE,
             "TransactModule: Must include unshield"
+        );
+        // CCTP only bridges USDC, and the burn below always spends the pool's `usdc` for the
+        // note's value, so the note being unshielded must itself be a USDC note (spec OQ-9).
+        // The pool stays multi-asset: other tokens still shield, transfer and unshield locally.
+        require(
+            _transaction.unshieldPreimage.token.tokenType == TokenType.ERC20 &&
+                _transaction.unshieldPreimage.token.tokenAddress == usdc,
+            "TransactModule: Cross-chain unshield is USDC-only"
         );
         require(remotePools[destinationDomain] != bytes32(0), "TransactModule: Unknown destination");
         require(
