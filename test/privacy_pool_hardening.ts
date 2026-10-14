@@ -626,6 +626,89 @@ describe("Privacy Pool Integration Hardening", function () {
   });
 
   // ═══════════════════════════════════════════════════════════════════
+  // Unshield note validation (#606)
+  // ═══════════════════════════════════════════════════════════════════
+
+  describe("Unshield Note Validation", function () {
+    const VALUE = ethers.parseUnits("10", 6);
+    let usdcAddr: string;
+
+    before(async function () {
+      usdcAddr = await hubUsdc.getAddress();
+      await shieldAndGetRoot(alice, ethers.parseUnits("200", 6), "note-validation-backing");
+    });
+
+    // Builds an unshield whose committed hash matches the preimage. Poseidon reduces its
+    // inputs mod q, so an npk at or above the field hashes like npk mod q.
+    function unshieldTx(npk: bigint, value: bigint, root: string, nullSeed: string, adaptParams?: string) {
+      return makeTransaction({
+        merkleRoot: root,
+        nullifiers: [ethers.keccak256(ethers.toUtf8Bytes(nullSeed))],
+        commitments: [computeCommitmentHash(npk % SNARK_SCALAR_FIELD, BigInt(usdcAddr), value)],
+        unshield: 1,
+        adaptParams,
+        unshieldPreimage: {
+          npk: ethers.zeroPadValue(ethers.toBeHex(npk), 32),
+          token: { tokenType: 0, tokenAddress: usdcAddr, tokenSubID: 0 },
+          value,
+        },
+      });
+    }
+
+    // WHY: npk and npk + q hash to the same commitment but truncate to different addresses, so
+    // without a range check anyone holding a pending unshield could re-point it at an address
+    // nobody controls (the nullifiers are spent and the funds are lost).
+    it("rejects a local unshield whose npk is not a canonical field element", async function () {
+      const root = await privacyPool.merkleRoot();
+      const aliased = BigInt(bobAddress) + SNARK_SCALAR_FIELD;
+      const poolBefore = await hubUsdc.balanceOf(privacyPoolAddress);
+
+      await expect(privacyPool.transact([unshieldTx(aliased, VALUE, root, "npk-alias-local")]))
+        .to.be.revertedWith("TransactModule: Invalid Unshield NPK");
+      expect(await hubUsdc.balanceOf(privacyPoolAddress)).to.equal(poolBefore);
+    });
+
+    // WHY: the same aliasing would let a pending cross-chain proof (npk = pool) be replayed
+    // through transact() with npk = pool + q, slipping past the unshield-to-pool guard (#364).
+    it("rejects a cross-chain proof replayed through transact() with an aliased pool npk", async function () {
+      const root = await privacyPool.merkleRoot();
+      const aliasedPool = BigInt(privacyPoolAddress) + SNARK_SCALAR_FIELD;
+      const tx = unshieldTx(aliasedPool, VALUE, root, "npk-alias-pool",
+        encodeCctpBinding(bobAddress, DOMAINS.client, 0n));
+
+      await expect(privacyPool.transact([tx])).to.be.revertedWith("TransactModule: Invalid Unshield NPK");
+    });
+
+    // WHY: a zero-value unshield moves nothing but still emits an Unshield event; upstream
+    // rejects it, and so must we.
+    it("rejects a zero-value unshield", async function () {
+      const root = await privacyPool.merkleRoot();
+      await expect(privacyPool.transact([unshieldTx(BigInt(bobAddress), 0n, root, "zero-value")]))
+        .to.be.revertedWith("TransactModule: Invalid Unshield Value");
+    });
+
+    // WHY: the unshield-to-pool guard (#364) assumes every cross-chain proof unshields to the
+    // pool. A cross-chain proof with any other npk is also a valid local-unshield proof, so it
+    // could be paid out on the hub instead of the destination chain.
+    it("rejects a cross-chain unshield whose npk is not the pool", async function () {
+      const root = await privacyPool.merkleRoot();
+      const tx = unshieldTx(BigInt(bobAddress), VALUE, root, "xchain-npk-not-pool",
+        encodeCctpBinding(bobAddress, DOMAINS.client, 0n));
+
+      await expect(
+        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, bobAddress, 0, ethers.ZeroHash)
+      ).to.be.revertedWith("TransactModule: Cross-chain unshield must pay the pool");
+    });
+
+    it("still allows a well-formed local unshield", async function () {
+      const root = await privacyPool.merkleRoot();
+      const before = await hubUsdc.balanceOf(charlieAddress);
+      await privacyPool.transact([unshieldTx(BigInt(charlieAddress), VALUE, root, "valid-local")]);
+      expect((await hubUsdc.balanceOf(charlieAddress)) - before).to.equal(VALUE);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
   // TEST 5: Batched transact with mixed operations
   // ═══════════════════════════════════════════════════════════════════
 

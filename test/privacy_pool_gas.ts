@@ -421,7 +421,9 @@ describe("Privacy Pool Gas Profiling", function () {
       const root = await shieldAndGetRoot(shieldAmount, "atomic-unshield-gas");
 
       const bobAddr = await bob.getAddress();
-      const npkBigInt = BigInt(bobAddr);
+      // A cross-chain unshield pays out to the pool, which burns via CCTP; Bob is the
+      // destination recipient, bound in adaptParams.
+      const npkBigInt = BigInt(privacyPoolAddress);
       const tokenId = BigInt(usdcAddr);
       const unshieldCommitHash = computeCommitmentHash(npkBigInt, tokenId, unshieldValue);
 
@@ -434,7 +436,7 @@ describe("Privacy Pool Gas Profiling", function () {
         unshield: 1,
         adaptParams: encodeCctpBinding(bobAddr, DOMAINS.client, 0n),
         unshieldPreimage: {
-          npk: ethers.zeroPadValue(bobAddr, 32),
+          npk: ethers.zeroPadValue(privacyPoolAddress, 32),
           token: { tokenType: 0, tokenAddress: usdcAddr, tokenSubID: 0 },
           value: unshieldValue,
         },

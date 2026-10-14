@@ -136,7 +136,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
     /// @notice Validates the routing inputs of an atomic cross-chain unshield.
     /// @dev Check order is pinned by spec section 8.2: not the local domain, non-zero
     ///      recipient, unshield output present, unshield note is USDC, destination
-    ///      registered, then the full transaction validation.
+    ///      registered, destination bound, unshield pays the pool, then the full
+    ///      transaction validation.
     function _validateAtomicUnshieldInputs(
         Transaction calldata _transaction,
         uint32 destinationDomain,
@@ -183,6 +184,14 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
                 maxFee
             ),
             "TransactModule: destination not bound to proof"
+        );
+
+        // A cross-chain unshield always pays out to the pool, which then burns via CCTP. Pinning the
+        // npk keeps cross-chain and local-unshield proofs disjoint, which the unshield-to-pool guard in
+        // _transferTokenOut (issue #364) relies on: otherwise this proof could also be paid out locally.
+        require(
+            _transaction.unshieldPreimage.npk == bytes32(uint256(uint160(address(this)))),
+            "TransactModule: Cross-chain unshield must pay the pool"
         );
 
         // Validate the transaction proof
@@ -311,6 +320,16 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
             // The unshield output is excluded from the ciphertext array
             if (_transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length - 1) {
                 return (false, "Invalid Ciphertext Length");
+            }
+
+            // The unshield note must be well-formed. Poseidon reduces its inputs mod the field, so
+            // npk and npk + k*q hash identically yet truncate to different payout addresses — only a
+            // canonical npk is bound by the hash check below. A zero-value unshield moves nothing.
+            if (uint256(_transaction.unshieldPreimage.npk) >= SNARK_SCALAR_FIELD) {
+                return (false, "Invalid Unshield NPK");
+            }
+            if (_transaction.unshieldPreimage.value == 0) {
+                return (false, "Invalid Unshield Value");
             }
 
             // Verify unshield preimage hash
