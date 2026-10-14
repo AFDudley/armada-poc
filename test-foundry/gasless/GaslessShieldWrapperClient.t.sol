@@ -209,6 +209,45 @@ contract GaslessShieldWrapperClientTest is Test {
         assertEq(wrapper.nonces(user), 1, "nonce consumed");
     }
 
+    function test_gaslessCrossChainShield_frontRunPermitDoesNotBlock() public {
+        // WHY: symmetric with the hub wrapper — a permit front-run from the mempool must not block
+        // the shield; the signed intent authorizes the spend (#610 P5).
+        uint256 shieldAmount = 9 * ONE_USDC;
+        uint256 fee = ONE_USDC;
+        uint256 total = shieldAmount + fee;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        ShieldData memory userNote = _note(USER_NPK, shieldAmount);
+        ShieldData memory feeNote = _note(RELAYER_NPK, fee);
+        bytes memory intentSig = _signIntent(userNote, feeNote, MAX_FEE, FINALITY, deadline, 0);
+        GaslessShieldWrapperClient.CrossChainIntentParams memory p =
+            _params(deadline, 0, MAX_FEE, FINALITY, total);
+
+        vm.prank(frontrunner);
+        usdc.permit(user, address(wrapper), total, deadline, p.permitV, p.permitR, p.permitS);
+
+        vm.prank(frontrunner);
+        wrapper.gaslessCrossChainShield(p, intentSig, userNote, feeNote);
+
+        assertEq(usdc.balanceOf(address(client)), total, "burned despite the front-run permit");
+        assertEq(wrapper.nonces(user), 1, "nonce consumed");
+    }
+
+    function test_gaslessCrossChainShield_failedPermitWithoutAllowanceReverts() public {
+        // WHY: tolerating a failed permit must not let the wrapper spend without an allowance.
+        uint256 deadline = block.timestamp + 1 hours;
+        ShieldData memory userNote = _note(USER_NPK, 9 * ONE_USDC);
+        ShieldData memory feeNote = _note(RELAYER_NPK, ONE_USDC);
+        bytes memory intentSig = _signIntent(userNote, feeNote, MAX_FEE, FINALITY, deadline, 0);
+        GaslessShieldWrapperClient.CrossChainIntentParams memory p =
+            _params(deadline, 0, MAX_FEE, FINALITY, 10 * ONE_USDC);
+        p.permitV = p.permitV ^ 1;
+
+        vm.prank(frontrunner);
+        vm.expectRevert("GaslessShieldWrapperClient: permit failed and allowance too low");
+        wrapper.gaslessCrossChainShield(p, intentSig, userNote, feeNote);
+    }
+
     function test_gaslessCrossChainShield_eventEmitsNotesHash() public {
         // WHY: symmetric with the hub wrapper. The event surfaces keccak256(abi.encode(userNote,
         // feeNote)) so a watcher can verify the burn honored the signed cross-chain intent.

@@ -180,9 +180,17 @@ contract GaslessShieldWrapperClient is EIP712 {
         ShieldData calldata userNote,
         ShieldData calldata feeNote
     ) internal returns (uint64) {
-        IERC20Permit(usdc).permit(
+        // The signed intent (checked above), not the permit, authorizes this spend. The permit is
+        // public in the mempool, so anyone may have submitted it already, consuming its nonce;
+        // tolerate a failed permit as long as the allowance is in place.
+        try IERC20Permit(usdc).permit(
             params.user, address(this), total, params.deadline, params.permitV, params.permitR, params.permitS
-        );
+        ) {} catch {
+            require(
+                IERC20(usdc).allowance(params.user, address(this)) >= total,
+                "GaslessShieldWrapperClient: permit failed and allowance too low"
+            );
+        }
         IERC20(usdc).safeTransferFrom(params.user, address(this), total);
         IERC20(usdc).safeApprove(privacyPoolClient, 0);
         IERC20(usdc).safeApprove(privacyPoolClient, total);

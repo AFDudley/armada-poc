@@ -234,6 +234,43 @@ contract GaslessShieldWrapperTest is Test {
         assertEq(wrapper.nonces(user), 1, "nonce consumed");
     }
 
+    function test_gaslessShield_frontRunPermitDoesNotBlock() public {
+        // WHY: the permit signature is public in the mempool. Anyone can submit it to USDC first,
+        // consuming its nonce; the wrapper's own permit call would then revert and block the shield.
+        // The signed intent (not the permit) authorizes the spend, so the shield must still go through
+        // on the allowance the front-run permit already granted (#610 P5).
+        uint256 shieldAmount = 9 * ONE_USDC;
+        uint256 fee = ONE_USDC;
+        uint256 total = shieldAmount + fee;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        ShieldRequest[] memory reqs = _twoNotes(shieldAmount, fee);
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(total, deadline);
+        bytes memory intentSig = _signIntent(reqs, integrator, deadline, 0);
+
+        vm.prank(frontrunner);
+        usdc.permit(user, address(wrapper), total, deadline, v, r, s);
+
+        vm.prank(frontrunner);
+        wrapper.gaslessShield(_params(deadline, 0, integrator, v, r, s), intentSig, reqs);
+
+        assertEq(usdc.balanceOf(address(pool)), total, "shielded despite the front-run permit");
+        assertEq(wrapper.nonces(user), 1, "nonce consumed");
+    }
+
+    function test_gaslessShield_failedPermitWithoutAllowanceReverts() public {
+        // WHY: tolerating a failed permit must not let the wrapper spend without an allowance.
+        uint256 total = 10 * ONE_USDC;
+        uint256 deadline = block.timestamp + 1 hours;
+        ShieldRequest[] memory reqs = _twoNotes(9 * ONE_USDC, ONE_USDC);
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(total, deadline);
+        bytes memory intentSig = _signIntent(reqs, integrator, deadline, 0);
+
+        vm.prank(frontrunner);
+        vm.expectRevert("GaslessShieldWrapper: permit failed and allowance too low");
+        wrapper.gaslessShield(_params(deadline, 0, integrator, v ^ 1, r, s), intentSig, reqs);
+    }
+
     function test_gaslessShield_eventEmitsRequestsHash() public {
         // WHY: the GaslessShield event surfaces keccak256(abi.encode(shieldRequests)) — the same digest
         // the user signed. A refactor that hashed a different shape would break the off-chain
