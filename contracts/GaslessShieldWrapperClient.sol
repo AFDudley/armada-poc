@@ -105,8 +105,9 @@ contract GaslessShieldWrapperClient is EIP712 {
      * @param params Scalar intent + permit-signature params (see `CrossChainIntentParams`).
      * @param intentSig EIP-712 CrossChainShieldIntent signature (EOA or EIP-1271).
      * @param userNote The user's recipient note (npk + ciphertext + value). Minted on the Hub net of
-     *        the CCTP fee.
-     * @param feeNote The relayer's fee note (to the relayer's npk). Minted on the Hub at full value.
+     *        the CCTP fee and the shield fee.
+     * @param feeNote The relayer's fee note (to the relayer's npk). Allocated its full declared value
+     *        on the Hub (it does not absorb the CCTP fee), then pays the shield fee like every note.
      */
     function gaslessCrossChainShield(
         CrossChainIntentParams calldata params,

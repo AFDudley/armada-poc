@@ -414,7 +414,7 @@ Module-private constant `BASIS_POINTS = 10000`. All externals are `onlyDelegatec
 
 ### 7.2 `processIncomingShield(uint256 amount, ShieldData[] calldata datas)` — selector `0xffd149d4`
 
-Invoked by the router's CCTP handler after USDC has already been minted to the pool. Post-drift (D-15) the payload is a note ARRAY: index 0 is the recipient note (it absorbs the CCTP protocol fee); any further notes (e.g. a relayer fee note) mint at their full declared value.
+Invoked by the router's CCTP handler after USDC has already been minted to the pool. Post-drift (D-15) the payload is a note ARRAY: index 0 is the recipient note (it alone absorbs the CCTP protocol fee); any further notes (e.g. a relayer fee note) are allocated their full declared value. Every note, fee notes included, then pays the shield fee (§7.4).
 
 1. Same pause check as §7.1 step 1.
 2. `require(datas.length > 0, "ShieldModule: no shield notes")`.
