@@ -44,9 +44,14 @@ export const CLIENT_CHAIN_B: Chain = {
 
 // ============ RPC Configuration ============
 
-export const HUB_RPC = "http://localhost:8546";
-export const CLIENT_RPC = "http://localhost:8545";
-export const CLIENT_B_RPC = "http://localhost:8547";
+// arn-e7a c5: the RPC base URLs are configurable, not pinned to a fixed host port.
+// The e2e job exports HUB_RPC (the deployment's compose service name); the chain
+// config follows that env var and falls back to the service name (not localhost:8545).
+const gethRpc = process.env.HUB_RPC ?? "http://armada-fixturenet-geth:8545";
+
+export const HUB_RPC = gethRpc;
+export const CLIENT_RPC = process.env.CLIENT_RPC ?? gethRpc;
+export const CLIENT_B_RPC = process.env.CLIENT_B_RPC ?? gethRpc;
 
 // ============ All Chains ============
 
