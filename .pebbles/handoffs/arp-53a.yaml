@@ -1,0 +1,130 @@
+status: completed
+pebble_id: arp-53a
+summary: >
+  Added test-foundry/ArmadaTokenShares.t.sol with six forge tests proving the
+  G1 ArmadaToken Baal-shares invariants from
+  labbook/2026-10-18-treasury-governance-baal-safe-shielded.md §3
+  decisions 3-5 and docs/tasks/G1-arm-shares-token.md: (1) single-mint fixed
+  12,000,000e18 supply plus a source-level scan confirming exactly one
+  _mint( call site; (2) non-proxy-bytecode via a source-level scan for
+  delegatecall/_authorizeUpgrade/Initializable/UUPSUpgradeable; (3)
+  whitelist-gating (initWhitelist deployer-only one-shot, addToWhitelist
+  timelock-only add-only, non-timelock caller reverts); (4)
+  restricted-transfer reverting with 'ArmadaToken: transfers restricted';
+  (5) mint-not-blocked (from==address(0) never restricted); (6)
+  timelock-set-transferable succeeding with windDownContract never set. No
+  contract edit was needed or made: all six tests pass against
+  contracts/governance/ArmadaToken.sol unmodified, per the brief's S6
+  instruction to escalate rather than silently edit if any invariant did
+  not already hold. Added scripts/check-armada-token-invariants.py, the
+  mutation-kill checker required by contracts/specs/derived-arp-53a.spec.json:
+  for each of the six assertions it confirms the test exists and passes on
+  the real contract, applies the matching breaking mutation via
+  safe-guarded substring patch on ArmadaToken.sol (asserting the anchor
+  text is present exactly once before patching, and always restoring the
+  original file in a finally block), reruns the single test, and confirms
+  it now fails. --all aggregates all six (assertions_missing,
+  mutations_surviving); --regression runs the full existing forge suite
+  and checks this chunk's own deliverables never call
+  setWindDownContract and that circulatingSupplyOf/delegateOnBehalf/
+  transferAndDelegate/_delegate (noDelegation enforcement) are
+  byte-for-byte unchanged via extracted-function-body comparison against a
+  hardcoded reference. foundry.toml gained one fs_permissions read entry
+  scoped to ./contracts/governance/ArmadaToken.sol, needed for the
+  source-level vm.readFile scans in tests 1 and 2. Verified by running
+  forge test --match-path test-foundry/ArmadaTokenShares.t.sol -vv (6/6
+  pass), the full forge test suite (794/794 pass, unchanged from
+  baseline), and all eight acceptance_tests in the linked spec exactly as
+  specified (six --assertion/--mutate pairs, --all, --regression), each
+  producing the exact JSON fields and values the spec's `then` clauses
+  require.
+cost: "~145k tokens"
+commits:
+  - "5804f5aa"
+verify_transcript:
+  hooks:
+    - name: "forge test --match-path test-foundry/ArmadaTokenShares.t.sol -vv"
+      outcome: passed
+      duration_s: 2
+    - name: "forge test (full existing suite, 794 tests)"
+      outcome: passed
+      duration_s: 58
+    - name: "scripts/check-armada-token-invariants.py --assertion single-mint --mutate second-mint"
+      outcome: passed
+      duration_s: 2
+    - name: "scripts/check-armada-token-invariants.py --assertion non-proxy-bytecode --mutate proxy"
+      outcome: passed
+      duration_s: 8
+    - name: "scripts/check-armada-token-invariants.py --assertion whitelist-gating --mutate open-add-to-whitelist"
+      outcome: passed
+      duration_s: 3
+    - name: "scripts/check-armada-token-invariants.py --assertion restricted-transfer-reverts --mutate allow-non-whitelisted-transfer"
+      outcome: passed
+      duration_s: 5
+    - name: "scripts/check-armada-token-invariants.py --assertion mint-not-blocked --mutate block-mint"
+      outcome: passed
+      duration_s: 5
+    - name: "scripts/check-armada-token-invariants.py --assertion timelock-set-transferable --mutate require-wind-down-contract"
+      outcome: passed
+      duration_s: 5
+    - name: "scripts/check-armada-token-invariants.py --all"
+      outcome: passed
+      duration_s: 21
+    - name: "scripts/check-armada-token-invariants.py --regression"
+      outcome: passed
+      duration_s: 59
+e2e_gate:
+  spec: contracts/specs/derived-arp-53a.spec.json
+  command: "python3 scripts/check-armada-token-invariants.py --all && python3 scripts/check-armada-token-invariants.py --regression"
+  result: passed
+  ran_at_sha: "5804f5aa"
+  mocks_in_path: false
+discrimination:
+  - mechanism: ablation
+    oracle: "scripts/check-armada-token-invariants.py --assertion single-mint --mutate second-mint"
+    target: "test-foundry/ArmadaTokenShares.t.sol: function test_shares_singleMint"
+    perturbation: "Deleted the test_shares_singleMint function body from the committed test file (ablating the c1 assertion) while leaving the second-mint mutation logic in the checker untouched."
+    took:
+      applied:
+        observable: "grep -c 'function test_shares_singleMint' test-foundry/ArmadaTokenShares.t.sol"
+        moved: ["1", "0"]
+      observed:
+        observable: "checker stdout_json.present for --assertion single-mint --mutate second-mint"
+        moved: ["true", "false"]
+    assertions_fired:
+      - assertion: "present"
+        moved: ["true", "false"]
+      - assertion: "passes_unmutated"
+        moved: ["true", "false"]
+    pinned_at:
+      - "test-foundry/ArmadaTokenShares.t.sol"
+      - "scripts/check-armada-token-invariants.py"
+    exit_code_before: 0
+    exit_code_after: 0
+    reverted: true
+  - mechanism: mutation_kill
+    oracle: "scripts/check-armada-token-invariants.py --assertion restricted-transfer-reverts --mutate allow-non-whitelisted-transfer"
+    target: "test-foundry/ArmadaTokenShares.t.sol: function test_shares_restrictedTransferReverts (proving the c4 invariant on contracts/governance/ArmadaToken.sol _beforeTokenTransfer)"
+    perturbation: "Replaced the body of test_shares_restrictedTransferReverts with a tautological assertTrue(true), removing the vm.expectRevert('ArmadaToken: transfers restricted') exercise of the invariant."
+    took:
+      applied:
+        observable: "re-read test-foundry/ArmadaTokenShares.t.sol after the write: the function body line"
+        moved: ["vm.expectRevert(\"ArmadaToken: transfers restricted\");", "assertTrue(true);"]
+      observed:
+        observable: "checker stdout_json.fails_under_mutation for --assertion restricted-transfer-reverts --mutate allow-non-whitelisted-transfer"
+        moved: ["true", "false"]
+    assertions_fired:
+      - assertion: "fails_under_mutation"
+        moved: ["true", "false"]
+    pinned_at:
+      - "test-foundry/ArmadaTokenShares.t.sol"
+      - "scripts/check-armada-token-invariants.py"
+    exit_code_before: 0
+    exit_code_after: 0
+    reverted: true
+    negative_control:
+      variant: "single-mint assertion (--assertion single-mint --mutate second-mint), run with the same perturbed test file"
+      applied: "Ran the checker for the unrelated single-mint assertion while test_shares_restrictedTransferReverts was still perturbed to assertTrue(true)."
+      observable: "checker stdout_json.fails_under_mutation for --assertion single-mint --mutate second-mint"
+      unmoved: "true"
+      exit_code: 0
