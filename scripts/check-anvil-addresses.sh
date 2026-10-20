@@ -27,6 +27,7 @@ ALLOWED_FILES=(
   "scripts/setup_chains.sh"                # Anvil chain launcher (prints accounts)
   "scripts/derive_relayer_railgun_address.ts"  # local-dev relayer key derivation
   "scripts/check-anvil-addresses.sh"       # this script
+  "scripts/verify_hub_owner_guard.sh"        # arp-3a7 owner-guard verification (uses anvil owner input)
 )
 
 # Build grep pattern: join addresses with | for alternation

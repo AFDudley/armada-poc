@@ -79,6 +79,10 @@ interface HubDeploymentInfo {
     messageTransmitter: string;
     usdc: string;
   };
+  /** Pool owner: the authority that sets verification keys (issue #349). This is a
+   *  dedicated key (single key or Safe multisig), never a governance-reachable address.
+   *  Refused if it equals any of the governance governor/treasury/windDown addresses. */
+  poolOwner: string;
   /** Block number the PrivacyPool router contract was deployed at. Used by the
    *  armada-interface to bound the Railgun engine's initial Shield/Transact/Unshield
    *  event scan — without it the engine starts from block 0 and burns through ~10M
@@ -112,12 +116,58 @@ interface ClientDeploymentInfo {
 }
 
 async function deployHub(): Promise<HubDeploymentInfo> {
-  const [deployer] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  const deployer = signers[0];
   const network = await ethers.provider.getNetwork();
   const chainId = Number(network.chainId);
   const config = getNetworkConfig();
   const domain = config.hub.cctpDomain;
   const nm = await createNonceManager(deployer);
+
+  // c4: Dedicated owner-key input (POOL_OWNER_ADDRESS). The pool owner is the authority
+  // that sets the verification keys (issue #349) — a single key or Safe multisig, never a
+  // DAO-governed contract. Falls back to the deployer only when the env var is unset.
+  const poolOwnerAddress =
+    process.env.POOL_OWNER_ADDRESS?.trim() || deployer.address;
+
+  // c3: The pool owner must not be an address the governance DAO can reach. Compare it
+  // against the governance deployment's governor, treasury, and wind-down contract addresses
+  // and refuse to deploy on any match. Run before module deploys so refusals are cheap.
+  const govDeployment = loadDeployment(getGovernanceDeploymentFile());
+  const govContracts = govDeployment?.contracts;
+  const ownerGuardAddresses: [string, string][] = [];
+  if (govContracts) {
+    if (govContracts.governor)
+      ownerGuardAddresses.push([govContracts.governor, "governor"]);
+    if (govContracts.treasury)
+      ownerGuardAddresses.push([govContracts.treasury, "treasury"]);
+    if (govContracts.windDown)
+      ownerGuardAddresses.push([govContracts.windDown, "windDown"]);
+  }
+  for (const [addr, label] of ownerGuardAddresses) {
+    if (poolOwnerAddress.toLowerCase() === addr.toLowerCase()) {
+      console.log(
+        `Hub owner guard: pool owner ${poolOwnerAddress} equals governance ${label} ${addr} — refused`,
+      );
+      throw new Error(
+        `Hub owner guard: pool owner ${poolOwnerAddress} equals the governance ${label} address ${addr}; ` +
+          "a swapped verification key would let an attacker accept forged proofs and drain the " +
+          "pool's shielded funds. Set POOL_OWNER_ADDRESS to a dedicated key or Safe multisig.",
+      );
+    }
+  }
+  console.log(
+    `Pool owner (dedicated key / Safe multisig): ${poolOwnerAddress}`,
+  );
+
+  // c5: The owner-gated hub ops (setVerificationKey, setShieldFee) must be signed by the pool
+  // owner, not the deployer. If the owner is one of the local signers (an Anvil account),
+  // sign as the owner; otherwise fall back to the deployer (valid only when owner == deployer).
+  const ownerSigner =
+    signers.find(
+      (s2) => s2.address.toLowerCase() === poolOwnerAddress.toLowerCase(),
+    ) ?? deployer;
+  const ownerNm = await createNonceManager(ownerSigner);
 
   console.log("=== Deploying Privacy Pool Modules to Hub Chain ===");
   console.log(`Deployer: ${deployer.address}`);
@@ -217,7 +267,6 @@ async function deployHub(): Promise<HubDeploymentInfo> {
   // Priority: env var > governance manifest (ArmadaTreasuryGov) > deployer (local only).
   // The env var override is refused on mainnet by getNetworkConfig().
   console.log("\n7. Initializing PrivacyPool...");
-  const govDeployment = loadDeployment(getGovernanceDeploymentFile());
   let treasuryAddress: string;
   if (config.treasuryAddress) {
     treasuryAddress = config.treasuryAddress;
@@ -247,12 +296,12 @@ async function deployHub(): Promise<HubDeploymentInfo> {
     messageTransmitterAddress,
     usdcAddress,
     domain,
-    deployer.address,
+    poolOwnerAddress,
     treasuryAddress,
     nm.override(),
   );
   await initTx.wait();
-  console.log("   PrivacyPool initialized (treasury immutable)");
+  console.log("   PrivacyPool initialized (owner + treasury immutable)");
 
   // 8. Deploy CCTPHookRouter
   console.log("\n8. Deploying CCTPHookRouter...");
@@ -273,8 +322,12 @@ async function deployHub(): Promise<HubDeploymentInfo> {
   console.log("\n9. Loading verification keys...");
   const { loadVerificationKeys, TESTING_ARTIFACT_CONFIGS } =
     await import("../lib/artifacts");
-  await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, true, () =>
-    nm.override(),
+  const ownerPool =
+    ownerSigner.address.toLowerCase() === deployer.address.toLowerCase()
+      ? privacyPool
+      : privacyPool.connect(ownerSigner);
+  await loadVerificationKeys(ownerPool, TESTING_ARTIFACT_CONFIGS, true, () =>
+    ownerNm.override(),
   );
 
   // 10. SNARK verification enabled
@@ -282,13 +335,19 @@ async function deployHub(): Promise<HubDeploymentInfo> {
 
   // 10b. Configure shield fee
   console.log("\n10b. Configuring shield fee...");
-  await (await privacyPool.setShieldFee(50, nm.override())).wait();
+  // c5: setShieldFee is owner-gated on the router; sign as the pool owner.
+  const shieldFeePool =
+    ownerSigner.address.toLowerCase() === deployer.address.toLowerCase()
+      ? privacyPool
+      : privacyPool.connect(ownerSigner);
+  await (await shieldFeePool.setShieldFee(50, ownerNm.override())).wait();
   console.log("   Shield fee: 50 bps (0.50%)");
 
   const deployment: HubDeploymentInfo = {
     chainId,
     domain,
     deployer: deployer.address,
+    poolOwner: poolOwnerAddress,
     contracts: {
       privacyPool: privacyPoolAddress,
       merkleModule: merkleModuleAddress,
