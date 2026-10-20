@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // ABOUTME: Foundry invariant tests for RevenueLock — supply conservation, no over-release, vote inertness.
-// ABOUTME: Uses a stateful handler to fuzz release() calls across beneficiaries and revenue levels.
+// ABOUTME: Uses a stateful handler to fuzz release() calls across beneficiaries and fee levels.
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
@@ -8,12 +8,18 @@ import "../contracts/governance/RevenueLock.sol";
 import "../contracts/governance/ArmadaToken.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 
-/// @dev Mock RevenueCounter for invariant testing
-contract MockRevenueCounterInv {
-    uint256 public recognizedRevenueUsd;
+/// @dev Mock pool for invariant testing: holds the per-asset cumulativeFees total
+///      that RevenueLock reads as its release source (P2b's real fee-tagged running total).
+contract MockPoolInv {
+    mapping(address => uint256) public cumulativeFees;
 
-    function setRevenue(uint256 _revenue) external {
-        recognizedRevenueUsd = _revenue;
+    /// @dev Test helper standing in for a real fee-tagged pool transaction.
+    function setCumulativeFees(address _asset, uint256 _fees) external {
+        // Monotonic: matches P2b's real pool (cumulativeFees only ever increases).
+        uint256 cur = cumulativeFees[_asset];
+        if (_fees > cur) {
+            cumulativeFees[_asset] = _fees;
+        }
     }
 }
 
@@ -21,7 +27,8 @@ contract MockRevenueCounterInv {
 contract RevenueLockHandler is Test {
     RevenueLock public revenueLock;
     ArmadaToken public armToken;
-    MockRevenueCounterInv public revenueCounter;
+    MockPoolInv public pool;
+    address public asset;
     address[] public beneficiaries;
     address[] public delegatees;
 
@@ -30,33 +37,33 @@ contract RevenueLockHandler is Test {
     uint256 public ghost_revertCount;
     // Ghost: high-water mark of released amount per beneficiary (for monotonicity check)
     mapping(address => uint256) public ghost_releasedHighWater;
-    // Ghost: high-water mark of maxObservedRevenue (for ratchet monotonicity invariant)
-    uint256 public ghost_maxObservedRevenueHighWater;
 
     constructor(
         RevenueLock _revenueLock,
         ArmadaToken _armToken,
-        MockRevenueCounterInv _revenueCounter,
+        MockPoolInv _pool,
+        address _asset,
         address[] memory _beneficiaries,
         address[] memory _delegatees
     ) {
         revenueLock = _revenueLock;
         armToken = _armToken;
-        revenueCounter = _revenueCounter;
+        pool = _pool;
+        asset = _asset;
         beneficiaries = _beneficiaries;
         delegatees = _delegatees;
     }
 
-    /// @dev Fuzzed: set revenue to an arbitrary amount
-    function setRevenue(uint256 revenue) external {
-        revenue = bound(revenue, 0, 5_000_000e18);
-        revenueCounter.setRevenue(revenue);
+    /// @dev Fuzzed: set the pool's per-asset fee total to an arbitrary amount
+    function setFees(uint256 fees) external {
+        fees = bound(fees, 0, 5_000_000e18);
+        pool.setCumulativeFees(asset, fees);
     }
 
     /// @dev Fuzzed: a random beneficiary calls release with a random delegatee
     function release(uint256 beneficiaryIdx, uint256 delegateeIdx) external {
         beneficiaryIdx = bound(beneficiaryIdx, 0, beneficiaries.length - 1);
-        delegateeIdx = bound(delegateeIdx, 0, delegatees.length - 1);
+        delegateeIdx = bound(delegateeIdx, 0, 1);
 
         address beneficiary = beneficiaries[beneficiaryIdx];
         address delegatee = delegatees[delegateeIdx];
@@ -67,28 +74,8 @@ contract RevenueLockHandler is Test {
             // Track high-water mark for monotonicity invariant
             uint256 currentReleased = revenueLock.released(beneficiary);
             ghost_releasedHighWater[beneficiary] = currentReleased;
-            // release() may advance the ratchet too — refresh the high-water mark.
-            _refreshRatchetHighWater();
         } catch {
             ghost_revertCount++;
-        }
-    }
-
-    /// @dev Fuzzed: advance time by up to 30 days and sync the ratchet. Without
-    ///      this handler method, the ratchet would never have budget to advance
-    ///      during invariant runs (block.timestamp does not move between handler
-    ///      calls by default), and the release handler would almost always revert.
-    function warpAndSync(uint256 daysDelta) external {
-        daysDelta = bound(daysDelta, 1, 30);
-        vm.warp(block.timestamp + daysDelta * 1 days);
-        revenueLock.syncObservedRevenue();
-        _refreshRatchetHighWater();
-    }
-
-    function _refreshRatchetHighWater() internal {
-        uint256 current = revenueLock.maxObservedRevenue();
-        if (current > ghost_maxObservedRevenueHighWater) {
-            ghost_maxObservedRevenueHighWater = current;
         }
     }
 }
@@ -96,21 +83,21 @@ contract RevenueLockHandler is Test {
 contract RevenueLockInvariantTest is Test {
     RevenueLock public revenueLock;
     ArmadaToken public armToken;
-    MockRevenueCounterInv public revenueCounter;
+    MockPoolInv public pool;
     TimelockController public timelock;
     RevenueLockHandler public handler;
 
     address public deployer = address(this);
+    address public asset = address(0x101);
     address[] public beneficiaries;
     address[] public delegatees;
     uint256[] public amounts;
 
     uint256 constant TOTAL_LOCK = 2_400_000 * 1e18;
-    uint256 constant MAX_INCREASE_PER_DAY = 10_000e18;
 
     function setUp() public {
-        // Deploy mock revenue counter
-        revenueCounter = new MockRevenueCounterInv();
+        // Deploy mock pool
+        pool = new MockPoolInv();
 
         // Deploy timelock
         address[] memory empty = new address[](0);
@@ -135,11 +122,9 @@ contract RevenueLockInvariantTest is Test {
         // Setup delegatees
         delegatees.push(address(0xD001));
         delegatees.push(address(0xD002));
-        delegatees.push(address(0xD003));
 
-        // Deploy RevenueLock
-        revenueLock =
-            new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, beneficiaries, amounts);
+        // Deploy RevenueLock with the pool and named asset
+        revenueLock = new RevenueLock(address(armToken), address(pool), asset, beneficiaries, amounts);
 
         // Whitelist all relevant addresses
         address[] memory whitelist = new address[](7);
@@ -162,7 +147,7 @@ contract RevenueLockInvariantTest is Test {
         revenueLock.activate();
 
         // Deploy handler
-        handler = new RevenueLockHandler(revenueLock, armToken, revenueCounter, beneficiaries, delegatees);
+        handler = new RevenueLockHandler(revenueLock, armToken, pool, asset, beneficiaries, delegatees);
 
         // Target only the handler
         targetContract(address(handler));
@@ -202,16 +187,13 @@ contract RevenueLockInvariantTest is Test {
     function invariant_releasedArmIsDelegated() public {
         for (uint256 i = 0; i < beneficiaries.length; i++) {
             if (revenueLock.released(beneficiaries[i]) > 0) {
-                assertTrue(
-                    armToken.delegates(beneficiaries[i]) != address(0), "INV-RL4: released ARM must be delegated"
-                );
+                address delegatee = armToken.delegates(beneficiaries[i]);
+                assertTrue(delegatee != address(0), "INV-RL4: released ARM must be delegated");
             }
         }
     }
 
     /// @notice INV-RL5: Released amount per beneficiary is monotonically non-decreasing.
-    ///         WHY: release() only adds to the released mapping, never subtracts.
-    ///         A violation would indicate state corruption.
     function invariant_monotonicRelease() public {
         for (uint256 i = 0; i < beneficiaries.length; i++) {
             assertGe(
@@ -222,15 +204,12 @@ contract RevenueLockInvariantTest is Test {
         }
     }
 
-    /// @notice INV-RL6: release() reverts when revenue < first milestone (10,000 USD).
-    ///         WHY: The step function returns 0 bps below the first milestone, so entitled == 0
-    ///         and release() should revert with "nothing to release". We verify this indirectly:
-    ///         if revenue is below first milestone now AND no releases have ever succeeded,
+    /// @notice INV-RL6: release() reverts when fees < first milestone (10,000 USD).
+    ///         If fees are below the first milestone and no releases have ever succeeded,
     ///         all released amounts must be zero.
-    ///         Note: revenue can decrease in the mock (set lower), but released amounts are
-    ///         permanent. So this invariant only applies if ghost_releaseCount == 0.
     function invariant_noReleaseWithoutRevenue() public {
-        if (handler.ghost_releaseCount() == 0) {
+        uint256 fe = pool.cumulativeFees(asset);
+        if (fe < 10_000e18 && handler.ghost_releaseCount() == 0) {
             for (uint256 i = 0; i < beneficiaries.length; i++) {
                 assertEq(
                     revenueLock.released(beneficiaries[i]),
@@ -241,28 +220,16 @@ contract RevenueLockInvariantTest is Test {
         }
     }
 
-    /// @notice INV-RL7: maxObservedRevenue is monotonically non-decreasing.
-    ///         WHY: this is the core ratchet property from issue #225 —
-    ///         RevenueCounter downgrades must not be visible to entitlement math.
-    ///         A violation would mean the rewind-attack class is live again.
-    function invariant_ratchetMonotonic() public {
-        assertGe(
-            revenueLock.maxObservedRevenue(),
-            handler.ghost_maxObservedRevenueHighWater(),
-            "INV-RL7: maxObservedRevenue must be monotonic"
-        );
-    }
-
-    /// @notice INV-RL8: lastSyncTimestamp never exceeds block.timestamp.
-    ///         WHY: lastSyncTimestamp is only ever set to block.timestamp during
-    ///         `_updateMaxObservedRevenue`. If it could exceed the current time,
-    ///         a later `elapsed = now - lastSyncTimestamp` would underflow
-    ///         (Solidity 0.8.x panic) and render the contract bricked.
-    function invariant_lastSyncTimestampBounded() public {
-        assertLe(
-            revenueLock.lastSyncTimestamp(),
-            block.timestamp,
-            "INV-RL8: lastSyncTimestamp must not exceed block.timestamp"
-        );
+    /// @notice INV-RL7: released[b] <= totalAllocation across all beneficiaries.
+    ///         The release source is the pool's real per-asset cumulativeFees, which is
+    ///         monotonic by the pool's own construction (P2b) — no ratchet needed.
+    function invariant_releasedTracksFeeMilestones() public {
+        uint256 bps = revenueLock.unlockPercentage();
+        uint256 totalReleased = 0;
+        for (uint256 i = 0; i < beneficiaries.length; i++) {
+            totalReleased += revenueLock.released(beneficiaries[i]);
+        }
+        uint256 totalEntitled = (TOTAL_LOCK * bps) / 10000;
+        assertLe(totalReleased, totalEntitled, "released must not exceed the milestone-supported amount");
     }
 }

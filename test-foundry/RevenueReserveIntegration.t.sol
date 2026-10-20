@@ -21,7 +21,7 @@ contract RevenueReserveIntegrationTest is Test {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = 360_000e18;
         // No revenue reads occur in a pre-funding check.
-        lock = new RevenueLock(address(token), address(0xC017), 10_000e18, recipients, amounts);
+        lock = new RevenueLock(address(token), address(0xC017), address(0xFEE), recipients, amounts);
     }
 
     function _initialize(uint8 flags, uint8 fault) internal {

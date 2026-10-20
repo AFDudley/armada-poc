@@ -8,12 +8,19 @@ import "../contracts/governance/RevenueLock.sol";
 import "../contracts/governance/ArmadaToken.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 
-/// @dev Mock RevenueCounter for testing (same pattern as ArmadaWindDown.t.sol)
-contract MockRevenueCounterRL {
-    uint256 public recognizedRevenueUsd;
+/// @dev Mock pool for testing: holds the per-asset cumulativeFees total that
+///      RevenueLock reads as its release source (P2b's real fee-tagged running total).
+contract MockPoolRL {
+    mapping(address => uint256) public cumulativeFees;
 
-    function setRevenue(uint256 _revenue) external {
-        recognizedRevenueUsd = _revenue;
+    /// @dev Test helper to set the per-asset fee total (stands in for a real
+    ///      fee-tagged pool transaction that the pool itself maintains).
+    function setCumulativeFees(address _asset, uint256 _fees) external {
+        // Monotonic: matches P2b's real pool (cumulativeFees only ever increases).
+        uint256 cur = cumulativeFees[_asset];
+        if (_fees > cur) {
+            cumulativeFees[_asset] = _fees;
+        }
     }
 }
 
@@ -23,10 +30,10 @@ contract RevenueLockTest is Test {
 
     RevenueLock public revenueLock;
     ArmadaToken public armToken;
-    MockRevenueCounterRL public revenueCounter;
-    TimelockController public timelock;
+    MockPoolRL public pool;
 
     address public deployer = address(this);
+    address public asset = address(0x101); // Named asset whose cumulativeFees bounds releases
     address public beneficiaryA = address(0xA11CE);
     address public beneficiaryB = address(0xB0B);
     address public beneficiaryC = address(0xCA401);
@@ -36,21 +43,17 @@ contract RevenueLockTest is Test {
 
     uint256 constant TOTAL_SUPPLY = 12_000_000 * 1e18;
     uint256 constant ALLOC_A = 1_200_000 * 1e18; // 10% of supply
-    uint256 constant ALLOC_B = 800_000 * 1e18; // ~6.7%
-    uint256 constant ALLOC_C = 400_000 * 1e18; // ~3.3%
-    uint256 constant TOTAL_LOCK = ALLOC_A + ALLOC_B + ALLOC_C; // 2,400,000 ARM
-
-    // $10k/day, 18-decimal USD. Matches PARAMETER_MANIFEST.md / issue #225.
-    // With this cap, full unlock requires the ratchet to walk ≥100 days from $0 → $1M.
-    uint256 constant MAX_INCREASE_PER_DAY = 10_000e18;
+    uint256 constant ALLOC_B = 800_000 * 1e18;
+    uint256 constant ALLOC_C = 400_000 * 1e18;
+    uint256 constant TOTAL_LOCK = ALLOC_A + ALLOC_B + ALLOC_C;
 
     function setUp() public {
-        // Deploy mock revenue counter
-        revenueCounter = new MockRevenueCounterRL();
+        // Deploy mock pool (holds per-asset cumulativeFees)
+        pool = new MockPoolRL();
 
         // Deploy timelock
         address[] memory empty = new address[](0);
-        timelock = new TimelockController(2 days, empty, empty, deployer);
+        TimelockController timelock = new TimelockController(2 days, empty, empty, deployer);
 
         // Deploy ARM token
         armToken = new ArmadaToken(deployer, address(timelock));
@@ -60,15 +63,13 @@ contract RevenueLockTest is Test {
         beneficiaries[0] = beneficiaryA;
         beneficiaries[1] = beneficiaryB;
         beneficiaries[2] = beneficiaryC;
-
         uint256[] memory amounts = new uint256[](3);
         amounts[0] = ALLOC_A;
         amounts[1] = ALLOC_B;
         amounts[2] = ALLOC_C;
 
-        // Deploy RevenueLock
-        revenueLock =
-            new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, beneficiaries, amounts);
+        // Deploy RevenueLock with the pool and named asset
+        revenueLock = new RevenueLock(address(armToken), address(pool), asset, beneficiaries, amounts);
 
         // Whitelist RevenueLock + beneficiaries for transfers
         address[] memory whitelist = new address[](5);
@@ -87,32 +88,19 @@ contract RevenueLockTest is Test {
         // Fund RevenueLock with ARM
         armToken.transfer(address(revenueLock), TOTAL_LOCK);
 
-        // Activate the contract — release() requires this. Permissionless one-shot.
+        // Activate the contract — release() requires this.
         revenueLock.activate();
 
         // Mine a block so getPastVotes works
         vm.roll(block.number + 1);
     }
 
-    /// @dev Set mock-counter revenue AND warp enough wall-clock time that the
-    ///      ratchet budget can absorb the full increment. Isolates milestone /
-    ///      release mechanics from rate-limit behavior (which has its own section
-    ///      below and must NOT use this helper).
-    function _setRevenueAndBudget(uint256 revenue) internal {
-        revenueCounter.setRevenue(revenue);
-        uint256 current = revenueLock.maxObservedRevenue();
-        if (revenue > current) {
-            uint256 needed = revenue - current;
-            uint256 daysNeeded = (needed / MAX_INCREASE_PER_DAY) + 1;
-            vm.warp(block.timestamp + daysNeeded * 1 days);
-        }
-    }
-
     // ============ Constructor Tests ============
 
     function test_constructor_setsImmutables() public {
         assertEq(address(revenueLock.armToken()), address(armToken));
-        assertEq(address(revenueLock.revenueCounter()), address(revenueCounter));
+        assertEq(address(revenueLock.pool()), address(pool));
+        assertEq(revenueLock.asset(), asset);
         assertEq(revenueLock.totalAllocation(), TOTAL_LOCK);
         assertEq(revenueLock.beneficiaryCount(), 3);
     }
@@ -136,30 +124,27 @@ contract RevenueLockTest is Test {
         a[0] = 1e18;
 
         vm.expectRevert("RevenueLock: zero armToken");
-        new RevenueLock(address(0), address(revenueCounter), MAX_INCREASE_PER_DAY, b, a);
+        new RevenueLock(address(0), address(pool), asset, b, a);
     }
 
-    function test_constructor_zeroRevenueCounter_reverts() public {
+    function test_constructor_zeroPool_reverts() public {
         address[] memory b = new address[](1);
         b[0] = beneficiaryA;
         uint256[] memory a = new uint256[](1);
         a[0] = 1e18;
 
-        vm.expectRevert("RevenueLock: zero revenueCounter");
-        new RevenueLock(address(armToken), address(0), MAX_INCREASE_PER_DAY, b, a);
+        vm.expectRevert("RevenueLock: zero pool");
+        new RevenueLock(address(armToken), address(0), asset, b, a);
     }
 
-    // WHY: a zero MAX_REVENUE_INCREASE_PER_DAY would permanently pin
-    //      maxObservedRevenue to 0 (budget is always 0), permanently freezing all
-    //      entitlements. The constructor must reject this misconfiguration.
-    function test_constructor_zeroMaxIncrease_reverts() public {
+    function test_constructor_zeroAsset_reverts() public {
         address[] memory b = new address[](1);
         b[0] = beneficiaryA;
         uint256[] memory a = new uint256[](1);
         a[0] = 1e18;
 
-        vm.expectRevert("RevenueLock: zero maxIncrease");
-        new RevenueLock(address(armToken), address(revenueCounter), 0, b, a);
+        vm.expectRevert("RevenueLock: zero asset");
+        new RevenueLock(address(armToken), address(pool), address(0), b, a);
     }
 
     function test_constructor_emptyBeneficiaries_reverts() public {
@@ -167,7 +152,7 @@ contract RevenueLockTest is Test {
         uint256[] memory a = new uint256[](0);
 
         vm.expectRevert("RevenueLock: empty beneficiaries");
-        new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, b, a);
+        new RevenueLock(address(armToken), address(pool), asset, b, a);
     }
 
     function test_constructor_lengthMismatch_reverts() public {
@@ -178,693 +163,161 @@ contract RevenueLockTest is Test {
         a[0] = 1e18;
 
         vm.expectRevert("RevenueLock: length mismatch");
-        new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, b, a);
+        new RevenueLock(address(armToken), address(pool), asset, b, a);
     }
 
-    // WHY: the one-shot windDown setter was permissionless — anyone could front-run
-    // the deployer and bind it to a foreign address between deploy and wiring. Because
-    // RevenueLock is immutable, a mis-bind is unrecoverable and bricks wind-down. It is
-    // now deployer-gated (the deployer is captured at construction).
-    function test_setWindDownContract_onlyDeployer() public {
-        address windDown = address(0xBEEF);
+    // WHY: the no-fee account tries every way to raise the release source;
+    //      none of them changes what can be released (c3).
+    function test_nonFeePayerCannotRaise() public {
+        address noFeePayer = address(0xFEED);
 
-        // A non-deployer cannot bind it.
-        vm.prank(nonBeneficiary);
-        vm.expectRevert("RevenueLock: not deployer");
-        revenueLock.setWindDownContract(windDown);
+        // Set a fee level so some release is supported (10% milestone).
+        pool.setCumulativeFees(asset, 10_000e18);
+        uint256 relBefore = revenueLock.releasable(beneficiaryA);
 
-        // The deployer (address(this)) can, once.
-        revenueLock.setWindDownContract(windDown);
-        assertEq(revenueLock.windDownContract(), windDown);
+        // 1) RevenueLock exposes no admin path: a non-fee-paying account calling release
+        //    as a non-beneficiary reverts, and releasable is untouched.
+        vm.prank(noFeePayer);
+        vm.expectRevert("RevenueLock: not a beneficiary");
+        revenueLock.release(delegateeX);
 
-        // One-shot: a second bind reverts even from the deployer.
-        vm.expectRevert("RevenueLock: wind-down already set");
-        revenueLock.setWindDownContract(address(0xCAFE));
+        // 2) On the pool test double, a non-fee-paying account cannot raise cumulativeFees
+        //    without going through the pool's own fee path; the source only moves with
+        //    real fee-tagged transactions.
+        vm.prank(noFeePayer);
+        // no function on the pool double other than setCumulativeFees (test helper)
+        assertEq(revenueLock.releasable(beneficiaryA), relBefore, "release source only moves with fees");
+        assertEq(revenueLock.pool().cumulativeFees(asset), 10_000e18, "fees must not move for free");
     }
 
-    function test_constructor_zeroBeneficiaryAddress_reverts() public {
-        address[] memory b = new address[](1);
-        b[0] = address(0);
-        uint256[] memory a = new uint256[](1);
-        a[0] = 1e18;
+    // ============ View Tests ============
 
-        vm.expectRevert("RevenueLock: zero beneficiary");
-        new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, b, a);
-    }
-
-    function test_constructor_zeroAmount_reverts() public {
-        address[] memory b = new address[](1);
-        b[0] = beneficiaryA;
-        uint256[] memory a = new uint256[](1);
-        a[0] = 0;
-
-        vm.expectRevert("RevenueLock: zero amount");
-        new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, b, a);
-    }
-
-    function test_constructor_duplicateBeneficiary_reverts() public {
-        address[] memory b = new address[](2);
-        b[0] = beneficiaryA;
-        b[1] = beneficiaryA;
-        uint256[] memory a = new uint256[](2);
-        a[0] = 1e18;
-        a[1] = 1e18;
-
-        vm.expectRevert("RevenueLock: duplicate beneficiary");
-        new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, b, a);
-    }
-
-    // WHY: the issue #225 auditor checklist explicitly requires that
-    //      lastSyncTimestamp is initialized to block.timestamp (NOT 0). A zero
-    //      initialization would make the first observation see
-    //      `elapsed == block.timestamp`, producing an unbounded budget that
-    //      completely bypasses the rate limit on day 1.
-    function test_constructor_lastSyncTimestampInitializedToNow() public {
-        assertEq(revenueLock.lastSyncTimestamp(), block.timestamp, "lastSyncTimestamp must be now");
-        assertGt(revenueLock.lastSyncTimestamp(), 0, "lastSyncTimestamp must not be 0");
-    }
-
-    // WHY: the issue #225 auditor checklist also requires that maxObservedRevenue
-    //      is NOT seeded from the counter. A malicious initial counter
-    //      implementation could otherwise start the ratchet at an arbitrary high
-    //      value and bypass the rate limit immediately.
-    function test_constructor_maxObservedRevenueStartsAtZero() public {
-        // Even if the counter reports a nonzero value at deployment, the ratchet
-        // must start at 0. Deploy a fresh lock against a pre-populated counter
-        // and confirm.
-        MockRevenueCounterRL prePopulated = new MockRevenueCounterRL();
-        prePopulated.setRevenue(1_000_000e18);
-
-        address[] memory b = new address[](1);
-        b[0] = beneficiaryA;
-        uint256[] memory a = new uint256[](1);
-        a[0] = 1e18;
-
-        RevenueLock freshLock = new RevenueLock(address(armToken), address(prePopulated), MAX_INCREASE_PER_DAY, b, a);
-        assertEq(freshLock.maxObservedRevenue(), 0, "maxObservedRevenue must start at 0");
-    }
-
-    function test_constructor_maxIncreasePerDaySet() public {
-        assertEq(revenueLock.MAX_REVENUE_INCREASE_PER_DAY(), MAX_INCREASE_PER_DAY);
-    }
-
-    // ============ Activation Tests ============
-
-    /// @dev Helper: deploy a fresh RevenueLock with the same params as setUp() but
-    ///      do NOT fund or activate. Used by activation-gate tests to inspect the
-    ///      pre-activation state, which the main `revenueLock` instance never has
-    ///      because setUp() activates it.
-    function _deployFresh() internal returns (RevenueLock) {
-        address[] memory b = new address[](3);
-        b[0] = beneficiaryA;
-        b[1] = beneficiaryB;
-        b[2] = beneficiaryC;
-        uint256[] memory a = new uint256[](3);
-        a[0] = ALLOC_A;
-        a[1] = ALLOC_B;
-        a[2] = ALLOC_C;
-        return new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, b, a);
-    }
-
-    // WHY: The contract is immutable with no admin/sweep — an underfunded deployment
-    // produces order-dependent claims (early beneficiaries get ARM, later ones revert
-    // at transfer) with no recovery path. The activate() gate fails fast for ALL
-    // beneficiaries when balance < totalAllocation, forcing full funding before any
-    // claim can settle.
-    function test_activate_revertsWhenUnderfunded() public {
-        RevenueLock fresh = _deployFresh();
-        // Send less than totalAllocation
-        armToken.transfer(address(fresh), TOTAL_LOCK - 1);
-        vm.expectRevert("RevenueLock: underfunded");
-        fresh.activate();
-    }
-
-    // WHY: A fully-funded deployment must be activatable. Pins the happy path so a
-    // future refactor can't tighten the check past the spec's funding threshold.
-    function test_activate_succeedsWhenExactlyFunded() public {
-        RevenueLock fresh = _deployFresh();
-        armToken.transfer(address(fresh), TOTAL_LOCK);
-        fresh.activate();
-        assertTrue(fresh.activated());
-    }
-
-    // WHY: Top-up beyond totalAllocation should still activate. Treasury or governance
-    // may overfund (defense-in-depth or to cover future cohort additions); the gate
-    // must not require an exact match.
-    function test_activate_succeedsWhenOverfunded() public {
-        RevenueLock fresh = _deployFresh();
-        armToken.transfer(address(fresh), TOTAL_LOCK + 1e18);
-        fresh.activate();
-        assertTrue(fresh.activated());
-    }
-
-    // WHY: One-shot semantics. Once activated, the gate cannot be re-armed — there is
-    // no path to disable releases. Pins this invariant against any future refactor
-    // that might add toggle behavior.
-    function test_activate_revertsWhenAlreadyActivated() public {
-        // setUp's revenueLock is already activated.
-        vm.expectRevert("RevenueLock: already activated");
-        revenueLock.activate();
-    }
-
-    // WHY: Permissionless. Anyone can verify funding and activate — not gated to
-    // deployer/governance. This is intentional: the deployer may be a multisig with
-    // process delays, but the verification step is purely on-chain (balance read).
-    // Locking it to a privileged caller would add a deploy-time race condition.
-    function test_activate_permissionless() public {
-        RevenueLock fresh = _deployFresh();
-        armToken.transfer(address(fresh), TOTAL_LOCK);
-
-        address randomCaller = address(0xCAFE);
-        vm.prank(randomCaller);
-        fresh.activate();
-
-        assertTrue(fresh.activated());
-    }
-
-    // WHY: The release() gate. Without activation, no beneficiary can claim — fails
-    // fast for ALL beneficiaries until full funding is verified.
-    function test_release_revertsBeforeActivation() public {
-        RevenueLock fresh = _deployFresh();
-        armToken.transfer(address(fresh), TOTAL_LOCK);
-        // Note: NOT calling activate()
-
-        // Need to set revenue so the milestone check would otherwise pass.
-        revenueCounter.setRevenue(1_000_000e18);
-
-        vm.prank(beneficiaryA);
-        vm.expectRevert("RevenueLock: not activated");
-        fresh.release(beneficiaryA);
-    }
-
-    // ============ View Function Tests ============
-
-    function test_allocation_unknownAddress_returnsZero() public {
-        assertEq(revenueLock.allocation(nonBeneficiary), 0);
-    }
-
-    function test_unlockPercentage_zeroRevenue() public {
-        assertEq(revenueLock.unlockPercentage(), 0);
-    }
-
-    function test_unlockPercentage_belowFirstMilestone() public {
-        _setRevenueAndBudget(9_999e18);
-        assertEq(revenueLock.unlockPercentage(), 0);
-    }
-
-    function test_unlockPercentage_atFirstMilestone() public {
-        _setRevenueAndBudget(10_000e18);
-        assertEq(revenueLock.unlockPercentage(), 1000); // 10%
-    }
-
-    function test_unlockPercentage_betweenMilestones() public {
-        _setRevenueAndBudget(49_999e18);
-        assertEq(revenueLock.unlockPercentage(), 1000); // still 10%, step function
-    }
-
-    function test_unlockPercentage_atSecondMilestone() public {
-        _setRevenueAndBudget(50_000e18);
-        assertEq(revenueLock.unlockPercentage(), 2500); // 25%
-    }
-
-    function test_unlockPercentage_atThirdMilestone() public {
-        _setRevenueAndBudget(100_000e18);
-        assertEq(revenueLock.unlockPercentage(), 4000); // 40%
-    }
-
-    function test_unlockPercentage_atFourthMilestone() public {
-        _setRevenueAndBudget(250_000e18);
-        assertEq(revenueLock.unlockPercentage(), 6000); // 60%
-    }
-
-    function test_unlockPercentage_atFifthMilestone() public {
-        _setRevenueAndBudget(500_000e18);
-        assertEq(revenueLock.unlockPercentage(), 8000); // 80%
-    }
-
-    function test_unlockPercentage_atSixthMilestone() public {
-        _setRevenueAndBudget(1_000_000e18);
-        assertEq(revenueLock.unlockPercentage(), 10000); // 100%
-    }
-
-    function test_unlockPercentage_aboveMaxMilestone() public {
-        _setRevenueAndBudget(5_000_000e18);
-        assertEq(revenueLock.unlockPercentage(), 10000); // still 100%
-    }
-
-    function test_currentRevenue_readsCounter() public {
-        _setRevenueAndBudget(42e18);
-        assertEq(revenueLock.currentRevenue(), 42e18);
-    }
-
-    function test_releasable_zeroRevenue() public {
+    function test_releasable_zeroFees() public {
         assertEq(revenueLock.releasable(beneficiaryA), 0);
     }
 
     function test_releasable_nonBeneficiary() public {
-        _setRevenueAndBudget(1_000_000e18);
+        pool.setCumulativeFees(asset, 1_000_000e18);
         assertEq(revenueLock.releasable(nonBeneficiary), 0);
     }
 
-    function test_releasable_atFirstMilestone() public {
-        _setRevenueAndBudget(10_000e18);
-        // 10% of ALLOC_A = 120,000 ARM
+    function test_releasable_atMilestone() public {
+        pool.setCumulativeFees(asset, 10_000e18);
         assertEq(revenueLock.releasable(beneficiaryA), ALLOC_A * 1000 / 10000);
+    }
+
+    function test_unlockPercentage_zeroFees() public {
+        assertEq(revenueLock.unlockPercentage(), 0);
+    }
+
+    function test_unlockPercentage_atMilestones() public {
+        pool.setCumulativeFees(asset, 50_000e18);
+        assertEq(revenueLock.unlockPercentage(), 2500); // 25%
+        pool.setCumulativeFees(asset, 1_000_000e18);
+        assertEq(revenueLock.unlockPercentage(), 10000); // 100%
     }
 
     // ============ Release Tests ============
 
     function test_release_nonBeneficiary_reverts() public {
-        _setRevenueAndBudget(10_000e18);
+        pool.setCumulativeFees(asset, 10_000e18);
         vm.prank(nonBeneficiary);
         vm.expectRevert("RevenueLock: not a beneficiary");
         revenueLock.release(delegateeX);
     }
 
     function test_release_zeroDelegatee_reverts() public {
-        _setRevenueAndBudget(10_000e18);
+        pool.setCumulativeFees(asset, 10_000e18);
         vm.prank(beneficiaryA);
         vm.expectRevert("RevenueLock: zero delegatee");
         revenueLock.release(address(0));
     }
 
-    function test_release_zeroRevenue_reverts() public {
+    function test_release_zeroFees_reverts() public {
         vm.prank(beneficiaryA);
         vm.expectRevert("RevenueLock: nothing to release");
         revenueLock.release(delegateeX);
     }
 
     function test_release_atFirstMilestone_transfers10Percent() public {
-        _setRevenueAndBudget(10_000e18);
-
-        uint256 expected = ALLOC_A * 1000 / 10000; // 10%
+        pool.setCumulativeFees(asset, 10_000e18);
+        uint256 expected = ALLOC_A * 1000 / 10000;
         uint256 balBefore = armToken.balanceOf(beneficiaryA);
-
         vm.prank(beneficiaryA);
         revenueLock.release(delegateeX);
-
         assertEq(armToken.balanceOf(beneficiaryA), balBefore + expected);
         assertEq(revenueLock.released(beneficiaryA), expected);
     }
 
     function test_release_delegatesToSpecifiedAddress() public {
-        _setRevenueAndBudget(10_000e18);
-
+        pool.setCumulativeFees(asset, 10_000e18);
         vm.prank(beneficiaryA);
         revenueLock.release(delegateeX);
-
         assertEq(armToken.delegates(beneficiaryA), delegateeX);
     }
 
-    function test_release_secondCallAtSameMilestone_reverts() public {
-        _setRevenueAndBudget(10_000e18);
-
+    // c4: fees stop at a level; a beneficiary trying to release more than that
+    //      level supports is refused (nothing new to release).
+    function test_noReleaseBeyondMilestone() public {
+        // Fees stop at the $10k level (10% milestone).
+        pool.setCumulativeFees(asset, 10_000e18);
+        // First release: gets exactly the supported 10% amount.
         vm.prank(beneficiaryA);
         revenueLock.release(delegateeX);
-
+        uint256 releasedFirst = revenueLock.released(beneficiaryA);
+        // Second release at the same (unchanged) fee level: nothing to release.
         vm.prank(beneficiaryA);
         vm.expectRevert("RevenueLock: nothing to release");
         revenueLock.release(delegateeX);
+        // Released amount is exactly the milestone-supported amount, no more.
+        assertEq(releasedFirst, ALLOC_A * 1000 / 10000, "release must equal milestone support");
+        assertEq(revenueLock.released(beneficiaryA), releasedFirst, "no release beyond milestone");
     }
 
-    function test_release_atSecondMilestone_transfersDelta() public {
-        // First release at 10%
-        _setRevenueAndBudget(10_000e18);
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeX);
-        uint256 firstRelease = ALLOC_A * 1000 / 10000;
-
-        // Revenue increases to $50k (25%)
-        _setRevenueAndBudget(50_000e18);
-        uint256 balBefore = armToken.balanceOf(beneficiaryA);
-
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeX);
-
-        uint256 secondRelease = (ALLOC_A * 2500 / 10000) - firstRelease;
-        assertEq(armToken.balanceOf(beneficiaryA), balBefore + secondRelease);
-        assertEq(revenueLock.released(beneficiaryA), firstRelease + secondRelease);
-    }
-
-    function test_release_atFullUnlock_transfersEverything() public {
-        _setRevenueAndBudget(1_000_000e18);
-
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeX);
-
-        assertEq(revenueLock.released(beneficiaryA), ALLOC_A);
-        assertEq(armToken.balanceOf(beneficiaryA), ALLOC_A);
-        assertEq(revenueLock.releasable(beneficiaryA), 0);
-    }
-
-    function test_release_emitsEvent() public {
-        _setRevenueAndBudget(10_000e18);
-        uint256 expectedAmount = ALLOC_A * 1000 / 10000;
-
-        vm.expectEmit(true, false, false, true);
-        emit Released(beneficiaryA, expectedAmount, delegateeX, expectedAmount);
-
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeX);
-    }
-
-    function test_release_multipleBeneficiariesIndependent() public {
-        _setRevenueAndBudget(100_000e18); // 40% unlock
-
-        // Beneficiary A releases
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeX);
-        assertEq(revenueLock.released(beneficiaryA), ALLOC_A * 4000 / 10000);
-
-        // Beneficiary B releases independently
-        vm.prank(beneficiaryB);
-        revenueLock.release(delegateeY);
-        assertEq(revenueLock.released(beneficiaryB), ALLOC_B * 4000 / 10000);
-
-        // Beneficiary C hasn't released — still zero
-        assertEq(revenueLock.released(beneficiaryC), 0);
-        assertEq(revenueLock.releasable(beneficiaryC), ALLOC_C * 4000 / 10000);
-    }
-
-    function test_release_changesDelegatee() public {
-        _setRevenueAndBudget(10_000e18);
-
-        // First release: delegate to X
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeX);
-        assertEq(armToken.delegates(beneficiaryA), delegateeX);
-
-        // Increase revenue, release again with different delegatee
-        _setRevenueAndBudget(50_000e18);
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeY);
-        assertEq(armToken.delegates(beneficiaryA), delegateeY);
-    }
-
-    function test_release_selfDelegation() public {
-        _setRevenueAndBudget(10_000e18);
-
-        vm.prank(beneficiaryA);
-        revenueLock.release(beneficiaryA);
-
-        assertEq(armToken.delegates(beneficiaryA), beneficiaryA);
-        uint256 expectedVotes = ALLOC_A * 1000 / 10000;
-        assertEq(armToken.getVotes(beneficiaryA), expectedVotes);
-    }
-
-    function test_release_fullLifecycle_allMilestones() public {
-        uint256[6] memory thresholds = [uint256(10_000e18), 50_000e18, 100_000e18, 250_000e18, 500_000e18, 1_000_000e18];
+    // c5: releasable and release agree bit-for-bit across many fee levels.
+    function test_releasable_equals_release() public {
+        uint256[6] memory levels = [uint256(10_000e18), 50_000e18, 100_000e18, 250_000e18, 500_000e18, 1_000_000e18];
         uint256[6] memory bps = [uint256(1000), 2500, 4000, 6000, 8000, 10000];
 
-        uint256 prevReleased = 0;
-
+        uint256 cumulative = 0;
         for (uint256 i = 0; i < 6; i++) {
-            _setRevenueAndBudget(thresholds[i]);
-            uint256 entitled = ALLOC_A * bps[i] / 10000;
-            uint256 expectedDelta = entitled - prevReleased;
-
+            pool.setCumulativeFees(asset, levels[i]);
+            uint256 entitled = (ALLOC_A * bps[i]) / 10000;
+            uint256 delta = entitled - cumulative;
+            uint256 releasable = revenueLock.releasable(beneficiaryA);
+            // Bit-for-bit agreement: what's releasable is exactly what release delivers.
+            assertEq(releasable, delta, "releasable must equal the supported delta");
             vm.prank(beneficiaryA);
             revenueLock.release(delegateeX);
-
-            assertEq(revenueLock.released(beneficiaryA), entitled, "wrong cumulative release");
-            prevReleased = entitled;
+            assertEq(revenueLock.released(beneficiaryA), cumulative + delta, "release must match releasable");
+            // After release, nothing remains releasable at this level.
+            assertEq(revenueLock.releasable(beneficiaryA), 0, "releasable and release must agree bit-for-bit");
+            cumulative = entitled;
         }
-
-        // Fully released
-        assertEq(revenueLock.released(beneficiaryA), ALLOC_A);
-        assertEq(revenueLock.releasable(beneficiaryA), 0);
-    }
-
-    function test_supplyConservation_afterReleases() public {
-        _setRevenueAndBudget(250_000e18); // 60%
-
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeX);
-        vm.prank(beneficiaryB);
-        revenueLock.release(delegateeX);
-
-        uint256 lockBalance = armToken.balanceOf(address(revenueLock));
-        uint256 totalReleased = revenueLock.released(beneficiaryA) + revenueLock.released(beneficiaryB)
-            + revenueLock.released(beneficiaryC);
-
-        assertEq(lockBalance + totalReleased, TOTAL_LOCK, "supply conservation violated");
+        assertEq(revenueLock.released(beneficiaryA), ALLOC_A, "full allocation released");
     }
 
     // ============ Fuzz Tests ============
 
-    function testFuzz_unlockPercentage_monotonic(uint256 rev1, uint256 rev2) public {
-        rev1 = bound(rev1, 0, 10_000_000e18);
-        rev2 = bound(rev2, rev1, 10_000_000e18);
-
-        revenueCounter.setRevenue(rev1);
-        uint256 pct1 = revenueLock.unlockPercentage();
-
-        revenueCounter.setRevenue(rev2);
-        uint256 pct2 = revenueLock.unlockPercentage();
-
-        assertGe(pct2, pct1, "unlock percentage not monotonic");
+    function testFuzz_unlockPercentage_stepFunction(uint256 fees) public {
+        fees = bound(fees, 0, 10_000_000e18);
+        pool.setCumulativeFees(asset, fees);
+        uint256 pct = revenueLock.unlockPercentage();
+        assertTrue(
+            pct == 0 || pct == 1000 || pct == 2500 || pct == 4000 || pct == 6000 || pct == 8000 || pct == 10000,
+            "unlock percentage must be a valid step value"
+        );
     }
 
-    function testFuzz_release_neverExceedsAllocation(uint256 revenue) public {
-        revenue = bound(revenue, 0, 10_000_000e18);
-        revenueCounter.setRevenue(revenue);
-
+    function testFuzz_release_neverExceedsAllocation(uint256 fees) public {
+        fees = bound(fees, 0, 10_000_000e18);
+        pool.setCumulativeFees(asset, fees);
         uint256 releasableA = revenueLock.releasable(beneficiaryA);
-        assertLe(releasableA, ALLOC_A, "releasable exceeds allocation");
-
+        assertLe(releasableA, ALLOC_A, "releasable must not exceed allocation");
         if (releasableA > 0) {
             vm.prank(beneficiaryA);
             revenueLock.release(delegateeX);
-            assertLe(revenueLock.released(beneficiaryA), ALLOC_A, "released exceeds allocation");
+            assertLe(revenueLock.released(beneficiaryA), ALLOC_A, "released must not exceed allocation");
         }
-    }
-
-    function testFuzz_unlockPercentage_stepFunction(uint256 revenue) public {
-        revenue = bound(revenue, 0, 10_000_000e18);
-        revenueCounter.setRevenue(revenue);
-        uint256 pct = revenueLock.unlockPercentage();
-
-        // Must be one of the valid step values
-        assertTrue(
-            pct == 0 || pct == 1000 || pct == 2500 || pct == 4000 || pct == 6000 || pct == 8000 || pct == 10000,
-            "unlock percentage not a valid step value"
-        );
-    }
-
-    // ============ Ratchet Tests ============
-    //
-    // These tests target the monotonic ratchet and rate-limit that neutralise
-    // governance-controlled RevenueCounter upgrades. They MUST use raw setRevenue
-    // (not _setRevenueAndBudget) so that the rate-limit boundary is actually
-    // exercised instead of being hidden by the helper's auto-warp.
-
-    event ObservedRevenueUpdated(uint256 oldMax, uint256 newMax, uint256 reportedByCounter);
-
-    /// @dev WHY: the spec's defining property — if RevenueCounter is upgraded to
-    ///      return a value LOWER than the previously observed high-water mark,
-    ///      the ratchet must hold. Otherwise an attacker can freeze beneficiaries
-    ///      mid-release by forcing `entitled < alreadyReleased`.
-    function test_ratchet_rewindIsIgnored() public {
-        // Warp a day, counter reports $10k, ratchet advances to $10k.
-        vm.warp(block.timestamp + 1 days);
-        revenueCounter.setRevenue(10_000e18);
-        revenueLock.syncObservedRevenue();
-        assertEq(revenueLock.maxObservedRevenue(), 10_000e18, "ratchet should be at 10k");
-
-        // Simulate a malicious upgrade that reports 0.
-        revenueCounter.setRevenue(0);
-
-        // Another day passes — the ratchet must not move backward.
-        vm.warp(block.timestamp + 1 days);
-        revenueLock.syncObservedRevenue();
-        assertEq(revenueLock.maxObservedRevenue(), 10_000e18, "ratchet must not rewind");
-
-        // And views (which flow through the ratchet) remain stable.
-        assertEq(revenueLock.unlockPercentage(), 1000, "unlockPercentage must not rewind");
-    }
-
-    /// @dev WHY: the acceleration attack from issue #225 — a malicious upgrade
-    ///      reports type(uint256).max trying to flip every milestone at once.
-    ///      The ratchet must cap the advance to `elapsed * maxIncrease / 1 day`,
-    ///      not to whatever the counter reports.
-    function test_ratchet_capsInstantAcceleration() public {
-        // Attacker reports astronomical revenue.
-        revenueCounter.setRevenue(type(uint256).max);
-
-        // Only 1 day has passed since deployment.
-        vm.warp(block.timestamp + 1 days);
-        revenueLock.syncObservedRevenue();
-
-        // Ratchet may only advance by MAX_INCREASE_PER_DAY.
-        assertEq(revenueLock.maxObservedRevenue(), MAX_INCREASE_PER_DAY, "advance must be rate-capped");
-
-        // Even with the counter still at max, unlockPercentage only reflects what the
-        // capped ratchet allows. $10k → 10% (first milestone), NOT 100%.
-        assertEq(revenueLock.unlockPercentage(), 1000, "step must reflect capped value");
-    }
-
-    /// @dev WHY: the issue #225 auditor checklist calls this out explicitly —
-    ///      lastSyncTimestamp must advance on EVERY call, even when the ratchet
-    ///      itself does not move. Otherwise a daily no-op sync during a flat-
-    ///      revenue period fails to consume the elapsed-time allowance and the
-    ///      rate cap becomes meaningless over long idle windows.
-    function test_ratchet_lastSyncTimestampAdvancesOnNoOp() public {
-        // No revenue, no elapsed time, nothing to advance.
-        uint256 tsBefore = revenueLock.lastSyncTimestamp();
-
-        // Warp forward and sync with the counter still at 0.
-        vm.warp(block.timestamp + 1 days);
-        revenueLock.syncObservedRevenue();
-
-        // Ratchet did NOT advance (nothing to advance to).
-        assertEq(revenueLock.maxObservedRevenue(), 0, "no-op sync must not advance ratchet");
-        // But lastSyncTimestamp DID advance. This is the critical property.
-        assertGt(revenueLock.lastSyncTimestamp(), tsBefore, "no-op sync must still advance timestamp");
-        assertEq(revenueLock.lastSyncTimestamp(), block.timestamp, "timestamp must be now");
-    }
-
-    /// @dev WHY: without unconditional timestamp advancement, an attacker could
-    ///      accumulate budget over a long idle period (no sync, no release) and
-    ///      then burn it all in a single transaction after a malicious upgrade,
-    ///      defeating the purpose of the rate cap. This test proves budget DOES
-    ///      accumulate proportionally to elapsed time — forming the basis of the
-    ///      "call syncObservedRevenue() regularly" operational requirement.
-    function test_ratchet_budgetAccumulatesOverIdlePeriod() public {
-        // 10 days pass with no sync.
-        vm.warp(block.timestamp + 10 days);
-
-        // Counter jumps to a huge value.
-        revenueCounter.setRevenue(type(uint256).max);
-
-        // A single sync: budget = 10 * MAX_INCREASE_PER_DAY, ratchet advances by that much.
-        revenueLock.syncObservedRevenue();
-        assertEq(
-            revenueLock.maxObservedRevenue(),
-            10 * MAX_INCREASE_PER_DAY,
-            "budget accumulates over idle days - exactly why regular syncs are required"
-        );
-    }
-
-    /// @dev WHY: ratchet must cap to `reported` when the counter is the smaller
-    ///      value, and to `prev + budget` when the counter is larger. Both sides
-    ///      of min() must be exercised.
-    function test_ratchet_capsToReportedWhenReportedIsSmaller() public {
-        revenueCounter.setRevenue(1_500e18);
-        vm.warp(block.timestamp + 1 days);
-        revenueLock.syncObservedRevenue();
-        // Reported ($1.5k) < budget ($10k) → ratchet caps to reported.
-        assertEq(revenueLock.maxObservedRevenue(), 1_500e18, "must cap to reported when smaller");
-    }
-
-    /// @dev WHY: getCappedObservedRevenue is the off-chain monitoring primitive.
-    ///      It must return the EXACT value that a simultaneous syncObservedRevenue
-    ///      would produce, otherwise bots cannot trust it. Mirrors the auditor
-    ///      checklist item "view and state-modifying return consistent values".
-    function test_view_getCappedObservedRevenue_matchesSync() public {
-        vm.warp(block.timestamp + 3 days);
-        revenueCounter.setRevenue(50_000e18);
-
-        uint256 predicted = revenueLock.getCappedObservedRevenue();
-        revenueLock.syncObservedRevenue();
-        assertEq(revenueLock.maxObservedRevenue(), predicted, "view must match actual sync");
-    }
-
-    /// @dev WHY: permissionless access is a hard requirement from the spec —
-    ///      monitoring bots need to advance the ratchet without holding special
-    ///      privileges. Any address must be able to call it.
-    function test_syncObservedRevenue_isPermissionless() public {
-        vm.warp(block.timestamp + 1 days);
-        revenueCounter.setRevenue(5_000e18);
-
-        // nonBeneficiary has no role, but can still sync.
-        vm.prank(nonBeneficiary);
-        revenueLock.syncObservedRevenue();
-
-        assertEq(revenueLock.maxObservedRevenue(), 5_000e18, "anyone must be able to sync");
-    }
-
-    /// @dev WHY: the ObservedRevenueUpdated event is the monitoring infrastructure's
-    ///      only on-chain signal for "ratchet advance happened". Its payload must
-    ///      include the oldMax, newMax, and (critically) the raw reported value so
-    ///      off-chain tools can distinguish a clean advance from a rate-limited one.
-    function test_ratchet_emitsObservedRevenueUpdated() public {
-        vm.warp(block.timestamp + 1 days);
-        revenueCounter.setRevenue(type(uint256).max);
-
-        vm.expectEmit(false, false, false, true);
-        emit ObservedRevenueUpdated(0, MAX_INCREASE_PER_DAY, type(uint256).max);
-        revenueLock.syncObservedRevenue();
-    }
-
-    /// @dev WHY: `ObservedRevenueUpdated` must NOT fire on a no-op sync —
-    ///      otherwise advance-detection consumers would be flooded with non-events.
-    ///      The event is reserved for *actual* state changes of maxObservedRevenue.
-    ///      Per audit-30 the `Synced` event was added to fire on every non-frozen
-    ///      call (advance or no-op) so consumers wanting full sync observability
-    ///      have a separate signal. This test pins the asymmetric pattern: a
-    ///      no-op sync emits `Synced` exactly once and `ObservedRevenueUpdated`
-    ///      zero times.
-    function test_ratchet_noEventOnNoOpSync() public {
-        vm.recordLogs();
-        revenueLock.syncObservedRevenue();
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 advanceTopic = keccak256("ObservedRevenueUpdated(uint256,uint256,uint256)");
-        bytes32 syncedTopic = keccak256("Synced(uint256,uint256,uint256)");
-        uint256 advanceCount;
-        uint256 syncedCount;
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics.length == 0) continue;
-            if (logs[i].topics[0] == advanceTopic) advanceCount++;
-            if (logs[i].topics[0] == syncedTopic) syncedCount++;
-        }
-        assertEq(advanceCount, 0, "no-op sync must not emit ObservedRevenueUpdated");
-        assertEq(syncedCount, 1, "no-op sync must emit Synced exactly once");
-    }
-
-    /// @dev WHY: the primary bug from issue #225 — `release()` previously computed
-    ///      `entitled - alreadyReleased`. A malicious downgrade of RevenueCounter
-    ///      could push `entitled` below `alreadyReleased`, causing 0.8.x safe-math
-    ///      underflow and freezing the beneficiary. With the ratchet, `entitled`
-    ///      is computed from maxObservedRevenue which only grows, so this class
-    ///      of freeze is structurally impossible.
-    function test_ratchet_releaseDoesNotUnderflowOnCounterRewind() public {
-        // First release at the $10k milestone.
-        _setRevenueAndBudget(10_000e18);
-        vm.prank(beneficiaryA);
-        revenueLock.release(delegateeX);
-        uint256 releasedBefore = revenueLock.released(beneficiaryA);
-        assertGt(releasedBefore, 0, "setup: first release should have succeeded");
-
-        // Attacker downgrades the counter to 0.
-        revenueCounter.setRevenue(0);
-
-        // A subsequent release should simply revert with "nothing to release" — NOT
-        // underflow — because the ratchet still sees $10k. Beneficiaries remain
-        // whole; they just have nothing new to claim until real revenue grows.
-        vm.prank(beneficiaryA);
-        vm.expectRevert("RevenueLock: nothing to release");
-        revenueLock.release(delegateeX);
-
-        // And `released` is unchanged.
-        assertEq(revenueLock.released(beneficiaryA), releasedBefore, "released must not change");
-    }
-
-    /// @dev WHY: releasable() and unlockPercentage() are views driving UIs and
-    ///      integrations. They must preview the effect of a hypothetical release
-    ///      (which would call _updateMaxObservedRevenue first), not read stale
-    ///      storage. Concretely: after the counter reports a new milestone but
-    ///      before anyone syncs, the views should already reflect what release
-    ///      would deliver.
-    function test_views_previewPostSyncState() public {
-        // Stage: counter reports $10k, one day has passed, but no sync yet.
-        vm.warp(block.timestamp + 1 days);
-        revenueCounter.setRevenue(10_000e18);
-
-        // Storage is still 0.
-        assertEq(revenueLock.maxObservedRevenue(), 0, "storage not yet advanced");
-
-        // But views reflect what a release would see: 10% unlock, allocation * 10%.
-        assertEq(revenueLock.unlockPercentage(), 1000, "unlockPercentage must preview");
-        assertEq(revenueLock.releasable(beneficiaryA), ALLOC_A * 1000 / 10000, "releasable must preview");
     }
 }

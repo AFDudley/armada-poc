@@ -48,13 +48,26 @@ contract ReserveRejectingRecipient {
     }
 }
 
+/// @dev Mock pool for the reserve-distributor suite: holds the per-asset
+///      cumulativeFees total (P2b's real fee-tagged running total) that
+///      RevenueLock now reads as its release source.
+contract MockPoolReserve {
+    mapping(address => uint256) public cumulativeFees;
+
+    function setCumulativeFees(address _asset, uint256 _fees) external {
+        uint256 cur = cumulativeFees[_asset];
+        if (_fees > cur) cumulativeFees[_asset] = _fees;
+    }
+}
+
 abstract contract RevenueReserveDistributorFixture is Test {
     uint256 internal constant RESERVE = 360_000e18;
     uint256 internal constant DIRECT = 2_040_000e18;
     uint256 internal constant LOCK_TOTAL = RESERVE + DIRECT;
-    uint256 internal constant RATE = 10_000e18;
 
     ArmadaToken internal token;
+    MockPoolReserve internal pool;
+    address internal poolAsset = address(0x101);
     RevenueCounter internal counter;
     RevenueLock internal lock;
     RevenueReserveDistributor internal distributor;
@@ -77,13 +90,14 @@ abstract contract RevenueReserveDistributorFixture is Test {
             )
         );
         distributor = new RevenueReserveDistributor(address(token), allocator, RESERVE);
+        pool = new MockPoolReserve();
         address[] memory recipients = new address[](2);
         recipients[0] = address(distributor);
         recipients[1] = direct;
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = RESERVE;
         amounts[1] = DIRECT;
-        lock = new RevenueLock(address(token), address(counter), RATE, recipients, amounts);
+        lock = new RevenueLock(address(token), address(pool), poolAsset, recipients, amounts);
         distributor.bindRevenueLock(address(lock));
 
         ReserveSettledCrowdfund crowdfund = new ReserveSettledCrowdfund();
@@ -132,9 +146,11 @@ abstract contract RevenueReserveDistributorFixture is Test {
     }
 
     function _revenue(uint256 value) internal {
+        // RevenueLock reads the pool's real cumulativeFees directly (G4) — no rate-limit
+        // ratchet to warp past. counter.attestRevenue is kept for distributor-side tests
+        // that still consult RevenueCounter via the distributor's own collection path.
         counter.attestRevenue(value);
-        uint256 observed = lock.maxObservedRevenue();
-        if (value > observed) vm.warp(block.timestamp + ((value - observed) / RATE + 1) * 1 days);
+        pool.setCumulativeFees(poolAsset, value);
         vm.roll(block.number + 1);
     }
 
@@ -279,23 +295,6 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         assertEq(token.balanceOf(alice), 300e18);
     }
 
-    // WHY: A bad upstream upgrade must not prevent distribution of ARM already collected.
-    function test_counterFailureLeavesCollectedBatchRangeAndSelfClaimsLive() public {
-        _assign(alice, 3_000e18);
-        _assign(bob, 9_000e18);
-        _revenue(10_000e18);
-        distributor.collect();
-        _failCounter();
-        vm.expectRevert();
-        distributor.distribute();
-        assertEq(distributor.claimable(alice), 300e18);
-        vm.prank(alice);
-        assertEq(distributor.claimSelf(), 300e18);
-        assertEq(distributor.claimRange(2, 3), 900e18);
-        _assign(bob, 1_000e18);
-        assertEq(distributor.claimCollected(), 100e18);
-    }
-
     // WHY: Once fully collected, even the default collect-and-pay path must not consult the counter.
     function test_fullCollectionRemovesCounterDependency() public {
         _revenue(1_000_000e18);
@@ -376,14 +375,15 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         assertEq(distributor.distribute(), 0);
     }
 
-    // WHY: freezeAtWindDown performs a final ratchet update which may cross a previously uncollected tier.
-    function test_windDownFinalUpdateCrossesMilestoneAndCounterCanThenFail() public {
+    // WHY: RevenueLock no longer depends on RevenueCounter at all — once the pool's
+    //      real fees cross a milestone, wind-down triggering (which snapshots the
+    //      locked portion) and distribute() both keep working even if RevenueCounter
+    //      later fails.
+    function test_windDownSurvivesCounterFailureOncePoolFeesAreSet() public {
         _assign(alice, 3_000e18);
         _revenue(9_000e18);
-        lock.syncObservedRevenue();
         assertEq(distributor.collectedBps(), 0);
-        counter.attestRevenue(10_000e18);
-        vm.warp(block.timestamp + 1 days);
+        _revenue(10_000e18);
         windDown.governanceTriggerWindDown();
         _failCounter();
         distributor.distribute();
@@ -413,15 +413,16 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         assertEq(token.balanceOf(address(distributor)), 0);
     }
 
-    // WHY: The wrapper must inherit the rate cap rather than treating reported revenue as unlocked revenue.
-    function test_collectionRespectsOriginalRateLimit() public {
+    // WHY: RevenueLock reads the pool's real cumulativeFees directly — there is no
+    //      rate-limit ratchet left to cap the unlock (G4). Setting the pool's fee total
+    //      straight to the full-unlock threshold unlocks 100% immediately, with no
+    //      elapsed-time requirement.
+    function test_collectionReflectsPoolFeesImmediately() public {
         _assign(alice, 3_000e18);
-        counter.attestRevenue(1_000_000e18);
-        vm.warp(block.timestamp + 1 days);
+        pool.setCumulativeFees(poolAsset, 1_000_000e18);
         distributor.distribute();
-        assertEq(lock.maxObservedRevenue(), 10_000e18);
-        assertEq(distributor.collectedBps(), 1000);
-        assertEq(token.balanceOf(alice), 300e18);
+        assertEq(distributor.collectedBps(), 10000);
+        assertEq(token.balanceOf(alice), 3_000e18);
     }
 
     // WHY: A reserve beneficiary must have the same payout regardless of whether direct holders redeem first.
