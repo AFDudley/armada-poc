@@ -1,0 +1,120 @@
+{
+  "id": "derived-arp-d0f",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. npm run test:config must run config/networks.test.ts to completion under ESM and report real pass or fail results, not crash on an undefined __dirname.\nWhat holds now? Describe the current, observed state. config/networks.test.ts references __dirname at lines 392, 950 and 1049. Under ESM __dirname is undefined, so npm run test:config fails with a ReferenceError and the networks config tests never run. The exophial gate leaves test:config out for this reason.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run npm run test:config. It errors with '__dirname is not defined' at config/networks.test.ts. A check runs the command and asserts it completes with no __dirname ReferenceError and the networks config tests execute.\nWhat constraints apply? State them in plain prose. Derive an ESM-safe directory path from import.meta.url at config/networks.test.ts lines 392, 950 and 1049, matching the repo's existing ESM path idiom. Change no production config-loader behavior and no other test.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) config/networks.test.ts",
+  "restatement": "The networks configuration test file config/networks.test.ts must run to completion under ESM when a person runs npm run test:config, and it must report real pass or fail results for the networks config tests. Today the file uses __dirname at lines 392, 950 and 1049. __dirname is undefined under ESM, so the run stops with a ReferenceError ('__dirname is not defined') and no networks config test executes. The fix must get the directory path from import.meta.url at those three places, in the same way the repo already does ESM paths elsewhere. The fix must not change how the production config loader behaves, and it must not change any other test.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "Running npm run test:config completes with no '__dirname is not defined' ReferenceError, and the networks config tests in config/networks.test.ts execute and report real pass or fail results."
+    },
+    {
+      "id": "c2",
+      "text": "config/networks.test.ts derives its directory path from import.meta.url at the places that used __dirname (lines 392, 950 and 1049), using the repo's existing ESM path idiom."
+    },
+    {
+      "id": "c3",
+      "text": "The change touches no production config-loader behavior and no other test: only config/networks.test.ts changes."
+    }
+  ],
+  "goal": "npm run test:config runs config/networks.test.ts to completion under ESM with no __dirname ReferenceError, and the networks config tests execute.",
+  "acceptance_criteria": [
+    "A person runs the config test command. The run finishes with no '__dirname is not defined' error, and the networks config tests actually run and report results.",
+    "The networks config test file now builds its directory path from import.meta.url.",
+    "Compared with the base branch, the only changed file is config/networks.test.ts. No config loader file and no other test changed."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "A person runs the config test command. The run finishes with no '__dirname is not defined' error, and the networks config tests actually run and report results."
+    },
+    {
+      "id": "c2",
+      "text": "The networks config test file now builds its directory path from import.meta.url."
+    },
+    {
+      "id": "c3",
+      "text": "Compared with the base branch, the only changed file is config/networks.test.ts. No config loader file and no other test changed."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "behavior",
+      "description": "A person runs the config test command. The run finishes with no '__dirname is not defined' error, and the networks config tests actually run and report results.",
+      "proves": "The ReferenceError is gone and the networks config tests execute to completion.",
+      "restatement_clause_id": "c1",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check_test_config_run.py",
+        "args": [],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "dirname_reference_error_count",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "networks_tests_executed",
+          "op": "gt",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "run_completed",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c1"
+    },
+    {
+      "type": "grep",
+      "description": "The networks config test file now builds its directory path from import.meta.url.",
+      "proves": "The file uses the ESM-safe import.meta.url source for its directory path.",
+      "restatement_clause_id": "c2",
+      "pattern": "import\\.meta\\.url",
+      "files": [
+        "config/networks.test.ts"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "Compared with the base branch, the only changed file is config/networks.test.ts. No config loader file and no other test changed.",
+      "proves": "The fix is limited to the one test file and leaves production config-loader behavior and other tests untouched.",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check_config_test_fix_scope.py",
+        "args": [],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "changed_files_outside_networks_test",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "networks_test_changed",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 60,
+      "clause_id": "c3"
+    }
+  ],
+  "declared_new_entrypoints": [
+    "scripts/check_config_test_fix_scope.py",
+    "scripts/check_test_config_run.py"
+  ]
+}
