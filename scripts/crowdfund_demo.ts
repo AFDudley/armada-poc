@@ -9,7 +9,7 @@
  *
  * LIMITATIONS: This demo is a standalone crowdfund mechanics walkthrough.
  *   - Deploys its OWN ArmadaToken (not the shared canonical token from governance)
- *   - Treasury is a bare address, not the governance-controlled ArmadaTreasuryGov
+ *   - Treasury is a bare address, not the governance-controlled treasury
  *   - No governance integration — claimed ARM is not connected to governor/timelock
  *   - For the full integrated lifecycle (crowdfund → treasury → governance → proposals),
  *     see full_lifecycle_demo.ts instead.

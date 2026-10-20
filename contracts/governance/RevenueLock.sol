@@ -30,7 +30,7 @@ interface IArmadaTokenRevenueLock {
 ///         or not. The one piece of wind-down bookkeeping kept is a snapshot of the
 ///         locked (unvested) portion at trigger time (`freezeAtWindDown`/
 ///         `lockedAtWindDown`): RevenueReserveDistributor's unmodified, already-
-///         deployed contract and ArmadaRedemption's circulating-supply accounting
+///         deployed contract and the redemption contract.s circulating-supply accounting
 ///         both read a wind-down-frozen state from this contract and cannot be
 ///         changed here. No admin controls entitlements: `setWindDownContract` only
 ///         binds the one authorized caller of `freezeAtWindDown`, a deployer-gated
@@ -108,7 +108,7 @@ contract RevenueLock {
     bool public frozenAtWindDown;
 
     /// @notice Unlock bps snapshotted at freeze time, for lockedAtWindDown()'s stable
-    ///         redemption-window denominator (ArmadaRedemption.circulatingSupply).
+    ///         redemption-window denominator (the redemption contract.s circulatingSupply).
     uint256 public frozenUnlockBps;
 
     // ============ Events ============
@@ -254,7 +254,7 @@ contract RevenueLock {
     ///         Wind-down only; one-shot. Does NOT affect release()/releasable(), which
     ///         always read the live pool.cumulativeFees(asset) — this snapshot exists
     ///         solely so lockedAtWindDown() gives a stable denominator across the
-    ///         redemption window (ArmadaRedemption.circulatingSupply).
+    ///         redemption window (the redemption contract.s circulatingSupply).
     function freezeAtWindDown() external {
         require(msg.sender == windDownContract, "RevenueLock: not wind-down");
         require(!frozenAtWindDown, "RevenueLock: already frozen");
@@ -264,7 +264,7 @@ contract RevenueLock {
         emit FrozenAtWindDown(frozenUnlockBps);
     }
 
-    /// @notice Locked (unvested) ARM portion, used by ArmadaRedemption.circulatingSupply
+    /// @notice Locked (unvested) ARM portion, used by the redemption contract.s circulatingSupply
     ///         as the non-circulating share of this contract.
     /// @dev Pre-freeze: computed from the live pool.cumulativeFees(asset). Post-freeze:
     ///      uses the bps snapshotted at trigger time, stable across the redemption window.

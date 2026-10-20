@@ -233,7 +233,7 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
   );
   const crowdfundArgs = await crowdfundConstructorArgs(cf.contracts.crowdfund);
 
-  const windDown = await ethers.getContractAt("ArmadaWindDown", c.windDown);
+  const windDown = await ethers.getContractAt("wind-down", c.windDown);
   const windDownDeadline = await windDown.windDownDeadline();
   const revenueThreshold = await windDown.revenueThreshold();
 
@@ -259,17 +259,17 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
       constructorArguments: [gov.deployer, c.timelockController],
     },
     {
-      name: "ArmadaTreasuryGov",
+      name: "treasury",
       address: c.treasury,
       constructorArguments: [c.timelockController],
     },
     {
-      name: "ArmadaGovernor (implementation)",
+      name: "governor (implementation)",
       address: c.governorImpl,
       constructorArguments: [],
     },
     {
-      name: "ArmadaGovernor (proxy)",
+      name: "governor (proxy)",
       address: c.governor,
       constructorArguments: [
         c.governorImpl,
@@ -285,7 +285,7 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
         "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
     },
     {
-      name: "TreasurySteward",
+      name: "treasury",
       address: c.steward,
       constructorArguments: [c.timelockController],
     },
@@ -325,7 +325,7 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
       constructorArguments: crowdfundArgs,
     },
     {
-      name: "ArmadaRedemption",
+      name: "redemption",
       address: c.redemption,
       constructorArguments: [
         c.armToken,
@@ -335,7 +335,7 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
       ],
     },
     {
-      name: "ArmadaWindDown",
+      name: "wind-down",
       address: c.windDown,
       constructorArguments: [
         c.armToken,

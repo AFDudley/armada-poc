@@ -4,19 +4,19 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "../contracts/governance/IArmadaGovernance.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "./helpers/GovernorDeployHelper.sol";
 
 /// @title GovernorSignalingTest — Tests for non-executable signaling proposals
 contract GovernorSignalingTest is Test, GovernorDeployHelper {
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
 
     address public deployer = address(this);
     address public alice = address(0xA11CE);
@@ -39,7 +39,7 @@ contract GovernorSignalingTest is Test, GovernorDeployHelper {
         armToken = new ArmadaToken(deployer, address(timelock));
 
         // Deploy treasury
-        treasury = new ArmadaTreasuryGov(address(timelock));
+        treasury = new Treasury(address(timelock));
 
         // Deploy governor
         governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
@@ -148,7 +148,7 @@ contract GovernorSignalingTest is Test, GovernorDeployHelper {
     function test_signaling_cannotQueue() public {
         uint256 proposalId = _createAndPassSignalingProposal(alice);
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_SignalingNoExecution.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_SignalingNoExecution.selector));
         governor.queue(proposalId);
     }
 
@@ -159,7 +159,7 @@ contract GovernorSignalingTest is Test, GovernorDeployHelper {
         uint256 proposalId = _createAndPassSignalingProposal(alice);
 
         // execute() checks state() == Queued first, which will be Succeeded for signaling
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotQueued.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotQueued.selector));
         governor.execute(proposalId);
     }
 
@@ -175,7 +175,7 @@ contract GovernorSignalingTest is Test, GovernorDeployHelper {
         calldatas[0] = abi.encodeWithSignature("proposalCount()");
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_SignalingMustBeEmpty.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_SignalingMustBeEmpty.selector));
         governor.propose(ProposalType.Signaling, targets, values, calldatas, "sneaky");
     }
 
@@ -188,7 +188,7 @@ contract GovernorSignalingTest is Test, GovernorDeployHelper {
             ProposalParams({votingDelay: 1 days, votingPeriod: 14 days, executionDelay: 2 days, quorumBps: 3000});
 
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_ImmutableProposalType.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_ImmutableProposalType.selector));
         governor.setProposalTypeParams(ProposalType.Signaling, newParams);
     }
 
@@ -245,7 +245,7 @@ contract GovernorSignalingTest is Test, GovernorDeployHelper {
         assertEq(uint256(governor.state(proposalId)), uint256(ProposalState.Active));
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotPending.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotPending.selector));
         governor.cancel(proposalId);
     }
 }

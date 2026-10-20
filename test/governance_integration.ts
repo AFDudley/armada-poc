@@ -145,22 +145,22 @@ describe("Governance Integration", function () {
     armToken = await ArmadaToken.deploy(deployer.address, timelockAddr);
     await armToken.waitForDeployment();
 
-    // 3. Deploy ArmadaTreasuryGov (owned by timelock)
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
+    // 3. Deploy Treasury (owned by timelock)
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    treasury = await Treasury.deploy(timelockAddr);
     await treasury.waitForDeployment();
 
-    // 4. Deploy ArmadaGovernor
+    // 4. Deploy Governor
     governor = await deployGovernorProxy(
       await armToken.getAddress(),
       timelockAddr,
       await treasury.getAddress(),
     );
 
-    // 5. Deploy TreasurySteward (identity management only)
-    const TreasurySteward = await ethers.getContractFactory("TreasurySteward");
-    stewardContract = await TreasurySteward.deploy(timelockAddr);
+    // 5. Deploy Steward (identity management only)
+    const Steward = await ethers.getContractFactory("Steward");
+    stewardContract = await Steward.deploy(timelockAddr);
     await stewardContract.waitForDeployment();
 
     // 5b. Register steward contract on governor

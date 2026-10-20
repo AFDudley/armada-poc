@@ -209,12 +209,12 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
     await hubUsdc.addMinter(await mockAaveSpoke.getAddress());
     await mockAaveSpoke.addReserve(await hubUsdc.getAddress(), 500, true);
 
-    // ArmadaTreasuryGov is the unified treasury (#152/#154). Deployer acts as
+    // Treasury is the unified treasury (#152/#154). Deployer acts as
     // timelock-owner for this integration test; the vault transfers yield fees
     // here via plain safeTransfer with no recordFee call.
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    armadaTreasury = await ArmadaTreasuryGov.deploy(deployerAddress);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    armadaTreasury = await Treasury.deploy(deployerAddress);
 
     const ArmadaYieldVault =
       await ethers.getContractFactory("ArmadaYieldVault");

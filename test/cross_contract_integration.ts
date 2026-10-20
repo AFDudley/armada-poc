@@ -164,9 +164,9 @@ describe("Cross-Contract Integration (Phase 6)", function () {
 
     // Deploy TreasuryGov (holds ARM for governance distributions)
     // Owner is set to timelock at deployment and is immutable — governance controls the treasury
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    treasuryGov = await ArmadaTreasuryGov.deploy(timelockAddr);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    treasuryGov = await Treasury.deploy(timelockAddr);
     await treasuryGov.waitForDeployment();
 
     // Initialize USDC outflow config on treasury (via timelock, deployer has proposer+executor)
@@ -733,9 +733,9 @@ describe("Cross-Contract Integration (Phase 6)", function () {
       await localTimelockController.waitForDeployment();
       const localTlAddr = await localTimelockController.getAddress();
 
-      const ArmadaTreasuryGov =
-        await ethers.getContractFactory("ArmadaTreasuryGov");
-      localTreasury = await ArmadaTreasuryGov.deploy(localTlAddr);
+      const Treasury =
+        await ethers.getContractFactory("Treasury");
+      localTreasury = await Treasury.deploy(localTlAddr);
       await localTreasury.waitForDeployment();
 
       localGovernor = await deployGovernorProxy(

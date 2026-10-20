@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-// ABOUTME: Foundry invariant tests for ArmadaTreasuryGov outflow accounting.
+// ABOUTME: Foundry invariant tests for Treasury outflow accounting.
 // ABOUTME: Verifies rolling-window limits hold under fuzzed distribute/stewardSpend sequences.
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @dev Simple ERC20 for testing treasury outflows
@@ -20,7 +20,7 @@ contract MockUSDCOutflow is ERC20 {
 
 /// @dev Handler for stateful fuzzing of treasury outflow limits
 contract TreasuryOutflowHandler is Test {
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
     address public token;
     address public owner;
 
@@ -31,7 +31,7 @@ contract TreasuryOutflowHandler is Test {
     uint256 public ghost_totalDistributed;
     uint256 public ghost_totalStewardSpent;
 
-    constructor(ArmadaTreasuryGov _treasury, address _token, address _owner) {
+    constructor(Treasury _treasury, address _token, address _owner) {
         treasury = _treasury;
         token = _token;
         owner = _owner;
@@ -109,7 +109,7 @@ contract TreasuryOutflowHandler is Test {
 }
 
 contract TreasuryOutflowInvariantTest is Test {
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
     MockUSDCOutflow public usdc;
     TreasuryOutflowHandler public handler;
 
@@ -123,7 +123,7 @@ contract TreasuryOutflowInvariantTest is Test {
     uint256 constant TREASURY_FUNDING = 10_000_000e6; // 10M USDC
 
     function setUp() public {
-        treasury = new ArmadaTreasuryGov(owner);
+        treasury = new Treasury(owner);
         usdc = new MockUSDCOutflow();
 
         // Fund the treasury

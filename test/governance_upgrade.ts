@@ -1,4 +1,4 @@
-// ABOUTME: Hardhat tests for ArmadaGovernor UUPS upgradeability.
+// ABOUTME: Hardhat tests for Governor UUPS upgradeability.
 // ABOUTME: Covers upgrade authorization, state persistence, re-init prevention, and extended classification.
 
 import { expect } from "chai";
@@ -36,9 +36,9 @@ describe("Governance UUPS Upgrade", function () {
     const armTokenAddr = await armToken.getAddress();
 
     // Deploy treasury
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    treasury = await Treasury.deploy(timelockAddr);
     await treasury.waitForDeployment();
     const treasuryAddr = await treasury.getAddress();
 
@@ -74,7 +74,7 @@ describe("Governance UUPS Upgrade", function () {
     await armToken.connect(bob).delegate(bob.address);
 
     // Create factory for deploying new governor implementations
-    linkedGovernorFactory = await ethers.getContractFactory("ArmadaGovernor");
+    linkedGovernorFactory = await ethers.getContractFactory("Governor");
   });
 
   describe("Upgrade Authorization", function () {

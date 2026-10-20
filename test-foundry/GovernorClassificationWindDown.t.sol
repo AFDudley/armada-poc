@@ -4,9 +4,9 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "../contracts/governance/IArmadaGovernance.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -26,10 +26,10 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
     // Mirror events from governor for expectEmit
     event WindDownActivated();
 
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
     MockUSDC public usdc;
 
     address public deployer = address(this);
@@ -53,7 +53,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         armToken = new ArmadaToken(deployer, address(timelock));
 
         // Deploy treasury
-        treasury = new ArmadaTreasuryGov(address(timelock));
+        treasury = new Treasury(address(timelock));
 
         // Deploy governor
         governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
@@ -130,7 +130,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         assertTrue(governor.windDownActive());
 
         // Proposing should revert
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_GovernanceEnded.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_GovernanceEnded.selector));
         _proposeStandard(alice);
     }
 
@@ -139,14 +139,14 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         governor.setWindDownContract(windDown);
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotWindDownContract.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotWindDownContract.selector));
         governor.setWindDownActive();
     }
 
     function test_windDown_cannotActivateBeforeSet() public {
         // windDownContract is address(0); random caller should fail
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotWindDownContract.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotWindDownContract.selector));
         governor.setWindDownActive();
     }
 
@@ -155,13 +155,13 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         governor.setWindDownContract(windDown);
 
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_WindDownContractAlreadySet.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_WindDownContractAlreadySet.selector));
         governor.setWindDownContract(address(0x999));
     }
 
     function test_windDown_onlyTimelockCanSetContract() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotTimelock.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotTimelock.selector));
         governor.setWindDownContract(windDown);
     }
 
@@ -173,7 +173,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         governor.setWindDownActive();
 
         vm.prank(windDown);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_WindDownAlreadyActive.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_WindDownAlreadyActive.selector));
         governor.setWindDownActive();
     }
 
@@ -319,7 +319,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
     function test_classify_removeStandardSelector_revertsIfNotStandard() public {
         bytes4 unregistered = bytes4(keccak256("notRegistered()"));
         vm.prank(address(timelock));
-        vm.expectRevert(ArmadaGovernor.Gov_SelectorNotStandard.selector);
+        vm.expectRevert(Governor.Gov_SelectorNotStandard.selector);
         governor.removeStandardSelector(unregistered);
     }
 
@@ -339,13 +339,13 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
     function test_classify_onlyTimelockCanAddSelector() public {
         bytes4 selector = bytes4(keccak256("test()"));
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotTimelock.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotTimelock.selector));
         governor.addExtendedSelector(selector);
     }
 
     function test_classify_onlyTimelockCanRemoveSelector() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotTimelock.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotTimelock.selector));
         governor.removeExtendedSelector(governor.setProposalTypeParams.selector);
     }
 
@@ -608,7 +608,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
 
     function test_securityCouncil_onlyTimelockCanSet() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotTimelock.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotTimelock.selector));
         governor.setSecurityCouncil(securityCouncil);
     }
 
@@ -651,7 +651,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
     function test_securityCouncil_deployerLockedAfterClearDeployer() public {
         governor.clearDeployer();
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotTimelock.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotTimelock.selector));
         governor.setSecurityCouncil(securityCouncil);
     }
 

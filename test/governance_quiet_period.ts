@@ -109,9 +109,9 @@ describe("Governance Quiet Period (T6.1)", function () {
     );
 
     // Deploy treasury for dummy calldata target
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    treasury = await Treasury.deploy(timelockAddr);
     await treasury.waitForDeployment();
   }
 

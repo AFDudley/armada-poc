@@ -1,14 +1,14 @@
-// ABOUTME: Foundry tests for the queue-time treasury outflow feasibility check on ArmadaGovernor.
+// ABOUTME: Foundry tests for the queue-time treasury outflow feasibility check on Governor.
 // ABOUTME: Rejects proposals whose aggregate per-token spend exceeds the current effective outflow limit.
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
-import "../contracts/governance/TreasurySteward.sol";
+import "../contracts/governance/Treasury.sol";
+import "../contracts/governance/Steward.sol";
 import "../contracts/governance/IArmadaGovernance.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -36,11 +36,11 @@ contract QueueOutflowMockToken is ERC20 {
 ///         and stewardSpend, temporarily-blocked passing case, batched aggregation, target
 ///         filtering, independent per-token aggregation, and mixed selector aggregation.
 contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
-    TreasurySteward public stewardContract;
+    Treasury public treasury;
+    Steward public stewardContract;
     QueueOutflowMockToken public usdc;
     QueueOutflowMockToken public other;
 
@@ -94,13 +94,13 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         armToken = new ArmadaToken(deployer, address(timelock));
 
         // Deploy treasury
-        treasury = new ArmadaTreasuryGov(address(timelock));
+        treasury = new Treasury(address(timelock));
 
         // Deploy governor
         governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Deploy steward contract and register it on the governor
-        stewardContract = new TreasurySteward(address(timelock));
+        stewardContract = new Steward(address(timelock));
         governor.setStewardContract(address(stewardContract));
 
         // Whitelist addresses so ARM transfers work before the global whitelist opens.
@@ -213,7 +213,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "exceed-limit distribute");
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_OutflowInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_OutflowInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -262,7 +262,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassSteward(tokens, recipients, amounts);
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_OutflowInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_OutflowInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -285,7 +285,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "batched usdc");
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_OutflowInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_OutflowInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -359,7 +359,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "two tokens");
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_OutflowInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_OutflowInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -389,7 +389,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         // Submit as Standard; the check must still catch the mixed-selector aggregate.
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "mixed selectors");
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_OutflowInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_OutflowInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -430,7 +430,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "exceed-limit eth");
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_OutflowInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_OutflowInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -448,7 +448,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "batched eth");
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_OutflowInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_OutflowInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -498,7 +498,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassSteward(tokens, recipients, amounts);
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_StewardBudgetInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_StewardBudgetInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -521,7 +521,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassSteward(tokens, recipients, amounts);
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_StewardBudgetInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_StewardBudgetInfeasible.selector));
         governor.queue(proposalId);
     }
 
@@ -587,7 +587,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
 
         uint256 proposalId = _proposeAndPassSteward(tokens, recipients, amounts);
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_StewardBudgetInfeasible.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_StewardBudgetInfeasible.selector));
         governor.queue(proposalId);
     }
 }

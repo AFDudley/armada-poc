@@ -2,13 +2,13 @@
  * Deploy Armada Yield Contracts
  *
  * Deploys the yield infrastructure:
- * - ArmadaYieldVault: ERC-20 wrapper around Aave Spoke (yield fees route to ArmadaTreasuryGov)
+ * - ArmadaYieldVault: ERC-20 wrapper around Aave Spoke (yield fees route to treasury)
  * - ArmadaYieldAdapter: Lend/redeem operations for privacy pool
  *
  * Prerequisites:
  *   - CCTP infrastructure deployed/configured (for USDC address)
  *   - Mock Aave deployed (for MockAaveSpoke address)
- *   - Governance deployed (for ArmadaTreasuryGov + adapter registry addresses)
+ *   - Governance deployed (for treasury + adapter registry addresses)
  *
  * Usage (local):
  *   npx hardhat run scripts/deploy_yield.ts --network hub
@@ -106,13 +106,13 @@ async function main() {
   const treasuryAddress = govDeployment.contracts.treasury;
   if (!treasuryAddress) {
     console.error(
-      `Governance deployment is missing 'treasury' (ArmadaTreasuryGov) address.`,
+      `Governance deployment is missing 'treasury' (treasury) address.`,
     );
     process.exit(1);
   }
-  console.log(`Using ArmadaTreasuryGov at: ${treasuryAddress}`);
+  console.log(`Using treasury at: ${treasuryAddress}`);
 
-  // 1. Deploy ArmadaYieldVault (yield fees route to ArmadaTreasuryGov via safeTransfer)
+  // 1. Deploy ArmadaYieldVault (yield fees route to treasury via safeTransfer)
   console.log("\n1. Deploying ArmadaYieldVault...");
   const ArmadaYieldVault = await ethers.getContractFactory("ArmadaYieldVault");
   const armadaYieldVault = await ArmadaYieldVault.deploy(

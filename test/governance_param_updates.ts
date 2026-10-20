@@ -154,9 +154,9 @@ describe("Governance Parameter Updates", function () {
     armToken = await ArmadaToken.deploy(deployer.address, timelockAddr);
     await armToken.waitForDeployment();
 
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    treasury = await Treasury.deploy(timelockAddr);
     await treasury.waitForDeployment();
 
     governor = await deployGovernorProxy(
@@ -165,8 +165,8 @@ describe("Governance Parameter Updates", function () {
       await treasury.getAddress(),
     );
 
-    const TreasurySteward = await ethers.getContractFactory("TreasurySteward");
-    stewardContract = await TreasurySteward.deploy(timelockAddr);
+    const Steward = await ethers.getContractFactory("Steward");
+    stewardContract = await Steward.deploy(timelockAddr);
     await stewardContract.waitForDeployment();
 
     // Configure timelock roles

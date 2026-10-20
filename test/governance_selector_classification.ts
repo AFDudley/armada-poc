@@ -1,4 +1,4 @@
-// ABOUTME: Regression tests for ArmadaGovernor.initialize() selector classification.
+// ABOUTME: Regression tests for Governor.initialize() selector classification.
 // ABOUTME: Locks in the Standard vs. Extended assignment for spec-critical selectors.
 
 import { expect } from "chai";
@@ -38,9 +38,9 @@ describe("Governance Selector Classification", function () {
     );
     await token.waitForDeployment();
 
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    const treasury = await ArmadaTreasuryGov.deploy(
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    const treasury = await Treasury.deploy(
       await timelock.getAddress(),
     );
     await treasury.waitForDeployment();
@@ -103,7 +103,7 @@ describe("Governance Selector Classification", function () {
     });
   });
 
-  // WHY: transferTo / transferETHTo on ArmadaTreasuryGov are wind-down-only
+  // WHY: transferTo / transferETHTo on Treasury are wind-down-only
   // (require msg.sender == windDownContract). A governance proposal calling
   // them via the timelock would always revert. Listing them in standardSelectors
   // would advertise a governance path that doesn't exist. They're intentionally

@@ -9,7 +9,7 @@ contract ReserveDistributorHandler is Test {
     RevenueReserveDistributor public immutable distributor;
     RevenueLock public immutable lock;
     RevenueCounter public immutable counter;
-    ArmadaWindDown public immutable windDown;
+    WindDown public immutable windDown;
     address public immutable owner;
     address public immutable allocator;
     address[] public actors;
@@ -18,7 +18,7 @@ contract ReserveDistributorHandler is Test {
         RevenueReserveDistributor _distributor,
         RevenueLock _lock,
         RevenueCounter _counter,
-        ArmadaWindDown _windDown,
+        WindDown _windDown,
         address _owner
     ) {
         distributor = _distributor;

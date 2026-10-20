@@ -246,11 +246,11 @@ async function assertReserveWiring(plan: ReservePreFunding): Promise<void> {
     plan.revenueLockAddress,
   );
   const governor = await ethers.getContractAt(
-    "ArmadaGovernor",
+    "governor",
     plan.governorAddress,
   );
   const windDown = await ethers.getContractAt(
-    "ArmadaWindDown",
+    "wind-down",
     plan.windDownAddress,
   );
   if (
@@ -340,7 +340,7 @@ export async function assertReservePreFunding(
   }
   await assertReserveWiring(plan);
   const windDown = await ethers.getContractAt(
-    "ArmadaWindDown",
+    "wind-down",
     plan.windDownAddress,
   );
   if (await windDown.triggered())
@@ -420,11 +420,11 @@ export async function assertReservePostFunding(
     throw new Error("Reserve post-funding check requires an activated lock");
   await assertReserveWiring(plan);
   const windDown = await ethers.getContractAt(
-    "ArmadaWindDown",
+    "wind-down",
     plan.windDownAddress,
   );
   const redemption = await ethers.getContractAt(
-    "ArmadaRedemption",
+    "redemption",
     plan.redemptionAddress,
   );
   if (

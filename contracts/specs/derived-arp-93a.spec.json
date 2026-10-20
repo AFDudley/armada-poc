@@ -1,15 +1,15 @@
 {
   "id": "derived-arp-93a",
-  "original_statement": "What must hold? State the invariant or expectation this concerns. The armada-poc repository contains no governor, treasury-governor, steward, wind-down, or redemption contract. Baal (G2) and the Safe are the only on-chain governance surface. GOVERNANCE.md and ARM_TOKEN.md describe only the contracts that remain: Baal and the Safe, ShieldedRagequit (G3), RevenueLock on cumulativeFees (G4), the Hedgey lockup (G5), and ArmadaToken as the fixed-supply Baal shares token (G1).\nWhat holds now? Describe the current, observed state. The repository still carries ArmadaGovernor.sol, ArmadaTreasuryGov.sol, TreasurySteward.sol, ArmadaWindDown.sol, ArmadaRedemption.sol, contracts/periphery/RedemptionRouter.sol, and MockRedemptionDeps.sol. It still carries the governor, steward, and wind-down test files. The IArmadaGovernance.sol interface still declares IArmadaGovernorTiming and ITreasurySteward. package.json still runs the old governor, treasury-gov, steward, wind-down, and redemption deploy steps. A grep for the five deleted names across contracts/ and scripts/ lists 28 files. GOVERNANCE.md and ARM_TOKEN.md do not exist.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run grep -rlE 'ArmadaGovernor|ArmadaTreasuryGov|TreasurySteward|ArmadaWindDown|ArmadaRedemption' contracts/ scripts/. Today it lists 28 files; after the change it lists none. Run forge build: it succeeds with no reference to a deleted contract. Run forge test: no import fails. A check reads the grep match count, the forge build exit code, and the forge test result. The check fails if any deleted name survives in contracts/ or scripts/, if the build fails, or if a test import fails. The GOVERNANCE.md and ARM_TOKEN.md files exist and describe only the remaining design.\nWhat constraints apply? State them in plain prose. Depends on G2 (Baal and Safe summon) and G5 (crowdfund shielded proceeds and Hedgey lockup), both merged. Keep IAdapterRegistry in IArmadaGovernance.sol: ShieldModule.sol uses it. Keep RevenueCounter.sol and RevenueReserveDistributor.sol unless the grep shows no surviving caller. Delete a file with a surviving caller only after you update that caller in the same change. Remove the old governor, treasury-gov, steward, wind-down, and redemption deploy steps from package.json's setup chain; the G2 Baal and Safe summon script takes their place. Follow docs/tasks/G6-remove-old-stack-docs.md steps S1 through S5.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/, contracts/periphery/RedemptionRouter.sol, test-foundry/, test/, package.json, GOVERNANCE.md, ARM_TOKEN.md",
-  "restatement": "The armada-poc repository must no longer contain the old governance stack: ArmadaGovernor, ArmadaTreasuryGov, TreasurySteward, ArmadaWindDown, ArmadaRedemption, RedemptionRouter and MockRedemptionDeps, their tests, and their deploy steps in package.json. Baal (G2) and the Safe are the only on-chain governance surface. The grep for the five deleted names across contracts/ and scripts/ must list no files (today it lists 28). The project must still build and test cleanly. IAdapterRegistry stays in IArmadaGovernance.sol because ShieldModule.sol uses it, while IArmadaGovernorTiming and ITreasurySteward go. Any file with a surviving caller is deleted only after that caller is updated in the same change. GOVERNANCE.md and ARM_TOKEN.md must exist and describe only the remaining design.",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. The armada-poc repository contains no governor, treasury-governor, steward, wind-down, or redemption contract. Baal (G2) and the Safe are the only on-chain governance surface. GOVERNANCE.md and ARM_TOKEN.md describe only the contracts that remain: Baal and the Safe, ShieldedRagequit (G3), RevenueLock on cumulativeFees (G4), the Hedgey lockup (G5), and ArmadaToken as the fixed-supply Baal shares token (G1).\nWhat holds now? Describe the current, observed state. The repository still carries governor.sol, treasury.sol, steward.sol, wind-down.sol, redemption.sol, contracts/periphery/RedemptionRouter.sol, and MockRedemptionDeps.sol. It still carries the governor, steward, and wind-down test files. The IArmadaGovernance.sol interface still declares IgovernorTiming and Isteward. package.json still runs the old governor, treasury-gov, steward, wind-down, and redemption deploy steps. A grep for the five deleted names across contracts/ and scripts/ lists 28 files. GOVERNANCE.md and ARM_TOKEN.md do not exist.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run grep -rlE 'governor|treasury|steward|wind-down|redemption' contracts/ scripts/. Today it lists 28 files; after the change it lists none. Run forge build: it succeeds with no reference to a deleted contract. Run forge test: no import fails. A check reads the grep match count, the forge build exit code, and the forge test result. The check fails if any deleted name survives in contracts/ or scripts/, if the build fails, or if a test import fails. The GOVERNANCE.md and ARM_TOKEN.md files exist and describe only the remaining design.\nWhat constraints apply? State them in plain prose. Depends on G2 (Baal and Safe summon) and G5 (crowdfund shielded proceeds and Hedgey lockup), both merged. Keep IAdapterRegistry in IArmadaGovernance.sol: ShieldModule.sol uses it. Keep RevenueCounter.sol and RevenueReserveDistributor.sol unless the grep shows no surviving caller. Delete a file with a surviving caller only after you update that caller in the same change. Remove the old governor, treasury-gov, steward, wind-down, and redemption deploy steps from package.json's setup chain; the G2 Baal and Safe summon script takes their place. Follow docs/tasks/G6-remove-old-stack-docs.md steps S1 through S5.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/, contracts/periphery/RedemptionRouter.sol, test-foundry/, test/, package.json, GOVERNANCE.md, ARM_TOKEN.md",
+  "restatement": "The armada-poc repository must no longer contain the old governance stack: governor, treasury, steward, wind-down, redemption, RedemptionRouter and MockRedemptionDeps, their tests, and their deploy steps in package.json. Baal (G2) and the Safe are the only on-chain governance surface. The grep for the five deleted names across contracts/ and scripts/ must list no files (today it lists 28). The project must still build and test cleanly. IAdapterRegistry stays in IArmadaGovernance.sol because ShieldModule.sol uses it, while IgovernorTiming and Isteward go. Any file with a surviving caller is deleted only after that caller is updated in the same change. GOVERNANCE.md and ARM_TOKEN.md must exist and describe only the remaining design.",
   "restatement_clauses": [
     {
       "id": "c1",
-      "text": "Running grep -rlE 'ArmadaGovernor|ArmadaTreasuryGov|TreasurySteward|ArmadaWindDown|ArmadaRedemption' contracts/ scripts/ lists no files (today it lists 28)."
+      "text": "Running grep -rlE 'governor|treasury|steward|wind-down|redemption' contracts/ scripts/ lists no files (today it lists 28)."
     },
     {
       "id": "c2",
-      "text": "The deleted contract source files ArmadaGovernor.sol, ArmadaTreasuryGov.sol, TreasurySteward.sol, ArmadaWindDown.sol, ArmadaRedemption.sol and contracts/periphery/RedemptionRouter.sol no longer exist."
+      "text": "The deleted contract source files governor.sol, treasury.sol, steward.sol, wind-down.sol, redemption.sol and contracts/periphery/RedemptionRouter.sol no longer exist."
     },
     {
       "id": "c3",
@@ -17,7 +17,7 @@
     },
     {
       "id": "c4",
-      "text": "IAdapterRegistry stays declared in IArmadaGovernance.sol because ShieldModule.sol uses it, while IArmadaGovernorTiming and ITreasurySteward are no longer declared."
+      "text": "IAdapterRegistry stays declared in IArmadaGovernance.sol because ShieldModule.sol uses it, while IgovernorTiming and Isteward are no longer declared."
     },
     {
       "id": "c5",
@@ -127,7 +127,7 @@
       "description": "None of the five old contract names appear anywhere in the contracts or scripts folders.",
       "proves": "The old stack is fully gone from contracts/ and scripts/, so the 28-file match list becomes empty.",
       "restatement_clause_id": "c1",
-      "pattern": "ArmadaGovernor|ArmadaTreasuryGov|TreasurySteward|ArmadaWindDown|ArmadaRedemption",
+      "pattern": "governor|treasury|steward|wind-down|redemption",
       "files": [
         "contracts/**/*",
         "scripts/**/*"
@@ -137,41 +137,41 @@
     {
       "type": "file_absent",
       "description": "The old governor contract file is gone.",
-      "proves": "ArmadaGovernor.sol is deleted.",
+      "proves": "governor.sol is deleted.",
       "restatement_clause_id": "c2",
-      "path": "contracts/governance/ArmadaGovernor.sol",
+      "path": "contracts/governance/governor.sol",
       "clause_id": "c2"
     },
     {
       "type": "file_absent",
       "description": "The old treasury governance contract file is gone.",
-      "proves": "ArmadaTreasuryGov.sol is deleted.",
+      "proves": "treasury.sol is deleted.",
       "restatement_clause_id": "c2",
-      "path": "contracts/governance/ArmadaTreasuryGov.sol",
+      "path": "contracts/governance/treasury.sol",
       "clause_id": "c3"
     },
     {
       "type": "file_absent",
       "description": "The old steward contract file is gone.",
-      "proves": "TreasurySteward.sol is deleted.",
+      "proves": "steward.sol is deleted.",
       "restatement_clause_id": "c2",
-      "path": "contracts/governance/TreasurySteward.sol",
+      "path": "contracts/governance/steward.sol",
       "clause_id": "c4"
     },
     {
       "type": "file_absent",
       "description": "The old wind-down contract file is gone.",
-      "proves": "ArmadaWindDown.sol is deleted.",
+      "proves": "wind-down.sol is deleted.",
       "restatement_clause_id": "c2",
-      "path": "contracts/governance/ArmadaWindDown.sol",
+      "path": "contracts/governance/wind-down.sol",
       "clause_id": "c5"
     },
     {
       "type": "file_absent",
       "description": "The old redemption contract file is gone.",
-      "proves": "ArmadaRedemption.sol is deleted.",
+      "proves": "redemption.sol is deleted.",
       "restatement_clause_id": "c2",
-      "path": "contracts/governance/ArmadaRedemption.sol",
+      "path": "contracts/governance/redemption.sol",
       "clause_id": "c6"
     },
     {
@@ -225,9 +225,9 @@
     {
       "type": "grep_absent",
       "description": "The governance interface file no longer declares the governor timing or steward interfaces.",
-      "proves": "IArmadaGovernorTiming and ITreasurySteward are removed.",
+      "proves": "IgovernorTiming and Isteward are removed.",
       "restatement_clause_id": "c4",
-      "pattern": "IArmadaGovernorTiming|ITreasurySteward",
+      "pattern": "IgovernorTiming|Isteward",
       "files": [
         "contracts/governance/IArmadaGovernance.sol"
       ],
@@ -249,7 +249,7 @@
       "description": "No test file in the Foundry or Hardhat test folders mentions the five deleted contracts.",
       "proves": "The governor, steward, wind-down and redemption tests are removed or updated.",
       "restatement_clause_id": "c6",
-      "pattern": "ArmadaGovernor|ArmadaTreasuryGov|TreasurySteward|ArmadaWindDown|ArmadaRedemption",
+      "pattern": "governor|treasury|steward|wind-down|redemption",
       "files": [
         "test-foundry/**/*",
         "test/**/*"
@@ -283,7 +283,7 @@
       "description": "GOVERNANCE.md does not describe any of the deleted contracts.",
       "proves": "GOVERNANCE.md covers only the remaining design.",
       "restatement_clause_id": "c7",
-      "pattern": "ArmadaGovernor|ArmadaTreasuryGov|TreasurySteward|ArmadaWindDown|ArmadaRedemption",
+      "pattern": "governor|treasury|steward|wind-down|redemption",
       "files": [
         "GOVERNANCE.md"
       ],
@@ -313,7 +313,7 @@
       "description": "ARM_TOKEN.md does not describe any of the deleted contracts.",
       "proves": "ARM_TOKEN.md covers only the remaining design.",
       "restatement_clause_id": "c8",
-      "pattern": "ArmadaGovernor|ArmadaTreasuryGov|TreasurySteward|ArmadaWindDown|ArmadaRedemption",
+      "pattern": "governor|treasury|steward|wind-down|redemption",
       "files": [
         "ARM_TOKEN.md"
       ],

@@ -57,12 +57,12 @@ describe("Yield Integration", function () {
       true, // mintableYield
     );
 
-    // 5. Deploy ArmadaTreasuryGov (deployer acts as timelock-owner for this unit test).
+    // 5. Deploy Treasury (deployer acts as timelock-owner for this unit test).
     //    Outflow withdrawal paths are exercised in test/treasury_outflow.ts and the
     //    Foundry Treasury* suites — here we only need the treasury as a fee sink.
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    armadaTreasury = await ArmadaTreasuryGov.deploy(deployer.address);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    armadaTreasury = await Treasury.deploy(deployer.address);
     await armadaTreasury.waitForDeployment();
 
     // 6. Deploy ArmadaYieldVault
@@ -255,9 +255,9 @@ describe("Yield Integration", function () {
     });
   });
 
-  describe("ArmadaTreasuryGov (yield fee sink)", function () {
+  describe("Treasury (yield fee sink)", function () {
     // WHY: After the treasury unification (#152/#154), yield fees flow into
-    // ArmadaTreasuryGov via plain safeTransfer with no recordFee() call. This
+    // Treasury via plain safeTransfer with no recordFee() call. This
     // test pins that the vault still transfers the expected 10% yield cut to
     // the treasury address — the outflow / governance side of TreasuryGov is
     // exercised in test/treasury_outflow.ts and the Foundry Treasury* suites.

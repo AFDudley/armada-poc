@@ -14,7 +14,7 @@
  * - RevenueCounter.setFeeCollector(feeModuleProxy) — timelock-only, uses impersonation on local
  * - Transfer yield contract ownership to timelock
  *
- * Fee module extended selectors are hardcoded in ArmadaGovernor.initialize().
+ * Fee module extended selectors are hardcoded in governor.initialize().
  *
  * Prerequisites: Governance, PrivacyPool, and YieldVault must be deployed.
  *
@@ -156,10 +156,10 @@ async function main() {
   }
 
   // Fee module extended selectors (setBaseArmadaTake, addTier, etc.) are hardcoded
-  // in ArmadaGovernor.initialize() — no runtime registration needed.
+  // in governor.initialize() — no runtime registration needed.
 
   // 6. Transfer yield contract ownership to timelock (all owner-gated config complete).
-  //    ArmadaTreasuryGov is already owned by the timelock (immutable at deploy time).
+  //    treasury is already owned by the timelock (immutable at deploy time).
   console.log("\n--- Transferring yield contract ownership to timelock ---");
   //    (attach the adapter's own ABI — it carries the custom transferOwnership)
   const armadaYieldAdapter = await ethers.getContractAt(

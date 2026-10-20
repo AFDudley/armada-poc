@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/yield/ArmadaYieldVault.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "../contracts/aave-mock/MockAaveSpoke.sol";
 import "../contracts/cctp/MockUSDCV2.sol";
 
@@ -13,7 +13,7 @@ contract YieldHandler is Test {
     ArmadaYieldVault public vault;
     MockUSDCV2 public usdc;
     MockAaveSpoke public spoke;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
 
     address[] public actors;
     uint256 constant USDC_PER_ACTOR = 1_000_000 * 1e6; // 1M USDC per actor
@@ -27,7 +27,7 @@ contract YieldHandler is Test {
         ArmadaYieldVault _vault,
         MockUSDCV2 _usdc,
         MockAaveSpoke _spoke,
-        ArmadaTreasuryGov _treasury,
+        Treasury _treasury,
         address[] memory _actors
     ) {
         vault = _vault;
@@ -92,7 +92,7 @@ contract YieldInvariantTest is Test {
     ArmadaYieldVault public vault;
     MockUSDCV2 public usdc;
     MockAaveSpoke public spoke;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
     YieldHandler public handler;
 
     address[] public actors;
@@ -107,9 +107,9 @@ contract YieldInvariantTest is Test {
 
         spoke.addReserve(address(usdc), YIELD_BPS, true);
 
-        // Unified ArmadaTreasuryGov as fee sink (#152/#154); owner arg is unused
+        // Unified Treasury as fee sink (#152/#154); owner arg is unused
         // by the invariants here so address(this) is fine.
-        treasury = new ArmadaTreasuryGov(address(this));
+        treasury = new Treasury(address(this));
         vault = new ArmadaYieldVault(
             address(spoke),
             0, // reserveId

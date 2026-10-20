@@ -4,9 +4,9 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "../contracts/governance/IArmadaGovernance.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "./helpers/GovernorDeployHelper.sol";
@@ -28,10 +28,10 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
     );
     event ProposalCanceled(uint256 indexed proposalId);
     event ProposalRestored(uint256 indexed proposalId);
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
 
     address public deployer = address(this);
     address public alice = address(0xA11CE);
@@ -55,7 +55,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         armToken = new ArmadaToken(deployer, address(timelock));
 
         // Deploy treasury
-        treasury = new ArmadaTreasuryGov(address(timelock));
+        treasury = new Treasury(address(timelock));
 
         // Deploy governor
         governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
@@ -252,7 +252,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         uint256 proposalId = _createAndQueueProposal(alice);
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotSecurityCouncil.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotSecurityCouncil.selector));
         governor.veto(proposalId, keccak256("rationale"));
     }
 
@@ -264,7 +264,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         governor.setSecurityCouncil(address(0));
 
         vm.prank(address(0));
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_SCEjected.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_SCEjected.selector));
         governor.veto(proposalId, keccak256("rationale"));
     }
 
@@ -281,13 +281,13 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
 
         // Still Pending
         vm.prank(sc);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotQueued.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotQueued.selector));
         governor.veto(proposalId, keccak256("rationale"));
 
         // Advance to Active
         vm.warp(block.timestamp + TWO_DAYS + 1);
         vm.prank(sc);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotQueued.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotQueued.selector));
         governor.veto(proposalId, keccak256("rationale"));
     }
 
@@ -629,14 +629,14 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         uint256 ratId = governor.proposalCount();
 
         // Try to resolve immediately (voting still active)
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_VotingNotEnded.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_VotingNotEnded.selector));
         governor.resolveRatification(ratId);
     }
 
     function test_resolve_revertsIfNotRatification() public {
         uint256 proposalId = _createAndQueueProposal(alice);
 
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotARatificationProposal.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotARatificationProposal.selector));
         governor.resolveRatification(proposalId);
     }
 
@@ -655,7 +655,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         governor.resolveRatification(ratId);
 
         // Try again
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_AlreadyResolved.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_AlreadyResolved.selector));
         governor.resolveRatification(ratId);
     }
 
@@ -688,7 +688,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
 
         // New SC tries to veto restored proposal — should revert
         vm.prank(newSC);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_SingleVetoRule.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_SingleVetoRule.selector));
         governor.veto(proposalId, keccak256("rationale2"));
     }
 
@@ -748,7 +748,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         vm.warp(block.timestamp + RATIFICATION_PERIOD + 1);
 
         // Try to queue — should revert
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_UseResolveRatification.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_UseResolveRatification.selector));
         governor.queue(ratId);
     }
 
@@ -777,7 +777,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
 
         // Ejected SC tries to veto
         vm.prank(sc);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotSecurityCouncil.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotSecurityCouncil.selector));
         governor.veto(proposalId2, keccak256("rationale"));
     }
 
@@ -893,7 +893,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
 
         // 4. Attempt to vote — should revert with Gov_ProposalCanceled
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_ProposalCanceled.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_ProposalCanceled.selector));
         governor.castVote(proposalId, 1);
     }
 

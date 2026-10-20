@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
 import "../contracts/governance/IArmadaGovernance.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
@@ -19,7 +19,7 @@ import "./helpers/GovernorDeployHelper.sol";
 /// @title GovernorHandler — Stateful fuzz handler for governance invariant testing
 /// @dev Drives the full governance lifecycle: delegate, propose, vote, advance time.
 contract GovernorHandler is Test {
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
 
     address[] public actors;
@@ -45,7 +45,7 @@ contract GovernorHandler is Test {
     mapping(uint256 => uint8) public ghost_highestState;
     uint256 public ghost_stateMonotonicityViolations;
 
-    constructor(ArmadaGovernor _governor, ArmadaToken _armToken, address[] memory _actors, address _treasuryAddr) {
+    constructor(Governor _governor, ArmadaToken _armToken, address[] memory _actors, address _treasuryAddr) {
         governor = _governor;
         armToken = _armToken;
         actors = _actors;
@@ -282,9 +282,9 @@ contract GovernorHandler is Test {
     }
 }
 
-/// @title GovernorInvariantTest — Foundry invariant test suite for ArmadaGovernor
+/// @title GovernorInvariantTest — Foundry invariant test suite for Governor
 contract GovernorInvariantTest is Test, GovernorDeployHelper {
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
     GovernorHandler public handler;

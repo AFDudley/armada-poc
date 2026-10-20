@@ -412,7 +412,7 @@ async function checkGovernanceWiring(govManifest: any) {
     "TimelockController",
     timelockAddr,
   );
-  const governor = await ethers.getContractAt("ArmadaGovernor", governorAddr);
+  const governor = await ethers.getContractAt("governor", governorAddr);
 
   // Timelock roles
   const PROPOSER_ROLE = await timelock.PROPOSER_ROLE();
@@ -547,7 +547,7 @@ async function checkYieldFeeWiring(
     fail(GROUP, "YieldVault adapter set", "Error reading adapter");
   }
 
-  // Treasury wired to ArmadaTreasuryGov from governance manifest
+  // Treasury wired to treasury from governance manifest
   if (govManifest?.contracts?.treasury) {
     try {
       const vaultTreasury = await vault.treasury();
@@ -555,18 +555,18 @@ async function checkYieldFeeWiring(
         vaultTreasury.toLowerCase() ===
         govManifest.contracts.treasury.toLowerCase()
       ) {
-        pass(GROUP, "YieldVault treasury == ArmadaTreasuryGov");
+        pass(GROUP, "YieldVault treasury == treasury");
       } else {
         fail(
           GROUP,
-          "YieldVault treasury == ArmadaTreasuryGov",
+          "YieldVault treasury == treasury",
           `Expected ${govManifest.contracts.treasury}, got ${vaultTreasury}`,
         );
       }
     } catch {
       fail(
         GROUP,
-        "YieldVault treasury == ArmadaTreasuryGov",
+        "YieldVault treasury == treasury",
         "Error reading treasury",
       );
     }
@@ -815,7 +815,7 @@ async function checkWindDownWiring(govManifest: any) {
 
   // Check windDown on governor
   const governor = await ethers.getContractAt(
-    "ArmadaGovernor",
+    "governor",
     govManifest.contracts.governor,
   );
   try {
@@ -855,7 +855,7 @@ async function checkWindDownWiring(govManifest: any) {
 
   // Check windDown on treasury
   const treasury = await ethers.getContractAt(
-    "ArmadaTreasuryGov",
+    "treasury",
     govManifest.contracts.treasury,
   );
   try {
@@ -908,7 +908,7 @@ async function checkTreasuryConfig(govManifest: any, hubCCTP: any | null) {
   const GROUP = "Treasury Config";
   const treasuryAddr = govManifest.contracts.treasury;
   const treasury = await ethers.getContractAt(
-    "ArmadaTreasuryGov",
+    "treasury",
     treasuryAddr,
   );
   const armTokenAddr = govManifest.contracts.armToken;
@@ -1098,11 +1098,11 @@ async function checkLaunchValues(
     "ArmadaCrowdfund",
     crowdfundAddr,
   );
-  const governor = await ethers.getContractAt("ArmadaGovernor", c.governor);
+  const governor = await ethers.getContractAt("governor", c.governor);
   const armToken = await ethers.getContractAt("ArmadaToken", c.armToken);
-  const treasury = await ethers.getContractAt("ArmadaTreasuryGov", c.treasury);
+  const treasury = await ethers.getContractAt("treasury", c.treasury);
   const lock = await ethers.getContractAt("RevenueLock", c.revenueLock);
-  const windDown = await ethers.getContractAt("ArmadaWindDown", c.windDown);
+  const windDown = await ethers.getContractAt("wind-down", c.windDown);
   const usdcAddr: string = crowdfundManifest.contracts.usdc;
 
   // Crowdfund immutables. Local deploys fall back to the deployer as launch team and an

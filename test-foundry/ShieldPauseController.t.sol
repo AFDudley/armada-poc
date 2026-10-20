@@ -5,9 +5,9 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/governance/ShieldPauseController.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "./helpers/GovernorDeployHelper.sol";
 
@@ -19,10 +19,10 @@ contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
     event WindDownActivated();
 
     ShieldPauseController public pauseController;
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
 
     address public deployer = address(this);
     address public alice = address(0xA11CE);
@@ -43,7 +43,7 @@ contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
         timelock = new TimelockController(TWO_DAYS, proposers, executors, deployer);
 
         armToken = new ArmadaToken(deployer, address(timelock));
-        treasury = new ArmadaTreasuryGov(address(timelock));
+        treasury = new Treasury(address(timelock));
         governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Set SC on governor

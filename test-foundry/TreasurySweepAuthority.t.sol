@@ -4,7 +4,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @dev Minimal mock ERC20 for testing
@@ -22,7 +22,7 @@ contract TreasurySweepAuthorityTest is Test {
     event WindDownTransfer(address indexed token, address indexed recipient, uint256 amount);
     event WindDownETHTransfer(address indexed recipient, uint256 amount);
 
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
     MockToken public usdc;
 
     address public timelockAddr = address(0x7171); // mock timelock (owner)
@@ -31,7 +31,7 @@ contract TreasurySweepAuthorityTest is Test {
     address public randomUser = address(0xCAFE);
 
     function setUp() public {
-        treasury = new ArmadaTreasuryGov(timelockAddr);
+        treasury = new Treasury(timelockAddr);
         usdc = new MockToken("Mock USDC", "USDC");
 
         // Fund treasury with USDC
@@ -52,7 +52,7 @@ contract TreasurySweepAuthorityTest is Test {
 
     function test_setWindDownContract_onlyOwner() public {
         vm.prank(randomUser);
-        vm.expectRevert("ArmadaTreasuryGov: not owner");
+        vm.expectRevert("Treasury: not owner");
         treasury.setWindDownContract(windDown);
     }
 
@@ -61,13 +61,13 @@ contract TreasurySweepAuthorityTest is Test {
         treasury.setWindDownContract(windDown);
 
         vm.prank(timelockAddr);
-        vm.expectRevert("ArmadaTreasuryGov: wind-down already set");
+        vm.expectRevert("Treasury: wind-down already set");
         treasury.setWindDownContract(address(0x999));
     }
 
     function test_setWindDownContract_rejectsZero() public {
         vm.prank(timelockAddr);
-        vm.expectRevert("ArmadaTreasuryGov: zero address");
+        vm.expectRevert("Treasury: zero address");
         treasury.setWindDownContract(address(0));
     }
 
@@ -90,7 +90,7 @@ contract TreasurySweepAuthorityTest is Test {
         _setupWindDown();
 
         vm.prank(timelockAddr);
-        vm.expectRevert("ArmadaTreasuryGov: not wind-down");
+        vm.expectRevert("Treasury: not wind-down");
         treasury.transferTo(address(usdc), recipient, 100e6);
     }
 
@@ -98,7 +98,7 @@ contract TreasurySweepAuthorityTest is Test {
         _setupWindDown();
 
         vm.prank(randomUser);
-        vm.expectRevert("ArmadaTreasuryGov: not wind-down");
+        vm.expectRevert("Treasury: not wind-down");
         treasury.transferTo(address(usdc), recipient, 100e6);
     }
 
@@ -106,7 +106,7 @@ contract TreasurySweepAuthorityTest is Test {
         _setupWindDown();
 
         vm.prank(windDown);
-        vm.expectRevert("ArmadaTreasuryGov: zero recipient");
+        vm.expectRevert("Treasury: zero recipient");
         treasury.transferTo(address(usdc), address(0), 100e6);
     }
 
@@ -117,7 +117,7 @@ contract TreasurySweepAuthorityTest is Test {
         _setupWindDown();
 
         vm.prank(windDown);
-        vm.expectRevert("ArmadaTreasuryGov: zero amount");
+        vm.expectRevert("Treasury: zero amount");
         treasury.transferTo(address(usdc), recipient, 0);
     }
 
@@ -141,7 +141,7 @@ contract TreasurySweepAuthorityTest is Test {
     function test_distribute_revertsWithoutOutflowConfig() public {
         // Treasury has USDC but no outflow config initialized
         vm.prank(timelockAddr);
-        vm.expectRevert("ArmadaTreasuryGov: outflow config required");
+        vm.expectRevert("Treasury: outflow config required");
         treasury.distribute(address(usdc), recipient, 100e6);
     }
 
@@ -151,7 +151,7 @@ contract TreasurySweepAuthorityTest is Test {
         treasury.addStewardBudgetToken(address(usdc), 500_000e6, 30 days);
 
         vm.prank(timelockAddr);
-        vm.expectRevert("ArmadaTreasuryGov: outflow config required");
+        vm.expectRevert("Treasury: outflow config required");
         treasury.stewardSpend(address(usdc), recipient, 100e6);
     }
 
@@ -183,7 +183,7 @@ contract TreasurySweepAuthorityTest is Test {
         _fundTreasuryETH(5 ether);
 
         vm.prank(randomUser);
-        vm.expectRevert("ArmadaTreasuryGov: not wind-down");
+        vm.expectRevert("Treasury: not wind-down");
         treasury.transferETHTo(payable(recipient), 5 ether);
     }
 
@@ -192,7 +192,7 @@ contract TreasurySweepAuthorityTest is Test {
         _fundTreasuryETH(5 ether);
 
         vm.prank(windDown);
-        vm.expectRevert("ArmadaTreasuryGov: zero recipient");
+        vm.expectRevert("Treasury: zero recipient");
         treasury.transferETHTo(payable(address(0)), 5 ether);
     }
 
@@ -204,7 +204,7 @@ contract TreasurySweepAuthorityTest is Test {
         _fundTreasuryETH(5 ether);
 
         vm.prank(windDown);
-        vm.expectRevert("ArmadaTreasuryGov: zero amount");
+        vm.expectRevert("Treasury: zero amount");
         treasury.transferETHTo(payable(recipient), 0);
     }
 

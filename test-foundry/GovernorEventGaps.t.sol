@@ -4,9 +4,9 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "../contracts/governance/IArmadaGovernance.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "./helpers/GovernorDeployHelper.sol";
@@ -17,10 +17,10 @@ contract GovernorEventGapsTest is Test, GovernorDeployHelper {
     event ExcludedAddressesSet(address[] addresses);
     event DeployerCleared(address indexed previousDeployer);
 
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
 
     address public deployer = address(this);
 
@@ -30,7 +30,7 @@ contract GovernorEventGapsTest is Test, GovernorDeployHelper {
         timelock = new TimelockController(2 days, proposers, executors, deployer);
 
         armToken = new ArmadaToken(deployer, address(timelock));
-        treasury = new ArmadaTreasuryGov(address(timelock));
+        treasury = new Treasury(address(timelock));
 
         governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
     }
@@ -69,7 +69,7 @@ contract GovernorEventGapsTest is Test, GovernorDeployHelper {
 
         governor.setExcludedAddresses(addrs);
 
-        vm.expectRevert(ArmadaGovernor.Gov_AlreadyLocked.selector);
+        vm.expectRevert(Governor.Gov_AlreadyLocked.selector);
         governor.setExcludedAddresses(addrs);
     }
 
@@ -83,7 +83,7 @@ contract GovernorEventGapsTest is Test, GovernorDeployHelper {
         addrs[0] = address(0xCafe);
         addrs[1] = address(0xCafe);
 
-        vm.expectRevert(ArmadaGovernor.Gov_DuplicateExcludedAddress.selector);
+        vm.expectRevert(Governor.Gov_DuplicateExcludedAddress.selector);
         governor.setExcludedAddresses(addrs);
     }
 
@@ -96,7 +96,7 @@ contract GovernorEventGapsTest is Test, GovernorDeployHelper {
         addrs[1] = address(0xBabe);
         addrs[2] = address(0xCafe); // duplicate of addrs[0], not addrs[1]
 
-        vm.expectRevert(ArmadaGovernor.Gov_DuplicateExcludedAddress.selector);
+        vm.expectRevert(Governor.Gov_DuplicateExcludedAddress.selector);
         governor.setExcludedAddresses(addrs);
     }
 

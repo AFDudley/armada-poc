@@ -79,7 +79,7 @@ contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
     // ══════════════════════════════════════════════════════════════════════════
 
     /// @param _owner Governance address (timelock)
-    /// @param _treasury ArmadaTreasuryGov address
+    /// @param _treasury treasury address
     /// @param _privacyPool PrivacyPool address (authorized recordShieldFee caller)
     /// @param _yieldVault ArmadaYieldVault address (authorized recordYieldFee caller)
     /// @param _usdc USDC address (the only asset whose shield fees and volume are recorded)

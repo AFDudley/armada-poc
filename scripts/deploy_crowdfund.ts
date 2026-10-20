@@ -371,7 +371,7 @@ async function main() {
   // 5. Register crowdfund as excluded from quorum denominator
   console.log("5. Registering crowdfund in governor quorum exclusion...");
   const governor = await ethers.getContractAt(
-    "ArmadaGovernor",
+    "governor",
     governorAddress,
   );
   await (
@@ -424,10 +424,10 @@ async function main() {
     "   Governor deployer cleared (no more deployer-gated calls possible)",
   );
 
-  // 8. Deploy ArmadaRedemption (requires crowdfund address)
-  console.log("8. Deploying ArmadaRedemption...");
-  const ArmadaRedemption = await ethers.getContractFactory("ArmadaRedemption");
-  const redemption = await ArmadaRedemption.deploy(
+  // 8. Deploy redemption (requires crowdfund address)
+  console.log("8. Deploying redemption...");
+  const redemption = await ethers.getContractFactory("redemption");
+  const redemption = await redemption.deploy(
     armTokenAddress,
     treasuryAddress,
     revenueLockAddress,
@@ -438,10 +438,10 @@ async function main() {
   const redemptionAddress = await redemption.getAddress();
   govDeployment.contracts.redemption = redemptionAddress;
   saveDeployment(govFilename, govDeployment);
-  console.log(`   ArmadaRedemption: ${redemptionAddress}`);
+  console.log(`   redemption: ${redemptionAddress}`);
 
-  // 9. Deploy ArmadaWindDown (requires redemption address)
-  console.log("9. Deploying ArmadaWindDown...");
+  // 9. Deploy wind-down (requires redemption address)
+  console.log("9. Deploying wind-down...");
   const windDownDeadline = Math.floor(
     new Date(config.windDownDeadline).getTime() / 1000,
   );
@@ -449,8 +449,8 @@ async function main() {
     config.windDownRevenueThreshold,
     18,
   );
-  const ArmadaWindDown = await ethers.getContractFactory("ArmadaWindDown");
-  const windDownContract = await ArmadaWindDown.deploy(
+  const wind-down = await ethers.getContractFactory("wind-down");
+  const windDownContract = await wind-down.deploy(
     armTokenAddress,
     treasuryAddress,
     governorAddress,
@@ -467,7 +467,7 @@ async function main() {
   const windDownAddress = await windDownContract.getAddress();
   govDeployment.contracts.windDown = windDownAddress;
   saveDeployment(govFilename, govDeployment);
-  console.log(`   ArmadaWindDown: ${windDownAddress}`);
+  console.log(`   wind-down: ${windDownAddress}`);
 
   // 10. Wire wind-down to ARM token (deployer-gated one-time setter — direct call)
   console.log("10. Wiring wind-down to ARM token...");
@@ -506,11 +506,11 @@ async function main() {
   );
 
   const governorContract = await ethers.getContractAt(
-    "ArmadaGovernor",
+    "governor",
     governorAddress,
   );
   const treasury = await ethers.getContractAt(
-    "ArmadaTreasuryGov",
+    "treasury",
     treasuryAddress,
   );
   const shieldPause = await ethers.getContractAt(
@@ -761,7 +761,7 @@ async function main() {
   console.log(`   RevenueLock activated`);
 
   // 13. Redemption circulating-supply invariant (deploy-time misconfiguration guard).
-  // ArmadaRedemption.circulatingSupply() subtracts revenueLock.lockedAtWindDown() and the
+  // redemption.circulatingSupply() subtracts revenueLock.lockedAtWindDown() and the
   // crowdfund unsold-in-contract from circulatingSupplyOf([treasury, redemption]) — both
   // UNCLAMPED against the running total (only the inner cfBalance-cfStillOwed is clamped).
   // If the excluded/locked terms ever exceed the base, every redeem() reverts permanently
@@ -788,7 +788,7 @@ async function main() {
         `  lockedAtWindDown (${ethers.formatUnits(lockedAtWindDown, 18)}) + cfUnsold (${ethers.formatUnits(cfUnsold, 18)}) ` +
         `= ${ethers.formatUnits(excludedSum, 18)}\n` +
         `  > circulatingSupplyOf([treasury, redemption]) = ${ethers.formatUnits(circBase, 18)}\n` +
-        `  ArmadaRedemption.circulatingSupply() would underflow and permanently brick redemptions.\n` +
+        `  redemption.circulatingSupply() would underflow and permanently brick redemptions.\n` +
         `  Check the ARM distribution / RevenueLock allocation parameters.`,
     );
   }

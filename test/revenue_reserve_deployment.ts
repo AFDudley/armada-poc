@@ -43,7 +43,7 @@ describe("Reserve deployment funding gate", function () {
       treasury.address,
     );
     const governor = await ethers.getContractAt(
-      "ArmadaGovernor",
+      "Governor",
       await governorProxy.getAddress(),
     );
     const governorAddress = await governor.getAddress();
@@ -84,12 +84,12 @@ describe("Reserve deployment funding gate", function () {
     const lockAddress = await lock.getAddress();
     await distributor.bindRevenueLock(lockAddress);
     const redemption = await (
-      await ethers.getContractFactory("ArmadaRedemption")
+      await ethers.getContractFactory("Redemption")
     ).deploy(tokenAddress, treasury.address, lockAddress, crowdfund.address);
     // The full suite shares a clock; earlier tests may have advanced it by years.
     const windDownDeadline = (await time.latest()) + 365 * 24 * 60 * 60;
     const windDown = await (
-      await ethers.getContractFactory("ArmadaWindDown")
+      await ethers.getContractFactory("WindDown")
     ).deploy(
       tokenAddress,
       treasury.address,

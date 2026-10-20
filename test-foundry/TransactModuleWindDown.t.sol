@@ -14,7 +14,7 @@ import "../contracts/cctp/MockUSDCV2.sol";
 import "../contracts/cctp/MockCCTPV2.sol";
 import "./helpers/PoseidonLinker.sol";
 
-/// @notice Minimal mock that satisfies IArmadaGovernorSC (securityCouncil() view)
+/// @notice Minimal mock that satisfies IGovernorSC (securityCouncil() view)
 contract MockGovernorSC {
     address public securityCouncil;
 

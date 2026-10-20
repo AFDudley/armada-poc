@@ -4,9 +4,9 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "../contracts/governance/IArmadaGovernance.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "./helpers/GovernorDeployHelper.sol";
@@ -18,10 +18,10 @@ import "./helpers/GovernorDeployHelper.sol";
 ///         X <= MIN_EXECUTION_DELAY (2 days), structurally preventing the brick — _minDelay
 ///         can never exceed the floor on any queueable proposal type's executionDelay.
 contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
 
     address public deployer = address(this);
     address public alice = address(0xA11CE);
@@ -36,7 +36,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         timelock = new TimelockController(TWO_DAYS, proposers, executors, deployer);
 
         armToken = new ArmadaToken(deployer, address(timelock));
-        treasury = new ArmadaTreasuryGov(address(timelock));
+        treasury = new Treasury(address(timelock));
 
         governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
@@ -117,7 +117,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
             _singleAction(address(timelock), _updateDelayCalldata(2 days + 1));
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_UpdateDelayExceedsCap.selector, 2 days + 1, 2 days));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_UpdateDelayExceedsCap.selector, 2 days + 1, 2 days));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "updateDelay 2d+1");
     }
 
@@ -130,7 +130,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
 
         vm.prank(alice);
         vm.expectRevert(
-            abi.encodeWithSelector(ArmadaGovernor.Gov_UpdateDelayExceedsCap.selector, type(uint256).max, 2 days)
+            abi.encodeWithSelector(Governor.Gov_UpdateDelayExceedsCap.selector, type(uint256).max, 2 days)
         );
         governor.propose(ProposalType.Extended, targets, values, calldatas, "updateDelay max");
     }
@@ -153,7 +153,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         calldatas[1] = _updateDelayCalldata(30 days);
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_UpdateDelayExceedsCap.selector, 30 days, 2 days));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_UpdateDelayExceedsCap.selector, 30 days, 2 days));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "batch brick");
     }
 
@@ -225,7 +225,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             _singleAction(address(timelock), _revokeRoleCalldata(role, address(governor)));
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_CannotRevokeGovernorRole.selector, role));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_CannotRevokeGovernorRole.selector, role));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "revoke PROPOSER");
     }
 
@@ -234,7 +234,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             _singleAction(address(timelock), _revokeRoleCalldata(role, address(governor)));
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_CannotRevokeGovernorRole.selector, role));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_CannotRevokeGovernorRole.selector, role));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "revoke EXECUTOR");
     }
 
@@ -243,7 +243,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             _singleAction(address(timelock), _revokeRoleCalldata(role, address(governor)));
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_CannotRevokeGovernorRole.selector, role));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_CannotRevokeGovernorRole.selector, role));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "revoke CANCELLER");
     }
 
@@ -252,7 +252,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             _singleAction(address(timelock), _renounceRoleCalldata(role, address(timelock)));
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_CannotRenounceTimelockAdmin.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_CannotRenounceTimelockAdmin.selector));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "renounce ADMIN");
     }
 
@@ -270,7 +270,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             _singleAction(address(timelock), _revokeRoleCalldata(role, address(timelock)));
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_CannotRenounceTimelockAdmin.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_CannotRenounceTimelockAdmin.selector));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "revoke ADMIN from timelock");
     }
 

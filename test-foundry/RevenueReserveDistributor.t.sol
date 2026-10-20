@@ -8,8 +8,8 @@ import "../contracts/governance/RevenueReserveDistributor.sol";
 import "../contracts/governance/RevenueLock.sol";
 import "../contracts/governance/RevenueCounter.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaWindDown.sol";
-import "../contracts/governance/ArmadaRedemption.sol";
+import "../contracts/governance/WindDown.sol";
+import "../contracts/governance/Redemption.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -71,8 +71,8 @@ abstract contract RevenueReserveDistributorFixture is Test {
     RevenueCounter internal counter;
     RevenueLock internal lock;
     RevenueReserveDistributor internal distributor;
-    ArmadaWindDown internal windDown;
-    ArmadaRedemption internal redemption;
+    WindDown internal windDown;
+    Redemption internal redemption;
     ReserveTestUSDC internal usdc;
     address internal allocator = address(0xA110C);
     address internal alice = address(0xA11CE);
@@ -101,9 +101,9 @@ abstract contract RevenueReserveDistributorFixture is Test {
         distributor.bindRevenueLock(address(lock));
 
         ReserveSettledCrowdfund crowdfund = new ReserveSettledCrowdfund();
-        redemption = new ArmadaRedemption(address(token), treasury, address(lock), address(crowdfund));
+        redemption = new Redemption(address(token), treasury, address(lock), address(crowdfund));
         ReserveShutdownReceiver shutdown = new ReserveShutdownReceiver();
-        windDown = new ArmadaWindDown(
+        windDown = new WindDown(
             address(token),
             treasury,
             address(shutdown),

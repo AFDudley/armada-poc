@@ -159,9 +159,9 @@ describe("Governance Veto", function () {
     await armToken.waitForDeployment();
 
     // 3. Deploy Treasury
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    treasury = await Treasury.deploy(timelockAddr);
     await treasury.waitForDeployment();
 
     // 4. Deploy Governor

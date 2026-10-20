@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
-// ABOUTME: Foundry tests for ArmadaGovernor UUPS upgradeability.
+// ABOUTME: Foundry tests for Governor UUPS upgradeability.
 // ABOUTME: Covers upgrade authorization, state persistence, re-init prevention, and storage compatibility.
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
+import "../contracts/governance/Governor.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
+import "../contracts/governance/Treasury.sol";
 import "../contracts/governance/IArmadaGovernance.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./helpers/GovernorDeployHelper.sol";
 
-/// @title ArmadaGovernorV2Mock — Minimal V2 for testing upgrade + state persistence
-contract ArmadaGovernorV2Mock is ArmadaGovernor {
+/// @title GovernorV2Mock — Minimal V2 for testing upgrade + state persistence
+contract GovernorV2Mock is Governor {
     uint256 public newV2Variable;
 
     function setNewV2Variable(uint256 val) external {
@@ -28,10 +28,10 @@ contract ArmadaGovernorV2Mock is ArmadaGovernor {
 
 /// @title GovernorUpgradeTest — UUPS upgrade lifecycle tests
 contract GovernorUpgradeTest is Test, GovernorDeployHelper {
-    ArmadaGovernor public governor;
+    Governor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
+    Treasury public treasury;
 
     address public deployer = address(this);
     address public alice = address(0xA11CE);
@@ -52,7 +52,7 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
         armToken = new ArmadaToken(deployer, address(timelock));
 
         // Deploy treasury
-        treasury = new ArmadaTreasuryGov(address(timelock));
+        treasury = new Treasury(address(timelock));
 
         // Deploy governor behind proxy
         governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
@@ -84,30 +84,30 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
     // ============ Upgrade Authorization ============
 
     function test_upgrade_viaTimelockSucceeds() public {
-        ArmadaGovernorV2Mock v2Impl = new ArmadaGovernorV2Mock();
+        GovernorV2Mock v2Impl = new GovernorV2Mock();
 
         // Upgrade via timelock
         vm.prank(address(timelock));
         governor.upgradeTo(address(v2Impl));
 
         // Verify V2 is active
-        ArmadaGovernorV2Mock upgraded = ArmadaGovernorV2Mock(address(governor));
+        GovernorV2Mock upgraded = GovernorV2Mock(address(governor));
         assertEq(upgraded.v2Marker(), "v2");
     }
 
     function test_upgrade_fromNonTimelockReverts() public {
-        ArmadaGovernorV2Mock v2Impl = new ArmadaGovernorV2Mock();
+        GovernorV2Mock v2Impl = new GovernorV2Mock();
 
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotTimelock.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotTimelock.selector));
         governor.upgradeTo(address(v2Impl));
     }
 
     function test_upgrade_fromDeployerReverts() public {
-        ArmadaGovernorV2Mock v2Impl = new ArmadaGovernorV2Mock();
+        GovernorV2Mock v2Impl = new GovernorV2Mock();
 
         vm.prank(deployer);
-        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotTimelock.selector));
+        vm.expectRevert(abi.encodeWithSelector(Governor.Gov_NotTimelock.selector));
         governor.upgradeTo(address(v2Impl));
     }
 
@@ -129,7 +129,7 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
         assertEq(governor.securityCouncil(), address(0x5C5C));
 
         // Upgrade
-        ArmadaGovernorV2Mock v2Impl = new ArmadaGovernorV2Mock();
+        GovernorV2Mock v2Impl = new GovernorV2Mock();
         vm.prank(address(timelock));
         governor.upgradeTo(address(v2Impl));
 
@@ -142,7 +142,7 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
         assertTrue(governor.stewardContractLocked());
 
         // Verify V2 functionality works
-        ArmadaGovernorV2Mock upgraded = ArmadaGovernorV2Mock(address(governor));
+        GovernorV2Mock upgraded = GovernorV2Mock(address(governor));
         vm.prank(address(timelock));
         upgraded.setNewV2Variable(42);
         assertEq(upgraded.newV2Variable(), 42);
@@ -158,7 +158,7 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
         assertEq(quorum, 2000);
 
         // Upgrade
-        ArmadaGovernorV2Mock v2Impl = new ArmadaGovernorV2Mock();
+        GovernorV2Mock v2Impl = new GovernorV2Mock();
         vm.prank(address(timelock));
         governor.upgradeTo(address(v2Impl));
 
@@ -178,7 +178,7 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
     }
 
     function test_initialize_implementationCannotBeInitialized() public {
-        ArmadaGovernor impl = new ArmadaGovernor();
+        Governor impl = new Governor();
 
         vm.expectRevert("Initializable: contract is already initialized");
         impl.initialize(address(armToken), payable(address(timelock)), address(treasury));
@@ -201,7 +201,7 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
         assertTrue(governor.windDownContractSet());
 
         // Upgrade
-        ArmadaGovernorV2Mock v2Impl = new ArmadaGovernorV2Mock();
+        GovernorV2Mock v2Impl = new GovernorV2Mock();
         vm.prank(address(timelock));
         governor.upgradeTo(address(v2Impl));
 

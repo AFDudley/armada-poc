@@ -1,4 +1,4 @@
-// ABOUTME: Integration tests for the Signaling proposal type in ArmadaGovernor.
+// ABOUTME: Integration tests for the Signaling proposal type in Governor.
 // ABOUTME: Covers lifecycle, voting, revert guards, and non-executability constraints.
 
 import { expect } from "chai";
@@ -92,9 +92,9 @@ describe("Governance — Signaling Proposals", function () {
     await armToken.waitForDeployment();
 
     // 3. Deploy Treasury
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    treasury = await Treasury.deploy(timelockAddr);
     await treasury.waitForDeployment();
 
     // 4. Deploy Governor
@@ -342,7 +342,7 @@ describe("Governance — Signaling Proposals", function () {
     // same as all other proposal types.
     it("should be blocked after wind-down", async function () {
       // Register a mock wind-down address and activate via impersonation.
-      // We only need windDownActive=true; full ArmadaWindDown deployment is tested elsewhere.
+      // We only need windDownActive=true; full WindDown deployment is tested elsewhere.
       const timelockAddr = await timelockController.getAddress();
       await ethers.provider.send("hardhat_impersonateAccount", [timelockAddr]);
       await deployer.sendTransaction({

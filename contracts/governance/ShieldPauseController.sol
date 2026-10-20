@@ -5,8 +5,8 @@ pragma solidity ^0.8.17;
 
 import "./IShieldPauseController.sol";
 
-/// @notice Minimal interface to read securityCouncil from ArmadaGovernor
-interface IArmadaGovernorSC {
+/// @notice Minimal interface to read securityCouncil from the governor
+interface ISecurityCouncilProvider {
     function securityCouncil() external view returns (address);
 }
 
@@ -17,7 +17,7 @@ interface IArmadaGovernorSC {
 ///         always false). Wind-down behaviour is unaffected: once wind-down is active,
 ///         `shieldsPaused()` and `withdrawOnlyMode()` are permanently true.
 ///
-///         The SC address is read from the ArmadaGovernor contract, so changes to
+///         The SC address is read from the governance governor contract, so changes to
 ///         the governor's securityCouncil (including ejection via denied veto) are
 ///         automatically reflected here without a separate setter.
 ///
@@ -29,7 +29,7 @@ contract ShieldPauseController is IShieldPauseController {
     // ============ State ============
 
     /// @notice Governor contract (reads securityCouncil from here)
-    IArmadaGovernorSC public immutable governor;
+    ISecurityCouncilProvider public immutable governor;
 
     /// @notice Timelock address (governance authority for early unpause)
     address public immutable pauseTimelock;
@@ -61,13 +61,13 @@ contract ShieldPauseController is IShieldPauseController {
 
     // ============ Constructor ============
 
-    /// @param _governor ArmadaGovernor contract (reads SC address from here)
+    /// @param _governor governance governor contract (reads SC address from here)
     /// @param _pauseTimelock Timelock address for governance unpause
     constructor(address _governor, address _pauseTimelock) {
         require(_governor != address(0), "ShieldPauseController: zero governor");
         require(_pauseTimelock != address(0), "ShieldPauseController: zero timelock");
 
-        governor = IArmadaGovernorSC(_governor);
+        governor = ISecurityCouncilProvider(_governor);
         pauseTimelock = _pauseTimelock;
     }
 

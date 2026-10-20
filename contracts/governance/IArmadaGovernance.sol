@@ -37,19 +37,6 @@ struct ProposalParams {
 
 // ========== Interfaces ==========
 
-interface IArmadaGovernorTiming {
-    function proposalTypeParams(ProposalType proposalType)
-        external
-        view
-        returns (uint256 votingDelay, uint256 votingPeriod, uint256 executionDelay, uint256 quorumBps);
-}
-
-interface ITreasurySteward {
-    function currentSteward() external view returns (address);
-    function isStewardActive() external view returns (bool);
-    function getCurrentSteward() external view returns (address steward, bool isActive);
-}
-
 interface IAdapterRegistry {
     function authorizedAdapters(address adapter) external view returns (bool);
     function withdrawOnlyAdapters(address adapter) external view returns (bool);

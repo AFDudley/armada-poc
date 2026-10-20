@@ -1,4 +1,4 @@
-// ABOUTME: Tests for native ETH distribution from ArmadaTreasuryGov.
+// ABOUTME: Tests for native ETH distribution from Treasury.
 // ABOUTME: Covers happy path, access control, and outflow enforcement under the address(0) sentinel.
 
 import { expect } from "chai";
@@ -20,9 +20,9 @@ describe("Treasury ETH Distribution", function () {
 
   async function deployTreasury() {
     [deployer, stranger, recipient] = await ethers.getSigners();
-    const ArmadaTreasuryGov =
-      await ethers.getContractFactory("ArmadaTreasuryGov");
-    treasury = await ArmadaTreasuryGov.deploy(deployer.address);
+    const Treasury =
+      await ethers.getContractFactory("Treasury");
+    treasury = await Treasury.deploy(deployer.address);
     await treasury.waitForDeployment();
   }
 
@@ -93,7 +93,7 @@ describe("Treasury ETH Distribution", function () {
       // 8 ETH used; 2 ETH headroom. 3 ETH next call should exceed the cap.
       await expect(
         treasury.distributeETH(recipient.address, ETH("3")),
-      ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
+      ).to.be.revertedWith("Treasury: outflow limit exceeded");
     });
   });
 
@@ -108,19 +108,19 @@ describe("Treasury ETH Distribution", function () {
     it("rejects zero recipient", async function () {
       await expect(
         treasury.distributeETH(ethers.ZeroAddress, ETH("1")),
-      ).to.be.revertedWith("ArmadaTreasuryGov: zero recipient");
+      ).to.be.revertedWith("Treasury: zero recipient");
     });
 
     it("rejects zero amount", async function () {
       await expect(
         treasury.distributeETH(recipient.address, 0n),
-      ).to.be.revertedWith("ArmadaTreasuryGov: zero amount");
+      ).to.be.revertedWith("Treasury: zero amount");
     });
 
     it("rejects non-owner caller", async function () {
       await expect(
         treasury.connect(stranger).distributeETH(recipient.address, ETH("1")),
-      ).to.be.revertedWith("ArmadaTreasuryGov: not owner");
+      ).to.be.revertedWith("Treasury: not owner");
     });
 
     // WHY: All outflow paths require an initialized config for the token. Without this
@@ -132,7 +132,7 @@ describe("Treasury ETH Distribution", function () {
       // No initOutflowConfig(address(0), ...)
       await expect(
         treasury.distributeETH(recipient.address, ETH("1")),
-      ).to.be.revertedWith("ArmadaTreasuryGov: outflow config required");
+      ).to.be.revertedWith("Treasury: outflow config required");
     });
   });
 
@@ -155,7 +155,7 @@ describe("Treasury ETH Distribution", function () {
       // 11 more would exceed (90 + 11 = 101 > 100)
       await expect(
         treasury.distributeETH(recipient.address, ETH("11")),
-      ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
+      ).to.be.revertedWith("Treasury: outflow limit exceeded");
     });
 
     it("uses absolute limit on small treasury (absolute > pct)", async function () {
@@ -172,7 +172,7 @@ describe("Treasury ETH Distribution", function () {
       // 11 more would exceed (40 + 11 = 51 > 50)
       await expect(
         treasury.distributeETH(recipient.address, ETH("11")),
-      ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
+      ).to.be.revertedWith("Treasury: outflow limit exceeded");
     });
 
     // WHY: Rolling-window semantics — once the window passes, prior outflows fall off
