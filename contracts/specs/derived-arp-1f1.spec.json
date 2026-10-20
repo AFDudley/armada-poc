@@ -1,0 +1,301 @@
+{
+  "id": "derived-arp-1f1",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. A summon script must deploy one Baal (Moloch v3; HausDAO feat/baalZodiac, the version the labbook records audited by Hacken 2022-08-02 and Quantstamp 2022-10-18) backed by one Gnosis Safe, with ARM (ArmadaToken) as the Baal shares token, the Safe's only owner set to the Baal contract, and the Safe's threshold set to 1. The deploy joins the fixturenet setup chain after ARM deploys. Source: armada-laconic labbook 2026-10-18-treasury-governance-baal-safe-shielded 3 decisions 1,8,9,10 and 4 the G2 check; the committed brief armada-poc docs/tasks/G2-baal-safe-summon.md.\nWhat holds now? Describe the current, observed state. The repo has no Safe or Baal contracts (lib/ holds only forge-std and halmos-cheatcodes; no .gitmodules), no summon script, and no governance-baal deploy step in package.json scripts.setup. The Baal treasury governance design is unimplemented.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. A fixturenet deploy (npm run setup, or the new governance-baal step alone) must print: the Safe address with zero human owners and threshold 1; the Baal address with ARM as its registered shares token; safe.isOwner(baal)==true and safe.getOwners().length==1. A forge test on a local EVM must assert the same three facts. A check reads those printed fields and the test pass/fail output and fails if a human Safe owner exists at any point, if ARM is not Baal's shares token, or if the Safe is not owned solely by Baal at threshold 1.\nWhat constraints apply? State them in plain prose. Vendor Safe (safe-contracts) and Baal (feat/baalZodiac) at the audited commits the labbook names; confirm the commit hashes from the feat/baalZodiac branch tip. No human Safe owner at any point in the deploy, even transiently. Depends on G1 (ArmadaToken as the Baal shares token). Follow the committed brief docs/tasks/G2-baal-safe-summon.md deliverables and the existing scripts/ deploy conventions; do not invent a new deploy structure.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) scripts/ (summon-baal-safe), lib/ (vendored Safe and Baal), package.json scripts.setup",
+  "restatement": "The repo must gain a summon script that deploys one Baal (Moloch v3, HausDAO feat/baalZodiac, the audited version) backed by one Gnosis Safe. ARM (ArmadaToken) is the Baal shares token. The Safe's only owner is the Baal contract, the threshold is 1, and no human is ever a Safe owner, even briefly. Safe and Baal are vendored in lib/ at audited commits. The deploy runs as a governance-baal step in the setup chain after ARM deploys. A fixturenet deploy prints the facts and a forge test asserts them.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "Safe (safe-contracts) and Baal (feat/baalZodiac) are vendored in lib/ at the audited commits the labbook names, with commit hashes confirmed from the feat/baalZodiac branch tip."
+    },
+    {
+      "id": "c2",
+      "text": "A summon script exists under scripts/ (summon-baal-safe) and package.json scripts.setup runs a governance-baal step after ARM deploys."
+    },
+    {
+      "id": "c3",
+      "text": "The deploy prints the Safe address with zero human owners and threshold 1, and safe.isOwner(baal)==true and safe.getOwners().length==1."
+    },
+    {
+      "id": "c4",
+      "text": "The deploy prints the Baal address with ARM as its registered shares token."
+    },
+    {
+      "id": "c5",
+      "text": "No human Safe owner exists at any point in the deploy, even transiently."
+    },
+    {
+      "id": "c6",
+      "text": "A forge test on a local EVM asserts the same three facts: Safe owned solely by Baal, threshold 1, and ARM as Baal shares token."
+    }
+  ],
+  "goal": "Deploy one Baal backed by one Safe, with ARM as shares token, Baal as sole Safe owner, threshold 1, and no human owner at any time.",
+  "acceptance_criteria": [
+    "A check reports that the Safe and Baal code folders are present in lib/ and each is pinned to a recorded commit hash.",
+    "A check reports that the summon script exists and that the setup command runs the governance-baal step after the ARM deploy.",
+    "Running the deploy on a local chain prints a Safe with no human owners, exactly one owner (the Baal), and threshold 1.",
+    "Running the deploy prints a Baal whose registered shares token is the ARM token address.",
+    "Checking the Safe owner list after every step of the deploy finds no human owner at any step.",
+    "The forge test for the Baal and Safe summon runs and all its tests pass, with at least one test run."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "A check reports that the Safe and Baal code folders are present in lib/ and each is pinned to a recorded commit hash."
+    },
+    {
+      "id": "c2",
+      "text": "A check reports that the summon script exists and that the setup command runs the governance-baal step after the ARM deploy."
+    },
+    {
+      "id": "c3",
+      "text": "Running the deploy on a local chain prints a Safe with no human owners, exactly one owner (the Baal), and threshold 1."
+    },
+    {
+      "id": "c4",
+      "text": "Running the deploy prints a Baal whose registered shares token is the ARM token address."
+    },
+    {
+      "id": "c5",
+      "text": "Checking the Safe owner list after every step of the deploy finds no human owner at any step."
+    },
+    {
+      "id": "c6",
+      "text": "The forge test for the Baal and Safe summon runs and all its tests pass, with at least one test run."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "behavior",
+      "description": "A check reports that the Safe and Baal code folders are present in lib/ and each is pinned to a recorded commit hash.",
+      "proves": "Safe and Baal are vendored at pinned audited commits.",
+      "restatement_clause_id": "c1",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/verify-baal-safe-summon.py",
+        "args": [
+          "--report",
+          "vendoring"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "safe_vendored_and_pinned",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "baal_vendored_and_pinned",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 300,
+      "clause_id": "c1"
+    },
+    {
+      "type": "behavior",
+      "description": "A check reports that the summon script exists and that the setup command runs the governance-baal step after the ARM deploy.",
+      "proves": "The Baal deploy is wired into the setup chain in the right order.",
+      "restatement_clause_id": "c2",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/verify-baal-safe-summon.py",
+        "args": [
+          "--report",
+          "wiring"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "summon_script_present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "governance_baal_after_arm_in_setup",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 300,
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "Running the deploy on a local chain prints a Safe with no human owners, exactly one owner (the Baal), and threshold 1.",
+      "proves": "The Safe is owned solely by Baal at threshold 1.",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/verify-baal-safe-summon.py",
+        "args": [
+          "--report",
+          "safe"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "safe_threshold",
+          "op": "eq",
+          "value": 1
+        },
+        {
+          "observe": "stdout_json",
+          "field": "safe_owner_count",
+          "op": "eq",
+          "value": 1
+        },
+        {
+          "observe": "stdout_json",
+          "field": "baal_is_safe_owner",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "human_owner_count",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "Running the deploy prints a Baal whose registered shares token is the ARM token address.",
+      "proves": "ARM is the Baal shares token.",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/verify-baal-safe-summon.py",
+        "args": [
+          "--report",
+          "shares-token"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "shares_token_is_arm",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c4"
+    },
+    {
+      "type": "behavior",
+      "description": "Checking the Safe owner list after every step of the deploy finds no human owner at any step.",
+      "proves": "No human is a Safe owner at any time, even briefly.",
+      "restatement_clause_id": "c5",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/verify-baal-safe-summon.py",
+        "args": [
+          "--report",
+          "owner-history"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "max_human_owners_at_any_step",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c5"
+    },
+    {
+      "type": "behavior",
+      "description": "The forge test for the Baal and Safe summon runs and all its tests pass, with at least one test run.",
+      "proves": "The local EVM test asserts the three facts and passes.",
+      "restatement_clause_id": "c6",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/verify-baal-safe-summon.py",
+        "args": [
+          "--report",
+          "forge-test"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "forge_tests_failed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "forge_tests_passed",
+          "op": "ge",
+          "value": 1
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c6"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/verify-baal-safe-summon.py"
+  ]
+}
