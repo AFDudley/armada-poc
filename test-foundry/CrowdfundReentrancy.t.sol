@@ -5,6 +5,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
+import "./helpers/CrowdfundPoolDeploy.sol";
 import "../contracts/crowdfund/ArmadaCrowdfund.sol";
 import "../contracts/crowdfund/IArmadaCrowdfund.sol";
 import "../contracts/governance/ArmadaToken.sol";
@@ -147,8 +148,10 @@ contract MaliciousERC20Propagating is ERC20 {
     }
 }
 
-contract CrowdfundReentrancyTest is Test {
+contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy  {
     MockUSDCV2 public usdc;
+    PrivacyPool public pool;
+    PrivacyPool public pool2;
     ArmadaToken public armToken;
     address public admin;
     address public treasury;
@@ -203,8 +206,8 @@ contract CrowdfundReentrancyTest is Test {
     function test_reentrancy_claim_reentryBlocked() public {
         MaliciousERC20 maliciousArm = new MaliciousERC20("Bad ARM", "BARM", 18);
 
-        ArmadaCrowdfund cf =
-            new ArmadaCrowdfund(address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp);
+        pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
+        ArmadaCrowdfund cf = new ArmadaCrowdfund(address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, address(pool));
         maliciousArm.mint(address(cf), ARM_FUNDING);
         cf.loadArm();
 
@@ -271,7 +274,7 @@ contract CrowdfundReentrancyTest is Test {
         MaliciousERC20Propagating maliciousArm = new MaliciousERC20Propagating("Bad ARM", "BARM", 18);
 
         ArmadaCrowdfund cf =
-            new ArmadaCrowdfund(address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp);
+            new ArmadaCrowdfund(address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, address(pool));
         maliciousArm.mint(address(cf), ARM_FUNDING);
         cf.loadArm();
 
@@ -325,8 +328,8 @@ contract CrowdfundReentrancyTest is Test {
     function test_reentrancy_claimRefund_reentryBlocked() public {
         MaliciousERC20 maliciousUsdc = new MaliciousERC20("Bad USDC", "BUSDC", 6);
 
-        ArmadaCrowdfund cf =
-            new ArmadaCrowdfund(address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp);
+        pool2 = _deployPool(address(maliciousUsdc), treasury, address(this), bytes32(0));
+        ArmadaCrowdfund cf = new ArmadaCrowdfund(address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool2));
 
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
@@ -385,7 +388,7 @@ contract CrowdfundReentrancyTest is Test {
         MaliciousERC20 maliciousUsdc = new MaliciousERC20("Bad USDC", "BUSDC", 6);
 
         ArmadaCrowdfund cf =
-            new ArmadaCrowdfund(address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp);
+            new ArmadaCrowdfund(address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool2));
 
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();

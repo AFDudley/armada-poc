@@ -5,14 +5,17 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
+import "./helpers/CrowdfundPoolDeploy.sol";
 import "../contracts/crowdfund/ArmadaCrowdfund.sol";
 import "../contracts/crowdfund/IArmadaCrowdfund.sol";
 import "../contracts/governance/ArmadaToken.sol";
 import "../contracts/cctp/MockUSDCV2.sol";
 
-contract ArmadaCrowdfundArmRecoveryTest is Test {
+contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy  {
     ArmadaCrowdfund public crowdfund;
     MockUSDCV2 public usdc;
+    PrivacyPool public pool;
+    PrivacyPool public pool2;
     ArmadaToken public armToken;
     address public admin;
     address public treasury;
@@ -25,13 +28,15 @@ contract ArmadaCrowdfundArmRecoveryTest is Test {
 
         usdc = new MockUSDCV2("Mock USDC", "USDC");
         armToken = new ArmadaToken(admin, admin);
+pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         crowdfund = new ArmadaCrowdfund(
             address(usdc),
             address(armToken),
             treasury,
             admin,
             admin, // securityCouncil
-            block.timestamp
+            block.timestamp,
+            address(pool)
         );
 
         // Whitelist admin and crowdfund so token transfers work
@@ -101,7 +106,8 @@ contract ArmadaCrowdfundArmRecoveryTest is Test {
             treasury,
             admin,
             admin, // securityCouncil
-            block.timestamp
+            block.timestamp,
+            address(pool)
         );
 
         vm.expectRevert("ArmadaCrowdfund: not finalized or canceled");
@@ -139,7 +145,8 @@ contract ArmadaCrowdfundArmRecoveryTest is Test {
             treasury,
             admin,
             admin, // securityCouncil
-            block.timestamp
+            block.timestamp,
+            address(pool)
         );
         armToken.addToWhitelist(address(fuzzCrowdfund));
         armToken.transfer(address(fuzzCrowdfund), funding);
