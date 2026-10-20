@@ -7,10 +7,9 @@
 // ABOUTME: labbook 2026-10-18-treasury-governance-baal-safe-shielded.
 pragma solidity ^0.8.17;
 
-import { ArmadaToken } from "./ArmadaToken.sol";
-import { PrivacyPool } from "../privacy-pool/PrivacyPool.sol";
-import { Safe } from "@safe-global/safe-contracts/contracts/Safe.sol";
-import { Baal } from "lib/baal/contracts/Baal.sol";
+import {ArmadaToken} from "./ArmadaToken.sol";
+import {PrivacyPool} from "../privacy-pool/PrivacyPool.sol";
+import {Safe} from "@safe-global/safe-contracts/contracts/Safe.sol";
 import {
     CommitmentCiphertext,
     CommitmentPreimage,
@@ -24,9 +23,9 @@ import {
     TokenType,
     SNARK_SCALAR_FIELD
 } from "../privacy-pool/types/PoolTypes.sol";
-import { PoseidonT4 } from "../privacy-pool/types/PoseidonLibs.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {PoseidonT4} from "../privacy-pool/types/PoseidonLibs.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title ShieldedRagequit — Baal manager shaman for the shielded treasury exit.
 /// @notice Any ARM holder can call ragequit(armAmount, npk, tokens) to burn their ARM and
@@ -43,7 +42,7 @@ contract ShieldedRagequit {
     // ============ Immutables (S1) ============
 
     ArmadaToken public armToken;
-    Baal public baal;
+    address public baal;
     Safe public safe;
     PrivacyPool public pool;
 
@@ -61,7 +60,7 @@ contract ShieldedRagequit {
     /// @param _pool P2's PrivacyPool (the contract-owned spend path)
     constructor(address _armToken, address _baal, address _safe, address _pool) {
         armToken = ArmadaToken(_armToken);
-        baal = Baal(_baal);
+        baal = _baal;
         safe = Safe(payable(_safe));
         pool = PrivacyPool(_pool);
     }
@@ -119,15 +118,14 @@ contract ShieldedRagequit {
 
         // The Safe's pool-owned input note (the note the exit debits).
         bytes32 safeNpk = bytes32(uint256(uint160(address(safe))));
-        CommitmentPreimage memory inputNote = CommitmentPreimage({npk: safeNpk, token: tokenData, value: uint120(payout)});
+        CommitmentPreimage memory inputNote =
+            CommitmentPreimage({npk: safeNpk, token: tokenData, value: uint120(payout)});
 
         // The caller's output note at their own npk.
         CommitmentPreimage memory outputNote = CommitmentPreimage({npk: npk, token: tokenData, value: uint120(payout)});
 
         SnarkProof memory zeroProof = SnarkProof({
-            a: G1Point(0, 0),
-            b: G2Point([uint256(0), uint256(0)], [uint256(0), uint256(0)]),
-            c: G1Point(0, 0)
+            a: G1Point(0, 0), b: G2Point([uint256(0), uint256(0)], [uint256(0), uint256(0)]), c: G1Point(0, 0)
         });
 
         // ownerField binds the caller of transactOwned (this shaman) to the owned circuit.
@@ -171,7 +169,7 @@ contract ShieldedRagequit {
                 ownerField: ownerField,
                 publicOutputs: publicOutputs
             }),
-            unshieldPreimage: CommitmentPreimage({ npk: bytes32(0), token: tokenData, value: 0 })
+            unshieldPreimage: CommitmentPreimage({npk: bytes32(0), token: tokenData, value: 0})
         });
     }
 
