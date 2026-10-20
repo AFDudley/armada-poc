@@ -6,6 +6,9 @@ import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Env keys the config reads that a test might set — cleared between tests so one case
 // can't leak chain topology into the next (getNetworkConfig caches, so we also re-require).
