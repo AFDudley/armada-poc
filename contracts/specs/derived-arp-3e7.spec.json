@@ -1,0 +1,76 @@
+{
+  "id": "derived-arp-3e7",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. GOVERNANCE.md, committed at integrated 1f07f220, states: \"ShieldedRagequit ... is the one exit from the DAO. It lets any ARM holder exit at any time.\" It also states \"A captured majority cannot block the exit.\"\nWhat holds now? Describe the current, observed state. ShieldedRagequit.sol:80 calls armToken.burn(msg.sender, armAmount). ArmadaToken.burn (ArmadaToken.sol:190) calls the internal _burn, which calls _beforeTokenTransfer(account, address(0), amount). ArmadaToken._beforeTokenTransfer (ArmadaToken.sol, the Transfer Restriction section) contains: require(from == address(0) || transferWhitelist[from], \"ArmadaToken: transfers restricted\"), gated on the transferable flag. A burn call has from = account, which is not address(0). When transferable is false and account is not on transferWhitelist, the require reverts with \"ArmadaToken: transfers restricted\".\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. In test-foundry/ShieldedRagequit.t.sol, the setup at lines 99-103 calls arm.initWhitelist with a list that includes the holder before any ragequit call. scripts/deploy_crowdfund.ts, around line 239, calls armToken.initWhitelist with only the crowdfund, treasury, revenueLock, deployer, and an optional reserve address. No deployed or tested configuration calls ragequit for a holder who is absent from transferWhitelist while transferable is false.\nWhat constraints apply? State them in plain prose. Observed at armada-poc integrated 1f07f220. The contracts named are unchanged since commit afbb81b5.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/ArmadaToken.sol, contracts/governance/ShieldedRagequit.sol, test-foundry/ShieldedRagequit.t.sol, scripts/deploy_crowdfund.ts.",
+  "restatement": "GOVERNANCE.md states that ShieldedRagequit is the one exit from the DAO, that any ARM holder can exit at any time, and that a captured majority cannot block the exit. Today the exit fails for most holders. ShieldedRagequit.ragequit calls armToken.burn(msg.sender, armAmount). The burn runs ArmadaToken._beforeTokenTransfer(account, address(0), amount). While transferable is false, that hook requires from == address(0) || transferWhitelist[from]. A burn has from = the holder, so a holder who is not on transferWhitelist gets the revert \"ArmadaToken: transfers restricted\". The deploy script whitelists only the crowdfund, treasury, revenueLock, deployer, and an optional reserve, so ordinary holders cannot ragequit until transfers open. Governance controls that flag, so a captured majority can block the exit. The requirement: a holder who is not on transferWhitelist can ragequit while transferable is false. The burn of the holder's ARM succeeds, and the holder's balance and the total supply both fall by armAmount. The fix must not open ordinary transfers: a non-whitelisted holder's transfer while transferable is false must still revert with \"ArmadaToken: transfers restricted\". The fix must also keep burn restricted to the authorized burner.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "With transferable false, a holder who is absent from transferWhitelist calls ShieldedRagequit.ragequit(armAmount, npk, tokens). The call does not revert with \"ArmadaToken: transfers restricted\". It succeeds, and the holder's ARM balance and armToken.totalSupply() both decrease by exactly armAmount."
+    },
+    {
+      "id": "c2",
+      "text": "With transferable false, a holder who is absent from transferWhitelist calls ARM transfer to another address. The call still reverts with \"ArmadaToken: transfers restricted\"."
+    },
+    {
+      "id": "c3",
+      "text": "ArmadaToken.burn stays callable only by an authorized burner. A call from any other address reverts with \"ArmadaToken: not authorized burner\"."
+    }
+  ],
+  "goal": "Any ARM holder can ragequit through ShieldedRagequit while transferable is false, whether or not the holder is on transferWhitelist, and ordinary transfer restrictions stay in force.",
+  "acceptance_criteria": [
+    "A holder who is not on the transfer whitelist exits through ragequit while ARM transfers are still locked. The exit succeeds, and the holder's ARM balance and the total ARM supply each fall by the exact amount the holder gave up.",
+    "A holder who is not on the transfer whitelist tries to send ARM to another address while transfers are locked. The send is refused with the message \"ArmadaToken: transfers restricted\".",
+    "An address that is not the authorized burner tries to burn a holder's ARM. The attempt is refused with the message \"ArmadaToken: not authorized burner\"."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "A holder who is not on the transfer whitelist exits through ragequit while ARM transfers are still locked. The exit succeeds, and the holder's ARM balance and the total ARM supply each fall by the exact amount the holder gave up."
+    },
+    {
+      "id": "c2",
+      "text": "A holder who is not on the transfer whitelist tries to send ARM to another address while transfers are locked. The send is refused with the message \"ArmadaToken: transfers restricted\"."
+    },
+    {
+      "id": "c3",
+      "text": "An address that is not the authorized burner tries to burn a holder's ARM. The attempt is refused with the message \"ArmadaToken: not authorized burner\"."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A holder who is not on the transfer whitelist exits through ragequit while ARM transfers are still locked. The exit succeeds, and the holder's ARM balance and the total ARM supply each fall by the exact amount the holder gave up.",
+      "proves": "The one exit from the DAO works for every holder while transfers are locked, so a governance majority that keeps transfers locked cannot block the exit.",
+      "restatement_clause_id": "c1",
+      "test": "test_RagequitSucceedsForNonWhitelistedHolderWhileRestricted",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol",
+        "contracts/governance/ShieldedRagequit.sol"
+      ],
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A holder who is not on the transfer whitelist tries to send ARM to another address while transfers are locked. The send is refused with the message \"ArmadaToken: transfers restricted\".",
+      "proves": "The fix opens only the exit path, not ordinary transfers, so the transfer lock still holds for non-whitelisted holders.",
+      "restatement_clause_id": "c2",
+      "test": "test_TransferStillRestrictedForNonWhitelistedHolderWhileRestricted",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "An address that is not the authorized burner tries to burn a holder's ARM. The attempt is refused with the message \"ArmadaToken: not authorized burner\".",
+      "proves": "The fix does not let any other party destroy a holder's ARM, so only the ragequit exit can burn ARM.",
+      "restatement_clause_id": "c3",
+      "test": "test_BurnOnlyCallableByShieldedRagequit",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "clause_id": "c3"
+    }
+  ],
+  "criticality": "critical"
+}
