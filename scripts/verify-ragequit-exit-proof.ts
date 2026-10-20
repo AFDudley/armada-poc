@@ -42,22 +42,29 @@ const toBig = (hexNo0x: string): bigint => BigInt(`0x${hexNo0x}`);
 
 // The holder's root (deterministic keyset). The ragequit payout note is contract-owned at the
 // holder's npk; the holder's wallet can spend it.
-const HOLDER_ROOT = seed(0xA9);
+const HOLDER_ROOT = seed(0xa9);
 
 async function main() {
   console.log("=".repeat(60));
-  console.log("  G3/arp-a76 c10: ShieldedRagequit exit-proof conservation oracle");
+  console.log(
+    "  G3/arp-a76 c10: ShieldedRagequit exit-proof conservation oracle",
+  );
   console.log("=".repeat(60));
   await initPoseidonPromise;
 
   const deployments = loadDeployment("privacy-pool-hub.json");
   if (!deployments)
-    throw new Error("privacy-pool-hub.json not found — run `npm run setup` first");
+    throw new Error(
+      "privacy-pool-hub.json not found — run `npm run setup` first",
+    );
   const chainId: number = deployments.chainId;
   const chain = getChainById(chainId);
   console.log(`Network: hub (chainId ${chainId})`);
 
-  const pool = await ethers.getContractAt("PrivacyPool", deployments.contracts.privacyPool);
+  const pool = await ethers.getContractAt(
+    "PrivacyPool",
+    deployments.contracts.privacyPool,
+  );
   const poolAddress = (await pool.getAddress()) as `0x${string}`;
   const usdc = await ethers.getContractAt("MockUSDCV2", deployments.cctp.usdc);
   const usdcAddress = (await usdc.getAddress()) as `0x${string}`;
@@ -115,12 +122,19 @@ async function main() {
   // Recover the payout note (the transactOwned output at the holder's npk).
   const tree = new UTXOMerkletree();
   const owned: TXO[] = [];
-  const leaves = [...decoded.shields, ...decoded.transacts].sort((a, b) => a.tree - b.tree || a.position - b.position);
+  const leaves = [...decoded.shields, ...decoded.transacts].sort(
+    (a, b) => a.tree - b.tree || a.position - b.position,
+  );
   for (const c of leaves) {
     tree.insert(c.hash);
     // Type-guard: transact commitments carry `ciphertext`; shields carry `encryptedBundle`.
-    if ('ciphertext' in c) {
-      const n = await tryDecryptCommitment(c.ciphertext, holderReceiver, tokenDataGetter, armadaChain);
+    if ("ciphertext" in c) {
+      const n = await tryDecryptCommitment(
+        c.ciphertext,
+        holderReceiver,
+        tokenDataGetter,
+        armadaChain,
+      );
       if (n)
         owned.push({
           tree: c.tree,
@@ -129,7 +143,7 @@ async function main() {
           value: n.value,
           blockNumber: c.blockNumber,
           txid: c.txid,
-          origin: 'transact',
+          origin: "transact",
           random: n.random,
           notePublicKey: n.notePublicKey,
         });
@@ -143,7 +157,7 @@ async function main() {
           value: o.value,
           blockNumber: c.blockNumber,
           txid: c.txid,
-          origin: 'shield',
+          origin: "shield",
           random: o.random,
           notePublicKey: o.notePublicKey,
         });
@@ -168,12 +182,16 @@ async function main() {
   const plan = planTransfer({
     txos: [payoutNote],
     tokenAddress: usdcAddress,
-    outputs: [{ toShieldedAddress: holder.shieldedAddress, value: payoutNote.value }],
+    outputs: [
+      { toShieldedAddress: holder.shieldedAddress, value: payoutNote.value },
+    ],
     roots: new Map([[payoutNote.tree, merkleRoot]]),
     chainID: BigInt(chainId),
   });
 
-  console.log("\nBuilding witness + proving (Groth16 over the exit-proof circuit)...");
+  console.log(
+    "\nBuilding witness + proving (Groth16 over the exit-proof circuit)...",
+  );
   const signer = await LocalSigner.fromRootSecret(HOLDER_ROOT);
   const witness = await buildWitness({
     inputs: [
@@ -204,7 +222,10 @@ async function main() {
     chainId,
   });
 
-  const artifacts = getArtifact(witness.shape.nullifiers, witness.shape.commitments);
+  const artifacts = getArtifact(
+    witness.shape.nullifiers,
+    witness.shape.commitments,
+  );
   const prover = createSnarkjsProver();
   try {
     const groth16Proof = await prover.prove(witness.formattedInputs, {
@@ -220,9 +241,15 @@ async function main() {
       ...witness.publicInputs.nullifiers,
       ...witness.publicInputs.commitmentsOut,
     ];
-    const localOk = await prover.verify(groth16Proof, publicSignals, artifacts.vkey);
+    const localOk = await prover.verify(
+      groth16Proof,
+      publicSignals,
+      artifacts.vkey,
+    );
     if (!localOk)
-      throw new Error("LOCAL VERIFY FAILED — witness does not satisfy the circuit");
+      throw new Error(
+        "LOCAL VERIFY FAILED — witness does not satisfy the circuit",
+      );
     console.log("Local Groth16 verify: OK");
 
     // Conservation (c10): the value the spend consumes equals the sum of its outputs.
@@ -248,15 +275,22 @@ async function main() {
     );
 
     // ── Submit transact on-chain: the deployed Verifier accepts the armada-built proof ──
-    console.log("\nSubmitting transact() on-chain (the deployed Verifier accepts the exit-proof)...");
+    console.log(
+      "\nSubmitting transact() on-chain (the deployed Verifier accepts the exit-proof)...",
+    );
     const signers = await ethers.getSigners();
     const rcpt = await (
-      await (await ethers.getContractAt("PrivacyPool", poolAddress)
+      await ((await ethers
+        .getContractAt("PrivacyPool", poolAddress)
         .connect(signers[0])
-        .transact(calldata.data) as any)
+        .transact(calldata.data)) as any)
     ).wait();
-    console.log(`✓ transact mined (block ${rcpt.blockNumber}) — ON-CHAIN GROTH16 VERIFICATION PASSED`);
-    console.log("c10: the spend conserves value (consumed == outputs sum) and verifies on-chain.");
+    console.log(
+      `✓ transact mined (block ${rcpt.blockNumber}) — ON-CHAIN GROTH16 VERIFICATION PASSED`,
+    );
+    console.log(
+      "c10: the spend conserves value (consumed == outputs sum) and verifies on-chain.",
+    );
   } finally {
     await prover.close();
   }
