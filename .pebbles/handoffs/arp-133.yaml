@@ -1,0 +1,45 @@
+status: completed
+pebble_id: arp-133
+summary: >-
+  Removed the license-hygiene check from armada-poc per operator order 2026-10-20:
+  deleted scripts/check-license-hygiene.sh, its license-hygiene job in
+  .github/workflows/ci.yml, and its step in the exophial gate command in
+  .exophial/config.yaml. Verified the three tracked files hold zero
+  case-insensitive matches of "license-hygiene"/"license hygiene" (c1:
+  script_exists false; c2/c3: matches 0) and that the other CI jobs and the gate
+  command remain intact (c4). Ran the full exophial gate (npm ci + pre-commit +
+  anvil + compile + sizes + tsc + forge), which passed with 788 forge tests, 0
+  failed.
+cost: "~10k tokens"
+commits:
+  - "c8bb991b6fe6729d5f22dd33fb3742f117194a"
+verify_transcript:
+  hooks:
+    - name: exophial-gate
+      outcome: passed
+      duration_s: 169
+e2e_gate:
+  spec: contracts/specs/derived-arp-133.spec.json
+  command: npm ci --legacy-peer-deps --offline --no-audit --no-fund && pre-commit run --all-files && ./scripts/check-anvil-addresses.sh && npm run compile && npm run check:sizes && npx tsc --noEmit --project tsconfig.ci.json && forge test --offline
+  result: passed
+  ran_at_sha: "c8bb991b6fe6729d5f22dd33fb3742f117194a"
+  mocks_in_path: false
+discrimination:
+  - mechanism: red_first
+    oracle: derived-arp-133.spec.json
+    target: "scripts/check-license-hygiene.sh, .github/workflows/ci.yml, .exophial/config.yaml"
+    perturbation: "remove the license-hygiene check from the tracked tree"
+    took:
+      applied:
+        observable: "scripts/check-license-hygiene.sh present in the worktree"
+        moved: [exists, absent]
+      observed:
+        observable: "case-insensitive 'license-hygiene' matches in ci.yml / config.yaml"
+        moved: ["2", "0"]
+    assertions_fired:
+      - assertion: "c1 file_absent: scripts/check-license-hygiene.sh is not present"
+        moved: ["2", "0"]
+    pinned_at: [contracts/specs/derived-arp-133.spec.json]
+    exit_code_before: 1
+    exit_code_after: 0
+    reverted: throwaway_tree_discarded
