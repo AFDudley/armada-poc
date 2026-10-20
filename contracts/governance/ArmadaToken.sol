@@ -86,7 +86,7 @@ contract ArmadaToken is ERC20Votes {
     // ============ One-Time Setup (deployer-only, pre-renounce) ============
 
     /// @notice Set initial whitelist addresses. Callable once by deployer.
-    ///         Matches the setExcludedAddresses pattern in ArmadaGovernor.
+    ///         Matches the deployer-gated one-shot setter pattern.
     function initWhitelist(address[] calldata accounts) external {
         require(msg.sender == tokenDeployer, "ArmadaToken: not deployer");
         require(!whitelistInitialized, "ArmadaToken: whitelist already initialized");
@@ -237,7 +237,7 @@ contract ArmadaToken is ERC20Votes {
 
     /// @notice Helper for redemption denominator math: returns totalSupply minus the
     ///         sum of balanceOf(excluded[i]). Collapses the (1 totalSupply + N balanceOf)
-    ///         multi-call pattern in ArmadaRedemption.circulatingSupply to a single CALL.
+    ///         multi-call pattern in the redemption circulating-supply math to a single CALL.
     /// @param excluded Addresses whose ARM is non-circulating (treasury, redemption contract, etc.)
     function circulatingSupplyOf(address[] calldata excluded) external view returns (uint256 result) {
         result = totalSupply();

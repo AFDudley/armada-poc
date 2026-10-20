@@ -165,7 +165,7 @@ contract ArmadaTokenSharesTest is Test {
 
     // ============ c6 · timelock-set-transferable ============
     // setTransferable(true) succeeds from the timelock alone; windDownContract is
-    // never set (ArmadaWindDown is being removed; nothing here may depend on it).
+    // never set (the old wind-down contract is removed; nothing here may depend on it).
 
     function test_shares_timelockSetTransferable() public {
         assertEq(armToken.windDownContract(), address(0), "windDownContract never set");

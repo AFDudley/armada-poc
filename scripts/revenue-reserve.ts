@@ -234,25 +234,13 @@ const sameAddress = (a: string, b: string) =>
   ethers.getAddress(a) === ethers.getAddress(b);
 
 /** Wiring checked both before and after funding: distributor identity and integration,
- * quorum and delegation treatment of the reserve and its allocator, and wind-down bindings. */
+ * and the delegation treatment of the reserve allocator. */
 async function assertReserveWiring(plan: ReservePreFunding): Promise<void> {
   const distributor = await ethers.getContractAt(
     "RevenueReserveDistributor",
     plan.distributorAddress,
   );
   const token = await ethers.getContractAt("ArmadaToken", plan.armTokenAddress);
-  const lock = await ethers.getContractAt(
-    "RevenueLock",
-    plan.revenueLockAddress,
-  );
-  const governor = await ethers.getContractAt(
-    "ArmadaGovernor",
-    plan.governorAddress,
-  );
-  const windDown = await ethers.getContractAt(
-    "ArmadaWindDown",
-    plan.windDownAddress,
-  );
   if (
     !sameAddress(await distributor.armToken(), plan.armTokenAddress) ||
     !sameAddress(await distributor.revenueLock(), plan.revenueLockAddress) ||
@@ -265,46 +253,8 @@ async function assertReserveWiring(plan: ReservePreFunding): Promise<void> {
   }
   if (!(await distributor.verifyIntegration()))
     throw new Error("Reserve integration check failed");
-  const exclusions: string[] = await governor.getExcludedFromQuorum();
-  for (const address of [plan.distributorAddress, plan.revenueLockAddress]) {
-    if (
-      exclusions.filter((excluded) => sameAddress(excluded, address)).length !==
-      1
-    ) {
-      throw new Error(
-        "RevenueLock and reserve distributor must each be quorum-excluded exactly once",
-      );
-    }
-  }
   if (await token.noDelegation(plan.allocator)) {
     throw new Error("Reserve allocator must not be a noDelegation address");
-  }
-  if (
-    exclusions.some((excluded) => sameAddress(excluded, plan.allocator)) ||
-    sameAddress(await governor.treasuryAddress(), plan.allocator)
-  ) {
-    throw new Error(
-      "Reserve allocator must not be a quorum-excluded custody address",
-    );
-  }
-  const counter = await ethers.getContractAt(
-    "RevenueCounter",
-    await lock.revenueCounter(),
-  );
-  if (
-    !sameAddress(await lock.windDownContract(), plan.windDownAddress) ||
-    !sameAddress(await counter.windDownContract(), plan.windDownAddress) ||
-    !sameAddress(await token.windDownContract(), plan.windDownAddress) ||
-    !sameAddress(await governor.windDownContract(), plan.windDownAddress) ||
-    !sameAddress(await windDown.revenueLock(), plan.revenueLockAddress) ||
-    !sameAddress(
-      await windDown.revenueCounter(),
-      await lock.revenueCounter(),
-    ) ||
-    !sameAddress(await windDown.armToken(), plan.armTokenAddress) ||
-    !sameAddress(await windDown.governor(), plan.governorAddress)
-  ) {
-    throw new Error("Reserve wind-down wiring is incomplete or mismatched");
   }
   await assertAllocatorMultisig(plan.allocator);
 }
@@ -339,12 +289,6 @@ export async function assertReservePreFunding(
     );
   }
   await assertReserveWiring(plan);
-  const windDown = await ethers.getContractAt(
-    "ArmadaWindDown",
-    plan.windDownAddress,
-  );
-  if (await windDown.triggered())
-    throw new Error("Reserve wind-down wiring is already active");
 }
 
 /** JSON-safe original constructor input, including beneficiary order. */
@@ -419,21 +363,6 @@ export async function assertReservePostFunding(
   if (!(await lock.activated()))
     throw new Error("Reserve post-funding check requires an activated lock");
   await assertReserveWiring(plan);
-  const windDown = await ethers.getContractAt(
-    "ArmadaWindDown",
-    plan.windDownAddress,
-  );
-  const redemption = await ethers.getContractAt(
-    "ArmadaRedemption",
-    plan.redemptionAddress,
-  );
-  if (
-    !sameAddress(await windDown.redemptionContract(), plan.redemptionAddress) ||
-    !sameAddress(await redemption.revenueLock(), plan.revenueLockAddress) ||
-    !sameAddress(await redemption.windDown(), plan.windDownAddress)
-  ) {
-    throw new Error("Reserve redemption/wind-down binding mismatch");
-  }
 }
 
 type ActivatableLock = {

@@ -361,9 +361,8 @@ def count_protected_functions_changed() -> int:
 
 def count_wind_down_contract_set() -> int:
     """Scopes the check to this chunk's own deliverables: the new test file
-    and this checker script. Pre-existing tests/deploy scripts for the
-    (still-present, soon-to-be-removed-in-G6) ArmadaWindDown contract call
-    setWindDownContract legitimately and are out of this chunk's scope."""
+    and this checker script. Other tests and deploy scripts that call
+    setWindDownContract legitimately are out of this chunk's scope."""
     count = 0
     for path in (TEST_PATH, Path(__file__).resolve()):
         if path.exists():

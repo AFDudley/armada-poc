@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// ABOUTME: Reserve distributor integration tests using real ARM, RevenueLock, RevenueCounter, wind-down and redemption.
+// ABOUTME: Reserve distributor integration tests using real ARM, RevenueLock and RevenueCounter, with a direct wind-down snapshot.
 // ABOUTME: Covers batch gas, claim liveness, immutable assignments, delegation and wind-down conservation.
 pragma solidity ^0.8.17;
 
@@ -8,26 +8,8 @@ import "../contracts/governance/RevenueReserveDistributor.sol";
 import "../contracts/governance/RevenueLock.sol";
 import "../contracts/governance/RevenueCounter.sol";
 import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaWindDown.sol";
-import "../contracts/governance/ArmadaRedemption.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-/// @dev Only governor/pause shutdown callbacks are stubbed; no governance proposals are exercised.
-contract ReserveShutdownReceiver {
-    bool public windDownActive;
-
-    function setWindDownActive() external {
-        windDownActive = true;
-    }
-}
-
-/// @dev Models a fully settled crowdfund with no remaining participant entitlement.
-contract ReserveSettledCrowdfund {
-    function armStillOwed() external pure returns (uint256) {
-        return 0;
-    }
-}
 
 contract ReserveTestUSDC is ERC20 {
     constructor() ERC20("Test USDC", "USDC") {}
@@ -71,8 +53,6 @@ abstract contract RevenueReserveDistributorFixture is Test {
     RevenueCounter internal counter;
     RevenueLock internal lock;
     RevenueReserveDistributor internal distributor;
-    ArmadaWindDown internal windDown;
-    ArmadaRedemption internal redemption;
     ReserveTestUSDC internal usdc;
     address internal allocator = address(0xA110C);
     address internal alice = address(0xA11CE);
@@ -100,25 +80,7 @@ abstract contract RevenueReserveDistributorFixture is Test {
         lock = new RevenueLock(address(token), address(pool), poolAsset, recipients, amounts);
         distributor.bindRevenueLock(address(lock));
 
-        ReserveSettledCrowdfund crowdfund = new ReserveSettledCrowdfund();
-        redemption = new ArmadaRedemption(address(token), treasury, address(lock), address(crowdfund));
-        ReserveShutdownReceiver shutdown = new ReserveShutdownReceiver();
-        windDown = new ArmadaWindDown(
-            address(token),
-            treasury,
-            address(shutdown),
-            address(redemption),
-            address(shutdown),
-            address(counter),
-            address(lock),
-            address(this),
-            10_000e18,
-            block.timestamp + 365 days
-        );
-        lock.setWindDownContract(address(windDown));
-        counter.setWindDownContract(address(windDown));
-        token.setWindDownContract(address(windDown));
-        redemption.setWindDown(address(windDown));
+        lock.setWindDownContract(address(this));
 
         address[] memory whitelist = new address[](3);
         whitelist[0] = address(this);
@@ -156,6 +118,13 @@ abstract contract RevenueReserveDistributorFixture is Test {
 
     function _failCounter() internal {
         vm.mockCallRevert(address(counter), abi.encodeWithSignature("recognizedRevenueUsd()"), "counter unavailable");
+    }
+
+    /// @dev After G6 there is no wind-down contract. The test holds the lock's
+    ///      wind-down authority (set in setUp) and snapshots the locked portion directly,
+    ///      the one effect the old trigger had on RevenueLock and the distributor.
+    function _triggerWindDown() internal {
+        lock.freezeAtWindDown();
     }
 }
 
@@ -261,7 +230,7 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         _assign(allocator, 1e18);
         assertEq(distributor.beneficiaryCount(), 76);
         _revenue(10_000e18);
-        windDown.governanceTriggerWindDown();
+        _triggerWindDown();
         distributor.distribute();
         assertEq(distributor.totalClaimed(), RESERVE / 10);
     }
@@ -317,7 +286,7 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         assertEq(distributor.totalClaimed(), 0);
         assertEq(distributor.remainingAssignable(), RESERVE - 3_000e18);
         _revenue(1_000_000e18);
-        windDown.governanceTriggerWindDown();
+        _triggerWindDown();
         distributor.distribute();
         assertEq(token.balanceOf(address(distributor)), 1_000e18);
         assertEq(distributor.totalClaimed(), RESERVE);
@@ -360,7 +329,7 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         distributor.distribute();
         assertEq(token.balanceOf(allocator), 2_000e18);
         _revenue(100_000e18);
-        windDown.governanceTriggerWindDown();
+        _triggerWindDown();
         assertEq(distributor.remainingAssignable(), 0);
         assertEq(distributor.effectiveAllocation(allocator), 260_000e18);
         vm.prank(allocator);
@@ -384,7 +353,7 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         _revenue(9_000e18);
         assertEq(distributor.collectedBps(), 0);
         _revenue(10_000e18);
-        windDown.governanceTriggerWindDown();
+        _triggerWindDown();
         _failCounter();
         distributor.distribute();
         assertEq(distributor.collectedBps(), 1000);
@@ -394,9 +363,7 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
 
     // WHY: A zero-unlock wind-down transfers entitlement but must not create spendable tokens.
     function test_permissionlessZeroRevenueWindDownPaysNothing() public {
-        vm.warp(windDown.windDownDeadline() + 1);
-        vm.prank(outsider);
-        windDown.triggerWindDown();
+        _triggerWindDown();
         assertEq(distributor.effectiveAllocation(allocator), RESERVE);
         assertEq(distributor.distribute(), 0);
         assertEq(token.balanceOf(allocator), 0);
@@ -406,7 +373,7 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
     function test_fullyAssignedWindDownHasNoFallback() public {
         _assign(alice, RESERVE);
         _revenue(1_000_000e18);
-        windDown.governanceTriggerWindDown();
+        _triggerWindDown();
         distributor.distribute();
         assertEq(distributor.effectiveAllocation(allocator), 0);
         assertEq(token.balanceOf(alice), RESERVE);
@@ -423,57 +390,6 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         distributor.distribute();
         assertEq(distributor.collectedBps(), 10000);
         assertEq(token.balanceOf(alice), 3_000e18);
-    }
-
-    // WHY: A reserve beneficiary must have the same payout regardless of whether direct holders redeem first.
-    function test_redemptionDirectHolderFirst() public {
-        _redemptionOrder(true);
-    }
-
-    // WHY: Claiming and redeeming the fallback first must not dilute unreleased direct entitlements.
-    function test_redemptionReserveHoldersFirst() public {
-        _redemptionOrder(false);
-    }
-
-    function _redemptionOrder(bool directFirst) internal {
-        _assign(alice, 100_000e18);
-        _assign(bob, 80_000e18);
-        _revenue(100_000e18);
-        windDown.governanceTriggerWindDown();
-        vm.warp(block.timestamp + redemption.REDEMPTION_DELAY() + 1);
-        uint256 circulating = LOCK_TOTAL * 4000 / 10_000;
-        assertEq(redemption.circulatingSupply(), circulating);
-        usdc.mint(address(redemption), circulating / 1e12);
-        if (directFirst) _redeemDirect();
-        uint256 beforeClaims = redemption.circulatingSupply();
-        distributor.distribute();
-        assertEq(redemption.circulatingSupply(), beforeClaims);
-        _redeem(alice);
-        _redeem(bob);
-        _redeem(allocator);
-        if (!directFirst) _redeemDirect();
-        assertEq(usdc.balanceOf(alice), 40_000e6);
-        assertEq(usdc.balanceOf(bob), 32_000e6);
-        assertEq(usdc.balanceOf(allocator), 72_000e6);
-        assertEq(usdc.balanceOf(direct), 816_000e6);
-        assertEq(usdc.balanceOf(address(redemption)), 0);
-        assertEq(redemption.circulatingSupply(), 0);
-    }
-
-    function _redeemDirect() internal {
-        vm.prank(direct);
-        lock.release(direct);
-        _redeem(direct);
-    }
-
-    function _redeem(address who) internal {
-        address[] memory assets = new address[](1);
-        assets[0] = address(usdc);
-        uint256 amount = token.balanceOf(who);
-        vm.startPrank(who);
-        token.approve(address(redemption), amount);
-        redemption.redeem(amount, assets, address(0));
-        vm.stopPrank();
     }
 
     // WHY: Bootstrap has a one-shot trust boundary; no attacker or second bind may replace the lock.
@@ -528,7 +444,7 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         distributor.distribute();
         if (c > 0) _assign(alice, c * quantum);
         _revenue(250_000e18);
-        windDown.governanceTriggerWindDown();
+        _triggerWindDown();
         distributor.distribute();
         assertEq(distributor.totalClaimed(), RESERVE * 6000 / 10_000);
         assertEq(token.balanceOf(address(distributor)), 0);
@@ -568,7 +484,7 @@ contract RevenueReserveDistributorGasTest is RevenueReserveDistributorFixture {
         vm.prank(allocator);
         token.delegate(allocator);
         _revenue(10_000e18);
-        windDown.governanceTriggerWindDown();
+        _triggerWindDown();
         vm.roll(block.number + 1);
         _cool();
         uint256 beforeGas = gasleft();

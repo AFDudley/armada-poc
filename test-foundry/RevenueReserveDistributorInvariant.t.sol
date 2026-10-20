@@ -9,22 +9,14 @@ contract ReserveDistributorHandler is Test {
     RevenueReserveDistributor public immutable distributor;
     RevenueLock public immutable lock;
     RevenueCounter public immutable counter;
-    ArmadaWindDown public immutable windDown;
     address public immutable owner;
     address public immutable allocator;
     address[] public actors;
 
-    constructor(
-        RevenueReserveDistributor _distributor,
-        RevenueLock _lock,
-        RevenueCounter _counter,
-        ArmadaWindDown _windDown,
-        address _owner
-    ) {
+    constructor(RevenueReserveDistributor _distributor, RevenueLock _lock, RevenueCounter _counter, address _owner) {
         distributor = _distributor;
         lock = _lock;
         counter = _counter;
-        windDown = _windDown;
         owner = _owner;
         allocator = _distributor.allocator();
         actors.push(allocator);
@@ -74,7 +66,7 @@ contract ReserveDistributorHandler is Test {
         // Keep enough pre-wind-down history for grants, top-ups and multiple tiers.
         if (gate % 4 != 0 || lock.frozenAtWindDown()) return;
         vm.prank(owner);
-        windDown.governanceTriggerWindDown();
+        lock.freezeAtWindDown();
     }
 }
 
@@ -83,7 +75,7 @@ contract RevenueReserveDistributorInvariantTest is RevenueReserveDistributorFixt
 
     function setUp() public override {
         super.setUp();
-        handler = new ReserveDistributorHandler(distributor, lock, counter, windDown, address(this));
+        handler = new ReserveDistributorHandler(distributor, lock, counter, address(this));
         targetContract(address(handler));
         bytes4[] memory selectors = new bytes4[](5);
         selectors[0] = ReserveDistributorHandler.assign.selector;
@@ -144,7 +136,7 @@ contract RevenueReserveDistributorInvariantTest is RevenueReserveDistributorFixt
             uint256 reported = counter.recognizedRevenueUsd();
             counter.attestRevenue(reported > 1_000_000e18 ? reported : 1_000_000e18);
             vm.warp(block.timestamp + 1000 days);
-            windDown.governanceTriggerWindDown();
+            lock.freezeAtWindDown();
         }
         distributor.distribute();
         assertEq(token.balanceOf(address(distributor)), 0);

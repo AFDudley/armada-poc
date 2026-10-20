@@ -147,7 +147,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     ///         — success, capped-demand-below-MIN_SALE refund, and post-allocation
     ///         refund. Consumers that need to distinguish a successful sale from a
     ///         refundMode finalization must check `phase == Phase.Finalized && !refundMode`
-    ///         in addition to `finalizedAt > 0`. Used by ArmadaGovernor to anchor the
+    ///         in addition to `finalizedAt > 0`. Used by governance to anchor the
     ///         10-day governance quiet period (which starts on any finalization,
     ///         including refundMode).
     uint256 public finalizedAt;
@@ -682,7 +682,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     /// @notice ARM still owed to participants (allocated minus already transferred).
     /// @dev Pre-finalize / Cancel / refundMode / post-claim-deadline all return 0 —
     ///      no participant has a live ARM claim against the contract in those states.
-    ///      Used by ArmadaRedemption.circulatingSupply to count entitled-unclaimed
+    ///      Used by the redemption-supply accounting to count entitled-unclaimed
     ///      ARM as circulating: subtract `balance - armStillOwed()` (the unsold
     ///      portion still in this contract that will be swept to treasury), not the
     ///      full balance.

@@ -116,17 +116,6 @@ const config: HardhatUserConfig = {
       },
     ],
     overrides: {
-      "contracts/governance/ArmadaGovernor.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 1,
-          },
-          viaIR: true,
-          evmVersion: "shanghai",
-        },
-      },
       "contracts/governance/AdapterRegistry.sol": {
         version: "0.8.20",
         settings: {
@@ -134,28 +123,7 @@ const config: HardhatUserConfig = {
           evmVersion: "shanghai",
         },
       },
-      "contracts/governance/ArmadaRedemption.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
       "contracts/governance/ArmadaToken.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/ArmadaTreasuryGov.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/ArmadaWindDown.sol": {
         version: "0.8.20",
         settings: {
           optimizer: { enabled: true, runs: 200 },
@@ -197,13 +165,6 @@ const config: HardhatUserConfig = {
           evmVersion: "shanghai",
         },
       },
-      "contracts/governance/MockRedemptionDeps.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
       "contracts/governance/ProxyImports.sol": {
         version: "0.8.20",
         settings: {
@@ -233,13 +194,6 @@ const config: HardhatUserConfig = {
         },
       },
       "contracts/governance/ShieldPauseController.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/TreasurySteward.sol": {
         version: "0.8.20",
         settings: {
           optimizer: { enabled: true, runs: 200 },

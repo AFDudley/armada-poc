@@ -7,7 +7,6 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import "../contracts/yield/ArmadaYieldVault.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
 import "../contracts/aave-mock/MockAaveSpoke.sol";
 import "../contracts/cctp/MockUSDCV2.sol";
 
@@ -20,7 +19,7 @@ contract YieldInflationPoC is Test {
     ArmadaYieldVault vault;
     MockUSDCV2 usdc;
     MockAaveSpoke spoke;
-    ArmadaTreasuryGov treasury;
+    address treasury;
 
     address attacker = address(0xA11CE);
     address victim = address(0x71C71);
@@ -33,7 +32,7 @@ contract YieldInflationPoC is Test {
         spoke = new MockAaveSpoke();
         usdc.addMinter(address(spoke));
         spoke.addReserve(address(usdc), 500, true); // 5% APY reserve, reserveId 0
-        treasury = new ArmadaTreasuryGov(address(this));
+        treasury = address(0x7EA5);
         vault = new ArmadaYieldVault(address(spoke), 0, address(treasury), "Armada Yield USDC", "ayUSDC");
 
         usdc.mint(attacker, 1 + DONATION);

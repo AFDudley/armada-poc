@@ -3,7 +3,6 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/yield/ArmadaYieldVault.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
 import "../contracts/yield/ArmadaYieldAdapter.sol";
 import "../contracts/governance/MockAdapterRegistry.sol";
 import "../contracts/aave-mock/MockAaveSpoke.sol";
@@ -21,7 +20,7 @@ contract YieldFullHandler is Test {
     ArmadaYieldVault public vault;
     MockUSDCV2 public usdc;
     MockAaveSpoke public spoke;
-    ArmadaTreasuryGov public treasury;
+    address public treasury;
     ArmadaYieldAdapter public adapter;
 
     address[] public actors;
@@ -39,7 +38,7 @@ contract YieldFullHandler is Test {
         ArmadaYieldVault _vault,
         MockUSDCV2 _usdc,
         MockAaveSpoke _spoke,
-        ArmadaTreasuryGov _treasury,
+        address _treasury,
         ArmadaYieldAdapter _adapter,
         address[] memory _actors
     ) {
@@ -169,7 +168,7 @@ contract YieldFullInvariantTest is Test {
     ArmadaYieldVault public vault;
     MockUSDCV2 public usdc;
     MockAaveSpoke public spoke;
-    ArmadaTreasuryGov public treasury;
+    address public treasury;
     ArmadaYieldAdapter public adapter;
     YieldFullHandler public handler;
 
@@ -185,8 +184,8 @@ contract YieldFullInvariantTest is Test {
 
         spoke.addReserve(address(usdc), YIELD_BPS, true);
 
-        // Unified ArmadaTreasuryGov as fee sink (#152/#154); owner arg unused by invariants here.
-        treasury = new ArmadaTreasuryGov(address(this));
+        // Plain fee-sink address (the Safe is the treasury after G6); owner arg unused by invariants here.
+        treasury = address(0x7EA5);
         vault = new ArmadaYieldVault(
             address(spoke),
             0, // reserveId
@@ -286,7 +285,7 @@ contract YieldFullInvariantTest is Test {
 contract YieldNoProfitTest is Test {
     MockUSDCV2 public usdc;
     MockAaveSpoke public spoke;
-    ArmadaTreasuryGov public treasury;
+    address public treasury;
     ArmadaYieldVault public vault;
 
     function setUp() public {
@@ -296,8 +295,8 @@ contract YieldNoProfitTest is Test {
 
         spoke.addReserve(address(usdc), 500, true); // 5% APY
 
-        // Unified ArmadaTreasuryGov as fee sink (#152/#154); owner arg unused by invariants here.
-        treasury = new ArmadaTreasuryGov(address(this));
+        // Plain fee-sink address (the Safe is the treasury after G6); owner arg unused by invariants here.
+        treasury = address(0x7EA5);
         vault = new ArmadaYieldVault(address(spoke), 0, address(treasury), "Armada Yield USDC", "ayUSDC");
     }
 

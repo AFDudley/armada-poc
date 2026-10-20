@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: MIT
 // ABOUTME: Foundry tests for ShieldPauseController — disabled (zero-duration) SC pause and wind-down modes.
-// ABOUTME: Covers SC authorization via governor, same-block pause expiry, timelock unpause, and the post-wind-down budget.
+// ABOUTME: Covers SC authorization via a constructor-set SC address, same-block pause expiry, timelock unpause, and the post-wind-down budget.
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/governance/ShieldPauseController.sol";
-import "../contracts/governance/ArmadaGovernor.sol";
-import "../contracts/governance/ArmadaToken.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
-import "./helpers/GovernorDeployHelper.sol";
 
-contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
+contract ShieldPauseControllerTest is Test {
     // Mirror events for expectEmit
     event ShieldsPaused(address indexed securityCouncil, uint256 expiry);
     event ShieldsUnpaused(address indexed caller);
@@ -19,10 +15,7 @@ contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
     event WindDownActivated();
 
     ShieldPauseController public pauseController;
-    ArmadaGovernor public governor;
-    ArmadaToken public armToken;
     TimelockController public timelock;
-    ArmadaTreasuryGov public treasury;
 
     address public deployer = address(this);
     address public alice = address(0xA11CE);
@@ -37,21 +30,13 @@ contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
     uint256 constant TWENTY_FOUR_HOURS = 24 hours;
 
     function setUp() public {
-        // Deploy governance stack
+        // Deploy the timelock (the governance unpause authority)
         address[] memory proposers = new address[](0);
         address[] memory executors = new address[](0);
         timelock = new TimelockController(TWO_DAYS, proposers, executors, deployer);
 
-        armToken = new ArmadaToken(deployer, address(timelock));
-        treasury = new ArmadaTreasuryGov(address(timelock));
-        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
-
-        // Set SC on governor
-        vm.prank(address(timelock));
-        governor.setSecurityCouncil(securityCouncil);
-
-        // Deploy shield pause controller
-        pauseController = new ShieldPauseController(address(governor), address(timelock));
+        // Deploy the shield pause controller with a plain SC address (the Safe after G6).
+        pauseController = new ShieldPauseController(securityCouncil, address(timelock));
     }
 
     // ======== Basic Pause / Unpause ========
@@ -85,16 +70,6 @@ contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
         pauseController.pauseShields();
     }
 
-    function test_ejectedSC_cannotPause() public {
-        // Eject SC by setting to address(0)
-        vm.prank(address(timelock));
-        governor.setSecurityCouncil(address(0));
-
-        vm.prank(securityCouncil);
-        vm.expectRevert("ShieldPauseController: not SC");
-        pauseController.pauseShields();
-    }
-
     // WHY: a zero-duration pause is never active, so there is nothing for governance to lift.
     function test_timelockCannotUnpauseAfterNoOpPause() public {
         vm.prank(securityCouncil);
@@ -118,26 +93,6 @@ contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
         vm.prank(randomUser);
         vm.expectRevert("ShieldPauseController: not timelock");
         pauseController.unpauseShields();
-    }
-
-    // ======== SC Change Propagation ========
-
-    function test_governorSCChangeAffectsWhoCanPause() public {
-        address newSC = address(0x5C5C5C);
-
-        // Change SC on governor
-        vm.prank(address(timelock));
-        governor.setSecurityCouncil(newSC);
-
-        // Old SC cannot pause
-        vm.prank(securityCouncil);
-        vm.expectRevert("ShieldPauseController: not SC");
-        pauseController.pauseShields();
-
-        // New SC is authorized (the call succeeds), but the pause has no effect
-        vm.prank(newSC);
-        pauseController.pauseShields();
-        assertFalse(pauseController.shieldsPaused());
     }
 
     // ======== Wind-Down Contract Setup ========
@@ -343,13 +298,24 @@ contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
         assertEq(pauseController.MAX_PAUSE_DURATION(), 0);
     }
 
-    function test_constructorRejectsZeroGovernor() public {
-        vm.expectRevert("ShieldPauseController: zero governor");
+    // WHY: After G6 the SC address is a plain constructor-set value (the Safe), not read
+    // from a governor. Pin that the constructor stores it and that it gates pauseShields.
+    function test_securityCouncilIsConstructorSet() public {
+        assertEq(pauseController.securityCouncil(), securityCouncil);
+        vm.prank(securityCouncil);
+        pauseController.pauseShields();
+        vm.prank(randomUser);
+        vm.expectRevert("ShieldPauseController: not SC");
+        pauseController.pauseShields();
+    }
+
+    function test_constructorRejectsZeroSecurityCouncil() public {
+        vm.expectRevert("ShieldPauseController: zero security council");
         new ShieldPauseController(address(0), address(timelock));
     }
 
     function test_constructorRejectsZeroTimelock() public {
         vm.expectRevert("ShieldPauseController: zero timelock");
-        new ShieldPauseController(address(governor), address(0));
+        new ShieldPauseController(securityCouncil, address(0));
     }
 }

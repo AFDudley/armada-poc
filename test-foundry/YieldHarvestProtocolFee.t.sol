@@ -6,7 +6,6 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/yield/ArmadaYieldVault.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
 import "../contracts/aave-mock/MockAaveSpoke.sol";
 import "../contracts/cctp/MockUSDCV2.sol";
 
@@ -18,7 +17,7 @@ contract YieldHarvestProtocolFeeTest is Test {
     ArmadaYieldVault public vault;
     MockUSDCV2 public usdc;
     MockAaveSpoke public spoke;
-    ArmadaTreasuryGov public treasury;
+    address public treasury;
 
     address public alice = address(0xA11CE);
     address public bob = address(0xB0B);
@@ -39,7 +38,7 @@ contract YieldHarvestProtocolFeeTest is Test {
         usdc.addMinter(address(spoke));
         spoke.addReserve(address(usdc), YIELD_BPS, true);
 
-        treasury = new ArmadaTreasuryGov(address(this));
+        treasury = address(0x7EA5);
         vault = new ArmadaYieldVault(address(spoke), 0, address(treasury), "Armada Yield USDC", "ayUSDC");
 
         usdc.mint(alice, DEPOSIT_AMOUNT * 4);

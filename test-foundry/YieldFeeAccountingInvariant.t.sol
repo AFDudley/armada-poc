@@ -5,7 +5,6 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/yield/ArmadaYieldVault.sol";
-import "../contracts/governance/ArmadaTreasuryGov.sol";
 import "../contracts/aave-mock/MockAaveSpoke.sol";
 import "../contracts/cctp/MockUSDCV2.sol";
 
@@ -87,7 +86,7 @@ abstract contract YieldFeeSetup is Test {
         MockAaveSpoke spoke = new MockAaveSpoke();
         usdc.addMinter(address(spoke));
         spoke.addReserve(address(usdc), 500, true); // 5% APY
-        ArmadaTreasuryGov treasury = new ArmadaTreasuryGov(address(this));
+        address treasury = address(0x7EA5);
         vault = new ArmadaYieldVault(address(spoke), 0, address(treasury), "Armada Yield USDC", "ayUSDC");
 
         address[] memory actors = new address[](4);

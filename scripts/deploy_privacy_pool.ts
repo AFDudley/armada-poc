@@ -214,7 +214,7 @@ async function deployHub(): Promise<HubDeploymentInfo> {
   );
 
   // 7. Resolve treasury address and initialize PrivacyPool
-  // Priority: env var > governance manifest (ArmadaTreasuryGov) > deployer (local only).
+  // Priority: env var > governance manifest (the Safe treasury) > deployer (local only).
   // The env var override is refused on mainnet by getNetworkConfig().
   console.log("\n7. Initializing PrivacyPool...");
   const govDeployment = loadDeployment(getGovernanceDeploymentFile());
@@ -224,7 +224,7 @@ async function deployHub(): Promise<HubDeploymentInfo> {
     console.log("   Using TREASURY_ADDRESS from env");
   } else if (govDeployment?.contracts?.treasury) {
     treasuryAddress = govDeployment.contracts.treasury;
-    console.log("   Using ArmadaTreasuryGov from governance deployment");
+    console.log("   Using treasury from governance deployment");
   } else if (isLocal()) {
     treasuryAddress = deployer.address;
     console.log(

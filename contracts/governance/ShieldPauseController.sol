@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: MIT
 // ABOUTME: Shield pause controller; the SC pause is disabled (zero duration), wind-down modes remain.
-// ABOUTME: Reads SC address from governor; supports post-wind-down single-pause behavior.
+// ABOUTME: The SC address is set once at construction (the Safe holds pause authority after G6).
 pragma solidity ^0.8.17;
 
 import "./IShieldPauseController.sol";
-
-/// @notice Minimal interface to read securityCouncil from ArmadaGovernor
-interface IArmadaGovernorSC {
-    function securityCouncil() external view returns (address);
-}
 
 /// @title ShieldPauseController — wind-down shield modes; SC pause disabled
 /// @notice MAX_PAUSE_DURATION is zero, so an SC pause expires in the block it is made:
@@ -17,9 +12,10 @@ interface IArmadaGovernorSC {
 ///         always false). Wind-down behaviour is unaffected: once wind-down is active,
 ///         `shieldsPaused()` and `withdrawOnlyMode()` are permanently true.
 ///
-///         The SC address is read from the ArmadaGovernor contract, so changes to
-///         the governor's securityCouncil (including ejection via denied veto) are
-///         automatically reflected here without a separate setter.
+///         The SC address is set once at construction. After G6 the governor is gone;
+///         the Safe holds pause authority (lab book decision 10's pattern). Neither the
+///         G6 brief nor the lab book names the shield-pause holder, so it is a plain
+///         constructor-set address.
 ///
 ///         Post-wind-down behavior: the SC can invoke exactly one pause. After that
 ///         pause expires or is lifted, no further pauses are possible. This prevents
@@ -28,8 +24,8 @@ interface IArmadaGovernorSC {
 contract ShieldPauseController is IShieldPauseController {
     // ============ State ============
 
-    /// @notice Governor contract (reads securityCouncil from here)
-    IArmadaGovernorSC public immutable governor;
+    /// @notice Security council address with pause authority (the Safe after G6). Set once at construction.
+    address public immutable securityCouncil;
 
     /// @notice Timelock address (governance authority for early unpause)
     address public immutable pauseTimelock;
@@ -61,13 +57,13 @@ contract ShieldPauseController is IShieldPauseController {
 
     // ============ Constructor ============
 
-    /// @param _governor ArmadaGovernor contract (reads SC address from here)
+    /// @param _securityCouncil Security council / pause authority (the Safe after G6)
     /// @param _pauseTimelock Timelock address for governance unpause
-    constructor(address _governor, address _pauseTimelock) {
-        require(_governor != address(0), "ShieldPauseController: zero governor");
+    constructor(address _securityCouncil, address _pauseTimelock) {
+        require(_securityCouncil != address(0), "ShieldPauseController: zero security council");
         require(_pauseTimelock != address(0), "ShieldPauseController: zero timelock");
 
-        governor = IArmadaGovernorSC(_governor);
+        securityCouncil = _securityCouncil;
         pauseTimelock = _pauseTimelock;
     }
 
@@ -103,9 +99,8 @@ contract ShieldPauseController is IShieldPauseController {
     ///         Post-wind-down: exactly one invocation allowed.
     function pauseShields() external {
         // sc != address(0) check is redundant: msg.sender is never address(0) in
-        // EVM, so msg.sender == sc already implies sc != address(0). Pre-launch
-        // (governor.securityCouncil() == 0) is rejected by the first conjunct alone.
-        address sc = governor.securityCouncil();
+        // EVM, so msg.sender == sc already implies sc != address(0).
+        address sc = securityCouncil;
         require(msg.sender == sc, "ShieldPauseController: not SC");
         require(!_isPaused(), "ShieldPauseController: already paused");
 

@@ -14,15 +14,6 @@ import "../contracts/cctp/MockUSDCV2.sol";
 import "../contracts/cctp/MockCCTPV2.sol";
 import "./helpers/PoseidonLinker.sol";
 
-/// @notice Minimal mock that satisfies IArmadaGovernorSC (securityCouncil() view)
-contract MockGovernorSC {
-    address public securityCouncil;
-
-    constructor(address _sc) {
-        securityCouncil = _sc;
-    }
-}
-
 /// @title TransactModuleWindDownTest — Withdraw-only mode blocks private transfers
 /// @dev Tests that after wind-down activation, transact() reverts for pure transfers
 ///      but allows unshields. Covers spec §Wind-Down → Sequence step 3.
@@ -36,7 +27,6 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
     MockTokenMessengerV2 public tokenMessenger;
     MockMessageTransmitterV2 public messageTransmitter;
     ShieldPauseController public pauseController;
-    MockGovernorSC public mockGovernor;
 
     address public owner;
     address public treasury;
@@ -80,8 +70,7 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
         pool.setTestingMode(true);
 
         // Deploy ShieldPauseController
-        mockGovernor = new MockGovernorSC(securityCouncil);
-        pauseController = new ShieldPauseController(address(mockGovernor), owner);
+        pauseController = new ShieldPauseController(securityCouncil, owner);
 
         // Wire wind-down contract to pause controller
         pauseController.setWindDownContract(windDownContract);

@@ -45,7 +45,7 @@ interface IAaveSpoke {
  *         the protocol's cut to treasury when nobody redeems. Cadence is read from
  *         `ArmadaFeeModule.getHarvestInterval()` (governance-owned, default 7 days).
  *
- *      Treasury (ArmadaTreasuryGov) receives fee via plain `safeTransfer`; `feeModule`,
+ *      Treasury (the Safe) receives fee via plain `safeTransfer`; `feeModule`,
  *      when wired, records the fee for RevenueCounter accounting.
  */
 contract ArmadaYieldVault is ERC20, ReentrancyGuard {
@@ -81,7 +81,7 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
     /// @notice The reserve ID in the Spoke
     uint256 public immutable reserveId;
 
-    /// @notice Treasury address for yield fees (ArmadaTreasuryGov). Set once at deployment.
+    /// @notice Treasury address for yield fees (the Safe). Set once at deployment.
     address public immutable treasury;
 
     // ============ State ============
