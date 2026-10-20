@@ -1,0 +1,70 @@
+status: completed
+pebble_id: arp-d0f
+summary: >
+  config/networks.test.ts referenced bare __dirname at three sites (lines
+  392, 950, 1049), which is undefined under ESM, so
+  'npm run test:config' crashed with 'ReferenceError: __dirname is not
+  defined' before any networks config test executed. The fix adds the
+  repo's existing ESM path idiom at the top of the file —
+  `import { fileURLToPath } from "url"` plus
+  `const __dirname = path.dirname(fileURLToPath(import.meta.url))` —
+  keeping all three usage sites working. Only config/networks.test.ts
+  changes (3 insertions); production config-loader behavior and other
+  tests are untouched. Verified: 'npm run test:config' now completes
+  (run_completed) with zero __dirname ReferenceErrors and 66 networks
+  config tests execute and report real pass/fail results (the 66
+  failures are the pre-existing 'require is not defined' ESM gap in the
+  same file, out of this pebble's scope per c2). Discrimination
+  (mutation_kill): removing the ESM __dirname line made test:config
+  crash with the __dirname ReferenceError (the checker observed
+  dirname_reference_error_count flip 0→1); restoring the line restored
+  exit 66 with 0 __dirname errors.
+cost: "~30k tokens"
+commits:
+  - "4b94e04e"
+verify_transcript:
+  hooks:
+    - name: "npm run test:config (acceptance c1: run completes under ESM, networks tests execute)"
+      outcome: passed
+      duration_s: 1.4
+    - name: "npm run test:config (mutation_kill perturbation: ESM __dirname line removed)"
+      outcome: failed
+      duration_s: 1.3
+e2e_gate:
+  spec: contracts/specs/derived-arp-d0f.spec.json
+  command: "npm run test:config"
+  result: passed
+  ran_at_sha: "4b94e04e"
+  mocks_in_path: false
+discrimination:
+  - mechanism: mutation_kill
+    oracle: "npm run test:config"
+    target: "config/networks.test.ts:11 (const __dirname = path.dirname(fileURLToPath(import.meta.url));)"
+    perturbation: "Temporarily removed the ESM __dirname definition line from config/networks.test.ts, then re-ran test:config."
+    took:
+      applied:
+        observable: "Re-read config/networks.test.ts lines 7-12 after the write: definition line absent (only the url import remains)"
+        moved:
+          - "const __dirname = path.dirname(fileURLToPath(import.meta.url));"
+          - "absent (only import { fileURLToPath } from \"url\" remains)"
+      observed:
+        observable: "npm run test:config output"
+        moved:
+          - "Run completed: 0 __dirname errors, 66 failing networks tests, exit 66"
+          - "Crash: 'ReferenceError: __dirname is not defined', exit 1"
+    assertions_fired:
+      - assertion: "dirname_reference_error_count"
+        moved:
+          - "0"
+          - "1"
+    pinned_at:
+      - "config/networks.test.ts"
+    exit_code_before: 66
+    exit_code_after: 1
+    reverted: true
+    negative_control:
+      variant: "Restored the definition line (git checkout -- config/networks.test.ts) and re-ran test:config — the arm that must NOT move"
+      applied: "Re-read config/networks.test.ts after restore: line 11 definition present"
+      observable: "npm run test:config output after restore"
+      unmoved: "exit 66, 0 __dirname errors"
+      exit_code: 66
