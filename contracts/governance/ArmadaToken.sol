@@ -50,6 +50,14 @@ contract ArmadaToken is ERC20Votes {
     /// @notice Contracts authorized to call delegateOnBehalf (e.g. RevenueLock, Crowdfund).
     mapping(address => bool) public authorizedDelegator;
 
+    // ============ Authorized Burner State ============
+
+    /// @notice The G3 burn gate: addresses authorized to call burnFrom (only ShieldedRagequit,
+    ///          registered by the deployer one-shot via initBurners, or the timelock via addBurner).
+    mapping(address => bool) public authorizedBurner;
+    /// @notice One-shot deployer lock for the authorizedBurner registry.
+    bool public burnersInitialized;
+
     // ============ Events ============
 
     event WhitelistAdded(address indexed account);
@@ -60,6 +68,8 @@ contract ArmadaToken is ERC20Votes {
     event NoDelegationInitialized(address[] accounts);
     event AuthorizedDelegatorsInitialized(address[] delegators);
     event AuthorizedDelegatorAdded(address indexed delegator);
+    event BurnersInitialized(address[] burners);
+    event BurnerAdded(address indexed burner);
 
     // ============ Constructor ============
 
@@ -146,6 +156,38 @@ contract ArmadaToken is ERC20Votes {
         if (authorizedDelegator[delegator]) return;
         authorizedDelegator[delegator] = true;
         emit AuthorizedDelegatorAdded(delegator);
+    }
+
+    /// @notice Register the addresses authorized to call burnFrom (G3). Deployer-only, one-shot.
+    ///         Mirrors the one-shot authorized-caller pattern of addAuthorizedDelegator; only
+    ///         ShieldedRagequit may be registered as the sole authorized burner.
+    function initBurners(address[] calldata burners) external {
+        require(msg.sender == tokenDeployer, "ArmadaToken: not deployer");
+        require(!burnersInitialized, "ArmadaToken: burners already initialized");
+        for (uint256 i = 0; i < burners.length; i++) {
+            require(burners[i] != address(0), "ArmadaToken: zero address");
+            authorizedBurner[burners[i]] = true;
+        }
+        burnersInitialized = true;
+        emit BurnersInitialized(burners);
+    }
+
+    /// @notice Authorize an address to call burnFrom. Timelock-only, add-only (mirrors
+    ///         addAuthorizedDelegator).
+    function addBurner(address burner) external {
+        require(msg.sender == timelock, "ArmadaToken: not timelock");
+        if (authorizedBurner[burner]) return;
+        authorizedBurner[burner] = true;
+        emit BurnerAdded(burner);
+    }
+
+    /// @notice Burns `armAmount` of the caller's own ARM (G3). Only callable by an authorized
+    ///         burner (ShieldedRagequit); any other caller reverts. The holder's ARM is destroyed
+    ///         and totalSupply is reduced.
+    function burnFrom(address account, uint256 amount) external {
+        require(authorizedBurner[msg.sender], "ArmadaToken: not authorized burner");
+        require(account != address(0), "ArmadaToken: zero address");
+        _burn(account, amount);
     }
 
     /// @notice Remove the deployer from the transfer whitelist. Deployer-only, callable once.
