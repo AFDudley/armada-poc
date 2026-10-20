@@ -23,6 +23,9 @@ contract VerifierModule is PrivacyPoolStorage, IVerifierModule {
     /// @notice Emitted whenever a verification key is (re)registered for a circuit shape.
     event VerifyingKeySet(uint256 nullifiers, uint256 commitments, VerifyingKey verifyingKey);
 
+    /// @notice Emitted whenever an owned-shape verification key is (re)registered.
+    event OwnedVerifyingKeySet(uint256 nullifiers, uint256 commitments, VerifyingKey verifyingKey);
+
     /// @notice Emitted when the testing-mode proof bypass is toggled.
     event TestingModeSet(bool enabled);
 
@@ -41,6 +44,24 @@ contract VerifierModule is PrivacyPoolStorage, IVerifierModule {
         verificationKeys[_nullifiers][_commitments] = _verifyingKey;
 
         emit VerifyingKeySet(_nullifiers, _commitments, _verifyingKey);
+    }
+
+    /// @notice Registers the verification key for an owned circuit shape (P2a).
+    /// @dev Owner-gated. Written to the disjoint ownedVerificationKeys registry so an
+    ///      owned-shape proof can never verify against a plain-shape key or the reverse.
+    /// @param _nullifiers Nullifier count of the circuit (N).
+    /// @param _commitments Commitment count of the circuit (M).
+    /// @param _verifyingKey Groth16 verification key to store.
+    function setVerificationKeyOwned(uint256 _nullifiers, uint256 _commitments, VerifyingKey calldata _verifyingKey)
+        external
+        override
+        onlyDelegatecall
+    {
+        require(msg.sender == owner, "VerifierModule: Only owner");
+
+        ownedVerificationKeys[_nullifiers][_commitments] = _verifyingKey;
+
+        emit OwnedVerifyingKeySet(_nullifiers, _commitments, _verifyingKey);
     }
 
     /// @notice Returns the verification key registered for a circuit shape.
@@ -68,6 +89,13 @@ contract VerifierModule is PrivacyPoolStorage, IVerifierModule {
     /// @return Never returns — always reverts.
     function verify(Transaction calldata) external view override onlyDelegatecall returns (bool) {
         revert("VerifierModule: verify handled by PrivacyPool router");
+    }
+
+    /// @notice Owned proof verification does not run in this module — it lives on the
+    ///         router (`PrivacyPool.verifyOwned`), exactly as `verify` does.
+    /// @return Never returns — always reverts.
+    function verifyOwned(Transaction calldata) external view override onlyDelegatecall returns (bool) {
+        revert("VerifierModule: verifyOwned handled by PrivacyPool router");
     }
 
     /// @notice Hashes the bound parameters into a SNARK scalar field element.

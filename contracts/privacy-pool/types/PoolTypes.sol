@@ -114,6 +114,16 @@ struct BoundParams {
     address adaptContract;
     bytes32 adaptParams;
     CommitmentCiphertext[] commitmentCiphertext;
+    // P2a: the circuit's public owner input, zero for a non-owned transaction.
+    // The router binds it as a public input for the owned proof, and
+    // transactOwned checks it against msg.sender.
+    bytes32 ownerField;
+    // P2a: plaintext preimages for contract-owned outputs. Zero-length when no
+    // output is contract-owned; otherwise one entry per commitment, every field
+    // zero for an output that stays encrypted and populated for a contract-owned
+    // output. The pool hashes each non-zero entry and requires it to equal the
+    // matching commitment before it writes the entry to preimageOf.
+    CommitmentPreimage[] publicOutputs;
 }
 
 /// @notice A privacy pool transaction: a proof, its public anchors, the spent

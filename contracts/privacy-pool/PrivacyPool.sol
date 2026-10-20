@@ -148,6 +148,15 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
     }
 
     /**
+     * @notice Execute contract-owned transactions (P2a): a contract spends and re-mints
+     *         its own notes with no EdDSA signature, authorized by msg.sender.
+     * @param _transactions Array of contract-owned transactions to process
+     */
+    function transactOwned(Transaction[] calldata _transactions) external nonReentrant {
+        _delegatecall(transactModule, abi.encodeCall(ITransactModule.transactOwned, (_transactions)));
+    }
+
+    /**
      * @notice Atomic cross-chain unshield to a client chain
      * @param _transaction Transaction with unshield proof
      * @param destinationDomain Target client chain's CCTP domain
@@ -361,6 +370,21 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
     }
 
     /**
+     * @notice Set a verification key for an owned circuit shape (P2a)
+     * @dev Owner-gated. Kept disjoint from setVerificationKey so owned and plain
+     *      keys never collide.
+     * @param _nullifiers Number of nullifiers
+     * @param _commitments Number of commitments
+     * @param _key The verification key
+     */
+    function setVerificationKeyOwned(uint256 _nullifiers, uint256 _commitments, VerifyingKey calldata _key) external {
+        require(msg.sender == owner, "PrivacyPool: Only owner");
+        _delegatecall(
+            verifierModule, abi.encodeCall(IVerifierModule.setVerificationKeyOwned, (_nullifiers, _commitments, _key))
+        );
+    }
+
+    /**
      * @notice Set the shield fee in basis points
      * @param _feeBps Fee in basis points (50 = 0.50%)
      */
@@ -509,6 +533,55 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
 
         // Always return true in gas estimation transactions
         // This allows relayer fee calculation without computing a proof
+        // solhint-disable-next-line avoid-tx-origin
+        if (tx.origin == VERIFICATION_BYPASS) {
+            return true;
+        }
+
+        return validity;
+    }
+
+    /**
+     * @notice Verify a contract-owned transaction's SNARK proof (P2a)
+     * @dev Uses the owned verifying-key set and binds ownerField as the final public
+     *      input. Called by TransactModule during delegatecall via staticcall to this
+     *      router, exactly as `verify` is.
+     * @param _transaction The transaction to verify
+     * @return True if proof is valid
+     */
+    function verifyOwned(Transaction calldata _transaction) external view returns (bool) {
+        // POC: Bypass verification in testing mode
+        if (testingMode) {
+            return true;
+        }
+
+        uint256 nullifiersLength = _transaction.nullifiers.length;
+        uint256 commitmentsLength = _transaction.commitments.length;
+
+        // Retrieve the OWNED verification key for this circuit configuration
+        VerifyingKey memory verifyingKey = ownedVerificationKeys[nullifiersLength][commitmentsLength];
+
+        // Check if verifying key is set (alpha1.x == 0 means not set)
+        require(verifyingKey.alpha1.x != 0, "PrivacyPool: Owned verification key not set");
+
+        // Construct public inputs array
+        // Format: [merkleRoot, boundParamsHash, nullifiers..., commitments..., ownerField]
+        uint256[] memory inputs = new uint256[](3 + nullifiersLength + commitmentsLength);
+
+        inputs[0] = uint256(_transaction.merkleRoot);
+        inputs[1] = uint256(keccak256(abi.encode(_transaction.boundParams))) % SNARK_SCALAR_FIELD;
+        for (uint256 i = 0; i < nullifiersLength; i++) {
+            inputs[2 + i] = uint256(_transaction.nullifiers[i]);
+        }
+        for (uint256 i = 0; i < commitmentsLength; i++) {
+            inputs[2 + nullifiersLength + i] = uint256(_transaction.commitments[i]);
+        }
+        // Final input: the circuit's public owner field
+        inputs[2 + nullifiersLength + commitmentsLength] = uint256(_transaction.boundParams.ownerField);
+
+        bool validity = Snark.verify(verifyingKey, _transaction.proof, inputs);
+
+        // Always return true in gas estimation transactions
         // solhint-disable-next-line avoid-tx-origin
         if (tx.origin == VERIFICATION_BYPASS) {
             return true;

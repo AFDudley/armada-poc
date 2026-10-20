@@ -75,7 +75,9 @@ contract OnlyDelegatecallTest is Test {
             chainID: 0,
             adaptContract: address(0),
             adaptParams: bytes32(0),
-            commitmentCiphertext: ciphertext
+            commitmentCiphertext: ciphertext,
+            ownerField: bytes32(0),
+            publicOutputs: new CommitmentPreimage[](0)
         });
 
         SnarkProof memory proof =
@@ -143,7 +145,9 @@ contract OnlyDelegatecallTest is Test {
             chainID: 0,
             adaptContract: address(0),
             adaptParams: bytes32(0),
-            commitmentCiphertext: ciphertext
+            commitmentCiphertext: ciphertext,
+            ownerField: bytes32(0),
+            publicOutputs: new CommitmentPreimage[](0)
         });
 
         SnarkProof memory proof =

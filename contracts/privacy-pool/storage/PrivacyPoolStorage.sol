@@ -216,10 +216,26 @@ abstract contract PrivacyPoolStorage {
     address public adapterRegistry;
 
     // ══════════════════════════════════════════════════════════════════════════
+    // CONTRACT-OWNED NOTES (P2a)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /// @notice Public preimage registry for contract-owned commitments. The pool
+    ///         writes an entry only for a commitment it has itself hashed and
+    ///         matched to the proof, so any reader can learn a contract-owned
+    ///         note's token and value from its commitment with no off-chain index.
+    mapping(bytes32 => CommitmentPreimage) public preimageOf;
+
+    /// @notice Verification keys for the owned circuit shapes, kept disjoint from
+    ///         `verificationKeys` so a plain-shape proof can never verify against an
+    ///         owned-shape key or the reverse: nullifierCount -> commitmentCount ->
+    ///         VerifyingKey.
+    mapping(uint256 => mapping(uint256 => VerifyingKey)) internal ownedVerificationKeys;
+
+    // ══════════════════════════════════════════════════════════════════════════
     // RESERVED FOR FUTURE USE
     // ══════════════════════════════════════════════════════════════════════════
 
     /// @dev Reserved storage slots for future upgrades
     ///      When adding new state variables above, decrement this gap
-    uint256[43] private __gap;
+    uint256[41] private __gap;
 }

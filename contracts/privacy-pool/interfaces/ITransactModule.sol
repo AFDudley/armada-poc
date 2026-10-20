@@ -47,6 +47,20 @@ interface ITransactModule {
     );
 
     /**
+     * @notice Emitted when a contract-owned private transaction is processed
+     * @param treeNumber The merkle tree number
+     * @param startPosition Starting leaf index for new commitments
+     * @param hash Array of commitment hashes
+     */
+    event TransactOwned(uint256 treeNumber, uint256 startPosition, bytes32[] hash);
+
+    /**
+     * @notice Emitted when a contract-owned commitment's preimage is recorded
+     * @param commitment The commitment whose plaintext preimage was written
+     */
+    event PreimageRecorded(bytes32 commitment);
+
+    /**
      * @notice Execute private transactions (transfers and/or local unshields)
      * @dev Validates proofs, nullifies inputs, creates new commitments
      *      For local unshields, transfers tokens to recipient
@@ -54,6 +68,16 @@ interface ITransactModule {
      * @param _transactions Array of transactions to process
      */
     function transact(Transaction[] calldata _transactions) external;
+
+    /**
+     * @notice Execute contract-owned transactions (a contract spends and re-mints its
+     *         own notes with no EdDSA signature).
+     * @dev Authorized by msg.sender equal to each transaction's ownerField. No
+     *      unshield is allowed on this path. Every output is contract-owned, so its
+     *      plaintext preimage is supplied and recorded in preimageOf.
+     * @param _transactions Array of contract-owned transactions to process
+     */
+    function transactOwned(Transaction[] calldata _transactions) external;
 
     /**
      * @notice Atomic cross-chain unshield
