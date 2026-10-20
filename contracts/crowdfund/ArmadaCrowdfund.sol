@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
+import "../privacy-pool/PrivacyPool.sol";
+import "../privacy-pool/types/PoolTypes.sol";
 import "./IArmadaCrowdfund.sol";
 
 /// @notice Minimal ArmadaToken interface for atomic delegation on claim.
@@ -101,6 +103,8 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     address public immutable launchTeam;
     /// @notice Security council multisig — can cancel the sale at any pre-finalization phase.
     address public immutable securityCouncil;
+    /// @notice Privacy pool that receives the sale proceeds as one Safe-owned shielded note (decision 16).
+    PrivacyPool public immutable pool;
 
     // ============ State ============
     // Pack 5-byte run into one slot (audit-68): Phase (1) + 2×uint8 (2) + 2×bool (2) = 5 bytes.
@@ -192,7 +196,8 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         address _treasury,
         address _launchTeam,
         address _securityCouncil,
-        uint256 _openTimestamp
+        uint256 _openTimestamp,
+        address _pool
     ) EIP712("ArmadaCrowdfund", "1") {
         require(_usdc != address(0), "ArmadaCrowdfund: zero usdc");
         require(_armToken != address(0), "ArmadaCrowdfund: zero armToken");
@@ -203,6 +208,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         usdc = IERC20(_usdc);
         armToken = IERC20(_armToken);
         treasury = _treasury;
+        pool = PrivacyPool(_pool);
         launchTeam = _launchTeam;
         securityCouncil = _securityCouncil;
 
@@ -552,7 +558,26 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         // treasuryReceived + contractDust + sum(refunds) == totalCommitted.
         uint256 roundingBuffer = participantNodes.length;
         uint256 proceedsPush = totalAllocUsdc_ > roundingBuffer ? totalAllocUsdc_ - roundingBuffer : 0;
-        usdc.safeTransfer(treasury, proceedsPush);
+        // G5: shield the sale proceeds into the pool as one Safe-owned note (decision 16).
+        // Reads the Safe's owner-derived npk from the pool's feeRecipient (P2b), approves the
+        // pool to pull the proceeds (forceApprove, no open approval left), then shields.
+        if (proceedsPush > 0) {
+            bytes32 safeNpk = pool.feeRecipient();
+            ShieldRequest[] memory requests = new ShieldRequest[](1);
+            requests[0] = ShieldRequest({
+                preimage: CommitmentPreimage({
+                    npk: safeNpk,
+                    token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0}),
+                    value: uint120(proceedsPush)
+                }),
+                ciphertext: ShieldCiphertext({
+                    encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)],
+                    shieldKey: bytes32(0)
+                })
+            });
+            usdc.forceApprove(address(pool), proceedsPush);
+            pool.shield(requests, address(0));
+        }
 
         emit Finalized(saleSize_, allocatedArm, totalAllocUsdc_, false, capped, totalCommitted);
     }

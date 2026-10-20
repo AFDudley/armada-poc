@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
+import "./helpers/CrowdfundPoolDeploy.sol";
 import "../contracts/crowdfund/ArmadaCrowdfund.sol";
 import "../contracts/crowdfund/IArmadaCrowdfund.sol";
 import "../contracts/governance/ArmadaToken.sol";
@@ -257,9 +258,10 @@ contract CrowdfundHandler is Test {
 }
 
 /// @title CrowdfundInvariantTest — Foundry invariant test suite for ArmadaCrowdfund
-contract CrowdfundInvariantTest is Test {
+contract CrowdfundInvariantTest is Test, CrowdfundPoolDeploy  {
     ArmadaCrowdfund public crowdfund;
     MockUSDCV2 public usdc;
+    PrivacyPool public pool;
     ArmadaToken public armToken;
     CrowdfundHandler public handler;
 
@@ -281,13 +283,15 @@ contract CrowdfundInvariantTest is Test {
         usdc = new MockUSDCV2("Mock USDC", "USDC");
 
         // Deploy crowdfund
+pool = _deployPool(address(usdc), address(0xBEEF), address(this), bytes32(0));
         crowdfund = new ArmadaCrowdfund(
             address(usdc),
             address(armToken),
             address(0xBEEF), // treasury
             admin,
             admin, // securityCouncil
-            block.timestamp
+            block.timestamp,
+            address(pool)
         );
 
         // Fund ARM to crowdfund and verify pre-load
