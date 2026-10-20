@@ -386,6 +386,43 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         assertEq(uint256(cvalue), change, "caf-c4: the Safe note value falls by exactly the payout");
     }
 
+    // SPEC c1 · While ARM transfers are still locked (transferable=false), a holder who is
+    //      absent from transferWhitelist exits through the shaman; the exit succeeds and the
+    //      holder's ARM balance and arm.totalSupply() each drop by exactly the burned amount.
+    function test_RagequitSucceedsForNonWhitelistedHolderWhileRestricted() public {
+        address nonWhitelisted = address(0xC1);
+        uint256 burnAmt = 100;
+        // Move ARM to the non-whitelisted holder via a whitelisted sender (holder is whitelisted).
+        vm.prank(holder);
+        arm.transfer(nonWhitelisted, burnAmt);
+
+        uint256 balBefore = arm.balanceOf(nonWhitelisted);
+        uint256 supplyBefore = arm.totalSupply();
+
+        // c1: the exit must NOT revert with "ArmadaToken: transfers restricted".
+        vm.prank(nonWhitelisted);
+        ragequit.ragequit(burnAmt, _npk(nonWhitelisted), _tokenList(address(usdc)));
+
+        assertEq(arm.balanceOf(nonWhitelisted), balBefore - burnAmt, "c1: holder ARM balance must drop by armAmount");
+        assertEq(arm.totalSupply(), supplyBefore - burnAmt, "c1: totalSupply must drop by armAmount");
+    }
+
+    // SPEC c2 · While ARM transfers are still locked, a holder who is absent from
+    //      transferWhitelist cannot make an ordinary ARM transfer; the send is refused.
+    function test_TransferStillRestrictedForNonWhitelistedHolderWhileRestricted() public {
+        address nonWhitelisted = address(0xC2);
+        address dest = address(0xC3);
+        // Move ARM to the non-whitelisted holder via a whitelisted sender.
+        vm.prank(holder);
+        arm.transfer(nonWhitelisted, 100);
+
+        // c2: an ordinary transfer by a non-whitelisted holder while transferable=false
+        //      must still be refused with the restriction message.
+        vm.prank(nonWhitelisted);
+        vm.expectRevert("ArmadaToken: transfers restricted");
+        arm.transfer(dest, 50);
+    }
+
     // ============ Helpers ============
 
     function _npk(address a) public pure returns (bytes32) {
