@@ -90,13 +90,7 @@ contract CrowdfundShieldedProceedsTest is Test, CrowdfundPoolDeploy {
         pool = _deployPool(address(usdc), poolTreasury, admin, SAFE_NPK);
 
         crowdfund = new ArmadaCrowdfund(
-            address(usdc),
-            address(armToken),
-            treasury,
-            admin,
-            admin,
-            block.timestamp,
-            address(pool)
+            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
         );
 
         address[] memory wl = new address[](2);
@@ -152,18 +146,12 @@ contract CrowdfundShieldedProceedsTest is Test, CrowdfundPoolDeploy {
 
     /// @notice Reentrant finalize check: a malicious USDC reenters `finalize` during the shield's
     ///          USDC pull; the nonReentrant guard must reject the reentrant call.
-    function _reentrantFinalizeBlocked() internal returns ( bool) {
+    function _reentrantFinalizeBlocked() internal returns (bool) {
         MaliciousUSDC maliciousUsdc = new MaliciousUSDC("Bad USDC", "BUSDC");
         ArmadaToken armToken2 = new ArmadaToken(admin, admin);
         PrivacyPool pool2 = _deployPool(address(maliciousUsdc), poolTreasury, admin, SAFE_NPK);
         ArmadaCrowdfund cf2 = new ArmadaCrowdfund(
-            address(maliciousUsdc),
-            address(armToken2),
-            treasury,
-            admin,
-            admin,
-            block.timestamp,
-            address(pool2)
+            address(maliciousUsdc), address(armToken2), treasury, admin, admin, block.timestamp, address(pool2)
         );
 
         // Whitelist admin + cf2 on the fresh ARM token, then fund it.
@@ -203,8 +191,9 @@ contract CrowdfundShieldedProceedsTest is Test, CrowdfundPoolDeploy {
         bool outerRevert = false;
         bytes memory outerData;
         try cf2.finalize() {
-            // outer finalize succeeded
-        } catch (bytes memory odata) {
+        // outer finalize succeeded
+        }
+        catch (bytes memory odata) {
             outerRevert = true;
             outerData = odata;
             // store the reason for inspection
@@ -228,22 +217,21 @@ contract CrowdfundShieldedProceedsTest is Test, CrowdfundPoolDeploy {
     }
 
     function _extractRevertReason(bytes memory revertData_) internal pure returns (string memory) {
-        if (revertData_.length < 32) {
-            return string(revertData_);
+        // Error(string) revert data is a 4-byte selector (0x08c379a0) followed by
+        // abi.encode(string). Strip the selector, then decode the remainder as a string.
+        if (revertData_.length < 68) {
+            return "";
         }
-        bytes memory payload = new bytes(uint256(revertData_.length - 32));
-        for (uint256 i = 0; i < payload.length; i++) {
-            payload[i] = revertData_[32 + i];
+        bytes memory stripped = new bytes(revertData_.length - 4);
+        for (uint256 i = 0; i < stripped.length; i++) {
+            stripped[i] = revertData_[4 + i];
         }
-        string memory message = abi.decode(payload, (string));
-        return message;
+        return abi.decode(stripped, (string));
     }
 
     function _setRevertReason(string memory reason) internal {
         // store the last-seen revert reason for inspection
     }
-
-
 
     /// @notice Concatenate two dynamic strings (Solidity forbids `+` on two dynamic strings).
     function _cat(string memory a_, string memory b_) internal pure returns (string memory) {
@@ -251,9 +239,23 @@ contract CrowdfundShieldedProceedsTest is Test, CrowdfundPoolDeploy {
         bytes memory bb = bytes(b_);
         bytes memory res = new bytes(ba.length + bb.length);
         uint256 i;
-        for (i = 0; i < ba.length; i++) res[i] = ba[i];
-        for (i = 0; i < bb.length; i++) res[ba.length + i] = bb[i];
+        for (i = 0; i < ba.length; i++) {
+            res[i] = ba[i];
+        }
+        for (i = 0; i < bb.length; i++) {
+            res[ba.length + i] = bb[i];
+        }
         return string(res);
+    }
+
+    struct ShieldedProceedsResults {
+        uint256 safeNoteCount;
+        bool amountMatchesProceeds;
+        int256 treasuryUsdcDelta;
+        bool armSweepOk;
+        bool treasuryUnchanged;
+        bool reentrantReverts;
+        uint256 poolAllowanceAfter;
     }
 
     function test_shieldedProceeds() public {
@@ -264,84 +266,74 @@ contract CrowdfundShieldedProceedsTest is Test, CrowdfundPoolDeploy {
 
         vm.warp(crowdfund.windowEnd() + 1);
         crowdfund.finalize();
-        console.log("DEBUG totalAlloc:", crowdfund.totalAllocatedUsdc());
-        console.log("DEBUG participantCount:", crowdfund.getParticipantCount());
-        console.log("DEBUG refundMode:", crowdfund.refundMode());
+
+        // Results are held in a memory struct so all seven stay live for both the JSON
+        // probe output and the assertions without exceeding the stack-slot limit.
+        ShieldedProceedsResults memory r;
 
         // ── c1: pool holds exactly one Safe-owned note
-        uint256 safeNoteCount = pool.nextLeafIndex();
+        r.safeNoteCount = pool.nextLeafIndex();
 
-        // ── c1: note amount matches the sale proceeds
-        uint256 totalAlloc = crowdfund.totalAllocatedUsdc();
-        uint256 roundingBuffer = crowdfund.getParticipantCount();
-        uint256 proceedsPush = totalAlloc > roundingBuffer ? totalAlloc - roundingBuffer : 0;
-        bytes32 tokenID = bytes32(uint256(uint160(address(usdc))));
-        bytes32[3] memory arr = [SAFE_NPK, tokenID, bytes32(uint256(proceedsPush))];
-        bytes32 expectedCommitment = PoseidonT4.poseidon(arr);
-
-        (bytes32 noteNpk, TokenData memory noteToken, uint120 noteValue) = pool.preimageOf(expectedCommitment);
-        bool amountMatchesProceeds = (uint256(noteValue) == proceedsPush) && (noteNpk == SAFE_NPK);
+        // ── c1: note amount matches the sale proceeds (intermediates scoped so they drop)
+        {
+            uint256 totalAlloc = crowdfund.totalAllocatedUsdc();
+            uint256 roundingBuffer = crowdfund.getParticipantCount();
+            uint256 proceedsPush = totalAlloc > roundingBuffer ? totalAlloc - roundingBuffer : 0;
+            bytes32 tokenID = bytes32(uint256(uint160(address(usdc))));
+            bytes32[3] memory arr = [SAFE_NPK, tokenID, bytes32(uint256(proceedsPush))];
+            bytes32 expectedCommitment = PoseidonT4.poseidon(arr);
+            (bytes32 noteNpk,, uint120 noteValue) = pool.preimageOf(expectedCommitment);
+            r.amountMatchesProceeds = (uint256(noteValue) == proceedsPush) && (noteNpk == SAFE_NPK);
+        }
 
         // ── c2: treasury USDC delta == 0
-        int256 treasuryUsdcDelta = int256(usdc.balanceOf(treasury)) - int256(usdcBalanceBefore);
+        r.treasuryUsdcDelta = int256(usdc.balanceOf(treasury)) - int256(usdcBalanceBefore);
 
         // ── c3: unsold-ARM sweep to treasury still works
         crowdfund.withdrawUnallocatedArm();
-        bool armSweepOk = armToken.balanceOf(treasury) > armBalanceBefore;
+        r.armSweepOk = armToken.balanceOf(treasury) > armBalanceBefore;
 
         // ── c3: treasury address unchanged (immutable)
-        bool treasuryUnchanged = crowdfund.treasury() == treasury;
+        r.treasuryUnchanged = crowdfund.treasury() == treasury;
 
         // ── c: reentrant finalize is rejected by the nonReentrant guard
-        bool reentrantReverts = _reentrantFinalizeBlocked();
+        r.reentrantReverts = _reentrantFinalizeBlocked();
 
         // ── c4: no USDC allowance left open to the pool after finalize
-        uint256 poolAllowanceAfter = usdc.allowance(address(crowdfund), address(pool));
+        r.poolAllowanceAfter = usdc.allowance(address(crowdfund), address(pool));
 
-        // Emit the JSON for the reducer. The script merges tests_passed / tests_failed.
+        _emitShieldedProceedsJson(r);
+
+        assertEq(r.safeNoteCount, 1, "pool holds exactly one Safe note");
+        assertTrue(r.amountMatchesProceeds, "note amount matches sale proceeds");
+        assertEq(r.treasuryUsdcDelta, 0, "treasury USDC balance unchanged by finalize");
+        assertTrue(r.armSweepOk, "unsold-ARM sweep to treasury");
+        assertTrue(r.treasuryUnchanged, "treasury address immutable");
+        assertTrue(r.reentrantReverts, "reentrant finalize rejected");
+        assertEq(r.poolAllowanceAfter, 0, "no open USDC allowance to pool");
+    }
+
+    /// @dev Emits the probe JSON the reducer's check script parses. Byte-for-byte identical
+    ///      to the inline form; split out only to keep the test within the stack-slot limit.
+    function _emitShieldedProceedsJson(ShieldedProceedsResults memory r) internal view {
         string memory json = "CROWDFUND_SHIELDED_PROCEEDS_JSON {\"safe_note_count\": ";
-        json = _cat(json, toString(safeNoteCount));
+        json = _cat(json, toString(r.safeNoteCount));
         json = _cat(json, ",\"safe_note_amount_matches_proceeds\": ");
-        json = _cat(json, amountMatchesProceeds ? "true" : "false");
+        json = _cat(json, r.amountMatchesProceeds ? "true" : "false");
         json = _cat(json, ",\"treasury_usdc_delta\": ");
-        json = _cat(json, toString(uint256(treasuryUsdcDelta) == 0 ? 0 : 1));
+        json = _cat(json, toString(uint256(r.treasuryUsdcDelta) == 0 ? 0 : 1));
         json = _cat(json, ",\"treasury_receives_unsold_arm_sweep\": ");
-        json = _cat(json, armSweepOk ? "true" : "false");
+        json = _cat(json, r.armSweepOk ? "true" : "false");
         json = _cat(json, ",\"treasury_address_unchanged\": ");
-        json = _cat(json, treasuryUnchanged ? "true" : "false");
+        json = _cat(json, r.treasuryUnchanged ? "true" : "false");
         json = _cat(json, ",\"reentrant_finalize_reverts\": ");
-        json = _cat(json, reentrantReverts ? "true" : "false");
+        json = _cat(json, r.reentrantReverts ? "true" : "false");
         json = _cat(json, ",\"pool_allowance_after_finalize\": ");
-        json = _cat(json, toString(poolAllowanceAfter));
+        json = _cat(json, toString(r.poolAllowanceAfter));
         json = _cat(json, "}");
         console.log(json);
-
-        assertEq(safeNoteCount, 1, "pool holds exactly one Safe note");
-        assertTrue(amountMatchesProceeds, "note amount matches sale proceeds");
-        assertEq(treasuryUsdcDelta, 0, "treasury USDC balance unchanged by finalize");
-        assertTrue(armSweepOk, "unsold-ARM sweep to treasury");
-        assertTrue(treasuryUnchanged, "treasury address immutable");
-        assertTrue(reentrantReverts, "reentrant finalize rejected");
-        assertEq(poolAllowanceAfter, 0, "no open USDC allowance to pool");
     }
 
-    /// @notice Debug: print the sale/finalize values (passing test so output shows).
-    function test_debug() public {
-        _commitSmallSale();
-        vm.warp(crowdfund.windowEnd() + 1);
-        crowdfund.finalize();
-        uint256 totalAlloc = crowdfund.totalAllocatedUsdc();
-        bool refund = crowdfund.refundMode();
-        uint256 pcount = crowdfund.getParticipantCount();
-        uint256 proceeds = (totalAlloc > pcount) ? totalAlloc - pcount : 0;
-        uint256 noteCount = pool.nextLeafIndex();
-        assertEq(totalAlloc, 0, "totalAlloc");
-        assertEq((refund ? 1 : 0), 0, "refundMode");
-        assertEq(noteCount, 1, "noteCount");
-        assertEq((refund ? 1 : 0), 0, "refund actual is shown");
-        assertEq(proceeds, 0, "proceedsPush actual is shown");
-        assertEq(usdc.balanceOf(treasury), 0, "treasuryUsdc actual is shown");
-    }
     /// @notice Forge built-in: format a uint256 as a string.
     function toString(uint256 value) internal pure returns (string memory) {
         return vm.toString(value);
