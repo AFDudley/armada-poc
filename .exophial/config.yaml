@@ -11,8 +11,8 @@ dispatcher:
 # with NO linked spec (a linked spec is graded in-process by spec_oracle.run_spec).
 # Chains pre-commit (lint/format) with the repo's own offline build and test
 # commands, so a merge also proves the repo compiles and its tests pass.
-# License hygiene and Anvil-address scans are the two fast CI scripts outside
-# pre-commit; `npm run compile` + `check:sizes` mirror the CI `contract-sizes`
+# The Anvil-address scan is the fast CI script outside pre-commit;
+# `npm run compile` + `check:sizes` mirror the CI `contract-sizes`
 # job; `tsc --noEmit` mirrors CI `typecheck` (minus `test:config`, which fails
 # on `integrated` today for an unrelated reason, see .scratch/rewrite-evidence/
 # BRIEF-GATE report); `forge test --offline` mirrors CI `forge`. CI jobs needing
@@ -24,7 +24,7 @@ gate:
     [
       "bash",
       "-c",
-      "npm ci --legacy-peer-deps --offline --no-audit --no-fund && pre-commit run --all-files && ./scripts/check-license-hygiene.sh && ./scripts/check-anvil-addresses.sh && npm run compile && npm run check:sizes && npx tsc --noEmit --project tsconfig.ci.json && forge test --offline",
+      "npm ci --legacy-peer-deps --offline --no-audit --no-fund && pre-commit run --all-files && ./scripts/check-anvil-addresses.sh && npm run compile && npm run check:sizes && npx tsc --noEmit --project tsconfig.ci.json && forge test --offline",
     ]
   timeout: 300
 
