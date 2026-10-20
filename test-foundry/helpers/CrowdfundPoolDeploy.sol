@@ -21,19 +21,23 @@ abstract contract CrowdfundPoolDeploy is PoseidonLinker {
     /// @param treasury The pool's fee treasury (a plain address is fine).
     /// @param owner The pool owner (this test contract).
     /// @param safeNpk The Safe's owner-derived npk to register as feeRecipient (bytes32(0) skips).
-    function _deployPool(address usdcAddr, address treasury, address owner, bytes32 safeNpk) public returns (PrivacyPool pool) {
+    function _deployPool(address usdcAddr, address treasury, address owner, bytes32 safeNpk)
+        public
+        returns (PrivacyPool pool)
+    {
         _linkRealPoseidon();
 
-        // Deploy the pool, its four modules, and the mock CCTP, minimizing local variables
-        // to avoid a "stack too deep" in the initialize call.
+        // Deploy the pool, its four modules, and the mock CCTP. The two CCTP mocks are
+        // built through private helpers so no nested `new` temporaries coexist in the
+        // 10-argument initialize call — this avoids a "stack too deep" without via-IR.
         pool = new PrivacyPool();
         pool.initialize(
             address(new ShieldModule()),
             address(new TransactModule()),
             address(new MerkleModule()),
             address(new VerifierModule()),
-            address(new MockTokenMessengerV2(address(new MockMessageTransmitterV2(0, owner)), usdcAddr, 0)),
-            address(new MockMessageTransmitterV2(0, owner)),
+            _deployTokenMessenger(usdcAddr, owner),
+            _deployTransmitter(owner),
             usdcAddr,
             0,
             owner,
@@ -43,5 +47,15 @@ abstract contract CrowdfundPoolDeploy is PoseidonLinker {
         if (safeNpk != bytes32(0)) {
             pool.setFeeRecipient(safeNpk);
         }
+    }
+
+    /// @dev Deploys a mock CCTP token messenger wrapping its own mock transmitter.
+    function _deployTokenMessenger(address usdcAddr, address owner) private returns (address) {
+        return address(new MockTokenMessengerV2(_deployTransmitter(owner), usdcAddr, 0));
+    }
+
+    /// @dev Deploys a mock CCTP message transmitter.
+    function _deployTransmitter(address owner) private returns (address) {
+        return address(new MockMessageTransmitterV2(0, owner));
     }
 }
