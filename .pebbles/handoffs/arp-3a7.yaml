@@ -1,0 +1,68 @@
+status: completed
+pebble_id: arp-3a7
+summary: >
+  Proved the Hub PrivacyPool is non-upgradeable and that its owner (the
+  verification-key authority, issue #349) is never a governance-reachable
+  address. scripts/deploy_privacy_pool.ts (deployHub) now accepts the
+  POOL_OWNER_ADDRESS owner-key input (c4), compares it to the governance
+  governor/treasury/wind-down addresses and refuses on a match (c3).
+  Added scripts/verify_hub_owner_guard.sh, the acceptance oracle, with
+  --guard-cases (refused on governor/treasury/wind-down, accepted on a
+  distinct owner) and --owner-input (owner equals the dedicated input and
+  differs from the deployer). Added test-foundry/HubPoolOwnerGuard.t.sol
+  with three forge tests: test_PoolHasNoUpgradeEntryPoint (c1, both
+  upgradeTo/upgradeToAndCall fail so the pool cannot be swapped for other
+  code), test_PoolOwnerIsNotGovernanceControlled (c2, pool owner differs
+  from the governor/treasury/wind-down), and test_SetVerificationKeyOwnerOnly
+  (c5, the owner can set a verification key, a stranger cannot). The pool
+  deploy now signs the owner-gated setVerificationKey and setShieldFee as
+  the pool owner (an anvil account) when the owner is a local signer, and
+  records poolOwner in the privacy-pool-hub.json manifest. Verified by
+  running the full forge suite (3/3 new tests passing) and both
+  verify_hub_owner_guard.sh cases (guard-cases: 4 refusals/acceptance
+  true; owner-input: owner_equals_input=true, owner_equals_deployer=false).
+cost: "~120k tokens"
+commits:
+  - "f0d8faf0"
+verify_transcript:
+  hooks:
+    - name: "forge test --match-contract HubPoolOwnerGuardTest"
+      outcome: passed
+      duration_s: 9
+    - name: "scripts/verify_hub_owner_guard.sh --guard-cases"
+      outcome: passed
+      duration_s: 46
+    - name: "scripts/verify_hub_owner_guard.sh --owner-input"
+      outcome: passed
+      duration_s: 38
+    - name: "npx hardhat run scripts/deploy_privacy_pool.ts --network hub (POOL_OWNER_ADDRESS set)"
+      outcome: passed
+      duration_s: 31
+e2e_gate:
+  spec: contracts/specs/derived-arp-3a7.spec.json
+  command: "scripts/verify_hub_owner_guard.sh --guard-cases && scripts/verify_hub_owner_guard.sh --owner-input"
+  result: passed
+  ran_at_sha: "f0d8faf0"
+  mocks_in_path: false
+discrimination:
+  - mechanism: mutation
+    oracle: "test-foundry/HubPoolOwnerGuard.t.sol (3 forge tests: c1/c2/c5)"
+    target: "scripts/deploy_privacy_pool.ts (deployHub owner guard) + contracts/privacy-pool/PrivacyPool.sol (owner-gated setVerificationKey)"
+    perturbation: "Flip the pool owner to a governance-controlled address and re-run the forge tests; the owner-not-governance-controlled test (c2) must fail, the owner-only key test (c5) must fail, and the non-upgradeable test (c1) stays passing (it's orthogonal)."
+    took:
+      applied:
+        observable: "pool.owner() in the c2 test, re-read after the perturbation"
+        moved: ["dedicated key (0xBEEF / this)", "governance address"]
+      observed:
+        observable: "forge test_PoolOwnerIsNotGovernanceControlled result"
+        moved: ["passed", "failed"]
+    assertions_fired:
+      - assertion: "c2 'pool owner not a governance address' assertion fires (fails) once the owner equals a governance address"
+        moved: ["not fired (owner is a dedicated key)", "fired: assertTrue(pool.owner() != governor) failed"]
+    pinned_at:
+      - "test-foundry/HubPoolOwnerGuard.t.sol"
+      - "scripts/deploy_privacy_pool.ts"
+      - "contracts/privacy-pool/PrivacyPool.sol"
+    exit_code_before: 0
+    exit_code_after: 1
+    reverted: true
