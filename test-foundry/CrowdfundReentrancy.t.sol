@@ -148,7 +148,7 @@ contract MaliciousERC20Propagating is ERC20 {
     }
 }
 
-contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy  {
+contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy {
     MockUSDCV2 public usdc;
     PrivacyPool public pool;
     PrivacyPool public pool2;
@@ -207,7 +207,9 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy  {
         MaliciousERC20 maliciousArm = new MaliciousERC20("Bad ARM", "BARM", 18);
 
         pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
-        ArmadaCrowdfund cf = new ArmadaCrowdfund(address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, address(pool));
+        ArmadaCrowdfund cf = new ArmadaCrowdfund(
+            address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, address(pool)
+        );
         maliciousArm.mint(address(cf), ARM_FUNDING);
         cf.loadArm();
 
@@ -273,8 +275,10 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy  {
     function test_reentrancy_claim_propagatingRevert() public {
         MaliciousERC20Propagating maliciousArm = new MaliciousERC20Propagating("Bad ARM", "BARM", 18);
 
-        ArmadaCrowdfund cf =
-            new ArmadaCrowdfund(address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, address(pool));
+        pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
+        ArmadaCrowdfund cf = new ArmadaCrowdfund(
+            address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, address(pool)
+        );
         maliciousArm.mint(address(cf), ARM_FUNDING);
         cf.loadArm();
 
@@ -309,15 +313,19 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy  {
         // The propagated revert reason must be the nonReentrant guard.
         vm.prank(seeds[0]);
         vm.expectRevert("ReentrancyGuard: reentrant call");
+        console.log("TRACE: outer claim (expectRevert)");
         cf.claim(seeds[0]);
+        console.log("TRACE: outer claim done (revert consumed)");
 
         // Attacker received nothing
         assertEq(maliciousArm.balanceOf(seeds[0]), 0, "Attacker must receive nothing");
 
         // Disable attack — legitimate claim works
         maliciousArm.disableAttack();
+        console.log("TRACE: legitimate claim about to run");
         vm.prank(seeds[0]);
         cf.claim(seeds[0]);
+        console.log("TRACE: legitimate claim done");
         assertTrue(maliciousArm.balanceOf(seeds[0]) > 0, "Legitimate claim must succeed");
     }
 
@@ -329,7 +337,9 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy  {
         MaliciousERC20 maliciousUsdc = new MaliciousERC20("Bad USDC", "BUSDC", 6);
 
         pool2 = _deployPool(address(maliciousUsdc), treasury, address(this), bytes32(0));
-        ArmadaCrowdfund cf = new ArmadaCrowdfund(address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool2));
+        ArmadaCrowdfund cf = new ArmadaCrowdfund(
+            address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool2)
+        );
 
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
@@ -387,8 +397,9 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy  {
     function test_reentrancy_commit_reentryBlocked() public {
         MaliciousERC20 maliciousUsdc = new MaliciousERC20("Bad USDC", "BUSDC", 6);
 
-        ArmadaCrowdfund cf =
-            new ArmadaCrowdfund(address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool2));
+        ArmadaCrowdfund cf = new ArmadaCrowdfund(
+            address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool2)
+        );
 
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();

@@ -10,8 +10,9 @@ import "../contracts/crowdfund/ArmadaCrowdfund.sol";
 import "../contracts/crowdfund/IArmadaCrowdfund.sol";
 import "../contracts/governance/ArmadaToken.sol";
 import "../contracts/cctp/MockUSDCV2.sol";
+import "../contracts/privacy-pool/types/PoseidonLibs.sol";
 
-contract CrowdfundRoundingBufferTest is Test, CrowdfundPoolDeploy  {
+contract CrowdfundRoundingBufferTest is Test, CrowdfundPoolDeploy {
     ArmadaCrowdfund public crowdfund;
     MockUSDCV2 public usdc;
     PrivacyPool public pool;
@@ -21,6 +22,7 @@ contract CrowdfundRoundingBufferTest is Test, CrowdfundPoolDeploy  {
     address public treasury;
 
     uint256 constant ARM_FUNDING = 1_800_000 * 1e18;
+    bytes32 constant SAFE_NPK = bytes32(uint256(0x5AFE00000000000000000000000000000000000000000000000000000));
 
     function setUp() public {
         admin = address(this);
@@ -28,8 +30,10 @@ contract CrowdfundRoundingBufferTest is Test, CrowdfundPoolDeploy  {
 
         usdc = new MockUSDCV2("Mock USDC", "USDC");
         armToken = new ArmadaToken(admin, admin);
-pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
-        crowdfund = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool));
+        pool = _deployPool(address(usdc), treasury, address(this), SAFE_NPK);
+        crowdfund = new ArmadaCrowdfund(
+            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+        );
 
         address[] memory wl = new address[](2);
         wl[0] = admin;
@@ -50,6 +54,21 @@ pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
 
     function _hop1(uint256 i) internal pure returns (address) {
         return address(uint160(0x2000 + i));
+    }
+
+    /// @notice Reads the pool note for the given amount: returns (noteNpk, noteValue) via
+    ///          preimageOf. Keeping the Poseidon preimage in a small helper keeps the test
+    ///          functions within the stack-slot limit (no viaIR).
+    function _readNote(PrivacyPool pool_, bytes32 npk, address usdcAddr, uint256 amount)
+        internal
+        view
+        returns (bytes32 noteNpk, uint120 noteValue)
+    {
+        bytes32 tokenID = bytes32(uint256(uint160(usdcAddr)));
+        bytes32[3] memory pre = [npk, tokenID, bytes32(uint256(amount))];
+        bytes32 commitment = PoseidonT4.poseidon(pre);
+        (noteNpk,, noteValue) = pool_.preimageOf(commitment);
+        return (noteNpk, noteValue);
     }
 
     // WHY: audit-71 — the original buffer was `participantNodes.length * NUM_HOPS`,
@@ -101,9 +120,14 @@ pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         uint256 buffer = SEED_COUNT + HOP1_COUNT; // post-fix: participantNodes.length
 
         assertEq(crowdfund.totalAllocatedUsdc(), totalAlloc, "alloc total");
-        // Treasury receives totalAlloc - buffer.
-        // Pre-fix this was totalAlloc - SEED_COUNT * NUM_HOPS (3x over-reserved).
-        assertEq(usdc.balanceOf(treasury), totalAlloc - buffer, "treasury proceeds");
+        // G5: the sale proceeds are shielded into the pool as one Safe-owned note,
+        // not sent to the public treasury address (usdc.balanceOf(treasury) stays 0).
+        // G5: the sale proceeds are shielded into the pool as one Safe-owned note,
+        // not sent to the public treasury address (usdc.balanceOf(treasury) stays 0).
+        uint256 proceedsPush = totalAlloc > buffer ? totalAlloc - buffer : 0;
+        (bytes32 noteNpk, uint120 noteValue) = _readNote(pool, SAFE_NPK, address(usdc), proceedsPush);
+        assertEq(uint256(noteValue), proceedsPush, "pool note amount = sale proceeds");
+        assertEq(noteNpk, SAFE_NPK, "note is Safe-owned");
 
         // All claims must succeed (contract never runs short).
         for (uint256 i = 0; i < SEED_COUNT; i++) {
@@ -171,19 +195,26 @@ pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         assertFalse(crowdfund.refundMode(), "should be success-path");
 
         uint256 totalAlloc = crowdfund.totalAllocatedUsdc();
-        uint256 treasuryReceived = usdc.balanceOf(treasury);
-
-        // Buffer = participantNodes.length. For tiny
-        // sales the saturating ternary in finalize() floors at zero, but here the
-        // alloc is large so we expect the simple subtraction.
+        // Buffer = participantNodes.length; the saturating ternary in finalize() floors
+        // at zero for tiny sales, but here the alloc is large so the simple subtraction applies.
         uint256 participantCount = SEED_COUNT + HOP1_COUNT;
-        assertEq(treasuryReceived, totalAlloc - participantCount, "treasury = totalAlloc - buffer");
 
-        // Settlement identity sanity (pre-claims): contract holds totalCommitted - treasury.
+        // G5: proceeds are a Safe-owned pool note, not a public treasury USDC balance.
+        // The pool holds exactly one note whose amount equals totalAlloc - buffer.
+        uint256 noteAmount = totalAlloc > participantCount ? totalAlloc - participantCount : 0;
+        (bytes32 noteNpk, uint120 noteValue) = _readNote(pool, SAFE_NPK, address(usdc), noteAmount);
+        // The pool note amount must equal the sale proceeds (totalAlloc - buffer).
+        assertEq(uint256(noteValue), noteAmount, "pool note amount = totalAlloc - buffer");
+        assertEq(noteNpk, SAFE_NPK, "note is Safe-owned");
+        // The shielded note amount is what the treasury (now a pool note) has received.
+        uint256 treasuryReceived = uint256(noteValue);
+
+        // Settlement identity sanity (pre-claims): the contract holds
+        // totalCommitted minus the shielded proceeds (now a pool note).
         assertEq(
             usdc.balanceOf(address(crowdfund)),
             totalCommitted - treasuryReceived,
-            "contract balance = totalCommitted - treasury (pre-claims)"
+            "contract balance = totalCommitted - shielded proceeds (pre-claims)"
         );
 
         // All claims must succeed; sum the actually-distributed refunds.
