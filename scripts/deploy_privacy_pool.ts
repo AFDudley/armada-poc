@@ -33,6 +33,7 @@ import {
   getAllChains,
   getCCTPDeploymentFile,
   getGovernanceDeploymentFile,
+  getBaalSafeDeploymentFile,
   getPrivacyPoolDeploymentFile,
   isLocal,
   type ChainRole,
@@ -66,6 +67,10 @@ interface HubDeploymentInfo {
   chainId: number;
   domain: number;
   deployer: string;
+  /** The pool owner: the verification-key authority (issue #349). A dedicated key
+   *  or Safe multisig, never an address the Baal/Safe governance can direct
+   *  (lab book decision 8). The deploy refuses a governance-reachable owner. */
+  poolOwner: string;
   contracts: {
     privacyPool: string;
     merkleModule: string;
@@ -112,12 +117,70 @@ interface ClientDeploymentInfo {
 }
 
 async function deployHub(): Promise<HubDeploymentInfo> {
-  const [deployer] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  const deployer = signers[0];
   const network = await ethers.provider.getNetwork();
   const chainId = Number(network.chainId);
   const config = getNetworkConfig();
   const domain = config.hub.cctpDomain;
   const nm = await createNonceManager(deployer);
+
+  // ── Hub pool owner guard (arp-b11.2; lab book decision 8) ──────────────────
+  // The pool owner is the verification-key authority (issue #349). A swapped key
+  // accepts forged proofs and drains every pool user's shielded funds, so the owner
+  // must be a dedicated key or Safe multisig, never an address the Baal/Safe
+  // governance can direct. POOL_OWNER_ADDRESS sets the owner; it falls back to the
+  // deployer only when unset.
+  const poolOwnerAddress =
+    process.env.POOL_OWNER_ADDRESS?.trim() || deployer.address;
+
+  // Forbidden-owner set: the Baal, the Safe (treasury/avatar), the ShieldedRagequit
+  // shaman and the ARM token — every address the Baal/Safe governance can direct.
+  // Read from the Baal/Safe manifest (baal, safe, shieldedRagequit, armToken) and
+  // the governance manifest (treasury = the Safe, armToken). Checked before the
+  // module deploys so a refusal is cheap.
+  const forbiddenOwners: [string, string][] = [];
+  const addForbidden = (addr: string | undefined, label: string) => {
+    if (addr) forbiddenOwners.push([addr, label]);
+  };
+  const baalSafeContracts = loadDeployment(
+    getBaalSafeDeploymentFile(),
+  )?.contracts;
+  addForbidden(baalSafeContracts?.baal, "Baal");
+  addForbidden(baalSafeContracts?.safe, "Safe (treasury)");
+  addForbidden(baalSafeContracts?.shieldedRagequit, "ShieldedRagequit shaman");
+  addForbidden(baalSafeContracts?.armToken, "ARM token");
+  const govGuardContracts = loadDeployment(
+    getGovernanceDeploymentFile(),
+  )?.contracts;
+  addForbidden(govGuardContracts?.treasury, "Safe (treasury)");
+  addForbidden(govGuardContracts?.armToken, "ARM token");
+  for (const [addr, label] of forbiddenOwners) {
+    if (poolOwnerAddress.toLowerCase() === addr.toLowerCase()) {
+      console.log(
+        `Hub owner guard: pool owner ${poolOwnerAddress} equals the ${label} address ${addr} — refused`,
+      );
+      throw new Error(
+        `Hub owner guard: pool owner ${poolOwnerAddress} equals the ${label} address ${addr}, ` +
+          "which the Baal/Safe governance can direct. A swapped verification key would let an " +
+          "attacker accept forged proofs and drain the pool's shielded funds. Set " +
+          "POOL_OWNER_ADDRESS to a dedicated key or Safe multisig.",
+      );
+    }
+  }
+  console.log(
+    `Pool owner (dedicated key / Safe multisig): ${poolOwnerAddress}`,
+  );
+
+  // The owner-gated hub ops (setVerificationKey via loadVerificationKeys, and
+  // setShieldFee) must be signed by the pool owner. When the owner is a local anvil
+  // signer, sign as it; otherwise fall back to the deployer (valid only when the
+  // owner equals the deployer).
+  const ownerSigner =
+    signers.find(
+      (s) => s.address.toLowerCase() === poolOwnerAddress.toLowerCase(),
+    ) ?? deployer;
+  const ownerNm = await createNonceManager(ownerSigner);
 
   console.log("=== Deploying Privacy Pool Modules to Hub Chain ===");
   console.log(`Deployer: ${deployer.address}`);
@@ -247,12 +310,12 @@ async function deployHub(): Promise<HubDeploymentInfo> {
     messageTransmitterAddress,
     usdcAddress,
     domain,
-    deployer.address,
+    poolOwnerAddress,
     treasuryAddress,
     nm.override(),
   );
   await initTx.wait();
-  console.log("   PrivacyPool initialized (treasury immutable)");
+  console.log("   PrivacyPool initialized (owner + treasury immutable)");
 
   // 8. Deploy CCTPHookRouter
   console.log("\n8. Deploying CCTPHookRouter...");
@@ -273,8 +336,12 @@ async function deployHub(): Promise<HubDeploymentInfo> {
   console.log("\n9. Loading verification keys...");
   const { loadVerificationKeys, TESTING_ARTIFACT_CONFIGS } =
     await import("../lib/artifacts");
-  await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, true, () =>
-    nm.override(),
+  const ownerPool =
+    ownerSigner.address.toLowerCase() === deployer.address.toLowerCase()
+      ? privacyPool
+      : privacyPool.connect(ownerSigner);
+  await loadVerificationKeys(ownerPool, TESTING_ARTIFACT_CONFIGS, true, () =>
+    ownerNm.override(),
   );
 
   // 10. SNARK verification enabled
@@ -282,13 +349,14 @@ async function deployHub(): Promise<HubDeploymentInfo> {
 
   // 10b. Configure shield fee
   console.log("\n10b. Configuring shield fee...");
-  await (await privacyPool.setShieldFee(50, nm.override())).wait();
+  await (await ownerPool.setShieldFee(50, ownerNm.override())).wait();
   console.log("   Shield fee: 50 bps (0.50%)");
 
   const deployment: HubDeploymentInfo = {
     chainId,
     domain,
     deployer: deployer.address,
+    poolOwner: poolOwnerAddress,
     contracts: {
       privacyPool: privacyPoolAddress,
       merkleModule: merkleModuleAddress,
