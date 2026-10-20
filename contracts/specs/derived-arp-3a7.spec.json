@@ -1,0 +1,174 @@
+{
+  "id": "derived-arp-3a7",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. The Hub PrivacyPool must be non-upgradeable, and the authority that can set its verification keys \u2014 the pool owner \u2014 must not be an address the governance DAO can reach. A swapped verification key would let an attacker accept forged proofs and drain every pool user's shielded funds.\nWhat holds now? Describe the current, observed state. No test proves the pool exposes no upgrade entry point, and no test proves the owner is not a governance-controlled address. The hub deploy path sets the owner to one address and never checks it against the governance deployment's own contract addresses, and offers no dedicated owner-key input.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Read scripts/deploy_privacy_pool.ts deployHub: it passes the deployer address as the pool owner and never compares it to the governance deployment's governor, treasury or wind-down addresses. Search the forge suite: no test calls upgradeTo(address) or upgradeToAndCall(address,bytes) on the pool and asserts they do not resolve, and none asserts the owner is a non-governance address.\nWhat constraints apply? State them in plain prose. The owner is a single key or a Safe multisig, never a DAO-governed contract. VerifierModule.setVerificationKey stays owner-callable by design (issue #349); this concerns who holds that authority, not removing it. The pool is already not a proxy; this is verification, not a redesign.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) armada-poc Hub PrivacyPool deployment (scripts/deploy_privacy_pool.ts) and the privacy-pool contracts",
+  "restatement": "The Hub PrivacyPool must be non-upgradeable. The pool owner is the authority that sets verification keys. The owner must be a single key or a Safe multisig. The owner must never be a contract or address the governance DAO can reach. This must be proven, not assumed. A test must show the pool has no upgrade entry point. A test must show the owner is not a governance address. The hub deploy path must compare the owner to the governance deployment's governor, treasury and wind-down addresses, and refuse a match. The hub deploy path must accept a dedicated owner-key input. The owner keeps the power to call VerifierModule.setVerificationKey (issue #349). This is verification of the existing design, not a redesign.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "A forge test calls upgradeTo(address) and upgradeToAndCall(address,bytes) on the deployed Hub PrivacyPool and asserts that neither function resolves (both calls fail)."
+    },
+    {
+      "id": "c2",
+      "text": "A forge test asserts that the Hub PrivacyPool owner is not a governance-controlled address (not the governor, the treasury or the wind-down address of the governance deployment)."
+    },
+    {
+      "id": "c3",
+      "text": "The hub deploy path in scripts/deploy_privacy_pool.ts (deployHub) compares the pool owner to the governance deployment's governor, treasury and wind-down addresses, and refuses to deploy if the owner equals any of them."
+    },
+    {
+      "id": "c4",
+      "text": "The hub deploy path offers a dedicated owner-key input (the POOL_OWNER_ADDRESS setting) separate from the deployer address, so the owner can be a single key or a Safe multisig."
+    },
+    {
+      "id": "c5",
+      "text": "VerifierModule.setVerificationKey stays callable by the pool owner, and a non-owner cannot call it."
+    }
+  ],
+  "goal": "Prove that the Hub PrivacyPool cannot be upgraded and that its owner, who controls the verification keys, is never an address the governance DAO controls.",
+  "acceptance_criteria": [
+    "A test tries to upgrade the Hub pool by both upgrade calls and sees both fail, so the pool cannot be swapped for other code.",
+    "A test reads the pool owner after a hub deploy and sees it differs from the governor, treasury and wind-down addresses.",
+    "The hub deploy owner check is run with the owner set equal to the governor, then the treasury, then the wind-down address, then a distinct address. The first three are refused. The last is accepted.",
+    "The hub deploy is run with POOL_OWNER_ADDRESS set to an address that differs from the deployer. The resulting pool owner equals that address and not the deployer.",
+    "A test shows the owner can set a verification key and a stranger cannot."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "A test tries to upgrade the Hub pool by both upgrade calls and sees both fail, so the pool cannot be swapped for other code."
+    },
+    {
+      "id": "c2",
+      "text": "A test reads the pool owner after a hub deploy and sees it differs from the governor, treasury and wind-down addresses."
+    },
+    {
+      "id": "c3",
+      "text": "The hub deploy owner check is run with the owner set equal to the governor, then the treasury, then the wind-down address, then a distinct address. The first three are refused. The last is accepted."
+    },
+    {
+      "id": "c4",
+      "text": "The hub deploy is run with POOL_OWNER_ADDRESS set to an address that differs from the deployer. The resulting pool owner equals that address and not the deployer."
+    },
+    {
+      "id": "c5",
+      "text": "A test shows the owner can set a verification key and a stranger cannot."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A test tries to upgrade the Hub pool by both upgrade calls and sees both fail, so the pool cannot be swapped for other code.",
+      "proves": "The pool has no upgrade entry point (clause c1).",
+      "restatement_clause_id": "c1",
+      "test": "test_PoolHasNoUpgradeEntryPoint",
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A test reads the pool owner after a hub deploy and sees it differs from the governor, treasury and wind-down addresses.",
+      "proves": "The pool owner is not a governance-reachable address (clause c2).",
+      "restatement_clause_id": "c2",
+      "test": "test_PoolOwnerIsNotGovernanceControlled",
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "The hub deploy owner check is run with the owner set equal to the governor, then the treasury, then the wind-down address, then a distinct address. The first three are refused. The last is accepted.",
+      "proves": "The deploy path refuses a governance-controlled owner and accepts a separate one (clause c3).",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/verify_hub_owner_guard.sh",
+        "args": [
+          "--guard-cases"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "refused_when_owner_equals_governor",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "refused_when_owner_equals_treasury",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "refused_when_owner_equals_wind_down",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "accepted_when_owner_distinct",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 120,
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "The hub deploy is run with POOL_OWNER_ADDRESS set to an address that differs from the deployer. The resulting pool owner equals that address and not the deployer.",
+      "proves": "The deploy path has its own owner input apart from the deployer (clause c4).",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/verify_hub_owner_guard.sh",
+        "args": [
+          "--owner-input"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "owner_equals_input",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "owner_equals_deployer",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 120,
+      "clause_id": "c4"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A test shows the owner can set a verification key and a stranger cannot.",
+      "proves": "The owner keeps the key-setting power and nobody else gains it (clause c5).",
+      "restatement_clause_id": "c5",
+      "test": "test_SetVerificationKeyOwnerOnly",
+      "clause_id": "c5"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/verify_hub_owner_guard.sh"
+  ]
+}
