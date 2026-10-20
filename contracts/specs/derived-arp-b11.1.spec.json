@@ -1,0 +1,99 @@
+{
+  "id": "derived-arp-b11.1",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. A swapped verifying key lets an attacker accept forged proofs and drain every pool user's shielded funds (armada-laconic labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md decision 8), so the authority over verification keys and the absence of any upgrade path protect ALL funds in the Hub PrivacyPool. Three properties must hold: (1) the pool exposes no upgrade entry point \u2014 no upgradeTo(address) and no upgradeToAndCall(address,bytes); (2) the pool owner is not an address the governance DAO can reach \u2014 not the governor, the treasury or the wind-down contract; (3) only the owner can call setVerificationKey \u2014 a non-owner call reverts. In addition the hub deploy must refuse to set the owner to any governance address and must honor a dedicated owner-key input.\nWhat holds now? Describe the current, observed state. No test proves any of the three properties. The pool is already a non-proxy with an owner set once in initialize and an owner-gated setVerificationKey, but nothing asserts a mutation of that logic is caught. The hub deploy sets the owner to the deployer and never compares it to the governance deployment's governor, treasury or wind-down addresses, and offers no owner-key input.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. The three properties are behaviour these existing contract files already have; a test proves each by mutating the file that implements it: contracts/privacy-pool/PrivacyPool.sol (the delegatecall router \u2014 no upgradeTo/upgradeToAndCall entry point; owner set once in initialize; setVerificationKey gated on msg.sender==owner), contracts/privacy-pool/storage/PrivacyPoolStorage.sol (address public owner), and contracts/privacy-pool/modules/VerifierModule.sol (the verification-key setter). To see the deploy gap, read scripts/deploy_privacy_pool.ts deployHub: it passes deployer.address as the pool owner with no comparison to governor/treasury/wind-down and no POOL_OWNER_ADDRESS override.\nWhat constraints apply? State them in plain prose. The owner is a single key or a Safe multisig, never a DAO-governed contract. VerifierModule.setVerificationKey stays owner-callable by design (issue #349); this concerns who holds that authority, not removing it. The pool is already not a proxy; this is verification of existing contract behaviour plus a deploy-script guard, not a contract redesign.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) armada-poc Hub PrivacyPool: contracts/privacy-pool/PrivacyPool.sol, contracts/privacy-pool/storage/PrivacyPoolStorage.sol, contracts/privacy-pool/modules/VerifierModule.sol, and scripts/deploy_privacy_pool.ts\n\nDecomposed child: A swapped verifying key lets an attacker accept forged proofs and drain every pool user's shielded funds (armada-laconic labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md decision 8). Add Foundry (forge) tests that prove three properties of the existing Hub PrivacyPool. (1) The pool exposes no upgrade entry point: no upgradeTo(address) and no upgradeToAndCall(address,bytes). A call to either selector on the deployed pool must not succeed. (2) The pool owner is set once in initialize. The pool owner is not an address the governance DAO can reach: not the governor, the treasury or the wind-down contract. (3) Only the owner can call setVerificationKey. A non-owner call reverts. An owner call succeeds and stores the key. Today no test proves any of the three properties. The pool is already a non-proxy, with an owner set once in initialize and an owner-gated setVerificationKey. But nothing asserts that a mutation of that logic is caught. The tests must catch a mutation of the files that implement the properties: contracts/privacy-pool/PrivacyPool.sol (the delegatecall router, owner set once in initialize, setVerificationKey gated on msg.sender==owner), contracts/privacy-pool/storage/PrivacyPoolStorage.sol (address public owner), and contracts/privacy-pool/modules/VerifierModule.sol (the verification-key setter). This work verifies existing contract behaviour. It is not a contract redesign. VerifierModule.setVerificationKey stays owner-callable by design (issue #349). Do not remove that authority. Do not change the pool consensus-critical surface. Do not enable setTestingMode or any verification bypass.",
+  "restatement": "A swapped verifying key lets an attacker accept forged proofs and drain the shielded funds of every Hub PrivacyPool user. Thus the authority over verification keys, and the absence of any upgrade path, protect all funds in the pool. The existing Hub PrivacyPool already has the necessary behaviour. It is not an upgradeable proxy. Its owner is set once in initialize. Only that owner can call setVerificationKey. No test proves these facts today, so a change that breaks them goes unnoticed. The deliverable is one Foundry (forge) test suite against the existing Hub PrivacyPool. The suite proves three properties. (1) The pool exposes no upgrade entry point: no upgradeTo(address) and no upgradeToAndCall(address,bytes). A call to either selector on the deployed pool must not succeed. (2) The pool owner is set once in initialize. The pool owner is not an address the governance DAO can reach: not the governor, the treasury or the wind-down contract. (3) Only the owner can call setVerificationKey. A non-owner call reverts. An owner call succeeds and stores the key. The suite must catch a mutation of contracts/privacy-pool/PrivacyPool.sol, contracts/privacy-pool/storage/PrivacyPoolStorage.sol and contracts/privacy-pool/modules/VerifierModule.sol. The work adds tests only. It does not redesign the contracts. VerifierModule.setVerificationKey stays owner-callable by design (issue #349). The work does not change the pool consensus-critical surface. It does not enable setTestingMode or any verification bypass. The hub deploy-script guard (scripts/deploy_privacy_pool.ts) is a separate sibling child and is not in this scope.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "The pool exposes no upgrade entry point: no upgradeTo(address) and no upgradeToAndCall(address,bytes). A call to either selector on the deployed pool must not succeed."
+    },
+    {
+      "id": "c2",
+      "text": "The pool owner is set once in initialize. The pool owner is not an address the governance DAO can reach: not the governor, the treasury or the wind-down contract."
+    },
+    {
+      "id": "c3",
+      "text": "Only the owner can call setVerificationKey. A non-owner call reverts. An owner call succeeds and stores the key."
+    },
+    {
+      "id": "c4",
+      "text": "The work verifies existing contract behaviour only: VerifierModule.setVerificationKey stays owner-callable, the pool consensus-critical surface does not change, and setTestingMode or any verification bypass is not enabled."
+    }
+  ],
+  "goal": "Forge tests prove that the Hub PrivacyPool has no upgrade entry point, has an owner set once that the governance DAO cannot reach, and lets only the owner set a verification key. The runner mutates the pool files and the tests must catch every mutation.",
+  "acceptance_criteria": [
+    "On a deployed Hub pool, a call to upgradeTo(address) and a call to upgradeToAndCall(address,bytes) both fail. The pool code stays the same after each attempt. The check also fails if one operator or one true/false value in the pool router or its storage is changed.",
+    "The pool owner equals the address given to initialize. A second initialize call fails and the owner does not change. The owner is not the governor, the treasury or the wind-down contract. The check also fails if one operator or one true/false value in the pool or its storage is changed.",
+    "A setVerificationKey call from an address that is not the owner reverts and the stored key does not change. The same call from the owner succeeds, and the stored key reads back equal to the key sent. The check also fails if one operator or one true/false value in the pool or the verifier module is changed.",
+    "After the change, the owner can still set a verification key through the verifier module. Testing mode stays off on the deployed pool. The check also fails if one operator or one true/false value in the verifier module or the pool is changed."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "On a deployed Hub pool, a call to upgradeTo(address) and a call to upgradeToAndCall(address,bytes) both fail. The pool code stays the same after each attempt. The check also fails if one operator or one true/false value in the pool router or its storage is changed."
+    },
+    {
+      "id": "c2",
+      "text": "The pool owner equals the address given to initialize. A second initialize call fails and the owner does not change. The owner is not the governor, the treasury or the wind-down contract. The check also fails if one operator or one true/false value in the pool or its storage is changed."
+    },
+    {
+      "id": "c3",
+      "text": "A setVerificationKey call from an address that is not the owner reverts and the stored key does not change. The same call from the owner succeeds, and the stored key reads back equal to the key sent. The check also fails if one operator or one true/false value in the pool or the verifier module is changed."
+    },
+    {
+      "id": "c4",
+      "text": "After the change, the owner can still set a verification key through the verifier module. Testing mode stays off on the deployed pool. The check also fails if one operator or one true/false value in the verifier module or the pool is changed."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c1",
+      "test": "test_PoolOwnerAuthority_NoUpgradeEntryPoint",
+      "mutation_targets": [
+        "contracts/privacy-pool/PrivacyPool.sol",
+        "contracts/privacy-pool/storage/PrivacyPoolStorage.sol"
+      ],
+      "description": "On a deployed Hub pool, a call to upgradeTo(address) and a call to upgradeToAndCall(address,bytes) both fail. The pool code stays the same after each attempt. The check also fails if one operator or one true/false value in the pool router or its storage is changed.",
+      "proves": "The pool has no upgrade path, so nobody can replace the pool code to swap the verification logic.",
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c2",
+      "test": "test_PoolOwnerAuthority_OwnerSetOnceNotDao",
+      "mutation_targets": [
+        "contracts/privacy-pool/PrivacyPool.sol",
+        "contracts/privacy-pool/storage/PrivacyPoolStorage.sol"
+      ],
+      "description": "The pool owner equals the address given to initialize. A second initialize call fails and the owner does not change. The owner is not the governor, the treasury or the wind-down contract. The check also fails if one operator or one true/false value in the pool or its storage is changed.",
+      "proves": "The owner is fixed at initialize and the governance DAO cannot reach the verification-key authority.",
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c3",
+      "test": "test_PoolOwnerAuthority_OnlyOwnerSetsVerificationKey",
+      "mutation_targets": [
+        "contracts/privacy-pool/PrivacyPool.sol",
+        "contracts/privacy-pool/modules/VerifierModule.sol"
+      ],
+      "description": "A setVerificationKey call from an address that is not the owner reverts and the stored key does not change. The same call from the owner succeeds, and the stored key reads back equal to the key sent. The check also fails if one operator or one true/false value in the pool or the verifier module is changed.",
+      "proves": "Only the owner can install a verification key, so an outsider cannot install a key that accepts forged proofs.",
+      "clause_id": "c3"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c4",
+      "test": "test_PoolOwnerAuthority_OwnerKeyPathKeptTestingModeOff",
+      "mutation_targets": [
+        "contracts/privacy-pool/PrivacyPool.sol",
+        "contracts/privacy-pool/modules/VerifierModule.sol"
+      ],
+      "description": "After the change, the owner can still set a verification key through the verifier module. Testing mode stays off on the deployed pool. The check also fails if one operator or one true/false value in the verifier module or the pool is changed.",
+      "proves": "The work keeps the owner authority over setVerificationKey (issue #349) and does not turn on testing mode or any verification bypass.",
+      "clause_id": "c4"
+    }
+  ],
+  "criticality": "critical"
+}
