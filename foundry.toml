@@ -25,6 +25,7 @@ libraries = [
 fs_permissions = [
     { access = "read", path = "./lib/poseidon_bytecode.json" },
     { access = "read", path = "./test-foundry/fixtures/snark" },  # real-proof verifier fixture (#604)
+    { access = "read", path = "./contracts/governance/ArmadaToken.sol" },  # source-level invariant scan (G1/arp-53a)
 ]
 
 # Invariant test config
