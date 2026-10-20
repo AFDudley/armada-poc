@@ -7,8 +7,12 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// freshConfig below reloads ./networks through CommonJS require.cache; under ESM
+// require is undefined, so build it from import.meta.url (the same ESM idiom as __dirname).
+const require = createRequire(import.meta.url);
 
 // Env keys the config reads that a test might set — cleared between tests so one case
 // can't leak chain topology into the next (getNetworkConfig caches, so we also re-require).
