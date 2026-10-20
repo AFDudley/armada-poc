@@ -8,9 +8,24 @@ dispatcher:
 
 # Commit-boundary acceptance gate the integrator re-runs in-worktree for pebbles
 # with NO linked spec (a linked spec is graded in-process by spec_oracle.run_spec).
-# gate:
-#   command: ["your-static-gate-command"]
-#   timeout: 1800
+# Chains pre-commit (lint/format) with the repo's own offline build and test
+# commands, so a merge also proves the repo compiles and its tests pass.
+# License hygiene and Anvil-address scans are the two fast CI scripts outside
+# pre-commit; `npm run compile` + `check:sizes` mirror the CI `contract-sizes`
+# job; `tsc --noEmit` mirrors CI `typecheck` (minus `test:config`, which fails
+# on `integrated` today for an unrelated reason, see .scratch/rewrite-evidence/
+# BRIEF-GATE report); `forge test --offline` mirrors CI `forge`. CI jobs needing
+# a network, a running chain, Docker or secrets (hardhat `test:all`, real-proof
+# e2e, golden-vector replay, indexer Docker build, Slither) stay out: they do
+# not belong in an offline commit-boundary gate.
+gate:
+  command:
+    [
+      "bash",
+      "-c",
+      "pre-commit run --all-files && ./scripts/check-license-hygiene.sh && ./scripts/check-anvil-addresses.sh && npm run compile && npm run check:sizes && npx tsc --noEmit --project tsconfig.ci.json && forge test --offline",
+    ]
+  timeout: 300
 
 # Where `exophial spec generate` writes unified spec instances (repo-relative).
 spec_dir: "contracts/specs"
