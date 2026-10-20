@@ -1,0 +1,67 @@
+status: completed
+pebble_id: arp-005
+summary: >
+  RevenueLock.sol now derives release entitlement from pool.cumulativeFees(asset) for
+  one named asset instead of the owner-raisable RevenueCounter.recognizedRevenueUsd.
+  Deleted the MAX_REVENUE_INCREASE_PER_DAY rate-limit ratchet entirely (maxObservedRevenue,
+  lastSyncTimestamp, syncObservedRevenue, getCappedObservedRevenue, both events) since
+  cumulativeFees is monotonic by the pool's own construction and there is no malicious
+  RevenueCounter upgrade left to defend against. release()/releasable()/unlockPercentage()
+  now always read the live pool fee total; no function raises the release source for free.
+  Kept a bare, ratchet-free wind-down snapshot (windDownContract/setWindDownContract/
+  frozenAtWindDown/freezeAtWindDown/lockedAtWindDown) because the explicitly protected,
+  unedited RevenueReserveDistributor.sol hard-depends on revenueLock.frozenAtWindDown()
+  via its own interface for assignment-close/allocator-fallback logic, and ArmadaWindDown.sol/
+  ArmadaRedemption.sol (also left unedited, outside this task's named file) call
+  freezeAtWindDown()/lockedAtWindDown() unconditionally during wind-down trigger — deleting
+  them per the brief's literal S4 would revert every wind-down-integrated call in the
+  existing, required-to-pass RevenueReserveDistributor suite. This kept surface cannot move
+  cumulativeFees or anyone's allocation/release amount, only snapshot the already-live,
+  already-monotonic unlock bps. Constructor is now (armToken, pool, asset, beneficiaries,
+  amounts); milestone step function and constants are unchanged (verified byte-identical,
+  whitespace-normalized, against the branch's base commit). Updated RevenueLock.t.sol (new
+  MockPoolRL double; new tests: non-fee-payer cannot raise the source, no release beyond
+  the fee-supported milestone, releasable/release agree bit-for-bit across levels),
+  RevenueLockInvariant.t.sol (pool-backed handler with a monotonic mock pool),
+  RevenueReserveDistributor.t.sol (pool double; two ratchet-era tests rewritten for the
+  counter-independent design; one obsolete counter-failure test deleted as redundant with
+  the existing transfer-failure-isolation test), and RevenueReserveIntegration.t.sol
+  (constructor signature only). Wrote scripts/check-revenuelock.sh, the acceptance-oracle
+  tool the linked spec's 9 acceptance_tests invoke. Verified by running all 9 subcommands
+  (each exits 0 with the JSON fields the spec's `then` clauses check), running
+  `forge test --match-path test-foundry/RevenueLock.t.sol` (23/23 passing), the existing
+  RevenueLockInvariant.t.sol and RevenueReserveDistributor.t.sol suites (26/26 passing),
+  and the full repo's forge test suite minus PrivacyPool* (756/756 passing, unaffected by
+  this change), plus a clean `forge build`. Fixed an unrelated pre-existing gap in this
+  worktree (no node_modules) by running `npm install` locally so forge could resolve
+  @openzeppelin imports; this is environment-local and not committed (node_modules stays
+  gitignored).
+cost: "~145k tokens"
+commits:
+  - "b8c73169"
+verify_transcript:
+  hooks:
+    - name: forge-test-revenuelock-unit
+      outcome: passed
+      duration_s: 2
+    - name: forge-test-revenuelock-invariant
+      outcome: passed
+      duration_s: 3
+    - name: forge-test-reserve-distributor
+      outcome: passed
+      duration_s: 3
+    - name: forge-build-full
+      outcome: passed
+      duration_s: 29
+    - name: forge-test-full-suite-minus-privacypool
+      outcome: passed
+      duration_s: 8
+    - name: check-revenuelock-all-subcommands
+      outcome: passed
+      duration_s: 5
+e2e_gate:
+  spec: contracts/specs/derived-arp-005.spec.json
+  command: "bash scripts/check-revenuelock.sh <each of the 9 declared args>"
+  result: passed
+  ran_at_sha: "b8c73169"
+  mocks_in_path: false
