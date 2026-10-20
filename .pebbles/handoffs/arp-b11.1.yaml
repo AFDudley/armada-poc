@@ -1,0 +1,62 @@
+status: completed
+pebble_id: arp-b11.1
+summary: >
+  Added test-foundry/HubPoolOwnerGuard.t.sol (PoolOwnerAuthorityTest) with four forge tests
+  that prove the Hub PrivacyPool's owner-authority properties: no upgradeTo/upgradeToAndCall
+  entry point (c1), the owner set once in initialize and not DAO-reachable (c2), only the
+  owner can call setVerificationKey — non-owner reverts and owner call stores the key (c3),
+  and the owner key path stays live with testing mode off (c4). All four tests deploy the
+  existing pool (router + modules + CCTP mocks) and exercise the owner-gated key path so a
+  mutation of the pool router or the verifier module is caught. Verified with forge test
+  test-foundry/HubPoolOwnerGuard.t.sol: 4/4 pass. Confirmed the mutation gate: flipping the
+  owner-gate operator in PrivacyPool.setVerificationKey (or VerifierModule.setVerificationKey)
+  turns all four tests red (exit 1) while the unmutated baseline stays green (exit 0).
+  node_modules linked from the parent checkout (gitignored, not committed) so forge resolves
+  the @openzeppelin imports.
+cost: "~40k tokens"
+commits:
+  - "d1c94918"
+verify_transcript:
+  hooks:
+    - name: forge-test-hub-pool-owner-guard
+      outcome: passed
+      duration_s: 3
+    - name: mutation-gate-router-gate-flip
+      outcome: passed
+      duration_s: 3
+    - name: mutation-gate-verifier-gate-flip
+      outcome: passed
+      duration_s: 3
+e2e_gate:
+  spec: contracts/specs/derived-arp-b11.1.spec.json
+  command: "forge test test-foundry/HubPoolOwnerGuard.t.sol"
+  result: passed
+  ran_at_sha: "d1c94918"
+  mocks_in_path: false
+discrimination:
+  - mechanism: mutation_kill
+    oracle: "forge test test-foundry/HubPoolOwnerGuard.t.sol (the linked spec's four forge_mutation_gated_test cases c1-c4)"
+    target: "test_PoolOwnerAuthority_OnlyOwnerSetsVerificationKey and its three siblings"
+    perturbation: "Flipped the owner-gate operator in PrivacyPool.setVerificationKey (msg.sender == owner -> msg.sender != owner), and separately in VerifierModule.setVerificationKey; re-ran the suite."
+    took:
+      applied:
+        observable: "grep -c 'msg.sender == owner' contracts/privacy-pool/PrivacyPool.sol"
+        moved: ["14", "13"]
+      observed:
+        observable: "forge test suite result"
+        moved: ["4 passed, 0 failed", "0 passed, 4 failed"]
+    assertions_fired:
+      - assertion: "all four owner-authority tests go red when the router/verifier owner gate is mutated"
+        moved: ["passing", "failing"]
+    pinned_at:
+      - "contracts/privacy-pool/PrivacyPool.sol"
+      - "test-foundry/HubPoolOwnerGuard.t.sol"
+    exit_code_before: 0
+    exit_code_after: 1
+    reverted: true
+    negative_control:
+      variant: "unmutated baseline (no perturbation)"
+      applied: "grep -c 'msg.sender == owner' contracts/privacy-pool/PrivacyPool.sol"
+      observable: "forge test suite passes (4 passed, 0 failed)"
+      unmoved: ["passing", "passing"]
+      exit_code: 0
