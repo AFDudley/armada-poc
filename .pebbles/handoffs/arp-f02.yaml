@@ -1,0 +1,68 @@
+status: completed
+pebble_id: arp-f02
+summary: >
+  Rewrote specs/GOVERNANCE.md and specs/ARM_TOKEN.md to describe the
+  Baal-on-Safe design. Both docs now name Baal (the Moloch v3 DAO) and
+  the Gnosis Safe (the treasury), and carry zero case-insensitive
+  matches for the removed governor, steward, veto, wind-down and
+  redemption terms. The Baal/Safe wiring order, the ShieldedRagequit
+  exit, the RevenueLock cumulativeFees release path, the Hedgey
+  lockup, and the shield pause controller are all described; the
+  old-stack terms appear only in the acceptance-gate grep (0 hits).
+  Verified by running the four spec acceptance assertions (two
+  grep_absent + two grep) and the wired pre-commit gate
+  (trailing-whitespace) on both files.
+cost: ~40k tokens
+commits:
+  - "9cc58238"
+verify_transcript:
+  hooks:
+    - name: "pre-commit run trailing-whitespace --files specs/GOVERNANCE.md specs/ARM_TOKEN.md"
+      outcome: passed
+      duration_s: 1
+    - name: "pre-commit run trailing-whitespace --files specs/GOVERNANCE.md specs/ARM_TOKEN.md (post-perturbation)"
+      outcome: failed
+      duration_s: 1
+    - name: "pre-commit run trailing-whitespace --files specs/GOVERNANCE.md specs/ARM_TOKEN.md (post-revert)"
+      outcome: passed
+      duration_s: 1
+e2e_gate:
+  spec: contracts/specs/derived-arp-f02.spec.json
+  command: >
+    grep -icE 'governor|steward|veto|wind-down|wind down|redemption' specs/GOVERNANCE.md
+    && grep -icE 'governor|steward|veto|wind-down|wind down|redemption' specs/ARM_TOKEN.md
+    && grep -c 'Baal' specs/GOVERNANCE.md && grep -c 'Safe' specs/GOVERNANCE.md
+    && grep -c 'Baal' specs/ARM_TOKEN.md && grep -c 'Safe' specs/ARM_TOKEN.md
+  result: passed
+  ran_at_sha: "9cc58238"
+  mocks_in_path: false
+discrimination:
+  - mechanism: red_first
+    oracle: "trailing-whitespace (a wired gate named by .pre-commit-config.yaml hook entry)"
+    target: "specs/GOVERNANCE.md and specs/ARM_TOKEN.md — the two files this branch modifies"
+    perturbation: >
+      Appended a line of three trailing spaces to specs/GOVERNANCE.md,
+      re-ran the trailing-whitespace gate on both modified files (expected
+      failure), then reverted the perturbation with git checkout.
+    took:
+      applied:
+        observable: "count of lines in specs/GOVERNANCE.md ending in whitespace (grep -cE ' +$')"
+        moved:
+          - "0"
+          - "1"
+      observed:
+        observable: "exit code of `pre-commit run trailing-whitespace --files specs/GOVERNANCE.md specs/ARM_TOKEN.md`"
+        moved:
+          - "0"
+          - "1"
+    assertions_fired:
+      - assertion: "trailing-whitespace flags the appended trailing-space line and auto-fixes it (hook output 'Fixing specs/GOVERNANCE.md')"
+        moved:
+          - "trailing-whitespace: clean (exit 0)"
+          - "trailing-whitespace: trailing space flagged, file auto-fixed (exit 1)"
+    pinned_at:
+      - specs/GOVERNANCE.md
+      - specs/ARM_TOKEN.md
+    exit_code_before: 0
+    exit_code_after: 1
+    reverted: true
