@@ -1,0 +1,311 @@
+{
+  "id": "derived-arp-67a",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. The armada-poc deploy scripts produce a complete governance manifest (getGovernanceDeploymentFile) that the six reader scripts load without error, with the Baal-era wiring: the treasury is the Gnosis Safe, there is no custom governor, timelock or wind-down, and RevenueLock, AdapterRegistry, ShieldPauseController and RevenueReserveDistributor are present. ShieldedRagequit is deployed and registered as the one Baal manager shaman with ARM burn authority. GOVERNANCE.md states the Safe is the treasury with the Baal as its sole owner, and ShieldedRagequit is the one exit.\nWhat holds now? Describe the current, observed state. G6 (arp-93a) deleted scripts/deploy_governance.ts, which wrote getGovernanceDeploymentFile. Nothing writes it now. Six scripts read its fields and throw 'Governance deployment not found': deploy_privacy_pool.ts reads treasury; deploy_fee_module.ts reads treasury, timelockController, governor and revenueCounter; deploy_crowdfund.ts reads armToken, treasury, revenueLock and revenueReserveDistributor; deploy_yield.ts reads adapterRegistry and treasury; deploy_revenue_lock_cohort.ts reads armToken and revenueCounter; link_privacy_pool.ts reads timelockController, adapterRegistry and shieldPauseController. No script calls setShamans and ShieldedRagequit has no deploy script. summon-baal-safe.ts reads armToken from the missing manifest and deploys its own Safe.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run deploy_crowdfund (or any of the six reader scripts) against a local node; it throws 'Governance deployment not found'. A check asserts: after the governance deploy the manifest exists; manifest.treasury equals the Safe address; the manifest carries armToken, revenueLock, adapterRegistry and shieldPauseController; Baal.shamans(ShieldedRagequit) is the manager role; ArmadaToken.authorizedBurner(ShieldedRagequit) is true; and each of the six reader scripts runs to completion without throwing.\nWhat constraints apply? State them in plain prose. The treasury is the Gnosis Safe (decision 9). The custom governor, timelock and wind-down are dropped (decision 1); where a reader needs a governance-executor address, it is the Safe, and the Safe is ArmadaToken's immutable timelock, so the Safe is deployed before ArmadaToken and summon-baal-safe.ts reuses it. ShieldedRagequit is the one Baal shaman (decisions 20 and 21). RevenueLock keeps reading the pool cumulativeFees (decision 22). The vendored Baal, Safe and Hedgey stay unchanged.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) armada-poc deployment: scripts/deploy_governance.ts, scripts/summon-baal-safe.ts, scripts/deploy_privacy_pool.ts, scripts/deploy_fee_module.ts, scripts/deploy_crowdfund.ts, scripts/deploy_yield.ts, scripts/deploy_revenue_lock_cohort.ts, scripts/link_privacy_pool.ts, config/networks",
+  "restatement": "The armada-poc deploy flow must again produce the governance manifest that getGovernanceDeploymentFile names, with Baal-era contents. The treasury is the Gnosis Safe. There is no custom governor, timelock or wind-down. RevenueLock, AdapterRegistry, ShieldPauseController and RevenueReserveDistributor are present, along with armToken. The Safe is deployed before ArmadaToken and is ArmadaToken's immutable timelock. summon-baal-safe.ts reuses that Safe. ShieldedRagequit gets a deploy step and is registered as the one Baal manager shaman with ARM burn authority. The six reader scripts (deploy_privacy_pool, deploy_fee_module, deploy_crowdfund, deploy_yield, deploy_revenue_lock_cohort, link_privacy_pool) run to completion without throwing 'Governance deployment not found'. Where a reader needs a governance executor address, it gets the Safe. GOVERNANCE.md states the Safe is the treasury, the Baal is its sole owner, and ShieldedRagequit is the one exit. RevenueLock keeps reading the pool cumulativeFees. The vendored Baal, Safe and Hedgey stay unchanged.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "After the governance deploy, the manifest written for getGovernanceDeploymentFile exists."
+    },
+    {
+      "id": "c2",
+      "text": "manifest.treasury equals the Safe address. The manifest carries armToken, revenueLock, adapterRegistry, shieldPauseController and revenueReserveDistributor. It has no custom governor, timelock or wind-down entry."
+    },
+    {
+      "id": "c3",
+      "text": "Baal.shamans(ShieldedRagequit) is the manager role, and ArmadaToken.authorizedBurner(ShieldedRagequit) is true."
+    },
+    {
+      "id": "c4",
+      "text": "Each of the six reader scripts (deploy_privacy_pool.ts, deploy_fee_module.ts, deploy_crowdfund.ts, deploy_yield.ts, deploy_revenue_lock_cohort.ts, link_privacy_pool.ts) runs to completion without throwing."
+    },
+    {
+      "id": "c5",
+      "text": "The Safe is deployed before ArmadaToken and is ArmadaToken's immutable timelock. summon-baal-safe.ts reuses that Safe and does not deploy its own. Where a reader needs a governance-executor address, it receives the Safe."
+    },
+    {
+      "id": "c6",
+      "text": "GOVERNANCE.md states the Safe is the treasury with the Baal as its sole owner, and ShieldedRagequit is the one exit."
+    },
+    {
+      "id": "c7",
+      "text": "The vendored Baal, Safe and Hedgey code is unchanged, and RevenueLock still reads the pool cumulativeFees."
+    }
+  ],
+  "goal": "After the governance deploy, a manifest exists with the Baal-era wiring, ShieldedRagequit is registered, and all six reader scripts run without error.",
+  "acceptance_criteria": [
+    "After a local governance deploy, the governance manifest file exists and can be loaded.",
+    "The manifest treasury equals the Safe address, all required contract entries are present, and no governor, timelock or wind-down entry exists.",
+    "On the deployed chain, ShieldedRagequit holds the manager role in the Baal and may burn ARM.",
+    "After the governance deploy, each of the six reader scripts runs against the local node and finishes with no error.",
+    "The Safe address is used as ArmadaToken's timelock and as the executor address, and the Baal summon step reuses it.",
+    "The governance document says the Safe is the treasury, the Baal is its sole owner, and ShieldedRagequit is the one exit.",
+    "The vendored Baal, Safe and Hedgey code has no changes compared with the base, and RevenueLock still reads cumulativeFees."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "After a local governance deploy, the governance manifest file exists and can be loaded."
+    },
+    {
+      "id": "c2",
+      "text": "The manifest treasury equals the Safe address, all required contract entries are present, and no governor, timelock or wind-down entry exists."
+    },
+    {
+      "id": "c3",
+      "text": "On the deployed chain, ShieldedRagequit holds the manager role in the Baal and may burn ARM."
+    },
+    {
+      "id": "c4",
+      "text": "After the governance deploy, each of the six reader scripts runs against the local node and finishes with no error."
+    },
+    {
+      "id": "c5",
+      "text": "The Safe address is used as ArmadaToken's timelock and as the executor address, and the Baal summon step reuses it."
+    },
+    {
+      "id": "c6",
+      "text": "The governance document says the Safe is the treasury, the Baal is its sole owner, and ShieldedRagequit is the one exit."
+    },
+    {
+      "id": "c7",
+      "text": "The vendored Baal, Safe and Hedgey code has no changes compared with the base, and RevenueLock still reads cumulativeFees."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "behavior",
+      "description": "After a local governance deploy, the governance manifest file exists and can be loaded.",
+      "proves": "The manifest is written again after the old deploy script was removed.",
+      "restatement_clause_id": "c1",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-governance-deploy.sh",
+        "args": [
+          "manifest-exists"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "manifest_exists",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c1"
+    },
+    {
+      "type": "behavior",
+      "description": "The manifest treasury equals the Safe address, all required contract entries are present, and no governor, timelock or wind-down entry exists.",
+      "proves": "The manifest has the Baal-era wiring and nothing from the dropped governance stack.",
+      "restatement_clause_id": "c2",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-governance-deploy.sh",
+        "args": [
+          "manifest-contents"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "treasury_is_safe",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "missing_required_fields",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "has_dropped_governance_fields",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "On the deployed chain, ShieldedRagequit holds the manager role in the Baal and may burn ARM.",
+      "proves": "ShieldedRagequit is deployed and registered as the one manager shaman with burn authority.",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-governance-deploy.sh",
+        "args": [
+          "shaman-and-burner"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "has_manager_role",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "authorized_burner",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "After the governance deploy, each of the six reader scripts runs against the local node and finishes with no error.",
+      "proves": "No reader script throws 'Governance deployment not found' any more.",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-governance-deploy.sh",
+        "args": [
+          "readers-run"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "readers_failed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "readers_run",
+          "op": "eq",
+          "value": 6
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 1800,
+      "clause_id": "c4"
+    },
+    {
+      "type": "behavior",
+      "description": "The Safe address is used as ArmadaToken's timelock and as the executor address, and the Baal summon step reuses it.",
+      "proves": "One Safe is deployed before ArmadaToken and shared by the token, the Baal summon step and the readers.",
+      "restatement_clause_id": "c5",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-governance-deploy.sh",
+        "args": [
+          "safe-reuse"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "token_timelock_is_safe",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "safes_deployed",
+          "op": "eq",
+          "value": 1
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c5"
+    },
+    {
+      "type": "behavior",
+      "description": "The governance document says the Safe is the treasury, the Baal is its sole owner, and ShieldedRagequit is the one exit.",
+      "proves": "The documentation matches the Baal-era design.",
+      "restatement_clause_id": "c6",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-governance-deploy.sh",
+        "args": [
+          "governance-doc"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "doc_states_safe_treasury",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "doc_states_baal_sole_owner",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "doc_states_ragequit_one_exit",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 120,
+      "clause_id": "c6"
+    },
+    {
+      "type": "behavior",
+      "description": "The vendored Baal, Safe and Hedgey code has no changes compared with the base, and RevenueLock still reads cumulativeFees.",
+      "proves": "The change leaves vendored code alone and keeps the RevenueLock fee source.",
+      "restatement_clause_id": "c7",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-governance-deploy.sh",
+        "args": [
+          "vendored-unchanged"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "vendored_files_changed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "revenue_lock_reads_cumulative_fees",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 300,
+      "clause_id": "c7"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/check-governance-deploy.sh"
+  ]
+}
