@@ -6,32 +6,27 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 
-import { PrivacyPool } from "../contracts/privacy-pool/PrivacyPool.sol";
-import { ShieldModule } from "../contracts/privacy-pool/modules/ShieldModule.sol";
-import { TransactModule } from "../contracts/privacy-pool/modules/TransactModule.sol";
-import { MerkleModule } from "../contracts/privacy-pool/modules/MerkleModule.sol";
-import { VerifierModule } from "../contracts/privacy-pool/modules/VerifierModule.sol";
-import {
-    CommitmentPreimage,
-    TokenData,
-    TokenType,
-    UnshieldType
-} from "../contracts/privacy-pool/types/PoolTypes.sol";
-import { PoseidonT4 } from "../contracts/privacy-pool/types/PoseidonLibs.sol";
-import { MockUSDCV2 } from "../contracts/cctp/MockUSDCV2.sol";
-import { MockTokenMessengerV2, MockMessageTransmitterV2 } from "../contracts/cctp/MockCCTPV2.sol";
-import { ArmadaToken } from "../contracts/governance/ArmadaToken.sol";
-import { ShieldedRagequit } from "../contracts/governance/ShieldedRagequit.sol";
-import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {PrivacyPool} from "../contracts/privacy-pool/PrivacyPool.sol";
+import {ShieldModule} from "../contracts/privacy-pool/modules/ShieldModule.sol";
+import {TransactModule} from "../contracts/privacy-pool/modules/TransactModule.sol";
+import {MerkleModule} from "../contracts/privacy-pool/modules/MerkleModule.sol";
+import {VerifierModule} from "../contracts/privacy-pool/modules/VerifierModule.sol";
+import {CommitmentPreimage, TokenData, TokenType, UnshieldType} from "../contracts/privacy-pool/types/PoolTypes.sol";
+import {PoseidonT4} from "../contracts/privacy-pool/types/PoseidonLibs.sol";
+import {MockUSDCV2} from "../contracts/cctp/MockUSDCV2.sol";
+import {MockTokenMessengerV2, MockMessageTransmitterV2} from "../contracts/cctp/MockCCTPV2.sol";
+import {ArmadaToken} from "../contracts/governance/ArmadaToken.sol";
+import {ShieldedRagequit} from "../contracts/governance/ShieldedRagequit.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
-import { GnosisSafe } from "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
-import { GnosisSafeProxyFactory } from "@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxyFactory.sol";
-import { GnosisSafeProxy } from "@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxy.sol";
-import { MultiSend } from "@gnosis.pm/safe-contracts/contracts/libraries/MultiSend.sol";
-import { ModuleProxyFactory } from "@gnosis.pm/zodiac/contracts/factory/ModuleProxyFactory.sol";
-import { Baal } from "lib/baal/contracts/Baal.sol";
-import { IBaalToken } from "lib/baal/contracts/interfaces/IBaalToken.sol";
-import { PoseidonLinker } from "./helpers/PoseidonLinker.sol";
+import {GnosisSafe} from "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
+import {GnosisSafeProxyFactory} from "@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxyFactory.sol";
+import {GnosisSafeProxy} from "@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxy.sol";
+import {MultiSend} from "@gnosis.pm/safe-contracts/contracts/libraries/MultiSend.sol";
+import {ModuleProxyFactory} from "@gnosis.pm/zodiac/contracts/factory/ModuleProxyFactory.sol";
+import {Baal} from "lib/baal/contracts/Baal.sol";
+import {IBaalToken} from "lib/baal/contracts/interfaces/IBaalToken.sol";
+import {PoseidonLinker} from "./helpers/PoseidonLinker.sol";
 
 /// @title ShieldedRagequitTest — G3 Baal manager-shaman exit (9 spec tests c1-c9).
 /// @dev The pool runs in testingMode (SNARK proof bypassed); the exit path (transactOwned) is
@@ -123,22 +118,16 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         address[] memory owners = new address[](1);
         owners[0] = address(public_baal);
         bytes memory enableBaalModule = abi.encodeWithSignature("enableModule(address)", address(public_baal));
-        bytes memory multisendAction = abi.encodeWithSignature("multiSend(bytes)",
-            abi.encodePacked(uint8(0), address(safe), uint256(0), uint256(enableBaalModule.length), enableBaalModule));
-        safe.setup(
-            owners,
-            1,
-            address(multisend),
-            multisendAction,
-            address(0),
-            address(0),
-            0,
-            payable(0)
+        bytes memory multisendAction = abi.encodeWithSignature(
+            "multiSend(bytes)",
+            abi.encodePacked(uint8(0), address(safe), uint256(0), uint256(enableBaalModule.length), enableBaalModule)
         );
+        safe.setup(owners, 1, address(multisend), multisendAction, address(0), address(0), 0, payable(0));
 
         bytes memory noOpMultisend = abi.encodeWithSignature("multiSend(bytes)", bytes(""));
         bytes memory baalInit = abi.encode(
-            address(armBaalToken), address(armBaalToken), address(multisend), address(safe), address(0), noOpMultisend);
+            address(armBaalToken), address(armBaalToken), address(multisend), address(safe), address(0), noOpMultisend
+        );
         public_baal.setUp(baalInit);
 
         // G3: the manager shaman contract (the constructor takes ARM, Baal, Safe, pool).
@@ -178,12 +167,15 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)));
 
         // The preimage registry now holds the output note's preimage (the caller's note at npk).
-        bytes32 commitment = _commitment(_npk(holder), address(usdc), armAmt, usdc.balanceOf(address(safe)), arm.totalSupply());
+        bytes32 commitment =
+            _commitment(_npk(holder), address(usdc), armAmt, usdc.balanceOf(address(safe)), arm.totalSupply());
         (bytes32 npk, TokenData memory tokenData, uint256 value) = pool.preimageOf(commitment);
         assertEq(npk, _npk(holder), "c2: the note must be at the caller's npk");
         assertEq(uint8(tokenData.tokenType), uint8(TokenType.ERC20), "c2: payout is denominated in the treasury token");
         assertEq(tokenData.tokenAddress, address(usdc), "c2: payout token is the treasury USDC");
-        assertEq(value, armAmt * usdc.balanceOf(address(safe)) / arm.totalSupply(), "c2: payout equals the bounded share");
+        assertEq(
+            value, armAmt * usdc.balanceOf(address(safe)) / arm.totalSupply(), "c2: payout equals the bounded share"
+        );
     }
 
     // c3 · The exit succeeds with a single direct call — no Safe signature, no Baal proposal.
@@ -198,7 +190,11 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
 
         // Proof the exit needed no Safe signature or Baal proposal: the holder's own call
         // burned ARM (totalSupply dropped) and the exit path ran through transactOwned.
-        assertEq(arm.totalSupply(), supplyBefore - armAmt, "c3: the holder's own call burned ARM without a Safe signature or Baal proposal");
+        assertEq(
+            arm.totalSupply(),
+            supplyBefore - armAmt,
+            "c3: the holder's own call burned ARM without a Safe signature or Baal proposal"
+        );
     }
 
     // c4 · A crafted call claiming more than the bound reverts; the treasury keeps its funds.
@@ -213,7 +209,7 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)));
 
         // The exit pays out exactly the bound — never more.
-        (, , uint256 value) = pool.preimageOf(_commitment(_npk(holder), address(usdc), armAmt, safeBal, supply));
+        (,, uint256 value) = pool.preimageOf(_commitment(_npk(holder), address(usdc), armAmt, safeBal, supply));
         assertEq(value, bound, "c4: payout equals the bounded share");
         assertLe(value, safeBal, "c4: the treasury keeps its funds (payout <= Safe balance)");
     }
@@ -329,7 +325,11 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
 
     /// @dev Computes the output note's commitment the same way the pool does:
     ///      PoseidonT4(npk, tokenID, value).
-    function _commitment(bytes32 npk, address tokenAddr, uint256 armAmt, uint256 safeBal, uint256 supply) public pure returns (bytes32) {
+    function _commitment(bytes32 npk, address tokenAddr, uint256 armAmt, uint256 safeBal, uint256 supply)
+        public
+        pure
+        returns (bytes32)
+    {
         bytes32 tokenID = bytes32(uint256(uint160(tokenAddr)));
         bytes32 value = bytes32(uint256(armAmt * safeBal / supply));
         return PoseidonT4.poseidon([npk, tokenID, value]);
@@ -357,44 +357,67 @@ contract MockBaalToken is IBaalToken {
     }
 
     function setUp(string memory, string memory) external override {}
+
     function mint(address recipient, uint256 amount) external override {
         _balances[recipient] += amount;
         totalSupply += amount;
     }
+
     function burn(address account, uint256 amount) external override {
         _balances[account] -= amount;
         totalSupply -= amount;
     }
-    function pause() external override { paused = true; }
-    function unpause() external override { paused = false; }
-    function transferOwnership(address newOwner) external override { owner = newOwner; }
+
+    function pause() external override {
+        paused = true;
+    }
+
+    function unpause() external override {
+        paused = false;
+    }
+
+    function transferOwnership(address newOwner) external override {
+        owner = newOwner;
+    }
+
     function balanceOf(address account) external view override returns (uint256) {
         return _balances[account];
     }
+
     function snapshot() external pure override returns (uint256) {
         return 0;
     }
+
     function getCurrentSnapshotId() external pure override returns (uint256) {
         return 0;
     }
+
     function balanceOfAt(address account, uint256) external view override returns (uint256) {
         return _balances[account];
     }
+
     function totalSupplyAt(uint256) external view override returns (uint256) {
         return totalSupply;
     }
+
     function getPastVotes(address, uint256) external pure override returns (uint256) {
         return 0;
     }
+
     function numCheckpoints(address) external pure override returns (uint256) {
         return 0;
     }
+
     function getCheckpoint(address, uint256) external pure override returns (Checkpoint memory) {
         return Checkpoint(0, 0);
     }
+
     function getVotes(address) external pure override returns (uint256) {
         return 0;
     }
-    function delegate(address delegatee) external override { delegates[msg.sender] = delegatee; }
+
+    function delegate(address delegatee) external override {
+        delegates[msg.sender] = delegatee;
+    }
     function delegateBySig(address, uint256, uint256, uint8, bytes32, bytes32) external override {}
 }
