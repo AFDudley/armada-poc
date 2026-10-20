@@ -516,7 +516,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
         inputs[0] = uint256(_transaction.merkleRoot);
 
         // Input 1: Hash of bound parameters
-        inputs[1] = uint256(keccak256(abi.encode(_transaction.boundParams))) % SNARK_SCALAR_FIELD;
+        inputs[1] = _boundParamsHash(_transaction.boundParams);
 
         // Inputs 2 to 2+nullifiersLength-1: Nullifiers
         for (uint256 i = 0; i < nullifiersLength; i++) {
@@ -569,7 +569,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
         uint256[] memory inputs = new uint256[](3 + nullifiersLength + commitmentsLength);
 
         inputs[0] = uint256(_transaction.merkleRoot);
-        inputs[1] = uint256(keccak256(abi.encode(_transaction.boundParams))) % SNARK_SCALAR_FIELD;
+        inputs[1] = _boundParamsHash(_transaction.boundParams);
         for (uint256 i = 0; i < nullifiersLength; i++) {
             inputs[2 + i] = uint256(_transaction.nullifiers[i]);
         }

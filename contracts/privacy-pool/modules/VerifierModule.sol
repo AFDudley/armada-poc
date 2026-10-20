@@ -99,10 +99,13 @@ contract VerifierModule is PrivacyPoolStorage, IVerifierModule {
     }
 
     /// @notice Hashes the bound parameters into a SNARK scalar field element.
+    /// @dev Delegates to `_boundParamsHash`, which hashes only the seven original fields
+    ///      (P2a's `ownerField` and `publicOutputs` are bound outside this hash). See the
+    ///      helper in `PrivacyPoolStorage` for the binding argument.
     /// @param _boundParams Bound parameters of the transaction.
-    /// @return `keccak256` of the standard ABI encoding, reduced mod the scalar field.
+    /// @return `keccak256` of the original seven fields, reduced mod the scalar field.
     function hashBoundParams(BoundParams calldata _boundParams) public pure override returns (uint256) {
-        return uint256(keccak256(abi.encode(_boundParams))) % SNARK_SCALAR_FIELD;
+        return _boundParamsHash(_boundParams);
     }
 
     /// @notice Toggles the testing-mode proof bypass.

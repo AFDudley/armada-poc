@@ -223,4 +223,54 @@ contract TransactOwnedTest is Test, PoseidonLinker {
         vm.expectRevert("TransactModule: Unshield not allowed");
         pool.transactOwned(_single(t));
     }
+
+    /// @notice A plain transact that carries a non-zero ownerField reverts. The plain
+    ///         circuit (armada-circuits src/main/main_1x2_owned.circom contrasts with
+    ///         main_1x2.circom:6, which has no ownerField public input), so a plain proof
+    ///         never binds ownerField and the plain path never reads it. A caller must not
+    ///         imply an owner the proof did not constrain; owned spends use transactOwned.
+    function test_transact_ownerFieldSet_reverts() public {
+        CommitmentPreimage memory preimage =
+            CommitmentPreimage({npk: bytes32(uint256(0x1111)), token: _token(), value: VALUE});
+        bytes32 commitment = _commitment(preimage);
+
+        bytes32 ownerField = bytes32(uint256(uint160(stranger)));
+        Transaction memory t = _buildTxn(UnshieldType.NONE, ownerField, preimage, commitment, false);
+        vm.expectRevert("TransactModule: Owner field set on plain transact");
+        pool.transact(_single(t));
+    }
+
+    /// @notice A transactOwned whose plaintext output does not hash to its commitment
+    ///         reverts, so the registry can never record an unverified preimage on the
+    ///         owned path either.
+    function test_transactOwned_publicOutputHashMismatch_reverts() public {
+        bytes32 ownerField = bytes32(uint256(uint160(noteOwner)));
+        CommitmentPreimage memory honest =
+            CommitmentPreimage({npk: bytes32(uint256(0x3333)), token: _token(), value: VALUE});
+        bytes32 commitment = _commitment(honest);
+
+        CommitmentPreimage memory tampered =
+            CommitmentPreimage({npk: bytes32(uint256(0x4444)), token: _token(), value: VALUE});
+
+        Transaction memory t = _buildTxn(UnshieldType.NONE, ownerField, tampered, commitment, true);
+        vm.prank(noteOwner);
+        vm.expectRevert("TransactModule: Invalid Public Output");
+        pool.transactOwned(_single(t));
+    }
+
+    /// @notice Changing ownerField makes the owned spend fail. ownerField is the owned
+    ///         circuit's public owner input (main_1x2_owned.circom:6) and transactOwned
+    ///         also checks msg.sender against it. A transaction whose ownerField names a
+    ///         different address than the caller reverts, so ownerField cannot be swapped.
+    function test_transactOwned_differentOwnerField_reverts() public {
+        bytes32 ownerField = bytes32(uint256(uint160(stranger)));
+        CommitmentPreimage memory preimage =
+            CommitmentPreimage({npk: bytes32(uint256(0x3333)), token: _token(), value: VALUE});
+        bytes32 commitment = _commitment(preimage);
+
+        Transaction memory t = _buildTxn(UnshieldType.NONE, ownerField, preimage, commitment, true);
+        vm.prank(noteOwner);
+        vm.expectRevert("TransactModule: Caller not owner");
+        pool.transactOwned(_single(t));
+    }
 }

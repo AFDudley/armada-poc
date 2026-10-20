@@ -336,6 +336,14 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
             }
         }
 
+        // P2a: the plain transact path has no owned proof, so ownerField is not a public
+        // input of the plain circuit (armada-circuits src/main/main_1x2.circom:6) and this
+        // path never reads it. Reject a non-zero ownerField so a caller cannot imply an
+        // owner the proof never bound; contract-owned spends use transactOwned.
+        if (_transaction.boundParams.ownerField != bytes32(0)) {
+            return (false, "Owner field set on plain transact");
+        }
+
         // P2a: validate any contract-owned plaintext outputs. publicOutputs, when
         // present, runs parallel to commitments; each non-zero entry must hash to its
         // commitment, so the registry can never record a preimage the pool did not

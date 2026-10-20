@@ -34,6 +34,28 @@ abstract contract PrivacyPoolStorage {
         _;
     }
 
+    /// @notice Hashes the bound parameters into a SNARK scalar field element.
+    /// @dev Hashes only the seven original `BoundParamsCore` fields. P2a added `ownerField`
+    ///      and `publicOutputs` to `BoundParams`, but the circuit's `boundParamsHash` public
+    ///      input is computed over the original seven fields, so this hash must stay equal to
+    ///      the value the prover used. `ownerField` is bound separately as a public input of
+    ///      the owned circuit (`verifyOwned`); each `publicOutputs` entry is bound by the
+    ///      required `_hashCommitment(publicOutputs[i]) == commitments[i]` check, and
+    ///      `commitments` are themselves circuit public inputs.
+    /// @return `keccak256` of the original seven fields, reduced mod the scalar field.
+    function _boundParamsHash(BoundParams calldata _boundParams) internal pure returns (uint256) {
+        BoundParamsCore memory core = BoundParamsCore({
+            treeNumber: _boundParams.treeNumber,
+            minGasPrice: _boundParams.minGasPrice,
+            unshield: _boundParams.unshield,
+            chainID: _boundParams.chainID,
+            adaptContract: _boundParams.adaptContract,
+            adaptParams: _boundParams.adaptParams,
+            commitmentCiphertext: _boundParams.commitmentCiphertext
+        });
+        return uint256(keccak256(abi.encode(core))) % SNARK_SCALAR_FIELD;
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // MODULE ADDRESSES
     // ══════════════════════════════════════════════════════════════════════════

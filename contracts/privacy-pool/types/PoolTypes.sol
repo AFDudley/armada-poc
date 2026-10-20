@@ -126,6 +126,24 @@ struct BoundParams {
     CommitmentPreimage[] publicOutputs;
 }
 
+/// @notice The seven original bound-parameter fields, in their pre-P2a order. P2a added
+///         `ownerField` and `publicOutputs` to `BoundParams`, but the circuit's
+///         `boundParamsHash` public input is still computed over only these seven fields.
+///         `ownerField` is bound as its own public input of the owned circuit
+///         (armada-circuits `src/main/main_1x2_owned.circom:6`), and each `publicOutputs`
+///         entry is required to hash to its commitment, which is itself a circuit public
+///         input. `_boundParamsHash` builds this struct and hashes it, so a real proof's
+///         `boundParamsHash` still matches on chain.
+struct BoundParamsCore {
+    uint16 treeNumber;
+    uint72 minGasPrice;
+    UnshieldType unshield;
+    uint64 chainID;
+    address adaptContract;
+    bytes32 adaptParams;
+    CommitmentCiphertext[] commitmentCiphertext;
+}
+
 /// @notice A privacy pool transaction: a proof, its public anchors, the spent
 ///         nullifiers, the new commitments, the bound parameters, and the optional
 ///         unshield output note.
