@@ -1,0 +1,102 @@
+{
+  "id": "derived-arp-f02",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. The branch carries one governance specification and one ARM token specification, and they describe the Baal-on-Safe design in the lab book.\nWhat holds now? Describe the current, observed state. At armada-poc integrated (1f07f220), two pairs of documents exist. Commit fffbbf31 added root GOVERNANCE.md and root ARM_TOKEN.md. Root GOVERNANCE.md line 1-3 states the old governor, treasury-governor, steward, wind-down and redemption contracts are gone. Root ARM_TOKEN.md lines 20 and 22 describe addToWhitelist and setTransferable as timelock-only. specs/GOVERNANCE.md and specs/ARM_TOKEN.md are unchanged by commit fffbbf31. A case-insensitive count of the terms governor, steward, veto, wind-down, wind down, and redemption shows 155 matches in specs/GOVERNANCE.md and 21 matches in specs/ARM_TOKEN.md, at integrated. The G6 brief, docs/tasks/G6-remove-old-stack-docs.md, section S4, states \"If GOVERNANCE.md exists, rewrite it.\"\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run: git show integrated:specs/GOVERNANCE.md | grep -icE \"governor|steward|veto|wind-down|wind down|redemption\". Run the same grep on integrated:specs/ARM_TOKEN.md. Compare against git show integrated:GOVERNANCE.md and git show integrated:ARM_TOKEN.md. Read docs/tasks/G6-remove-old-stack-docs.md section S4.\nWhat constraints apply? State them in plain prose. This report concerns only the specs directory documents and the two root documents named above. It does not concern any contract file.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) specs/GOVERNANCE.md, specs/ARM_TOKEN.md, root GOVERNANCE.md, root ARM_TOKEN.md, docs/tasks/G6-remove-old-stack-docs.md S4.",
+  "restatement": "The branch holds two pairs of governance and ARM token documents. The root GOVERNANCE.md and ARM_TOKEN.md, added by commit fffbbf31, already describe the Baal-on-Safe design. The documents in specs/ were not changed by that commit and still describe the old stack. At integrated (1f07f220) a case-insensitive count of governor, steward, veto, wind-down, wind down and redemption gives 155 matches in specs/GOVERNANCE.md and 21 matches in specs/ARM_TOKEN.md. Section S4 of docs/tasks/G6-remove-old-stack-docs.md says to rewrite GOVERNANCE.md if it exists. The expected state is that both documents in specs/ describe the Baal-on-Safe design and contain no match for those terms. The work covers only the two specs documents and the two root documents. It changes no contract file.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "specs/GOVERNANCE.md has zero case-insensitive matches for governor, steward, veto, wind-down, wind down and redemption (it has 155 today)."
+    },
+    {
+      "id": "c2",
+      "text": "specs/ARM_TOKEN.md has zero case-insensitive matches for governor, steward, veto, wind-down, wind down and redemption (it has 21 today)."
+    },
+    {
+      "id": "c3",
+      "text": "Both specs/GOVERNANCE.md and specs/ARM_TOKEN.md describe the Baal-on-Safe design, so each one names Baal and Safe."
+    }
+  ],
+  "goal": "Rewrite specs/GOVERNANCE.md and specs/ARM_TOKEN.md so they describe the Baal-on-Safe design and no longer describe the removed governor, steward, veto, wind-down and redemption stack.",
+  "acceptance_criteria": [
+    "Open specs/GOVERNANCE.md and search for governor, steward, veto, wind-down, wind down or redemption in any letter case. A reader finds none.",
+    "Open specs/ARM_TOKEN.md and search for governor, steward, veto, wind-down, wind down or redemption in any letter case. A reader finds none.",
+    "Both specs documents name Baal in their text.",
+    "Both specs documents name Safe in their text."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "Open specs/GOVERNANCE.md and search for governor, steward, veto, wind-down, wind down or redemption in any letter case. A reader finds none."
+    },
+    {
+      "id": "c2",
+      "text": "Open specs/ARM_TOKEN.md and search for governor, steward, veto, wind-down, wind down or redemption in any letter case. A reader finds none."
+    },
+    {
+      "id": "c3",
+      "text": "Both specs documents name Baal in their text."
+    },
+    {
+      "id": "c4",
+      "text": "Both specs documents name Safe in their text."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "grep_absent",
+      "description": "Open specs/GOVERNANCE.md and search for governor, steward, veto, wind-down, wind down or redemption in any letter case. A reader finds none.",
+      "proves": "The governance spec no longer describes the removed old governance stack.",
+      "restatement_clause_id": "c1",
+      "pattern": "(?i)governor|steward|veto|wind-down|wind down|redemption",
+      "files": [
+        "specs/GOVERNANCE.md"
+      ],
+      "clause_id": "c1"
+    },
+    {
+      "type": "grep_absent",
+      "description": "Open specs/ARM_TOKEN.md and search for governor, steward, veto, wind-down, wind down or redemption in any letter case. A reader finds none.",
+      "proves": "The ARM token spec no longer describes the removed old governance stack.",
+      "restatement_clause_id": "c2",
+      "pattern": "(?i)governor|steward|veto|wind-down|wind down|redemption",
+      "files": [
+        "specs/ARM_TOKEN.md"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "grep",
+      "description": "Both specs documents name Baal in their text.",
+      "proves": "Both specs describe the Baal-on-Safe design, not only drop the old terms.",
+      "restatement_clause_id": "c3",
+      "pattern": "Baal",
+      "files": [
+        "specs/GOVERNANCE.md",
+        "specs/ARM_TOKEN.md"
+      ],
+      "count": {
+        "unit": "files_without_match",
+        "op": "eq",
+        "value": 0
+      },
+      "clause_id": "c3"
+    },
+    {
+      "type": "grep",
+      "description": "Both specs documents name Safe in their text.",
+      "proves": "Both specs describe the Safe half of the Baal-on-Safe design.",
+      "restatement_clause_id": "c3",
+      "pattern": "Safe",
+      "files": [
+        "specs/GOVERNANCE.md",
+        "specs/ARM_TOKEN.md"
+      ],
+      "count": {
+        "unit": "files_without_match",
+        "op": "eq",
+        "value": 0
+      },
+      "clause_id": "c4"
+    }
+  ]
+}
