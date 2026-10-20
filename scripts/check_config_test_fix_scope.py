@@ -10,11 +10,13 @@ import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# The commit arp-d0f branched from. Anything that already differed at this point is
-# pre-existing, not introduced by this task.
-BASE_SHA = "13835aa20fba55dce6586f60876557aab8a041f1"
-
 TARGET = "config/networks.test.ts"
+
+# The grader rebases the branch onto the current integration tip before it runs this probe,
+# so a hardcoded base sha would include every commit merged since the branch was cut. Derive
+# the base at run time as the merge-base with the integration branch (the rebase target); the
+# tightest (newest) merge-base among the candidate refs is that target.
+CANDIDATE_REFS = ("main", "integrated", "origin/main", "origin/integrated")
 
 # Exclude the bus, the exophial control dir, the engine-derived spec, and this task's own
 # acceptance probes (declared_new_entrypoints) — none of them are production or test code.
@@ -25,20 +27,45 @@ EXCLUDE_EXACT = {
 }
 
 
+def git(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", *args], cwd=REPO_ROOT, capture_output=True, text=True
+    )
+
+
+def find_base() -> str | None:
+    best_base: str | None = None
+    best_distance: int | None = None
+    for ref in CANDIDATE_REFS:
+        if git("rev-parse", "--verify", "--quiet", ref).returncode != 0:
+            continue
+        merge_base = git("merge-base", "HEAD", ref)
+        base = merge_base.stdout.strip()
+        if merge_base.returncode != 0 or not base:
+            continue
+        count = git("rev-list", "--count", f"{base}..HEAD")
+        if count.returncode != 0 or not count.stdout.strip():
+            continue
+        distance = int(count.stdout.strip())
+        if best_distance is None or distance < best_distance:
+            best_base, best_distance = base, distance
+    return best_base
+
+
 def is_infrastructure(path: str) -> bool:
     return path.startswith(EXCLUDE_PREFIXES) or path in EXCLUDE_EXACT
 
 
 def main() -> int:
-    proc = subprocess.run(
-        ["git", "diff", "--name-only", BASE_SHA, "HEAD"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-    )
+    base = find_base()
+    if base is None:
+        # No integration ref present: fall back to the branch's recorded base.
+        base = "13835aa20fba55dce6586f60876557aab8a041f1"
+
+    diff = git("diff", "--name-only", base, "HEAD")
     changed = [
         line.strip()
-        for line in proc.stdout.splitlines()
+        for line in diff.stdout.splitlines()
         if line.strip() and not is_infrastructure(line.strip())
     ]
 
