@@ -23,7 +23,7 @@ gate:
     [
       "bash",
       "-c",
-      "pre-commit run --all-files && ./scripts/check-license-hygiene.sh && ./scripts/check-anvil-addresses.sh && npm run compile && npm run check:sizes && npx tsc --noEmit --project tsconfig.ci.json && forge test --offline",
+      "npm ci --legacy-peer-deps --offline --no-audit --no-fund && pre-commit run --all-files && ./scripts/check-license-hygiene.sh && ./scripts/check-anvil-addresses.sh && npm run compile && npm run check:sizes && npx tsc --noEmit --project tsconfig.ci.json && forge test --offline",
     ]
   timeout: 300
 
