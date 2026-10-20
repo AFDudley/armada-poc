@@ -13,8 +13,7 @@ import "@gnosis.pm/safe-contracts/contracts/base/Executor.sol";
 import "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
 import "@gnosis.pm/zodiac/contracts/core/Module.sol";
 import "@gnosis.pm/safe-contracts/contracts/common/Enum.sol";
-import "@opengsn/contracts/src/ERC2771Recipient.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@opengsn/contracts/src/BaseRelayRecipient.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
@@ -22,7 +21,7 @@ import "./interfaces/IBaalToken.sol";
 
 /// @title Baal ';_;'.
 /// @notice Flexible guild contract inspired by Moloch DAO framework.
-contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, ERC2771Recipient {
+contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, BaseRelayRecipient {
     using ECDSAUpgradeable for bytes32;
 
     // ERC20 SHARES + LOOT
@@ -64,7 +63,7 @@ contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, ERC2771R
     // MISCELLANEOUS PARAMS
     uint32 public latestSponsoredProposalId; /* the id of the last proposal to be sponsored */
     address public multisendLibrary; /*address of multisend library*/
-    string public versionRecipient; /* version recipient for OpenGSN */
+    string public override versionRecipient; /* version recipient for OpenGSN */
 
     // SIGNATURE HELPERS
     bytes32 constant VOTE_TYPEHASH = keccak256("Vote(string name,address voter,uint256 expiry,uint256 nonce,uint32 proposalId,bool support)");
@@ -1046,14 +1045,14 @@ contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, ERC2771R
     }
 
     /// @notice Provides access to message sender of a meta transaction (EIP-2771)
-    function _msgSender() internal view override(ContextUpgradeable, ERC2771Recipient)
+    function _msgSender() internal view override(ContextUpgradeable, BaseRelayRecipient)
         returns (address sender) {
-        sender = ERC2771Recipient._msgSender();
+        sender = BaseRelayRecipient._msgSender();
     }
 
     /// @notice Provides access to message data of a meta transaction (EIP-2771)
-    function _msgData() internal view override(ContextUpgradeable, ERC2771Recipient)
+    function _msgData() internal view override(ContextUpgradeable, BaseRelayRecipient)
         returns (bytes calldata) {
-        return ERC2771Recipient._msgData();
+        return BaseRelayRecipient._msgData();
     }
 }
