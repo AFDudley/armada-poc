@@ -15,7 +15,7 @@ import "../contracts/cctp/MockUSDCV2.sol";
 ///         All node creation funnels through _initParticipant, so one require guards every path
 ///         (seeds, peer invite, launch-team invite, commitWithInvite). These tests exercise the
 ///         boundary on the reachable paths.
-contract CrowdfundNodeCapTest is Test, CrowdfundPoolDeploy  {
+contract CrowdfundNodeCapTest is Test, CrowdfundPoolDeploy {
     MockUSDCV2 public usdc;
     PrivacyPool public pool;
     PrivacyPool public pool2;
@@ -36,8 +36,10 @@ contract CrowdfundNodeCapTest is Test, CrowdfundPoolDeploy  {
         wl[0] = admin;
         armToken.initWhitelist(wl);
 
-pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
-        cf = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool));
+        pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
+        cf = new ArmadaCrowdfund(
+            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+        );
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
     }

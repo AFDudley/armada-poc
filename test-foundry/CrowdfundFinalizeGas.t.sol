@@ -20,7 +20,7 @@ import "../contracts/cctp/MockUSDCV2.sol";
 ///         For the real cold profile and the MAX_FINALIZE_NODES cap guard see
 ///         CrowdfundFinalizeGasCold.t.sol. The binding limit is the 16,777,216 (2^24, EIP-7825)
 ///         per-tx cap, not the block gas limit.
-contract CrowdfundFinalizeGasTest is Test, CrowdfundPoolDeploy  {
+contract CrowdfundFinalizeGasTest is Test, CrowdfundPoolDeploy {
     MockUSDCV2 public usdc;
     PrivacyPool public pool;
     PrivacyPool public pool2;
@@ -103,8 +103,10 @@ contract CrowdfundFinalizeGasTest is Test, CrowdfundPoolDeploy  {
     }
 
     function _deploy() internal returns (ArmadaCrowdfund cf) {
-pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
-        cf = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool));
+        pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
+        cf = new ArmadaCrowdfund(
+            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+        );
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
     }

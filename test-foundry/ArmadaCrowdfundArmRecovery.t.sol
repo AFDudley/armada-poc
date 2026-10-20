@@ -11,7 +11,7 @@ import "../contracts/crowdfund/IArmadaCrowdfund.sol";
 import "../contracts/governance/ArmadaToken.sol";
 import "../contracts/cctp/MockUSDCV2.sol";
 
-contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy  {
+contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy {
     ArmadaCrowdfund public crowdfund;
     MockUSDCV2 public usdc;
     PrivacyPool public pool;
@@ -28,7 +28,7 @@ contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy  {
 
         usdc = new MockUSDCV2("Mock USDC", "USDC");
         armToken = new ArmadaToken(admin, admin);
-pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
+        pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         crowdfund = new ArmadaCrowdfund(
             address(usdc),
             address(armToken),

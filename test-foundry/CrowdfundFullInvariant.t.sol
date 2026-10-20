@@ -188,7 +188,7 @@ contract CrowdfundFullHandler is Test {
 
 /// @title CrowdfundFullInvariantTest — Extended crowdfund invariant tests
 /// @dev Adds INV-C2 (reserve BPS sum) to the existing coverage
-contract CrowdfundFullInvariantTest is Test, CrowdfundPoolDeploy  {
+contract CrowdfundFullInvariantTest is Test, CrowdfundPoolDeploy {
     ArmadaCrowdfund public crowdfund;
     MockUSDCV2 public usdc;
     PrivacyPool public pool;
@@ -213,7 +213,7 @@ contract CrowdfundFullInvariantTest is Test, CrowdfundPoolDeploy  {
         usdc = new MockUSDCV2("Mock USDC", "USDC");
 
         // Deploy crowdfund
-pool = _deployPool(address(usdc), address(0xBEEF), address(this), bytes32(0));
+        pool = _deployPool(address(usdc), address(0xBEEF), address(this), bytes32(0));
         crowdfund = new ArmadaCrowdfund(
             address(usdc),
             address(armToken),

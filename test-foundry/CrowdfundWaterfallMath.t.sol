@@ -13,7 +13,9 @@ import "../contracts/crowdfund/ArmadaCrowdfund.sol";
 ///      _computeHopAllocations reads (besides its args); it touches no USDC/ARM/participant state.
 contract WaterfallHarness is ArmadaCrowdfund {
     constructor(uint256 open)
-        ArmadaCrowdfund(address(0x1111), address(0x2222), address(0xBEEF), address(0xCAFE), address(0xF00D), open, address(0x3333))
+        ArmadaCrowdfund(
+            address(0x1111), address(0x2222), address(0xBEEF), address(0xCAFE), address(0xF00D), open, address(0x3333)
+        )
     {}
 
     function exposed(uint256 saleSize_, uint256[3] memory demand) external returns (uint256) {

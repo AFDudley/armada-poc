@@ -571,8 +571,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
                     value: uint120(proceedsPush)
                 }),
                 ciphertext: ShieldCiphertext({
-                    encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)],
-                    shieldKey: bytes32(0)
+                    encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)], shieldKey: bytes32(0)
                 })
             });
             usdc.forceApprove(address(pool), proceedsPush);

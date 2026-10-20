@@ -11,7 +11,7 @@ import "../contracts/crowdfund/IArmadaCrowdfund.sol";
 import "../contracts/governance/ArmadaToken.sol";
 import "../contracts/cctp/MockUSDCV2.sol";
 
-contract ArmadaCrowdfundRefundModeTest is Test, CrowdfundPoolDeploy  {
+contract ArmadaCrowdfundRefundModeTest is Test, CrowdfundPoolDeploy {
     ArmadaCrowdfund public crowdfund;
     MockUSDCV2 public usdc;
     PrivacyPool public pool;
@@ -32,7 +32,7 @@ contract ArmadaCrowdfundRefundModeTest is Test, CrowdfundPoolDeploy  {
 
         usdc = new MockUSDCV2("Mock USDC", "USDC");
         armToken = new ArmadaToken(admin, admin);
-pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
+        pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         crowdfund = new ArmadaCrowdfund(
             address(usdc),
             address(armToken),
@@ -231,8 +231,9 @@ pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
     /// @notice Concentrated hop-0 demand can trigger expansion yet remain below MIN_SALE.
     function test_refundMode_canHappenAfterExpansion() public {
         // Deploy a fresh crowdfund with 100 seeds to reach ELASTIC_TRIGGER
-        ArmadaCrowdfund cf2 =
-            new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool));
+        ArmadaCrowdfund cf2 = new ArmadaCrowdfund(
+            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+        );
         armToken.transfer(address(cf2), ARM_FUNDING);
         cf2.loadArm();
 

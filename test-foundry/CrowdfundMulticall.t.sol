@@ -16,7 +16,7 @@ import "../contracts/cctp/MockUSDCV2.sol";
 ///         test name was misleading or wrong (see DoubleNonReentrant — was
 ///         _Reverts, must be _Succeeds), the corrected name is used here and
 ///         the spec mapping is recorded in the WHY comment.
-contract CrowdfundMulticallTest is Test, CrowdfundPoolDeploy  {
+contract CrowdfundMulticallTest is Test, CrowdfundPoolDeploy {
     ArmadaCrowdfund public crowdfund;
     MockUSDCV2 public usdc;
     PrivacyPool public pool;
@@ -44,7 +44,7 @@ contract CrowdfundMulticallTest is Test, CrowdfundPoolDeploy  {
         usdc = new MockUSDCV2("Mock USDC", "USDC");
         armToken = new ArmadaToken(admin, admin);
 
-pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
+        pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         crowdfund = new ArmadaCrowdfund(
             address(usdc),
             address(armToken),
@@ -485,8 +485,9 @@ pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         uint256 futureOpen = block.timestamp + 10 days;
         MockUSDCV2 usdc2 = new MockUSDCV2("U2", "U2");
         ArmadaToken arm2 = new ArmadaToken(admin, admin);
-pool2 = _deployPool(address(usdc2), treasury, address(this), bytes32(0));
-        ArmadaCrowdfund c2 = new ArmadaCrowdfund(address(usdc2), address(arm2), treasury, admin, admin, futureOpen, address(pool2));
+        pool2 = _deployPool(address(usdc2), treasury, address(this), bytes32(0));
+        ArmadaCrowdfund c2 =
+            new ArmadaCrowdfund(address(usdc2), address(arm2), treasury, admin, admin, futureOpen, address(pool2));
         address[] memory wl = new address[](2);
         wl[0] = admin;
         wl[1] = address(c2);
