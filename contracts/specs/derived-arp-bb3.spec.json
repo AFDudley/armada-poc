@@ -1,0 +1,266 @@
+{
+  "id": "derived-arp-bb3",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. A Hedgey TokenLockupPlans linear-unlock plan must hold the team's reserved ARM, created with cancelable false, so the unlock has no revocation and no admin override. The ArmadaToken transfer allowlist must list the lockup before ARM transfers into it. Source: armada-laconic labbook 2026-10-18-treasury-governance-baal-safe-shielded 3 decision 7; the committed brief armada-poc docs/tasks/G5-hedgey-crowdfund-shielded-proceeds.md S3 and S4.\nWhat holds now? Describe the current, observed state. The repo has no Hedgey TokenLockupPlans dependency, no lockup deploy script, and no non-cancelable team unlock. ARM reserved for the team has no linear-unlock contract, and no test proves such a plan is non-cancelable or that the lockup is whitelisted.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. A deploy creates one linear-unlock plan for the team allocation and the deployed plan's cancelable field reads false. A forge test asserts the plan is non-cancelable and that ArmadaToken.addToWhitelist (timelock-only) lists the lockup address. A check reads the test and deploy output and fails if the plan is cancelable or the lockup is not whitelisted.\nWhat constraints apply? State them in plain prose. Depends on G1 (ArmadaToken transfer allowlist, merged). Vendor hedgey-protocol TokenLockupPlans at the Consensys-Diligence-audited release; confirm the tag from the upstream release list. Set cancelable false at creation and assert it explicitly, not by relying on the default. Whitelist the lockup via addToWhitelist (timelock-only). Follow the committed brief docs/tasks/G5-hedgey-crowdfund-shielded-proceeds.md S3 and S4.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) scripts/ (deploy-hedgey-lockup), lib/ (vendored Hedgey), contracts/governance/ArmadaToken.sol (whitelist)",
+  "restatement": "The team's reserved ARM must sit in a Hedgey TokenLockupPlans linear-unlock plan that nobody can revoke. The plan is created with cancelable false, set explicitly at creation. The ArmadaToken transfer allowlist must list the lockup address, through the timelock-only addToWhitelist, before any ARM moves into it. The repo must vendor Hedgey TokenLockupPlans at the Consensys-Diligence-audited release, provide a deploy script that creates the one plan, prove both properties in a forge test, and provide a check that fails if the plan is cancelable or the lockup is not whitelisted.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "The repo vendors hedgey-protocol TokenLockupPlans under lib/ at the Consensys-Diligence-audited release tag, confirmed from the upstream release list."
+    },
+    {
+      "id": "c2",
+      "text": "A deploy script scripts/deploy-hedgey-lockup creates exactly one linear-unlock plan for the team allocation, and the deployed plan's cancelable field reads false, set explicitly at creation and not by default."
+    },
+    {
+      "id": "c3",
+      "text": "The lockup address is listed in the ArmadaToken transfer allowlist via addToWhitelist, which only the timelock can call, before ARM is transferred into the lockup."
+    },
+    {
+      "id": "c4",
+      "text": "A forge test asserts the plan is non-cancelable and that ArmadaToken.addToWhitelist lists the lockup address, and the test passes."
+    },
+    {
+      "id": "c5",
+      "text": "A check reads the test and deploy output and fails if the plan is cancelable or the lockup is not whitelisted."
+    }
+  ],
+  "goal": "Deploy a non-cancelable Hedgey linear-unlock plan for the team ARM allocation, with the lockup whitelisted in ArmadaToken before ARM is transferred in.",
+  "acceptance_criteria": [
+    "The vendored Hedgey TokenLockupPlans code is present under lib/ and the report names the audited release tag it is pinned to.",
+    "After the deploy script runs on the local chains, exactly one plan exists for the team allocation and its cancelable field reads false.",
+    "After the deploy, the lockup is on the ArmadaToken allowlist, it was added before ARM moved in, and a caller other than the timelock is refused.",
+    "The forge test run for the lockup passes, and it includes the non-cancelable check and the whitelist check.",
+    "The check passes on a good deploy and fails when it is given a cancelable plan or a lockup that is not whitelisted."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The vendored Hedgey TokenLockupPlans code is present under lib/ and the report names the audited release tag it is pinned to."
+    },
+    {
+      "id": "c2",
+      "text": "After the deploy script runs on the local chains, exactly one plan exists for the team allocation and its cancelable field reads false."
+    },
+    {
+      "id": "c3",
+      "text": "After the deploy, the lockup is on the ArmadaToken allowlist, it was added before ARM moved in, and a caller other than the timelock is refused."
+    },
+    {
+      "id": "c4",
+      "text": "The forge test run for the lockup passes, and it includes the non-cancelable check and the whitelist check."
+    },
+    {
+      "id": "c5",
+      "text": "The check passes on a good deploy and fails when it is given a cancelable plan or a lockup that is not whitelisted."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "behavior",
+      "description": "The vendored Hedgey TokenLockupPlans code is present under lib/ and the report names the audited release tag it is pinned to.",
+      "proves": "The Hedgey dependency is vendored under lib/ at the named audited release.",
+      "restatement_clause_id": "c1",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/observe-hedgey-lockup.sh",
+        "args": [
+          "--mode",
+          "vendored"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "vendoredUnderLib",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "pinnedToAuditedTag",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c1"
+    },
+    {
+      "type": "behavior",
+      "description": "After the deploy script runs on the local chains, exactly one plan exists for the team allocation and its cancelable field reads false.",
+      "proves": "The deploy creates one plan that nobody can cancel.",
+      "restatement_clause_id": "c2",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/observe-hedgey-lockup.sh",
+        "args": [
+          "--mode",
+          "deploy"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "planCount",
+          "op": "eq",
+          "value": 1
+        },
+        {
+          "observe": "stdout_json",
+          "field": "cancelable",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "After the deploy, the lockup is on the ArmadaToken allowlist, it was added before ARM moved in, and a caller other than the timelock is refused.",
+      "proves": "The lockup is whitelisted by the timelock before ARM moves in.",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/observe-hedgey-lockup.sh",
+        "args": [
+          "--mode",
+          "whitelist"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "whitelisted",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "whitelistedBeforeTransfer",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "nonTimelockCallerReverted",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "The forge test run for the lockup passes, and it includes the non-cancelable check and the whitelist check.",
+      "proves": "The forge test proves both properties and passes.",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/observe-hedgey-lockup.sh",
+        "args": [
+          "--mode",
+          "forge"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "testsFailed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "testsPassed",
+          "op": "ge",
+          "value": 2
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c4"
+    },
+    {
+      "type": "behavior",
+      "description": "The check passes on a good deploy and fails when it is given a cancelable plan or a lockup that is not whitelisted.",
+      "proves": "The check rejects a cancelable plan and a lockup that is not whitelisted.",
+      "restatement_clause_id": "c5",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/observe-hedgey-lockup.sh",
+        "args": [
+          "--mode",
+          "check-negative"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "goodDeployAccepted",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "cancelableRejected",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "notWhitelistedRejected",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c5"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/observe-hedgey-lockup.sh"
+  ]
+}
