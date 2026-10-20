@@ -1,4 +1,4 @@
-Chunk P3 · Family F1 · Points 6 · Route Sonnet
+Chunk P3 · Family F1 · Points 6 · Route 5090
 Depends on: P2a, P2b, P4
 
 Repo: `armada-poc`. Branch: `integrated` (work in a `task/P3` branch cut from `integrated`, once P2a, P2b and P4

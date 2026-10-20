@@ -1,4 +1,4 @@
-Chunk P2b · Family F1 · Points 5 · Route Sonnet
+Chunk P2b · Family F1 · Points 5 · Route 5090
 Depends on: P2a
 
 Repo: `armada-poc`. Branch: `integrated` (work in a `task/P2b` branch cut from `task/P2a`, once P2a merges to

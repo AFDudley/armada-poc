@@ -1,4 +1,4 @@
-Chunk P4 · Family F1 · Points 4 · Route Sonnet
+Chunk P4 · Family F1 · Points 4 · Route Sonnet (pending the circom probe)
 Depends on: P1
 
 Repo: `armada-circuits`. Branch: `integrated` (work in a `task/P4` branch cut from `task/P1`, once P1 merges to

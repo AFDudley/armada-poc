@@ -1,4 +1,4 @@
-Chunk P2a · Family F1 · Points 6 · Route Sonnet
+Chunk P2a · Family F1 · Points 6 · Route 5090
 Depends on: P1
 
 Repo: `armada-poc`. Branch: `integrated` (work in a `task/P2a` branch cut from `integrated`, commit `60a2f05`).
