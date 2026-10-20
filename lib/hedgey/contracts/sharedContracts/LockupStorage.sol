@@ -12,8 +12,8 @@ contract LockupStorage {
   /// @param amount is the current amount of tokens locked in the lockup plan, both unclaimed unlocked and still locked tokens. This parameter is updated each time tokens are redeemed, reset to the new remaining locked and unclaimed amount
   /// @param start is the start date when token unlock begins or began. This parameter gets updated each time tokens are redeemed and claimed, reset to the most recent redeem time
   /// @param cliff is an optional field to add a single cliff date prior to which the tokens cannot be redeemed, this does not change
-  /// @param rate is the amount of tokens that unlock in a period. This parameter is constand for each plan. 
-  /// @param period is the length of time in between each discrete time when tokens unlock. If this is set to 1, then tokens unlocke every second. Otherwise the period is longer to allow for interval lockup plans. 
+  /// @param rate is the amount of tokens that unlock in a period. This parameter is constand for each plan.
+  /// @param period is the length of time in between each discrete time when tokens unlock. If this is set to 1, then tokens unlocke every second. Otherwise the period is longer to allow for interval lockup plans.
   struct Plan {
     address token;
     uint256 amount;
@@ -24,11 +24,11 @@ contract LockupStorage {
     bool cancelable;
   }
 
-  /// @dev a mapping of the planId to the Plan struct. This is also mapped of the NFT token ID to the Plan struct, as the planId is the NFT token Id. 
+  /// @dev a mapping of the planId to the Plan struct. This is also mapped of the NFT token ID to the Plan struct, as the planId is the NFT token Id.
   mapping(uint256 => Plan) public plans;
 
-  /// @dev this stores the original end date of a plan. This is only used when a token is segmented, which sometimes results in a new end that is longer than the original, 
-  /// the original end date is stored for the case of recombining those plans. 
+  /// @dev this stores the original end date of a plan. This is only used when a token is segmented, which sometimes results in a new end that is longer than the original,
+  /// the original end date is stored for the case of recombining those plans.
   mapping(uint256 => uint256) public segmentOriginalEnd;
 
   ///@notice event emitted when a new lockup plan is created, emits the NFT and planId, as well as all of the info from the plan struct
@@ -44,7 +44,7 @@ contract LockupStorage {
     uint256 period
   );
 
-  /// @notice event emitted when a beneficiary redeems some or all of the tokens in their plan. 
+  /// @notice event emitted when a beneficiary redeems some or all of the tokens in their plan.
   /// It emits the id of the plan, as well as the amount redeemed, any remaining unvested or unclaimed tokens and the date that was the effective new start date, the reset date
   event PlanRedeemed(uint256 indexed id, uint256 amountRedeemed, uint256 planRemainder, uint256 resetDate);
 
