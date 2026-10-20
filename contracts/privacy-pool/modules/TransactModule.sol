@@ -597,6 +597,9 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
             bytes32 commitment = _transaction.commitments[i];
             preimageOf[commitment] = preimage;
             emit PreimageRecorded(commitment);
+            // P2b: count an output paid to the governance feeRecipient toward the
+            // per-asset running total, in the same call that creates it.
+            _recognizeFee(preimage, commitment);
         }
     }
 

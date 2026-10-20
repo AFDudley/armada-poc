@@ -35,6 +35,9 @@ interface IPrivacyPool is IMessageHandlerV2 {
     /// @notice Emitted when the governance adapter registry is set (set-once, issue #370)
     event AdapterRegistrySet(address indexed adapterRegistry);
 
+    /// @notice Emitted when the governance fee-recipient note public key is set (P2b)
+    event FeeRecipientSet(bytes32 npk);
+
     // ══════════════════════════════════════════════════════════════════════════
     // INITIALIZATION
     // ══════════════════════════════════════════════════════════════════════════
@@ -145,6 +148,14 @@ interface IPrivacyPool is IMessageHandlerV2 {
      * @param feeBps Fee in basis points (50 = 0.50%)
      */
     function setShieldFee(uint120 feeBps) external;
+
+    /**
+     * @notice Set the governance fee-recipient note public key (P2b)
+     * @dev An output whose npk equals this value is recognized as a fee note and added
+     *      to cumulativeFees. bytes32(0) disables recognition.
+     * @param npk The Safe's registered note public key (P1's owner-derived formula).
+     */
+    function setFeeRecipient(bytes32 npk) external;
 
     /**
      * @notice Enable or disable testing mode

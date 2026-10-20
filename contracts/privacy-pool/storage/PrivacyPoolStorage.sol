@@ -254,10 +254,41 @@ abstract contract PrivacyPoolStorage {
     mapping(uint256 => mapping(uint256 => VerifyingKey)) internal ownedVerificationKeys;
 
     // ══════════════════════════════════════════════════════════════════════════
+    // FEE-TAGGED OUTPUTS (P2b)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /// @notice The governance Safe's registered note public key. An output whose npk
+    ///         equals this value is a fee note. Owner-set (PrivacyPool.setFeeRecipient);
+    ///         bytes32(0) disables recognition. The pool stores whatever npk governance
+    ///         sets; it does not compute it (P1's owner-derived formula on the Safe).
+    bytes32 public feeRecipient;
+
+    /// @notice Running total of recognized fees per asset. The pool itself increments
+    ///         this for every output paid to feeRecipient; no caller flag is trusted.
+    ///         G4's RevenueLock reads this and bounds its release by it.
+    mapping(address => uint256) public cumulativeFees;
+
+    /// @notice Emitted when the pool recognizes a fee note and adds it to cumulativeFees.
+    event FeeRecognized(address asset, uint256 amount, bytes32 commitment);
+
+    /// @notice P2b: recognize a fee note from a proof-bound plaintext output.
+    /// @dev If the output pays feeRecipient, add its value to the per-asset running
+    ///      total. Called for every contract-owned output (transact, transactOwned) and
+    ///      every shield output, always on a preimage the pool itself hashed and matched
+    ///      to its commitment, so cumulativeFees can never grow on a caller-asserted
+    ///      amount. A zero feeRecipient disables recognition.
+    function _recognizeFee(CommitmentPreimage memory _preimage, bytes32 _commitment) internal {
+        if (feeRecipient != bytes32(0) && _preimage.npk == feeRecipient) {
+            cumulativeFees[_preimage.token.tokenAddress] += _preimage.value;
+            emit FeeRecognized(_preimage.token.tokenAddress, _preimage.value, _commitment);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // RESERVED FOR FUTURE USE
     // ══════════════════════════════════════════════════════════════════════════
 
     /// @dev Reserved storage slots for future upgrades
     ///      When adding new state variables above, decrement this gap
-    uint256[41] private __gap;
+    uint256[39] private __gap;
 }

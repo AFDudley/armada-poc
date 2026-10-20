@@ -64,6 +64,13 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
             // Hash commitment for merkle tree
             insertionLeaves[i] = _hashCommitment(commitments[i]);
 
+            // P2b: extend the preimage registry to shield outputs, and recognize a fee
+            // note paid to the governance feeRecipient. commitments[i] is the fee-adjusted
+            // plaintext the pool just hashed into insertionLeaves[i], so the registry and
+            // the running total rest on a value the pool itself computed.
+            preimageOf[insertionLeaves[i]] = commitments[i];
+            _recognizeFee(commitments[i], insertionLeaves[i]);
+
             // Store ciphertext for event
             shieldCiphertext[i] = _shieldRequests[i].ciphertext;
         }
@@ -125,6 +132,9 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
             shieldCiphertext[i] = request.ciphertext;
             fees[i] = fee;
             insertionLeaves[i] = _hashCommitment(adjustedPreimage);
+            // P2b: registry + fee recognition for cross-chain shield outputs, as in shield().
+            preimageOf[insertionLeaves[i]] = adjustedPreimage;
+            _recognizeFee(adjustedPreimage, insertionLeaves[i]);
         }
 
         (uint256 insertionTreeNumber, uint256 insertionStartIndex) =

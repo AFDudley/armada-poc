@@ -395,6 +395,16 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
     }
 
     /**
+     * @notice Set the governance fee-recipient note public key (P2b)
+     * @param _npk The Safe's registered note public key; bytes32(0) disables recognition.
+     */
+    function setFeeRecipient(bytes32 _npk) external override {
+        require(msg.sender == owner, "PrivacyPool: Only owner");
+        feeRecipient = _npk;
+        emit FeeRecipientSet(_npk);
+    }
+
+    /**
      * @notice Enable or disable testing mode
      * @dev POC ONLY - bypasses SNARK verification
      * @param _enabled Whether to enable testing mode
