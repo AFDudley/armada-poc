@@ -1,9 +1,0 @@
-modelRoles:
-  default: pool/5090
-contextPromotion:
-  enabled: true
-bash:
-  autoBackground:
-    enabled: false
-extensions:
-- /home/rix/code/git_puller/repos/local_agents/router/extension.ts
