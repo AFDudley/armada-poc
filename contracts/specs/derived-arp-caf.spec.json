@@ -1,0 +1,95 @@
+{
+  "id": "derived-arp-caf",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. For a given token, the payout base for ShieldedRagequit.ragequit is the value of the Safe-owned pool note of that token. A fully shielded treasury pays a nonzero pro-rata amount for that token. A raw ERC-20 transfer to the Safe does not change the computed payout.\nWhat holds now? Describe the current, observed state. At armada-poc integrated (1f07f220), ShieldedRagequit.sol line 94 (contracts/governance/ShieldedRagequit.sol) computes payout = armAmount * token.balanceOf(address(safe)) / armToken.totalSupply(). token.balanceOf(address(safe)) is the Safe's public ERC-20 balance of the token, read with IERC20.balanceOf. The payout call then reaches _buildOwnedTxn, which assembles a Transaction that spends a Safe-owned pool note through pool.transactOwned (ShieldedRagequit.sol lines 96-104 and the _buildOwnedTxn body). docs/tasks/G3-shielded-ragequit.md line 42 states the same formula, armAmount * safe.balanceOf(token) / armToken.totalSupply(), and line 44-47 states the payout debits a Safe-owned pool note, not a plain ERC-20 transfer, and describes safe.balanceOf(token) as the formula input in the same sentence.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Deploy ShieldedRagequit against a Safe that holds a token only as a Safe-owned pool note, with token.balanceOf(address(safe)) at zero. Call ragequit with that token listed. Read the computed payout value and the Safe-owned note's held value before and after the call.\nWhat constraints apply? State them in plain prose. contracts/governance/ShieldedRagequit.sol, the pool's owned-note view in contracts/privacy-pool/PrivacyPool.sol.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/ShieldedRagequit.sol:94 and the _buildOwnedTxn function that follows it.",
+  "restatement": "ShieldedRagequit.ragequit must compute each token's payout from the value of the Safe-owned pool note of that token. It must not use the Safe's public ERC-20 balance. The payout for a token is armAmount * (value of the Safe-owned pool note of that token) / armToken.totalSupply(). The payout already debits that note through pool.transactOwned. Thus the formula input and the debited source must be the same quantity. Two observable results follow. First, a fully shielded treasury pays a nonzero pro-rata amount for that token, where token.balanceOf(address(safe)) is zero. Second, a raw ERC-20 transfer to the Safe does not change the computed payout. The Safe-owned note's held value must fall by exactly the paid amount. The change applies to contracts/governance/ShieldedRagequit.sol line 94 and _buildOwnedTxn. It also applies to the pool's owned-note view in contracts/privacy-pool/PrivacyPool.sol, which the ragequit reads. At 1f07f220 PrivacyPool.sol has no such view, so the worker must add it.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "For a given token, the payout base for ShieldedRagequit.ragequit is the value of the Safe-owned pool note of that token: payout = armAmount * (Safe-owned pool note value of that token) / armToken.totalSupply()."
+    },
+    {
+      "id": "c2",
+      "text": "A fully shielded treasury pays a nonzero pro-rata amount for that token: with the token held only as a Safe-owned pool note and token.balanceOf(address(safe)) at zero, ragequit with that token listed pays a nonzero payout."
+    },
+    {
+      "id": "c3",
+      "text": "A raw ERC-20 transfer to the Safe does not change the computed payout."
+    },
+    {
+      "id": "c4",
+      "text": "The Safe-owned note's held value after the ragequit call equals its value before the call minus the computed payout."
+    }
+  ],
+  "goal": "ShieldedRagequit.ragequit pays each token pro rata from the value of the Safe-owned pool note of that token, not from token.balanceOf(address(safe)).",
+  "acceptance_criteria": [
+    "A member who exits receives their share of the token measured against what the treasury holds inside the private pool. The amount equals the burned ARM times the pool-held value, divided by the total ARM supply.",
+    "A treasury can hold a token only inside the private pool, with zero public balance. A member who exits with that token listed still receives a nonzero share of it.",
+    "Someone sends tokens straight to the treasury Safe outside the pool. The amount a member receives on exit stays the same as with no such transfer.",
+    "The treasury's pool-held value of the token falls by exactly the amount the exiting member receives."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "A member who exits receives their share of the token measured against what the treasury holds inside the private pool. The amount equals the burned ARM times the pool-held value, divided by the total ARM supply."
+    },
+    {
+      "id": "c2",
+      "text": "A treasury can hold a token only inside the private pool, with zero public balance. A member who exits with that token listed still receives a nonzero share of it."
+    },
+    {
+      "id": "c3",
+      "text": "Someone sends tokens straight to the treasury Safe outside the pool. The amount a member receives on exit stays the same as with no such transfer."
+    },
+    {
+      "id": "c4",
+      "text": "The treasury's pool-held value of the token falls by exactly the amount the exiting member receives."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A member who exits receives their share of the token measured against what the treasury holds inside the private pool. The amount equals the burned ARM times the pool-held value, divided by the total ARM supply.",
+      "proves": "The payout formula uses the Safe-owned pool note value as its base (c1).",
+      "restatement_clause_id": "c1",
+      "test": "test_RagequitPayoutBaseIsSafeOwnedNoteValue",
+      "mutation_targets": [
+        "contracts/governance/ShieldedRagequit.sol"
+      ],
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A treasury can hold a token only inside the private pool, with zero public balance. A member who exits with that token listed still receives a nonzero share of it.",
+      "proves": "A fully shielded treasury pays a nonzero pro-rata amount (c2).",
+      "restatement_clause_id": "c2",
+      "test": "test_RagequitPaysNonzeroFromFullyShieldedTreasury",
+      "mutation_targets": [
+        "contracts/governance/ShieldedRagequit.sol"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "Someone sends tokens straight to the treasury Safe outside the pool. The amount a member receives on exit stays the same as with no such transfer.",
+      "proves": "A raw ERC-20 transfer to the Safe does not change the computed payout (c3).",
+      "restatement_clause_id": "c3",
+      "test": "test_RagequitPayoutIgnoresRawTransferToSafe",
+      "mutation_targets": [
+        "contracts/governance/ShieldedRagequit.sol"
+      ],
+      "clause_id": "c3"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "The treasury's pool-held value of the token falls by exactly the amount the exiting member receives.",
+      "proves": "The debited Safe-owned note and the payout base are the same quantity, so the note's value falls by exactly the payout (c4).",
+      "restatement_clause_id": "c4",
+      "test": "test_RagequitDebitsSafeOwnedNoteByPayout",
+      "mutation_targets": [
+        "contracts/governance/ShieldedRagequit.sol"
+      ],
+      "clause_id": "c4"
+    }
+  ],
+  "criticality": "critical"
+}
