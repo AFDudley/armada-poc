@@ -19,7 +19,12 @@ contract BaalSharesToken is ERC20Votes, Pausable, Ownable {
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) ERC20Permit(name_) {}
 
     /// @notice Baal-only mint (Baal.increaseShares/increaseLoot call this via sharesToken.mint).
+    ///         The loot token's mint is gated by the `mintable` flag (default false) so a Baal
+    ///         proposal can never create loot: even an owner-mint reverts until `mintable` is
+    ///         set, keeping the loot totalSupply at zero forever.
+    bool public mintable;
     function mint(address recipient, uint256 amount) external onlyOwner {
+        require(mintable, "BaalSharesToken: not mintable");
         _mint(recipient, amount);
     }
 

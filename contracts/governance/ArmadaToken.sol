@@ -4,6 +4,7 @@
 pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title ArmadaToken — ARM governance token with delegation and transfer restrictions
 /// @notice ERC20Votes provides Compound-style delegation and voting power checkpoints.
@@ -188,6 +189,34 @@ contract ArmadaToken is ERC20Votes {
         require(authorizedBurner[msg.sender], "ArmadaToken: not authorized burner");
         require(account != address(0), "ArmadaToken: zero address");
         _burn(account, amount);
+    }
+
+    /// @notice Baal's IBaalToken `burn` entry point (G3): destroys `amount` of `account`'s
+    ///         ARM. Only callable by an authorized burner (the ShieldedRagequit shaman). Any
+    ///         other caller (including a call from the Baal) reverts — this is why Baal's
+    ///         native ragequit (which calls sharesToken.burn) reverts and cannot move ARM.
+    function burn(address account, uint256 amount) external {
+        require(authorizedBurner[msg.sender], "ArmadaToken: not authorized burner");
+        require(account != address(0), "ArmadaToken: zero address");
+        _burn(account, amount);
+    }
+
+    /// @notice ARM is never pausable; Baal reads sharesToken.paused() during setUp.
+    function paused() external view returns (bool) {
+        return false;
+    }
+
+    /// @notice The ARM clock is a block TIMESTAMP, not a block number. Baal reads past votes
+    ///         at a block timestamp (getPastVotes at prop.votingStarts), so the checkpoints
+    ///         must be timestamp-keyed. This makes a holder's recorded votes at a past
+    ///         timestamp equal to that holder's ARM balance at that timestamp.
+    function clock() public view override returns (uint48) {
+        return SafeCast.toUint48(block.timestamp);
+    }
+
+    function CLOCK_MODE() public view override returns (string memory) {
+        require(clock() == block.timestamp, "ArmadaToken: broken clock mode");
+        return "mode=timestamp&from=default";
     }
 
     /// @notice Remove the deployer from the transfer whitelist. Deployer-only, callable once.
