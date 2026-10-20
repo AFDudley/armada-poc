@@ -1,0 +1,241 @@
+{
+  "id": "derived-arp-932",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. ArmadaToken is Baal's shares token. A holder's ARM balance is that holder's Baal vote power at a given block timestamp. The crowdfund distributes that same ARM. ShieldedRagequit is the one exit that burns ARM and pays a note. ARM_TOKEN.md states ArmadaToken.sol is ARM, the Baal shares token, and one ARM is one vote in Baal governance. Baal's loot supply stays zero forever. Baal's native ragequit cannot move ARM or Safe assets.\nWhat holds now? Describe the current, observed state. scripts/summon-baal-safe.ts deploys a separate contract, contracts/governance/BaalSharesToken.sol, as Baal's registered shares token (lines 189-203 and 367-385). G1 ArmadaToken is recorded only as the field g1ArmToken. No code mints the BaalSharesToken, so baal.sharesToken() is a token with zero supply and getPastVotes returns 0 for every ARM holder. The same BaalSharesToken is registered as the loot token and its onlyOwner mint does not revert, so a Baal proposal could mint loot. ArmadaToken extends OpenZeppelin ERC20Votes with a block-number clock: ArmadaToken.clock() returns block.number and CLOCK_MODE() returns mode=blocknumber, while Baal.submitVote reads sharesToken.getPastVotes(voter, prop.votingStarts) where votingStarts is a block timestamp. ArmadaToken exposes burnFrom, not the IBaalToken burn that Baal's native ragequit calls.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Summon Baal with scripts/summon-baal-safe.ts; read baal.sharesToken(). A check asserts: baal.sharesToken() equals the ArmadaToken address; ArmadaToken.CLOCK_MODE() contains the word timestamp; after a holder receives ARM and delegates, ArmadaToken.getPastVotes(holder, a past timestamp) equals the holder's ARM balance at that timestamp; ArmadaCrowdfund.claim transfers ARM to the claimant so armToken.balanceOf(claimant) rises by the allocation and the claimant's getPastVotes equals it; a call that mints the Baal loot token reverts and loot totalSupply stays zero; a call to Baal.ragequit by an ARM holder reverts; a call to ArmadaToken.burn from any address other than the ShieldedRagequit shaman reverts; ShieldedRagequit.ragequit lowers armToken.balanceOf(holder) and armToken.totalSupply() by the burned amount and creates the payout note.\nWhat constraints apply? State them in plain prose. ARM stays a plain non-upgradeable ERC20 with the whole 12,000,000e18 supply minted once and no later mint path, and its public mint reverts. There is one ARM token and no second token. ArmadaToken.burn(account, amount) is callable only by the ShieldedRagequit shaman and reverts for Baal. The Baal loot token's mint reverts forever and loot supply stays zero. ArmadaToken's existing transfer allowlist is unchanged by this fix: the timelock keeps its add-only addToWhitelist, as ARM_TOKEN.md records. The vendored Baal (lib/baal, feat/baalZodiac) stays unchanged.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) armada-poc governance: contracts/governance/ArmadaToken.sol, contracts/governance/BaalSharesToken.sol, scripts/summon-baal-safe.ts, test-foundry/BaalSafeSummon.t.sol",
+  "restatement": "Baal governance must count ARM votes from the real ArmadaToken. Today the summon script registers a separate, never-minted BaalSharesToken as Baal's shares and loot token, so every ARM holder has zero Baal vote power and a Baal proposal could mint loot. The fix makes ArmadaToken itself Baal's registered shares token. ArmadaToken must use a timestamp clock, because Baal reads past votes at a block timestamp. A holder's past votes at a timestamp must equal that holder's delegated ARM balance at that timestamp. ARM that the crowdfund pays out must count as Baal votes. The Baal loot token must never mint, so loot supply stays zero. Baal's native ragequit must not move ARM or Safe assets. The only burn path is ArmadaToken.burn(account, amount), callable only by the ShieldedRagequit shaman. ShieldedRagequit stays the one exit that burns ARM and pays a note. ARM stays one plain non-upgradeable ERC20 with 12,000,000e18 minted once and no later mint. The timelock's add-only transfer allowlist does not change. The vendored Baal in lib/baal does not change.",
+  "restatement_clauses": [
+    {
+      "id": "C1",
+      "text": "After scripts/summon-baal-safe.ts summons Baal, baal.sharesToken() equals the ArmadaToken address. There is one ARM token and no second token."
+    },
+    {
+      "id": "C2",
+      "text": "ArmadaToken.CLOCK_MODE() contains the word timestamp, and ArmadaToken.clock() returns the block timestamp."
+    },
+    {
+      "id": "C3",
+      "text": "After a holder receives ARM and delegates, ArmadaToken.getPastVotes(holder, a past timestamp) equals the holder's ARM balance at that timestamp, and Baal.submitVote counts that weight."
+    },
+    {
+      "id": "C4",
+      "text": "ArmadaCrowdfund.claim transfers ARM to the claimant so armToken.balanceOf(claimant) rises by the allocation and the claimant's getPastVotes equals it."
+    },
+    {
+      "id": "C5",
+      "text": "A call that mints the Baal loot token reverts and loot totalSupply stays zero, including a mint that a Baal proposal sends."
+    },
+    {
+      "id": "C6",
+      "text": "A call to Baal.ragequit by an ARM holder reverts, and the holder's ARM balance and the Safe's assets do not change."
+    },
+    {
+      "id": "C7",
+      "text": "A call to ArmadaToken.burn(account, amount) from any address other than the ShieldedRagequit shaman reverts. A call from Baal reverts."
+    },
+    {
+      "id": "C8",
+      "text": "ShieldedRagequit.ragequit lowers armToken.balanceOf(holder) and armToken.totalSupply() by the burned amount and creates the payout note."
+    },
+    {
+      "id": "C9",
+      "text": "ARM stays a plain non-upgradeable ERC20 with the whole 12,000,000e18 supply minted once and no later mint path, and its public mint reverts."
+    },
+    {
+      "id": "C10",
+      "text": "ArmadaToken's existing transfer allowlist is unchanged: the timelock keeps its add-only addToWhitelist, as ARM_TOKEN.md records."
+    },
+    {
+      "id": "C11",
+      "text": "The vendored Baal (lib/baal, feat/baalZodiac) stays unchanged."
+    }
+  ],
+  "goal": "Make ArmadaToken the Baal shares token, so that a holder's ARM balance is that holder's Baal vote power at a block timestamp, with ShieldedRagequit as the only burn exit and zero loot forever.",
+  "acceptance_criteria": [
+    "After Baal is set up the way the summon script sets it up, the token Baal reports as its shares token is the ArmadaToken that holders own.",
+    "ARM reports that it measures time by timestamp, and its clock reads the current block time.",
+    "A holder gets ARM and delegates. Later, the holder's recorded votes at an earlier time equal the ARM the holder had then, and a Baal vote by the holder counts that amount.",
+    "A crowdfund participant claims. The participant's ARM balance rises by the allocation, and the participant's recorded votes equal that allocation.",
+    "Every try to create loot fails, including a try sent through a Baal proposal, and the loot supply stays zero.",
+    "An ARM holder tries Baal's own exit. The try fails, and the holder's ARM and the Safe's assets stay the same.",
+    "A burn of ARM requested by Baal or by any other address fails. Only the ShieldedRagequit exit can burn ARM.",
+    "A holder uses the ShieldedRagequit exit. The holder's ARM and the total ARM supply both drop by the burned amount, and the payout note exists.",
+    "Total ARM supply is exactly 12,000,000 tokens (12,000,000e18 units) after deploy, and every later try to create more ARM fails.",
+    "The timelock can still add an address to the ARM transfer allowlist, and no call can remove an address that was added.",
+    "The vendored Baal code in lib/baal is identical before and after the change."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "After Baal is set up the way the summon script sets it up, the token Baal reports as its shares token is the ArmadaToken that holders own."
+    },
+    {
+      "id": "c2",
+      "text": "ARM reports that it measures time by timestamp, and its clock reads the current block time."
+    },
+    {
+      "id": "c3",
+      "text": "A holder gets ARM and delegates. Later, the holder's recorded votes at an earlier time equal the ARM the holder had then, and a Baal vote by the holder counts that amount."
+    },
+    {
+      "id": "c4",
+      "text": "A crowdfund participant claims. The participant's ARM balance rises by the allocation, and the participant's recorded votes equal that allocation."
+    },
+    {
+      "id": "c5",
+      "text": "Every try to create loot fails, including a try sent through a Baal proposal, and the loot supply stays zero."
+    },
+    {
+      "id": "c6",
+      "text": "An ARM holder tries Baal's own exit. The try fails, and the holder's ARM and the Safe's assets stay the same."
+    },
+    {
+      "id": "c7",
+      "text": "A burn of ARM requested by Baal or by any other address fails. Only the ShieldedRagequit exit can burn ARM."
+    },
+    {
+      "id": "c8",
+      "text": "A holder uses the ShieldedRagequit exit. The holder's ARM and the total ARM supply both drop by the burned amount, and the payout note exists."
+    },
+    {
+      "id": "c9",
+      "text": "Total ARM supply is exactly 12,000,000 tokens (12,000,000e18 units) after deploy, and every later try to create more ARM fails."
+    },
+    {
+      "id": "c10",
+      "text": "The timelock can still add an address to the ARM transfer allowlist, and no call can remove an address that was added."
+    },
+    {
+      "id": "c11",
+      "text": "The vendored Baal code in lib/baal is identical before and after the change."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C1",
+      "test": "test_baalSharesTokenIsArmadaToken",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "After Baal is set up the way the summon script sets it up, the token Baal reports as its shares token is the ArmadaToken that holders own.",
+      "proves": "Baal counts votes from the real ARM token, not from a separate empty token.",
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C2",
+      "test": "test_armadaTokenClockModeIsTimestamp",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "ARM reports that it measures time by timestamp, and its clock reads the current block time.",
+      "proves": "ARM vote history uses the same time unit that Baal uses when it reads past votes.",
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C3",
+      "test": "test_pastVotesAtTimestampEqualArmBalance",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "A holder gets ARM and delegates. Later, the holder's recorded votes at an earlier time equal the ARM the holder had then, and a Baal vote by the holder counts that amount.",
+      "proves": "A holder's ARM balance is that holder's Baal vote power at a given time.",
+      "clause_id": "c3"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C4",
+      "test": "test_crowdfundClaimGivesBaalVotePower",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "A crowdfund participant claims. The participant's ARM balance rises by the allocation, and the participant's recorded votes equal that allocation.",
+      "proves": "ARM that the crowdfund pays out is real Baal vote power.",
+      "clause_id": "c4"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C5",
+      "test": "test_lootMintRevertsAndLootSupplyZero",
+      "mutation_targets": [
+        "contracts/governance/BaalSharesToken.sol"
+      ],
+      "description": "Every try to create loot fails, including a try sent through a Baal proposal, and the loot supply stays zero.",
+      "proves": "Baal can never create loot, so loot supply stays zero forever.",
+      "clause_id": "c5"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C6",
+      "test": "test_baalNativeRagequitReverts",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "An ARM holder tries Baal's own exit. The try fails, and the holder's ARM and the Safe's assets stay the same.",
+      "proves": "Baal's own exit cannot move ARM or Safe assets.",
+      "clause_id": "c6"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C7",
+      "test": "test_burnOnlyByShieldedRagequitShaman",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "A burn of ARM requested by Baal or by any other address fails. Only the ShieldedRagequit exit can burn ARM.",
+      "proves": "No address except the ShieldedRagequit exit can destroy ARM.",
+      "clause_id": "c7"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C8",
+      "test": "test_shieldedRagequitBurnsArmAndCreatesNote",
+      "mutation_targets": [
+        "contracts/governance/ShieldedRagequit.sol",
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "A holder uses the ShieldedRagequit exit. The holder's ARM and the total ARM supply both drop by the burned amount, and the payout note exists.",
+      "proves": "ShieldedRagequit is a working exit that burns ARM and pays a note.",
+      "clause_id": "c8"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C9",
+      "test": "test_armFixedSupplyNoMint",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "Total ARM supply is exactly 12,000,000 tokens (12,000,000e18 units) after deploy, and every later try to create more ARM fails.",
+      "proves": "ARM stays one fixed-supply token with no way to mint more.",
+      "clause_id": "c9"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C10",
+      "test": "test_timelockWhitelistAddOnly",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "The timelock can still add an address to the ARM transfer allowlist, and no call can remove an address that was added.",
+      "proves": "The fix does not change the ARM transfer allowlist rules.",
+      "clause_id": "c10"
+    },
+    {
+      "type": "metamorphic",
+      "restatement_clause_id": "C11",
+      "relation_class": "conservation",
+      "run": [
+        "bash",
+        "scripts/check-vendored-baal-unchanged.sh",
+        "main"
+      ],
+      "description": "The vendored Baal code in lib/baal is identical before and after the change.",
+      "proves": "The fix does not edit the vendored Baal.",
+      "clause_id": "c11"
+    }
+  ],
+  "criticality": "critical",
+  "declared_new_entrypoints": [
+    "scripts/check-vendored-baal-unchanged.sh"
+  ]
+}
