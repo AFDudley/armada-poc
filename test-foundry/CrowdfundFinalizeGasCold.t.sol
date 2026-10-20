@@ -5,6 +5,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
+import "./helpers/CrowdfundPoolDeploy.sol";
 import "../contracts/crowdfund/ArmadaCrowdfund.sol";
 import "../contracts/crowdfund/IArmadaCrowdfund.sol";
 import "../contracts/governance/ArmadaToken.sol";
@@ -21,8 +22,10 @@ import "../contracts/cctp/MockUSDCV2.sol";
 ///         2,220-node structural max, cold one-shot finalize() was ~18.6M gas (success) — OVER the
 ///         2^24 cap. That finding motivated the cap; this suite profiles reachable counts (≤1,800)
 ///         and asserts the cap keeps finalize() submittable.
-contract CrowdfundFinalizeGasColdTest is Test {
+contract CrowdfundFinalizeGasColdTest is Test, CrowdfundPoolDeploy  {
     MockUSDCV2 public usdc;
+    PrivacyPool public pool;
+    PrivacyPool public pool2;
     ArmadaToken public armToken;
     address public admin;
     address public treasury;
@@ -43,7 +46,8 @@ contract CrowdfundFinalizeGasColdTest is Test {
     }
 
     function _deploy() internal returns (ArmadaCrowdfund cf) {
-        cf = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp);
+pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
+        cf = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool));
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
     }
