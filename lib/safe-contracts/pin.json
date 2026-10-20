@@ -1,0 +1,6 @@
+{
+  "repo": "https://github.com/gnosis/safe-contracts",
+  "version": "1.3.0",
+  "commit": "186a21a74b327f17fc41217a927dea7064f74604",
+  "notes": "Gnosis Safe v1.3.0 (GnosisSafe, GnosisSafeProxyFactory)."
+}

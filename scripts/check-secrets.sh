@@ -40,6 +40,8 @@ ALLOWED_DIRS=(
   "test-foundry/fixtures/contract-vectors/"  # M8 golden-vector corpus: deterministic public test vectors (calldata, commitments, EdDSA sig components)
   "test-foundry/fixtures/contract-vectors-v2/"  # M8 post-drift delta corpus (same rationale)
   "test-foundry/fixtures/snark/"  # Real Groth16 proof fixture: public verifying key, proof and public inputs (curve points, not keys)
+  "lib/safe-contracts/"       # Vendored Gnosis Safe (G2/arp-1f1): EIP-712 domain/tx typehashes and storage slot constants (public, not keys)
+  "lib/opengsn/"              # Vendored OpenGSN (transitive Baal dep, G2/arp-1f1): calldata-parsing bit-mask constants (public, not keys)
 )
 
 # Patterns that indicate secrets. Each entry: "LABEL:::REGEX"

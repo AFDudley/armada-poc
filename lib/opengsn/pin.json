@@ -1,0 +1,5 @@
+{
+  "source": "npm:@opengsn/contracts@2.2.5",
+  "repo": "https://github.com/opengsn/gsn",
+  "notes": "Transitive dependency of the vendored Baal (lib/baal): Baal imports @opengsn/contracts/src/BaseRelayRecipient.sol. Pinned to the exact npm package version (2.2.5) the Baal feat/baalZodiac branch's package.json requires (2.2.5, exact)."
+}

@@ -1,0 +1,5 @@
+{
+  "source": "npm:@gnosis.pm/zodiac@3.3.7",
+  "repo": "https://github.com/gnosis/zodiac",
+  "notes": "Transitive dependency of the vendored Baal (lib/baal): Baal imports @gnosis.pm/zodiac/contracts/{core/Module.sol,factory/{ModuleProxyFactory,FactoryFriendly}.sol}. Pinned to the exact npm package version (3.3.7) the Baal feat/baalZodiac branch's package.json requires (^3.3.7)."
+}

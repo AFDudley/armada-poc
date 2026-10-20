@@ -10,7 +10,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "chains": "./scripts/setup_chains.sh",
-    "setup": "npm run compile && npm run deploy:cctp && npm run deploy:aave && npm run deploy:governance && npm run deploy:privacy-pool && npm run deploy:gasless-wrapper && npm run deploy:yield && npm run link && npm run deploy:fee-module && npm run deploy:faucets && npm run deploy:crowdfund && npm run verify",
+    "setup": "npm run compile && npm run deploy:cctp && npm run deploy:aave && npm run deploy:governance && npm run deploy:governance-baal && npm run deploy:privacy-pool && npm run deploy:gasless-wrapper && npm run deploy:yield && npm run link && npm run deploy:fee-module && npm run deploy:faucets && npm run deploy:crowdfund && npm run verify",
     "setup:crowdfund": "npm run compile && npm run deploy:cctp:hub && npm run deploy:governance && npm run deploy:crowdfund",
     "deploy:cctp:hub": "hardhat run scripts/deploy_cctp_v3.ts --network hub",
     "deploy:cctp:clients": "npx ts-node scripts/run_on_clients.ts scripts/deploy_cctp_v3.ts",
@@ -36,6 +36,7 @@
     "relayer": "npx ts-node relayer/armada-relayer.ts",
     "armada-relayer": "npx ts-node relayer/armada-relayer.ts",
     "deploy:governance": "hardhat run scripts/deploy_governance.ts --network hub",
+    "deploy:governance-baal": "hardhat run scripts/summon-baal-safe.ts --network hub",
     "deploy:fee-module": "hardhat run scripts/deploy_fee_module.ts --network hub",
     "deploy:crowdfund": "hardhat run scripts/deploy_crowdfund.ts --network hub",
     "deploy:revenue-lock-cohort": "hardhat run scripts/deploy_revenue_lock_cohort.ts --network hub",

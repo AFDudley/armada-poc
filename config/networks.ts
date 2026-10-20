@@ -789,6 +789,15 @@ export function getCrowdfundDeploymentFile(): string {
 }
 
 /**
+ * Get the Baal + Safe governance deployment filename (G2/arp-1f1).
+ */
+export function getBaalSafeDeploymentFile(): string {
+  const config = getNetworkConfig();
+  const suffix = config.env === "local" ? "" : `-${config.env}`;
+  return `baal-safe-hub${suffix}.json`;
+}
+
+/**
  * Determine chain role from a hardhat chain ID at runtime.
  * Returns null if the chain ID doesn't match any configured chain.
  */
