@@ -37,7 +37,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
     address public alice = address(0xA11CE);
     address public bob = address(0xB0B);
     address public carol = address(0xCA201);
-    address public sc = address(0x5C5C);       // Security Council
+    address public sc = address(0x5C5C); // Security Council
     address public windDown = address(0xD00D);
 
     uint256 constant TOTAL_SUPPLY = 12_000_000 * 1e18;
@@ -58,11 +58,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         treasury = new ArmadaTreasuryGov(address(timelock));
 
         // Deploy governor
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Whitelist participants
         address[] memory whitelist = new address[](4);
@@ -196,13 +192,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
 
         uint256 ratId = governor.proposalCount();
 
-        (
-            address proposer,
-            ProposalType pType,
-            uint256 voteStart,
-            uint256 voteEnd,
-            , , , ,
-        ) = governor.getProposal(ratId);
+        (address proposer, ProposalType pType, uint256 voteStart, uint256 voteEnd,,,,,) = governor.getProposal(ratId);
 
         assertEq(proposer, sc, "proposer should be SC");
         assertEq(uint256(pType), uint256(ProposalType.VetoRatification));
@@ -244,9 +234,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         // Get the timelock operation ID before veto
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             governor.getProposalActions(proposalId);
-        bytes32 timelockId = timelock.hashOperationBatch(
-            targets, values, calldatas, 0, bytes32(proposalId)
-        );
+        bytes32 timelockId = timelock.hashOperationBatch(targets, values, calldatas, 0, bytes32(proposalId));
 
         // Verify operation is pending in timelock
         assertTrue(timelock.isOperationPending(timelockId));
@@ -506,7 +494,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
         // Slot must still hold SC_B — they didn't issue the veto.
         assertEq(governor.securityCouncil(), sc_b, "sc_b retains seat");
         // Vetoer's identity preserved on-chain for off-chain accountability.
-        (address recordedVetoer, , , , , , , , ) = governor.getProposal(ratId);
+        (address recordedVetoer,,,,,,,,) = governor.getProposal(ratId);
         assertEq(recordedVetoer, sc, "vetoer recoverable from ratification proposer");
         // Proposal restored to Queued.
         assertEq(uint256(governor.state(proposalId)), uint256(ProposalState.Queued));
@@ -587,9 +575,7 @@ contract GovernorVetoTest is Test, GovernorDeployHelper {
 
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             governor.getProposalActions(proposalId);
-        bytes32 timelockId = timelock.hashOperationBatch(
-            targets, values, calldatas, 0, bytes32(proposalId)
-        );
+        bytes32 timelockId = timelock.hashOperationBatch(targets, values, calldatas, 0, bytes32(proposalId));
 
         vm.prank(sc);
         governor.veto(proposalId, keccak256("rationale"));

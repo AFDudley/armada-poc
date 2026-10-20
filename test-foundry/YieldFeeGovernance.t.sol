@@ -35,13 +35,7 @@ contract YieldFeeGovernanceTest is Test {
         // Treasury is the unified ArmadaTreasuryGov (#152/#154). Tests here only use
         // it as a fee-sink address; the timelock-owner arg is satisfied by address(this).
         treasury = new ArmadaTreasuryGov(address(this));
-        vault = new ArmadaYieldVault(
-            address(spoke),
-            0,
-            address(treasury),
-            "Armada Yield USDC",
-            "ayUSDC"
-        );
+        vault = new ArmadaYieldVault(address(spoke), 0, address(treasury), "Armada Yield USDC", "ayUSDC");
 
         // Fund alice
         usdc.mint(alice, DEPOSIT_AMOUNT * 2);

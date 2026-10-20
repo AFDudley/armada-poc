@@ -91,28 +91,54 @@ function validate(parsed: unknown, key: string, path: string): RetryQueueData {
       `cctp-retry-store: invalid 'updatedAt' field at ${path}. Expected a non-negative integer. Delete to reset.`,
     );
   }
-  const entries = candidate.entries.map((raw, idx) => validateEntry(raw, path, idx));
-  return { entries, updatedAt: candidate.updatedAt, version: RETRY_QUEUE_SCHEMA_VERSION };
+  const entries = candidate.entries.map((raw, idx) =>
+    validateEntry(raw, path, idx),
+  );
+  return {
+    entries,
+    updatedAt: candidate.updatedAt,
+    version: RETRY_QUEUE_SCHEMA_VERSION,
+  };
 }
 
-function validateEntry(raw: unknown, path: string, idx: number): PersistedRetryEntry {
+function validateEntry(
+  raw: unknown,
+  path: string,
+  idx: number,
+): PersistedRetryEntry {
   if (typeof raw !== "object" || raw === null) {
-    throw new Error(`cctp-retry-store: entries[${idx}] at ${path} is not an object.`);
+    throw new Error(
+      `cctp-retry-store: entries[${idx}] at ${path} is not an object.`,
+    );
   }
   const r = raw as Partial<PersistedRetryEntry>;
-  if (typeof r.attempts !== "number" || !Number.isFinite(r.attempts) || r.attempts < 0) {
-    throw new Error(`cctp-retry-store: entries[${idx}].attempts at ${path} is not a valid number.`);
+  if (
+    typeof r.attempts !== "number" ||
+    !Number.isFinite(r.attempts) ||
+    r.attempts < 0
+  ) {
+    throw new Error(
+      `cctp-retry-store: entries[${idx}].attempts at ${path} is not a valid number.`,
+    );
   }
   if (typeof r.nextRetryAt !== "number" || !Number.isFinite(r.nextRetryAt)) {
-    throw new Error(`cctp-retry-store: entries[${idx}].nextRetryAt at ${path} is not a valid number.`);
+    throw new Error(
+      `cctp-retry-store: entries[${idx}].nextRetryAt at ${path} is not a valid number.`,
+    );
   }
   const event = validateEvent(r.event, path, idx);
   return { event, attempts: r.attempts, nextRetryAt: r.nextRetryAt };
 }
 
-function validateEvent(raw: unknown, path: string, idx: number): PersistedMessageEvent {
+function validateEvent(
+  raw: unknown,
+  path: string,
+  idx: number,
+): PersistedMessageEvent {
   if (typeof raw !== "object" || raw === null) {
-    throw new Error(`cctp-retry-store: entries[${idx}].event at ${path} is not an object.`);
+    throw new Error(
+      `cctp-retry-store: entries[${idx}].event at ${path} is not an object.`,
+    );
   }
   const e = raw as Partial<PersistedMessageEvent>;
   const strings: (keyof PersistedMessageEvent)[] = [

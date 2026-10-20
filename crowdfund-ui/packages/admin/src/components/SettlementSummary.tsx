@@ -7,35 +7,40 @@ import {
   formatArm,
   formatCountdown,
   type CrowdfundEvent,
-} from '@armada/crowdfund-shared'
-import type { AdminState } from '@/hooks/useAdminState'
+} from "@armada/crowdfund-shared";
+import type { AdminState } from "@/hooks/useAdminState";
 
 export interface SettlementSummaryProps {
-  state: AdminState
-  events: CrowdfundEvent[]
+  state: AdminState;
+  events: CrowdfundEvent[];
 }
 
 export function SettlementSummary({ state, events }: SettlementSummaryProps) {
-  const claimTimeLeft = state.claimDeadline - state.blockTimestamp
+  const claimTimeLeft = state.claimDeadline - state.blockTimestamp;
 
   // Extract net proceeds from Finalized event
-  const finalizedEvent = events.find((e) => e.type === 'Finalized')
-  const netProceeds = finalizedEvent?.args.netProceeds as bigint | undefined
+  const finalizedEvent = events.find((e) => e.type === "Finalized");
+  const netProceeds = finalizedEvent?.args.netProceeds as bigint | undefined;
 
   // Compute ARM claim stats
-  const armClaimedPct = state.totalAllocatedArm > 0n
-    ? Number(state.totalArmTransferred * 10000n / state.totalAllocatedArm) / 100
-    : 0
-  const armUnclaimed = state.totalAllocatedArm - state.totalArmTransferred
+  const armClaimedPct =
+    state.totalAllocatedArm > 0n
+      ? Number((state.totalArmTransferred * 10000n) / state.totalAllocatedArm) /
+        100
+      : 0;
+  const armUnclaimed = state.totalAllocatedArm - state.totalArmTransferred;
 
   // Sum refunds from events
-  const refundsOwed = netProceeds !== undefined
-    ? (state.totalCommitted > netProceeds ? state.totalCommitted - netProceeds : 0n)
-    : 0n
+  const refundsOwed =
+    netProceeds !== undefined
+      ? state.totalCommitted > netProceeds
+        ? state.totalCommitted - netProceeds
+        : 0n
+      : 0n;
 
   const refundsClaimed = events
-    .filter((e) => e.type === 'RefundClaimed')
-    .reduce((sum, e) => sum + (e.args.usdcAmount as bigint), 0n)
+    .filter((e) => e.type === "RefundClaimed")
+    .reduce((sum, e) => sum + (e.args.usdcAmount as bigint), 0n);
 
   return (
     <div className="rounded border border-border p-3 space-y-2">
@@ -43,7 +48,9 @@ export function SettlementSummary({ state, events }: SettlementSummaryProps) {
       <div className="grid grid-cols-2 gap-2">
         <div>
           <span className="text-muted-foreground">Finalized at: </span>
-          <span className="">{new Date(state.finalizedAt * 1000).toLocaleString()}</span>
+          <span className="">
+            {new Date(state.finalizedAt * 1000).toLocaleString()}
+          </span>
         </div>
         <div>
           <span className="text-muted-foreground">Sale size: </span>
@@ -51,8 +58,10 @@ export function SettlementSummary({ state, events }: SettlementSummaryProps) {
         </div>
         <div>
           <span className="text-muted-foreground">Refund mode: </span>
-          <span className={`${state.refundMode ? 'text-destructive' : 'text-success'}`}>
-            {state.refundMode ? 'Yes' : 'No'}
+          <span
+            className={`${state.refundMode ? "text-destructive" : "text-success"}`}
+          >
+            {state.refundMode ? "Yes" : "No"}
           </span>
         </div>
         {netProceeds !== undefined && (
@@ -85,24 +94,29 @@ export function SettlementSummary({ state, events }: SettlementSummaryProps) {
         )}
         <div>
           <span className="text-muted-foreground">Claim deadline: </span>
-          <span className="">{claimTimeLeft > 0 ? formatCountdown(claimTimeLeft) : 'expired'}</span>
+          <span className="">
+            {claimTimeLeft > 0 ? formatCountdown(claimTimeLeft) : "expired"}
+          </span>
         </div>
-        {state.finalizedAt > 0 && (() => {
-          const quietEnd = state.finalizedAt + CROWDFUND_CONSTANTS.GOVERNANCE_QUIET_PERIOD
-          const quietRemaining = quietEnd - state.blockTimestamp
-          return (
-            <div>
-              <span className="text-muted-foreground">Governance quiet period: </span>
-              <span className="">
-                {quietRemaining > 0
-                  ? `ends in ${formatCountdown(quietRemaining)} — ${new Date(quietEnd * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                  : `ended ${new Date(quietEnd * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                }
-              </span>
-            </div>
-          )
-        })()}
+        {state.finalizedAt > 0 &&
+          (() => {
+            const quietEnd =
+              state.finalizedAt + CROWDFUND_CONSTANTS.GOVERNANCE_QUIET_PERIOD;
+            const quietRemaining = quietEnd - state.blockTimestamp;
+            return (
+              <div>
+                <span className="text-muted-foreground">
+                  Governance quiet period:{" "}
+                </span>
+                <span className="">
+                  {quietRemaining > 0
+                    ? `ends in ${formatCountdown(quietRemaining)} — ${new Date(quietEnd * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                    : `ended ${new Date(quietEnd * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                </span>
+              </div>
+            );
+          })()}
       </div>
     </div>
-  )
+  );
 }

@@ -36,11 +36,24 @@ import { d32, npkFromSeed, toHex, writeJSON } from "./lib/util";
 import { Recorder } from "./lib/recorder";
 import { deployMock } from "./lib/mock-contracts";
 import { encodeBurnMessageV2, encodeMessageV2 } from "./lib/cctp-message";
-import { UnshieldType, erc20Token, initPoseidon, makeShieldRequest, makeTransaction } from "./lib/builders";
+import {
+  UnshieldType,
+  erc20Token,
+  initPoseidon,
+  makeShieldRequest,
+  makeTransaction,
+} from "./lib/builders";
 
 const OUT_DIR = process.env.CAPTURE_OUT_DIR
   ? path.resolve(process.env.CAPTURE_OUT_DIR)
-  : path.join(__dirname, "..", "..", "test-foundry", "fixtures", "contract-vectors-v2");
+  : path.join(
+      __dirname,
+      "..",
+      "..",
+      "test-foundry",
+      "fixtures",
+      "contract-vectors-v2",
+    );
 
 const ONE_USDC = 1_000_000n;
 const HUB_DOMAIN = 100;
@@ -49,18 +62,34 @@ const CLIENT_DOMAIN_B = 102;
 const CLIENT_POOL_DUMMY = "0x0000000000000000000000000000000000C11EA7";
 
 /** Matches contracts/privacy-pool/CCTPBindingLib.sol (DOMAIN_TAG + encode). */
-const CCTP_DOMAIN_TAG = ethers.keccak256(ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"));
-function encodeCctpBinding(recipient: string, domain: number, maxFee: bigint): string {
+const CCTP_DOMAIN_TAG = ethers.keccak256(
+  ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"),
+);
+function encodeCctpBinding(
+  recipient: string,
+  domain: number,
+  maxFee: bigint,
+): string {
   return ethers.keccak256(
     ethers.AbiCoder.defaultAbiCoder().encode(
       ["bytes32", "address", "uint32", "uint256"],
-      [CCTP_DOMAIN_TAG, recipient, domain, maxFee]
-    )
+      [CCTP_DOMAIN_TAG, recipient, domain, maxFee],
+    ),
   );
 }
 
 const BALANCE_TRACKED = (book: Record<string, string>) =>
-  (["POOL", "ALICE", "BOB", "CAROL", "TREASURY", "DEPLOYER", "HOOK_ROUTER"] as const)
+  (
+    [
+      "POOL",
+      "ALICE",
+      "BOB",
+      "CAROL",
+      "TREASURY",
+      "DEPLOYER",
+      "HOOK_ROUTER",
+    ] as const
+  )
     .filter((l) => book[l])
     .map((l) => [l, book[l]] as [string, string]);
 
@@ -68,7 +97,8 @@ async function main() {
   const signers = await ethers.getSigners();
   const [deployer, alice, bob, carol] = signers;
   const chainId = Number((await ethers.provider.getNetwork()).chainId);
-  if (chainId !== 31337) throw new Error("capture must run on the local hub fixturenet");
+  if (chainId !== 31337)
+    throw new Error("capture must run on the local hub fixturenet");
 
   const poolDeployment = require("../../deployments/privacy-pool-hub.json");
   const feeModuleDeployment = require("../../deployments/fee-module-hub.json");
@@ -92,8 +122,14 @@ async function main() {
 
   const pool = await ethers.getContractAt("PrivacyPool", book.POOL);
   const usdc = await ethers.getContractAt("MockUSDCV2", book.USDC);
-  const transmitter = await ethers.getContractAt("MockMessageTransmitterV2", book.MESSAGE_TRANSMITTER);
-  const hookRouter = await ethers.getContractAt("CCTPHookRouter", book.HOOK_ROUTER);
+  const transmitter = await ethers.getContractAt(
+    "MockMessageTransmitterV2",
+    book.MESSAGE_TRANSMITTER,
+  );
+  const hookRouter = await ethers.getContractAt(
+    "CCTPHookRouter",
+    book.HOOK_ROUTER,
+  );
 
   const poolIface = pool.interface as Interface;
   const txIface = transmitter.interface as Interface;
@@ -105,7 +141,9 @@ async function main() {
   const mockPause = await deployMock(deployer, "MockShieldPauseController");
   const mockFee = await deployMock(deployer, "MockConfigurableFeeModule");
   const mockRegistry = await deployMock(deployer, "MockAdapterRegistry");
-  const evilFactory = await ethers.getContractFactory("MaliciousReentrantToken");
+  const evilFactory = await ethers.getContractFactory(
+    "MaliciousReentrantToken",
+  );
   const evil = await evilFactory.deploy();
   await evil.waitForDeployment();
   const evilAddr = await evil.getAddress();
@@ -117,12 +155,21 @@ async function main() {
   await (await usdc.mint(alice.address, 10_000n * ONE_USDC)).wait();
   await (await usdc.mint(bob.address, 1_000n * ONE_USDC)).wait();
   await (await usdc.mint(carol.address, 1_000n * ONE_USDC)).wait();
-  await (await usdc.connect(alice).approve(book.POOL, ethers.MaxUint256)).wait();
+  await (
+    await usdc.connect(alice).approve(book.POOL, ethers.MaxUint256)
+  ).wait();
   await (await usdc.connect(bob).approve(book.POOL, ethers.MaxUint256)).wait();
-  await (await usdc.connect(carol).approve(book.POOL, ethers.MaxUint256)).wait();
+  await (
+    await usdc.connect(carol).approve(book.POOL, ethers.MaxUint256)
+  ).wait();
   await (await evil.mint(alice.address, 100n * ONE_USDC)).wait();
-  const evilToken = await ethers.getContractAt("MaliciousReentrantToken", evilAddr);
-  await (await evilToken.connect(alice).approve(book.POOL, ethers.MaxUint256)).wait();
+  const evilToken = await ethers.getContractAt(
+    "MaliciousReentrantToken",
+    evilAddr,
+  );
+  await (
+    await evilToken.connect(alice).approve(book.POOL, ethers.MaxUint256)
+  ).wait();
 
   const FUNDING_SETUP = [
     "MockUSDCV2 mints (ALICE 10_000, BOB 1_000, CAROL 1_000 USDC) + max approvals to POOL",
@@ -134,7 +181,12 @@ async function main() {
     outDir: OUT_DIR,
     pool,
     usdc,
-    decoders: [pool.interface, usdc.interface, transmitter.interface, hookRouter.interface],
+    decoders: [
+      pool.interface,
+      usdc.interface,
+      transmitter.interface,
+      hookRouter.interface,
+    ],
     addressBook: book,
     chainId,
     deployments: {
@@ -156,11 +208,25 @@ async function main() {
     description: string,
     fn: string,
     args: any[],
-    opts: { expectRevert?: boolean; expectReason?: string; dependsOn?: string[]; postReads?: any[] } = {}
+    opts: {
+      expectRevert?: boolean;
+      expectReason?: string;
+      dependsOn?: string[];
+      postReads?: any[];
+    } = {},
   ) => {
     await recorder.capture({
-      meta: { id, category: "admin", description, specRefs: ["§5.4"], dependsOn: opts.dependsOn ?? [] },
-      from: deployer, fromLabel: "DEPLOYER", to: book.POOL, toLabel: "POOL",
+      meta: {
+        id,
+        category: "admin",
+        description,
+        specRefs: ["§5.4"],
+        dependsOn: opts.dependsOn ?? [],
+      },
+      from: deployer,
+      fromLabel: "DEPLOYER",
+      to: book.POOL,
+      toLabel: "POOL",
       calldata: poolIface.encodeFunctionData(fn, args),
       decodedCall: { function: fn, args },
       expectRevert: opts.expectRevert,
@@ -174,40 +240,63 @@ async function main() {
   await admin(
     "v2-admin-set-testing-mode-true",
     "Owner enables testingMode proof bypass so the unshield vectors replay without circuit artifacts (same policy as v1 corpus).",
-    "setTestingMode", [true],
-    { postReads: [{ key: "pool.testingMode", read: () => pool.testingMode() }] }
+    "setTestingMode",
+    [true],
+    {
+      postReads: [{ key: "pool.testingMode", read: () => pool.testingMode() }],
+    },
   );
 
   // ═══ 2. Flat fee 50bps (fee behavior observability) ═══
   await admin(
     "v2-admin-set-shield-fee-50",
     "Owner sets the flat shield fee to 50 bps (fee module detached on a fresh fixturenet).",
-    "setShieldFee", [50],
-    { dependsOn: ["v2-admin-set-testing-mode-true"],
-      postReads: [{ key: "pool.shieldFee", read: () => pool.shieldFee() }] }
+    "setShieldFee",
+    [50],
+    {
+      dependsOn: ["v2-admin-set-testing-mode-true"],
+      postReads: [{ key: "pool.shieldFee", read: () => pool.shieldFee() }],
+    },
   );
 
   // ═══ 3. Remote pool + hook router wiring for cross-chain vectors ═══
   await admin(
     "v2-admin-set-remote-pool",
     "Owner registers a remote pool on domain 101 (client chain).",
-    "setRemotePool", [CLIENT_DOMAIN, ethers.zeroPadValue(CLIENT_POOL_DUMMY, 32)],
-    { postReads: [{ key: `pool.remotePools[${CLIENT_DOMAIN}]`, read: () => pool.remotePools(CLIENT_DOMAIN) }] }
+    "setRemotePool",
+    [CLIENT_DOMAIN, ethers.zeroPadValue(CLIENT_POOL_DUMMY, 32)],
+    {
+      postReads: [
+        {
+          key: `pool.remotePools[${CLIENT_DOMAIN}]`,
+          read: () => pool.remotePools(CLIENT_DOMAIN),
+        },
+      ],
+    },
   );
 
   await admin(
     "v2-admin-set-remote-hook-router",
     "Owner pins the destinationCaller for domain 101 to the hub hook router bytes32 (D-16): outbound burns can only be delivered through the destination chain's CCTPHookRouter.",
-    "setRemoteHookRouter", [CLIENT_DOMAIN, ethers.zeroPadValue(book.HOOK_ROUTER, 32)],
-    { dependsOn: ["v2-admin-set-remote-pool"],
-      postReads: [{ key: `pool.remoteHookRouters[${CLIENT_DOMAIN}]`, read: () => pool.remoteHookRouters(CLIENT_DOMAIN) }] }
+    "setRemoteHookRouter",
+    [CLIENT_DOMAIN, ethers.zeroPadValue(book.HOOK_ROUTER, 32)],
+    {
+      dependsOn: ["v2-admin-set-remote-pool"],
+      postReads: [
+        {
+          key: `pool.remoteHookRouters[${CLIENT_DOMAIN}]`,
+          read: () => pool.remoteHookRouters(CLIENT_DOMAIN),
+        },
+      ],
+    },
   );
 
   // Second remote pool WITHOUT a hook router (for the not-configured revert).
   await admin(
     "v2-admin-set-remote-pool-102",
     "Owner registers a remote pool on domain 102 but deliberately leaves its remoteHookRouters entry unset.",
-    "setRemotePool", [CLIENT_DOMAIN_B, ethers.zeroPadValue(CLIENT_POOL_DUMMY, 32)]
+    "setRemotePool",
+    [CLIENT_DOMAIN_B, ethers.zeroPadValue(CLIENT_POOL_DUMMY, 32)],
   );
 
   // ═══ 4. Adapter registry privilege (D-18) ═══
@@ -215,64 +304,116 @@ async function main() {
     meta: {
       id: "v2-admin-set-adapter-registry",
       category: "admin",
-      description: "Owner sets the timelock-governed adapter registry (set-once). Setup tx authorizes CAROL in the mock registry — CAROL's next shield pays no fee.",
+      description:
+        "Owner sets the timelock-governed adapter registry (set-once). Setup tx authorizes CAROL in the mock registry — CAROL's next shield pays no fee.",
       specRefs: ["§5.4", "§7.3"],
       dependsOn: ["v2-admin-set-shield-fee-50"],
-      setup: [...FUNDING_SETUP, "MockAdapterRegistry.setAuthorized(CAROL, true)"],
+      setup: [
+        ...FUNDING_SETUP,
+        "MockAdapterRegistry.setAuthorized(CAROL, true)",
+      ],
     },
-    setupTxs: [{
-      from: deployer, fromLabel: "DEPLOYER",
-      to: mockRegistry.address, toLabel: "MOCK_ADAPTER_REGISTRY",
-      calldata: (mockRegistry.contract.interface as Interface).encodeFunctionData("setAuthorized", [carol.address, true]),
-      description: "authorize CAROL in the mock registry",
-    }],
-    from: deployer, fromLabel: "DEPLOYER", to: book.POOL, toLabel: "POOL",
-    calldata: poolIface.encodeFunctionData("setAdapterRegistry", [mockRegistry.address]),
-    decodedCall: { function: "setAdapterRegistry", args: { registry: mockRegistry.address } },
+    setupTxs: [
+      {
+        from: deployer,
+        fromLabel: "DEPLOYER",
+        to: mockRegistry.address,
+        toLabel: "MOCK_ADAPTER_REGISTRY",
+        calldata: (
+          mockRegistry.contract.interface as Interface
+        ).encodeFunctionData("setAuthorized", [carol.address, true]),
+        description: "authorize CAROL in the mock registry",
+      },
+    ],
+    from: deployer,
+    fromLabel: "DEPLOYER",
+    to: book.POOL,
+    toLabel: "POOL",
+    calldata: poolIface.encodeFunctionData("setAdapterRegistry", [
+      mockRegistry.address,
+    ]),
+    decodedCall: {
+      function: "setAdapterRegistry",
+      args: { registry: mockRegistry.address },
+    },
     balancesOf: balances(),
-    postReads: [{ key: "pool.adapterRegistry", read: () => pool.adapterRegistry() }],
+    postReads: [
+      { key: "pool.adapterRegistry", read: () => pool.adapterRegistry() },
+    ],
   });
 
   await admin(
     "v2-admin-set-adapter-registry-twice-revert",
     "Second setAdapterRegistry reverts — the registry is immutable once set (owner has no path to grant shield privilege after configuration).",
-    "setAdapterRegistry", [mockRegistry.address],
-    { expectRevert: true, expectReason: "PrivacyPool: registry already set",
-      dependsOn: ["v2-admin-set-adapter-registry"] }
+    "setAdapterRegistry",
+    [mockRegistry.address],
+    {
+      expectRevert: true,
+      expectReason: "PrivacyPool: registry already set",
+      dependsOn: ["v2-admin-set-adapter-registry"],
+    },
   );
 
   // ═══ 5. Privilege-derived shields ═══
   {
-    const req = makeShieldRequest("v2-shield-privileged-adapter", erc20Token(book.USDC), 20n * ONE_USDC);
+    const req = makeShieldRequest(
+      "v2-shield-privileged-adapter",
+      erc20Token(book.USDC),
+      20n * ONE_USDC,
+    );
     await recorder.capture({
       meta: {
         id: "v2-shield-privileged-adapter",
         category: "shield",
-        description: "CAROL (authorized in the registry) shields 20 USDC with 50bps flat fee configured: fee = 0, full value committed (D-18 registry-derived exemption).",
+        description:
+          "CAROL (authorized in the registry) shields 20 USDC with 50bps flat fee configured: fee = 0, full value committed (D-18 registry-derived exemption).",
         specRefs: ["§7.1", "§7.3"],
         dependsOn: ["v2-admin-set-adapter-registry"],
         setup: FUNDING_SETUP,
       },
-      from: carol, fromLabel: "CAROL", to: book.POOL, toLabel: "POOL",
-      calldata: poolIface.encodeFunctionData("shield", [[req], ethers.ZeroAddress]),
-      decodedCall: { function: "shield", args: { requests: [req], integrator: ethers.ZeroAddress } },
+      from: carol,
+      fromLabel: "CAROL",
+      to: book.POOL,
+      toLabel: "POOL",
+      calldata: poolIface.encodeFunctionData("shield", [
+        [req],
+        ethers.ZeroAddress,
+      ]),
+      decodedCall: {
+        function: "shield",
+        args: { requests: [req], integrator: ethers.ZeroAddress },
+      },
       balancesOf: balances(),
     });
   }
   {
-    const req = makeShieldRequest("v2-shield-unprivileged-with-registry", erc20Token(book.USDC), 20n * ONE_USDC);
+    const req = makeShieldRequest(
+      "v2-shield-unprivileged-with-registry",
+      erc20Token(book.USDC),
+      20n * ONE_USDC,
+    );
     await recorder.capture({
       meta: {
         id: "v2-shield-unprivileged-with-registry",
         category: "shield",
-        description: "BOB (NOT in the registry) shields 20 USDC with the registry set: flat 50bps fee charged and sent to treasury — proves the retired privilegedShieldCallers map is inert (D-18).",
+        description:
+          "BOB (NOT in the registry) shields 20 USDC with the registry set: flat 50bps fee charged and sent to treasury — proves the retired privilegedShieldCallers map is inert (D-18).",
         specRefs: ["§7.1", "§7.3"],
         dependsOn: ["v2-shield-privileged-adapter"],
         setup: FUNDING_SETUP,
       },
-      from: bob, fromLabel: "BOB", to: book.POOL, toLabel: "POOL",
-      calldata: poolIface.encodeFunctionData("shield", [[req], ethers.ZeroAddress]),
-      decodedCall: { function: "shield", args: { requests: [req], integrator: ethers.ZeroAddress } },
+      from: bob,
+      fromLabel: "BOB",
+      to: book.POOL,
+      toLabel: "POOL",
+      calldata: poolIface.encodeFunctionData("shield", [
+        [req],
+        ethers.ZeroAddress,
+      ]),
+      decodedCall: {
+        function: "shield",
+        args: { requests: [req], integrator: ethers.ZeroAddress },
+      },
       balancesOf: balances(),
     });
   }
@@ -281,41 +422,79 @@ async function main() {
   await admin(
     "v2-admin-add-to-blocklist",
     "Owner blocklists the MOCK_PAUSE address (standing in for a token). Emits AddToBlocklist; blocked tokens cannot be SHIELDED but existing notes stay exitable.",
-    "addToBlocklist", [[mockPause.address]],
-    { dependsOn: ["v2-admin-set-shield-fee-50"],
-      postReads: [{ key: `pool.tokenBlocklist[${mockPause.address}]`, read: () => pool.tokenBlocklist(mockPause.address) }] }
+    "addToBlocklist",
+    [[mockPause.address]],
+    {
+      dependsOn: ["v2-admin-set-shield-fee-50"],
+      postReads: [
+        {
+          key: `pool.tokenBlocklist[${mockPause.address}]`,
+          read: () => pool.tokenBlocklist(mockPause.address),
+        },
+      ],
+    },
   );
   {
-    const req = makeShieldRequest("v2-shield-blocked-token-revert", erc20Token(mockPause.address), ONE_USDC);
+    const req = makeShieldRequest(
+      "v2-shield-blocked-token-revert",
+      erc20Token(mockPause.address),
+      ONE_USDC,
+    );
     await recorder.capture({
       meta: {
         id: "v2-shield-blocked-token-revert",
         category: "shield",
-        description: "Shield of a blocklisted token reverts in preimage validation (spec §7.1(a)) before any token movement.",
+        description:
+          "Shield of a blocklisted token reverts in preimage validation (spec §7.1(a)) before any token movement.",
         specRefs: ["§7.1"],
         dependsOn: ["v2-admin-add-to-blocklist"],
         setup: FUNDING_SETUP,
       },
-      from: alice, fromLabel: "ALICE", to: book.POOL, toLabel: "POOL",
-      calldata: poolIface.encodeFunctionData("shield", [[req], ethers.ZeroAddress]),
-      decodedCall: { function: "shield", args: { requests: [req], integrator: ethers.ZeroAddress } },
-      expectRevert: true, expectReason: "ShieldModule: Token blocked",
+      from: alice,
+      fromLabel: "ALICE",
+      to: book.POOL,
+      toLabel: "POOL",
+      calldata: poolIface.encodeFunctionData("shield", [
+        [req],
+        ethers.ZeroAddress,
+      ]),
+      decodedCall: {
+        function: "shield",
+        args: { requests: [req], integrator: ethers.ZeroAddress },
+      },
+      expectRevert: true,
+      expectReason: "ShieldModule: Token blocked",
       balancesOf: balances(),
     });
   }
   await admin(
     "v2-admin-block-usdc-revert",
     "Blocking the pool's core USDC asset reverts — in-flight cross-chain shields must stay deliverable (D-18).",
-    "addToBlocklist", [[book.USDC]],
-    { expectRevert: true, expectReason: "PrivacyPool: cannot block USDC",
-      dependsOn: ["v2-admin-add-to-blocklist"] }
+    "addToBlocklist",
+    [[book.USDC]],
+    {
+      expectRevert: true,
+      expectReason: "PrivacyPool: cannot block USDC",
+      dependsOn: ["v2-admin-add-to-blocklist"],
+    },
   );
   await admin(
     "v2-admin-remove-from-blocklist",
     "Owner removes the block (idempotent cleanup; end state: blocklist empty).",
-    "removeFromBlocklist", [[mockPause.address]],
-    { dependsOn: ["v2-shield-blocked-token-revert", "v2-admin-block-usdc-revert"],
-      postReads: [{ key: `pool.tokenBlocklist[${mockPause.address}]`, read: () => pool.tokenBlocklist(mockPause.address) }] }
+    "removeFromBlocklist",
+    [[mockPause.address]],
+    {
+      dependsOn: [
+        "v2-shield-blocked-token-revert",
+        "v2-admin-block-usdc-revert",
+      ],
+      postReads: [
+        {
+          key: `pool.tokenBlocklist[${mockPause.address}]`,
+          read: () => pool.tokenBlocklist(mockPause.address),
+        },
+      ],
+    },
   );
 
   // ═══ 7. Multi-note cross-chain shield-in (D-15) ═══
@@ -324,21 +503,38 @@ async function main() {
     notes: { value: bigint; npk?: string; integrator?: string }[],
     gross: bigint,
     cctpFee: bigint,
-    finality: number
+    finality: number,
   ) => {
     const coder = ethers.AbiCoder.defaultAbiCoder();
     const notesTuple = notes.map((n, i) => ({
       npk: n.npk ?? npkFromSeed(`${seed}:n${i}`),
       value: n.value,
-      encryptedBundle: [d32(`${seed}:eb${i}0`), d32(`${seed}:eb${i}1`), d32(`${seed}:eb${i}2`)],
+      encryptedBundle: [
+        d32(`${seed}:eb${i}0`),
+        d32(`${seed}:eb${i}1`),
+        d32(`${seed}:eb${i}2`),
+      ],
       shieldKey: d32(`${seed}:sk${i}`),
       integrator: n.integrator ?? ethers.ZeroAddress,
     }));
     const shieldDataArray = coder.encode(
-      ["tuple(bytes32 npk, uint120 value, bytes32[3] encryptedBundle, bytes32 shieldKey, address integrator)[]"],
-      [notesTuple.map((t) => [t.npk, t.value, t.encryptedBundle, t.shieldKey, t.integrator])]
+      [
+        "tuple(bytes32 npk, uint120 value, bytes32[3] encryptedBundle, bytes32 shieldKey, address integrator)[]",
+      ],
+      [
+        notesTuple.map((t) => [
+          t.npk,
+          t.value,
+          t.encryptedBundle,
+          t.shieldKey,
+          t.integrator,
+        ]),
+      ],
     );
-    const hookData = coder.encode(["tuple(uint8 messageType, bytes data)"], [[0, shieldDataArray]]);
+    const hookData = coder.encode(
+      ["tuple(uint8 messageType, bytes data)"],
+      [[0, shieldDataArray]],
+    );
     const body = encodeBurnMessageV2({
       burnToken: book.USDC,
       mintRecipient: book.POOL,
@@ -366,19 +562,27 @@ async function main() {
   await admin(
     "v2-admin-set-hook-router",
     "Owner wires the CCTPHookRouter into the pool (required for inbound cross-chain shields).",
-    "setHookRouter", [book.HOOK_ROUTER],
-    { postReads: [{ key: "pool.hookRouter", read: () => pool.hookRouter() }] }
+    "setHookRouter",
+    [book.HOOK_ROUTER],
+    { postReads: [{ key: "pool.hookRouter", read: () => pool.hookRouter() }] },
   );
   await recorder.capture({
     meta: {
       id: "v2-cctp-set-mock-relayer",
       category: "cctp-config",
-      description: "Mock-CCTP wiring: point the hub MockMessageTransmitterV2's relayer at the CCTPHookRouter so relayWithHook can call receiveMessage.",
+      description:
+        "Mock-CCTP wiring: point the hub MockMessageTransmitterV2's relayer at the CCTPHookRouter so relayWithHook can call receiveMessage.",
       dependsOn: ["v2-admin-set-hook-router"],
     },
-    from: deployer, fromLabel: "DEPLOYER", to: book.MESSAGE_TRANSMITTER, toLabel: "MESSAGE_TRANSMITTER",
+    from: deployer,
+    fromLabel: "DEPLOYER",
+    to: book.MESSAGE_TRANSMITTER,
+    toLabel: "MESSAGE_TRANSMITTER",
     calldata: txIface.encodeFunctionData("setRelayer", [book.HOOK_ROUTER]),
-    decodedCall: { function: "setRelayer", args: { relayer: book.HOOK_ROUTER } },
+    decodedCall: {
+      function: "setRelayer",
+      args: { relayer: book.HOOK_ROUTER },
+    },
     balancesOf: balances(),
   });
 
@@ -386,25 +590,45 @@ async function main() {
     const message = shieldInMessageV2(
       "v2-shieldin-multi-note",
       [{ value: 500n * ONE_USDC }, { value: 5n * ONE_USDC }],
-      500n * ONE_USDC, 2n * ONE_USDC, 2000
+      500n * ONE_USDC,
+      2n * ONE_USDC,
+      2000,
     );
     await recorder.capture({
       meta: {
         id: "v2-shieldin-multi-note",
         category: "shield-in",
-        description: "Multi-note cross-chain shield-in (D-15): 500 USDC gross, 2 USDC CCTP fee; note[0] (recipient) is credited 498-5=493, note[1] (relayer fee note) mints at full 5; ONE Shield event with both commitments.",
+        description:
+          "Multi-note cross-chain shield-in (D-15): 500 USDC gross, 2 USDC CCTP fee; note[0] (recipient) is credited 498-5=493, note[1] (relayer fee note) mints at full 5; ONE Shield event with both commitments.",
         specRefs: ["§5.3", "§7.2"],
         dependsOn: ["v2-admin-set-hook-router", "v2-cctp-set-mock-relayer"],
-        setup: ["MessageV2/BurnMessageV2 bytes fabricated off-chain per ICCTPV2.sol offsets (same bytes a client-chain MessageSent event would carry)"],
+        setup: [
+          "MessageV2/BurnMessageV2 bytes fabricated off-chain per ICCTPV2.sol offsets (same bytes a client-chain MessageSent event would carry)",
+        ],
       },
-      from: deployer, fromLabel: "DEPLOYER", to: book.HOOK_ROUTER, toLabel: "HOOK_ROUTER",
-      calldata: hookRouterIface.encodeFunctionData("relayWithHook", [message, "0x"]),
-      decodedCall: { function: "relayWithHook", args: { message, attestation: "0x" } },
+      from: deployer,
+      fromLabel: "DEPLOYER",
+      to: book.HOOK_ROUTER,
+      toLabel: "HOOK_ROUTER",
+      calldata: hookRouterIface.encodeFunctionData("relayWithHook", [
+        message,
+        "0x",
+      ]),
+      decodedCall: {
+        function: "relayWithHook",
+        args: { message, attestation: "0x" },
+      },
       balancesOf: balances(),
     });
   }
   {
-    const message = shieldInMessageV2("v2-shieldin-no-notes-revert", [], ONE_USDC, 0n, 2000);
+    const message = shieldInMessageV2(
+      "v2-shieldin-no-notes-revert",
+      [],
+      ONE_USDC,
+      0n,
+      2000,
+    );
     await recorder.capture({
       meta: {
         id: "v2-shieldin-no-notes-revert",
@@ -413,10 +637,20 @@ async function main() {
         specRefs: ["§7.2"],
         dependsOn: ["v2-shieldin-multi-note"],
       },
-      from: deployer, fromLabel: "DEPLOYER", to: book.HOOK_ROUTER, toLabel: "HOOK_ROUTER",
-      calldata: hookRouterIface.encodeFunctionData("relayWithHook", [message, "0x"]),
-      decodedCall: { function: "relayWithHook", args: { message, attestation: "0x" } },
-      expectRevert: true, expectReason: "ShieldModule: no shield notes",
+      from: deployer,
+      fromLabel: "DEPLOYER",
+      to: book.HOOK_ROUTER,
+      toLabel: "HOOK_ROUTER",
+      calldata: hookRouterIface.encodeFunctionData("relayWithHook", [
+        message,
+        "0x",
+      ]),
+      decodedCall: {
+        function: "relayWithHook",
+        args: { message, attestation: "0x" },
+      },
+      expectRevert: true,
+      expectReason: "ShieldModule: no shield notes",
       balancesOf: balances(),
     });
   }
@@ -427,7 +661,7 @@ async function main() {
     description: string,
     domain: number,
     bindCorrectly: boolean,
-    expectReason?: string
+    expectReason?: string,
   ) => {
     const pos = await treePos();
     const base = 10n * ONE_USDC;
@@ -454,23 +688,42 @@ async function main() {
       : ethers.ZeroHash;
     await recorder.capture({
       meta: {
-        id, category: "unshield", description,
+        id,
+        category: "unshield",
+        description,
         specRefs: ["§8.2"],
         proofsBypassed: true,
-        dependsOn: ["v2-admin-set-testing-mode-true", "v2-admin-set-remote-pool", "v2-shieldin-multi-note"],
+        dependsOn: [
+          "v2-admin-set-testing-mode-true",
+          "v2-admin-set-remote-pool",
+          "v2-shieldin-multi-note",
+        ],
         setup: [
           "testingMode = true (proof bypass)",
           "remotePools[101] + remoteHookRouters[101] registered",
           "Pool USDC balance covers the bridged amount from prior shield-ins",
         ],
       },
-      from: deployer, fromLabel: "DEPLOYER", to: book.POOL, toLabel: "POOL",
+      from: deployer,
+      fromLabel: "DEPLOYER",
+      to: book.POOL,
+      toLabel: "POOL",
       calldata: poolIface.encodeFunctionData("atomicCrossChainUnshield", [
-        tx, domain, bob.address, maxFee, uniqueNonce,
+        tx,
+        domain,
+        bob.address,
+        maxFee,
+        uniqueNonce,
       ]),
       decodedCall: {
         function: "atomicCrossChainUnshield",
-        args: { tx, destinationDomain: domain, finalRecipient: bob.address, maxFee: toHex(maxFee), uniqueNonce },
+        args: {
+          tx,
+          destinationDomain: domain,
+          finalRecipient: bob.address,
+          maxFee: toHex(maxFee),
+          uniqueNonce,
+        },
       },
       expectRevert: !!expectReason,
       expectReason,
@@ -482,17 +735,22 @@ async function main() {
   await atomicUnshieldVector(
     "v2-unshield-crosschain-bound",
     "Bound atomic cross-chain unshield (D-16): adaptParams = CCTPBindingLib.encode(recipient, domain, maxFee); destinationCaller pinned to remoteHookRouters[101] in the burn call; uniqueNonce echoed in hookData; nonce=0 returned.",
-    CLIENT_DOMAIN, true
+    CLIENT_DOMAIN,
+    true,
   );
   await atomicUnshieldVector(
     "v2-unshield-crosschain-unbound-revert",
     "Unbound cross-chain unshield (adaptParams = 0) reverts — a relayer cannot resubmit a victim's proof with a redirected recipient (D-16).",
-    CLIENT_DOMAIN, false, "TransactModule: destination not bound to proof"
+    CLIENT_DOMAIN,
+    false,
+    "TransactModule: destination not bound to proof",
   );
   await atomicUnshieldVector(
     "v2-unshield-crosschain-no-hookrouter-revert",
     "Cross-chain unshield to domain 102 (remote pool registered, hook router NOT pinned) reverts before proof validation (D-16).",
-    CLIENT_DOMAIN_B, true, "TransactModule: Hook router not configured"
+    CLIENT_DOMAIN_B,
+    true,
+    "TransactModule: Hook router not configured",
   );
 
   // ═══ 8b. Local unshield to the pool itself (cross-path replay guard, D-18) ═══
@@ -516,16 +774,27 @@ async function main() {
       meta: {
         id: "v2-unshield-to-pool-revert",
         category: "unshield",
-        description: "Local unshield whose npk encodes the pool address reverts (D-18): blocks replaying an xchain-unshield proof through plain transact() (pool->pool payout would strand funds).",
+        description:
+          "Local unshield whose npk encodes the pool address reverts (D-18): blocks replaying an xchain-unshield proof through plain transact() (pool->pool payout would strand funds).",
         specRefs: ["§8.5"],
         proofsBypassed: true,
         dependsOn: ["v2-admin-set-testing-mode-true", "v2-shieldin-multi-note"],
-        setup: ["testingMode = true (proof bypass)", "Pool USDC balance covers the amount (revert fires before any transfer)"],
+        setup: [
+          "testingMode = true (proof bypass)",
+          "Pool USDC balance covers the amount (revert fires before any transfer)",
+        ],
       },
-      from: deployer, fromLabel: "DEPLOYER", to: book.POOL, toLabel: "POOL",
+      from: deployer,
+      fromLabel: "DEPLOYER",
+      to: book.POOL,
+      toLabel: "POOL",
       calldata: poolIface.encodeFunctionData("transact", [[tx]]),
-      decodedCall: { function: "transact", args: { note: "1x2 tx with unshield preimage npk = POOL" } },
-      expectRevert: true, expectReason: "TransactModule: unshield to pool",
+      decodedCall: {
+        function: "transact",
+        args: { note: "1x2 tx with unshield preimage npk = POOL" },
+      },
+      expectRevert: true,
+      expectReason: "TransactModule: unshield to pool",
       balancesOf: balances(),
     });
   }
@@ -536,28 +805,55 @@ async function main() {
     // Deploy the fresh pool as a setupTx (creation tx) so replay reproduces it
     // at the same deterministic address (same deployer nonce position).
     const deployNonce = await deployer.getNonce();
-    const freshAddr = ethers.getCreateAddress({ from: deployer.address, nonce: deployNonce });
+    const freshAddr = ethers.getCreateAddress({
+      from: deployer.address,
+      nonce: deployNonce,
+    });
     await recorder.capture({
       meta: {
         id: "v2-initialize-nondeployer-revert",
         category: "admin",
-        description: "initialize() from a non-deployer reverts (OQ-7 closed, D-18): a front-runner cannot initialize a freshly deployed pool with malicious params.",
+        description:
+          "initialize() from a non-deployer reverts (OQ-7 closed, D-18): a front-runner cannot initialize a freshly deployed pool with malicious params.",
         specRefs: ["§5.1"],
-        setup: ["Freshly deployed uninitialized PrivacyPool (setupTx creation; captured init args are dummy addresses — the deployer check fires first)"],
+        setup: [
+          "Freshly deployed uninitialized PrivacyPool (setupTx creation; captured init args are dummy addresses — the deployer check fires first)",
+        ],
       },
-      setupTxs: [{
-        from: deployer, fromLabel: "DEPLOYER",
-        to: "", toLabel: "CREATE",
-        calldata: freshFactory.bytecode,
-        description: "deploy a fresh uninitialized PrivacyPool",
-      }],
-      from: alice, fromLabel: "ALICE", to: freshAddr, toLabel: "FRESH_POOL",
+      setupTxs: [
+        {
+          from: deployer,
+          fromLabel: "DEPLOYER",
+          to: "",
+          toLabel: "CREATE",
+          calldata: freshFactory.bytecode,
+          description: "deploy a fresh uninitialized PrivacyPool",
+        },
+      ],
+      from: alice,
+      fromLabel: "ALICE",
+      to: freshAddr,
+      toLabel: "FRESH_POOL",
       calldata: poolIface.encodeFunctionData("initialize", [
-        deployer.address, deployer.address, deployer.address, deployer.address,
-        deployer.address, deployer.address, book.USDC, HUB_DOMAIN, deployer.address, deployer.address,
+        deployer.address,
+        deployer.address,
+        deployer.address,
+        deployer.address,
+        deployer.address,
+        deployer.address,
+        book.USDC,
+        HUB_DOMAIN,
+        deployer.address,
+        deployer.address,
       ]),
-      decodedCall: { function: "initialize", args: { note: "dummy module/tokenMessenger/transmitter/usdc/owner/treasury args — deployer check fires first" } },
-      expectRevert: true, expectReason: "PrivacyPool: Only deployer",
+      decodedCall: {
+        function: "initialize",
+        args: {
+          note: "dummy module/tokenMessenger/transmitter/usdc/owner/treasury args — deployer check fires first",
+        },
+      },
+      expectRevert: true,
+      expectReason: "PrivacyPool: Only deployer",
       balancesOf: balances(),
     });
   }
@@ -568,24 +864,51 @@ async function main() {
       meta: {
         id: "v2-shield-reentrancy-revert",
         category: "edge",
-        description: "Shield with MaliciousReentrantToken: the token's transferFrom re-enters pool.shield mid-deposit; the router's nonReentrant guard fires (D-18).",
+        description:
+          "Shield with MaliciousReentrantToken: the token's transferFrom re-enters pool.shield mid-deposit; the router's nonReentrant guard fires (D-18).",
         specRefs: ["§5.2", "D-18"],
         dependsOn: ["v2-admin-set-shield-fee-50"],
-        setup: [...FUNDING_SETUP, "MaliciousReentrantToken.setAttack(POOL, 1=shield)"],
+        setup: [
+          ...FUNDING_SETUP,
+          "MaliciousReentrantToken.setAttack(POOL, 1=shield)",
+        ],
       },
-      setupTxs: [{
-        from: deployer, fromLabel: "DEPLOYER",
-        to: evilAddr, toLabel: "MALICIOUS_TOKEN",
-        calldata: (evilToken.interface as Interface).encodeFunctionData("setAttack", [book.POOL, 1]),
-        description: "arm the reentrancy attack against pool.shield",
-      }],
-      from: alice, fromLabel: "ALICE", to: book.POOL, toLabel: "POOL",
+      setupTxs: [
+        {
+          from: deployer,
+          fromLabel: "DEPLOYER",
+          to: evilAddr,
+          toLabel: "MALICIOUS_TOKEN",
+          calldata: (evilToken.interface as Interface).encodeFunctionData(
+            "setAttack",
+            [book.POOL, 1],
+          ),
+          description: "arm the reentrancy attack against pool.shield",
+        },
+      ],
+      from: alice,
+      fromLabel: "ALICE",
+      to: book.POOL,
+      toLabel: "POOL",
       calldata: poolIface.encodeFunctionData("shield", [
-        [makeShieldRequest("v2-shield-reentrancy-revert", erc20Token(evilAddr), ONE_USDC)],
+        [
+          makeShieldRequest(
+            "v2-shield-reentrancy-revert",
+            erc20Token(evilAddr),
+            ONE_USDC,
+          ),
+        ],
         ethers.ZeroAddress,
       ]),
-      decodedCall: { function: "shield", args: { note: "single 1-token shield of MALICIOUS_TOKEN", integrator: ethers.ZeroAddress } },
-      expectRevert: true, expectReason: "PrivacyPool: reentrant call",
+      decodedCall: {
+        function: "shield",
+        args: {
+          note: "single 1-token shield of MALICIOUS_TOKEN",
+          integrator: ethers.ZeroAddress,
+        },
+      },
+      expectRevert: true,
+      expectReason: "PrivacyPool: reentrant call",
       balancesOf: balances(),
     });
   }
@@ -594,9 +917,12 @@ async function main() {
   await admin(
     "v2-admin-set-testing-mode-false",
     "Owner disables testingMode (cleanup): real SNARK verification restored.",
-    "setTestingMode", [false],
-    { dependsOn: ["v2-unshield-crosschain-bound"],
-      postReads: [{ key: "pool.testingMode", read: () => pool.testingMode() }] }
+    "setTestingMode",
+    [false],
+    {
+      dependsOn: ["v2-unshield-crosschain-bound"],
+      postReads: [{ key: "pool.testingMode", read: () => pool.testingMode() }],
+    },
   );
 
   // ═══ Manifest ═══
@@ -611,7 +937,8 @@ async function main() {
       hubDomain: HUB_DOMAIN,
     },
     proofPolicy: {
-      summary: "Unshield vectors captured with testingMode proof bypass active; all others need no proofs. Same policy as the v1 corpus.",
+      summary:
+        "Unshield vectors captured with testingMode proof bypass active; all others need no proofs. Same policy as the v1 corpus.",
       bypassEnabledByVector: "v2-admin-set-testing-mode-true",
       bypassDisabledByVector: "v2-admin-set-testing-mode-false",
     },
@@ -638,7 +965,9 @@ async function main() {
   };
   writeJSON(path.join(OUT_DIR, "manifest.json"), manifest);
 
-  console.log(`\n=== v2 capture complete: ${recorder.entries.length} vectors ===`);
+  console.log(
+    `\n=== v2 capture complete: ${recorder.entries.length} vectors ===`,
+  );
   console.log(`Output: ${OUT_DIR}`);
 }
 

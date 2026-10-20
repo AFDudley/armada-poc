@@ -128,9 +128,13 @@ contract MerkleModule is PrivacyPoolStorage, IMerkleModule {
     /// @param newCommitments Size of the hypothetical batch.
     /// @return treeNum Tree the batch would land in.
     /// @return startIndex First leaf index the batch would occupy.
-    function getInsertionTreeNumberAndStartingIndex(
-        uint256 newCommitments
-    ) external view override onlyDelegatecall returns (uint256 treeNum, uint256 startIndex) {
+    function getInsertionTreeNumberAndStartingIndex(uint256 newCommitments)
+        external
+        view
+        override
+        onlyDelegatecall
+        returns (uint256 treeNum, uint256 startIndex)
+    {
         if (nextLeafIndex + newCommitments > 2 ** TREE_DEPTH) {
             return (treeNumber + 1, 0);
         }

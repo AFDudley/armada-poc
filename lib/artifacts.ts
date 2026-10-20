@@ -6,7 +6,7 @@
  */
 
 // Armada's own circuit artifacts (replaces unlicensed railgun-circuit-test-artifacts)
-import * as armadaArtifacts from './sdk/armada-artifacts';
+import * as armadaArtifacts from "./sdk/armada-artifacts";
 
 export interface VKey {
   protocol: string;
@@ -67,11 +67,11 @@ export interface SolidityVerifyingKey {
  */
 export const TESTING_ARTIFACT_CONFIGS: ArtifactConfig[] = [
   // Original baseline set — used by the first POC deployments.
-  { nullifiers: 1, commitments: 1 },  // Cross-contract: lend/redeem (1 unshield -> 1 shield)
-  { nullifiers: 1, commitments: 2 },  // Shield: 1 input -> 2 outputs
-  { nullifiers: 2, commitments: 2 },  // Simple transfer
-  { nullifiers: 2, commitments: 3 },  // Transfer with change
-  { nullifiers: 8, commitments: 4 },  // Medium consolidation
+  { nullifiers: 1, commitments: 1 }, // Cross-contract: lend/redeem (1 unshield -> 1 shield)
+  { nullifiers: 1, commitments: 2 }, // Shield: 1 input -> 2 outputs
+  { nullifiers: 2, commitments: 2 }, // Simple transfer
+  { nullifiers: 2, commitments: 3 }, // Transfer with change
+  { nullifiers: 8, commitments: 4 }, // Medium consolidation
 
   // Consolidation unshields — (N notes spent, 1 change). Triggered whenever the SDK has to
   // combine multiple smaller notes to satisfy a withdrawal/transfer amount. Without these,
@@ -116,7 +116,10 @@ export function getVKey(nullifiers: number, commitments: number): VKey {
 /**
  * Get full artifact (zkey, wasm, vkey) for a specific circuit configuration
  */
-export function getArtifact(nullifiers: number, commitments: number): {
+export function getArtifact(
+  nullifiers: number,
+  commitments: number,
+): {
   zkey: Uint8Array;
   wasm: Uint8Array;
   vkey: VKey;
@@ -144,7 +147,7 @@ function getIPFSHash(nullifiers: number, commitments: number): string {
 export function formatVKeyForSolidity(
   vkey: VKey,
   nullifiers: number,
-  commitments: number
+  commitments: number,
 ): SolidityVerifyingKey {
   return {
     artifactsIPFSHash: getIPFSHash(nullifiers, commitments),
@@ -196,7 +199,7 @@ export async function loadVerificationKeys(
   },
   configs: ArtifactConfig[] = TESTING_ARTIFACT_CONFIGS,
   logProgress: boolean = true,
-  txOverrides?: () => Record<string, unknown>
+  txOverrides?: () => Record<string, unknown>,
 ): Promise<void> {
   if (logProgress) {
     console.log(`Loading ${configs.length} verification keys...`);
@@ -205,11 +208,15 @@ export async function loadVerificationKeys(
   for (let i = 0; i < configs.length; i++) {
     const config = configs[i];
     const vkey = getVKey(config.nullifiers, config.commitments);
-    const solidityVKey = formatVKeyForSolidity(vkey, config.nullifiers, config.commitments);
+    const solidityVKey = formatVKeyForSolidity(
+      vkey,
+      config.nullifiers,
+      config.commitments,
+    );
 
     if (logProgress) {
       console.log(
-        `  [${i + 1}/${configs.length}] Loading ${config.nullifiers}x${config.commitments}...`
+        `  [${i + 1}/${configs.length}] Loading ${config.nullifiers}x${config.commitments}...`,
       );
     }
 
@@ -217,7 +224,7 @@ export async function loadVerificationKeys(
       config.nullifiers,
       config.commitments,
       solidityVKey,
-      txOverrides?.() ?? {}
+      txOverrides?.() ?? {},
     );
     await tx.wait();
   }

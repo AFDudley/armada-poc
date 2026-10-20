@@ -1,16 +1,22 @@
 // ABOUTME: Unit tests for RPC-backed range staging, verification, and repair behavior.
 // ABOUTME: Uses fake providers so cursor promotion and gap handling are tested without live RPC.
 
-import { mkdtemp, rm } from 'node:fs/promises'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
-import { afterEach, describe, expect, it } from 'vitest'
-import { FileIndexerStore } from '../db/fileStore.js'
-import { assertRpcChainId, checkRpcChainIds, repairRanges, stageRange, verifyRange } from './rpc.js'
-import type { CursorState, IngestRangeRecord } from '../types.js'
-import type { RangeLogProvider, RpcLog } from './rpc.js'
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { afterEach, describe, expect, it } from "vitest";
+import { FileIndexerStore } from "../db/fileStore.js";
+import {
+  assertRpcChainId,
+  checkRpcChainIds,
+  repairRanges,
+  stageRange,
+  verifyRange,
+} from "./rpc.js";
+import type { CursorState, IngestRangeRecord } from "../types.js";
+import type { RangeLogProvider, RpcLog } from "./rpc.js";
 
-const tempDirs: string[] = []
+const tempDirs: string[] = [];
 
 const cursor: CursorState = {
   deployBlock: 100,
@@ -19,259 +25,314 @@ const cursor: CursorState = {
   confirmedHead: 138,
   ingestedCursor: 99,
   verifiedCursor: 99,
-}
+};
 
 const config = {
   chainId: 11155111,
-  contractAddress: '0xF681A7c700420e5CA93f77c8988d3eED02767035',
-  providerName: 'primary',
-}
+  contractAddress: "0xF681A7c700420e5CA93f77c8988d3eED02767035",
+  providerName: "primary",
+};
 
 function makeRpcLog(overrides: Partial<RpcLog> = {}): RpcLog {
   return {
     blockNumber: 100,
-    blockHash: '0x' + '11'.repeat(32),
-    transactionHash: '0x' + '22'.repeat(32),
+    blockHash: "0x" + "11".repeat(32),
+    transactionHash: "0x" + "22".repeat(32),
     index: 0,
-    topics: ['0x' + '33'.repeat(32)],
-    data: '0x',
+    topics: ["0x" + "33".repeat(32)],
+    data: "0x",
     ...overrides,
-  }
+  };
 }
 
-function makeProvider(logs: readonly RpcLog[], blockNumber = 150): RangeLogProvider {
+function makeProvider(
+  logs: readonly RpcLog[],
+  blockNumber = 150,
+): RangeLogProvider {
   return {
     getBlockNumber: async () => blockNumber,
     getLogs: async () => logs,
-  }
+  };
 }
 
 function makeFailingProvider(message: string): RangeLogProvider {
   return {
     getBlockNumber: async () => 150,
     getLogs: async () => {
-      throw new Error(message)
+      throw new Error(message);
     },
-  }
+  };
 }
 
 function makeRange(overrides: Partial<IngestRangeRecord>): IngestRangeRecord {
   return {
     fromBlock: 120,
     toBlock: 129,
-    status: 'failed',
-    provider: 'primary',
+    status: "failed",
+    provider: "primary",
     attempts: 1,
     logCount: 0,
     digest: null,
     fetchedAt: null,
     verifiedAt: null,
-    lastError: 'RPC timeout',
+    lastError: "RPC timeout",
     nextRetryAt: null,
     ...overrides,
-  }
+  };
 }
 
 async function makeStore(): Promise<FileIndexerStore> {
-  const dir = await mkdtemp(join(tmpdir(), 'crowdfund-indexer-rpc-'))
-  tempDirs.push(dir)
+  const dir = await mkdtemp(join(tmpdir(), "crowdfund-indexer-rpc-"));
+  tempDirs.push(dir);
   return new FileIndexerStore({
-    path: join(dir, 'store.json'),
+    path: join(dir, "store.json"),
     initialCursor: cursor,
-  })
+  });
 }
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
-})
+  await Promise.all(
+    tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })),
+  );
+});
 
-describe('RPC range pipeline', () => {
-  it('stages fetched logs and advances the ingested cursor', async () => {
-    const store = await makeStore()
+describe("RPC range pipeline", () => {
+  it("stages fetched logs and advances the ingested cursor", async () => {
+    const store = await makeStore();
     const record = await stageRange({
       ...config,
       store,
       provider: makeProvider([makeRpcLog({ blockNumber: 120 })]),
       range: { fromBlock: 120, toBlock: 129 },
-    })
+    });
 
-    const data = await store.read()
-    expect(record.status).toBe('staged')
-    expect(data.cursor.ingestedCursor).toBe(129)
-    expect(data.rawLogs).toHaveLength(1)
-    expect(data.lastError).toBeNull()
-  })
+    const data = await store.read();
+    expect(record.status).toBe("staged");
+    expect(data.cursor.ingestedCursor).toBe(129);
+    expect(data.rawLogs).toHaveLength(1);
+    expect(data.lastError).toBeNull();
+  });
 
-  it('verifies matching primary and audit logs and promotes contiguous cursor', async () => {
-    const store = await makeStore()
-    const log = makeRpcLog({ blockNumber: 100 })
+  it("verifies matching primary and audit logs and promotes contiguous cursor", async () => {
+    const store = await makeStore();
+    const log = makeRpcLog({ blockNumber: 100 });
 
     const record = await verifyRange({
       ...config,
       store,
       provider: makeProvider([log]),
       auditProvider: makeProvider([log]),
-      auditProviderName: 'audit',
+      auditProviderName: "audit",
       range: { fromBlock: 100, toBlock: 109 },
-    })
+    });
 
-    const data = await store.read()
-    expect(record.status).toBe('verified')
-    expect(record.provider).toBe('primary/audit')
-    expect(data.cursor.verifiedCursor).toBe(109)
-    expect(data.lastVerifiedAt).not.toBeNull()
-  })
+    const data = await store.read();
+    expect(record.status).toBe("verified");
+    expect(record.provider).toBe("primary/audit");
+    expect(data.cursor.verifiedCursor).toBe(109);
+    expect(data.lastVerifiedAt).not.toBeNull();
+  });
 
-  it('marks a range suspicious when audit digest disagrees', async () => {
-    const store = await makeStore()
+  it("marks a range suspicious when audit digest disagrees", async () => {
+    const store = await makeStore();
 
     const record = await verifyRange({
       ...config,
       store,
-      provider: makeProvider([makeRpcLog({ data: '0x01' })]),
-      auditProvider: makeProvider([makeRpcLog({ data: '0x02' })]),
-      auditProviderName: 'audit',
+      provider: makeProvider([makeRpcLog({ data: "0x01" })]),
+      auditProvider: makeProvider([makeRpcLog({ data: "0x02" })]),
+      auditProviderName: "audit",
       range: { fromBlock: 100, toBlock: 109 },
-    })
+    });
 
-    const data = await store.read()
-    expect(record.status).toBe('suspicious')
-    expect(data.cursor.verifiedCursor).toBe(99)
-    expect(data.lastError).toContain('Digest mismatch')
-  })
+    const data = await store.read();
+    expect(record.status).toBe("suspicious");
+    expect(data.cursor.verifiedCursor).toBe(99);
+    expect(data.lastError).toContain("Digest mismatch");
+  });
 
-  it('records failed ranges without advancing cursors', async () => {
-    const store = await makeStore()
-
-    const record = await stageRange({
-      ...config,
-      store,
-      provider: makeFailingProvider('RPC timeout'),
-      range: { fromBlock: 120, toBlock: 129 },
-    })
-
-    const data = await store.read()
-    expect(record.status).toBe('failed')
-    expect(data.cursor.ingestedCursor).toBe(99)
-    expect(data.lastError).toBe('RPC timeout')
-  })
-
-  it('sanitizes RPC keys out of the persisted lastError', async () => {
-    const store = await makeStore()
-    const leakyUrl = 'https://eth-sepolia.g.alchemy.com/v2/abc123SECRETkey'
+  it("records failed ranges without advancing cursors", async () => {
+    const store = await makeStore();
 
     const record = await stageRange({
       ...config,
       store,
-      provider: makeFailingProvider(`could not detect network (req to ${leakyUrl} failed)`),
+      provider: makeFailingProvider("RPC timeout"),
       range: { fromBlock: 120, toBlock: 129 },
-    })
+    });
 
-    const data = await store.read()
-    expect(record.status).toBe('failed')
-    expect(data.lastError).not.toContain('abc123SECRETkey')
-    expect(data.lastError).toContain('https://eth-sepolia.g.alchemy.com/[redacted]')
-  })
+    const data = await store.read();
+    expect(record.status).toBe("failed");
+    expect(data.cursor.ingestedCursor).toBe(99);
+    expect(data.lastError).toBe("RPC timeout");
+  });
 
-  it('rejects malformed log responses instead of treating them as empty data', async () => {
-    const store = await makeStore()
+  it("sanitizes RPC keys out of the persisted lastError", async () => {
+    const store = await makeStore();
+    const leakyUrl = "https://eth-sepolia.g.alchemy.com/v2/abc123SECRETkey";
+
+    const record = await stageRange({
+      ...config,
+      store,
+      provider: makeFailingProvider(
+        `could not detect network (req to ${leakyUrl} failed)`,
+      ),
+      range: { fromBlock: 120, toBlock: 129 },
+    });
+
+    const data = await store.read();
+    expect(record.status).toBe("failed");
+    expect(data.lastError).not.toContain("abc123SECRETkey");
+    expect(data.lastError).toContain(
+      "https://eth-sepolia.g.alchemy.com/[redacted]",
+    );
+  });
+
+  it("rejects malformed log responses instead of treating them as empty data", async () => {
+    const store = await makeStore();
 
     const record = await stageRange({
       ...config,
       store,
       provider: makeProvider([{} as RpcLog]),
       range: { fromBlock: 120, toBlock: 129 },
-    })
+    });
 
-    const data = await store.read()
-    expect(record.status).toBe('failed')
-    expect(data.cursor.ingestedCursor).toBe(99)
-    expect(data.lastError).toContain('Malformed RPC log')
-  })
+    const data = await store.read();
+    expect(record.status).toBe("failed");
+    expect(data.cursor.ingestedCursor).toBe(99);
+    expect(data.lastError).toContain("Malformed RPC log");
+  });
 
-  it('repairs failed ranges through verification', async () => {
-    const store = await makeStore()
-    await store.upsertRange(makeRange({ fromBlock: 100, toBlock: 109 }))
-    const log = makeRpcLog({ blockNumber: 100 })
+  it("repairs failed ranges through verification", async () => {
+    const store = await makeStore();
+    await store.upsertRange(makeRange({ fromBlock: 100, toBlock: 109 }));
+    const log = makeRpcLog({ blockNumber: 100 });
 
     const repaired = await repairRanges({
       ...config,
       store,
       provider: makeProvider([log]),
       auditProvider: makeProvider([log]),
-      auditProviderName: 'audit',
-    })
+      auditProviderName: "audit",
+    });
 
-    const data = await store.read()
-    expect(repaired.map((record) => record.status)).toEqual(['verified'])
-    expect(data.cursor.verifiedCursor).toBe(109)
-  })
-})
+    const data = await store.read();
+    expect(repaired.map((record) => record.status)).toEqual(["verified"]);
+    expect(data.cursor.verifiedCursor).toBe(109);
+  });
+});
 
-describe('assertRpcChainId', () => {
-  const providerOn = (chainId: bigint) => ({ getNetwork: async () => ({ chainId }) })
+describe("assertRpcChainId", () => {
+  const providerOn = (chainId: bigint) => ({
+    getNetwork: async () => ({ chainId }),
+  });
 
   // WHY: the expected case — RPC serves the configured chain — must pass silently.
-  it('passes when the RPC serves CROWDFUND_CHAIN_ID', async () => {
-    await expect(assertRpcChainId(providerOn(1n), 1, 'primary', 1_000)).resolves.toBeUndefined()
-  })
+  it("passes when the RPC serves CROWDFUND_CHAIN_ID", async () => {
+    await expect(
+      assertRpcChainId(providerOn(1n), 1, "primary", 1_000),
+    ).resolves.toBeUndefined();
+  });
 
   // WHY: a wrong-chain RPC returns zero logs for the contract, which looks like a healthy
   // empty sale; the indexer must refuse to start instead of serving that.
-  it('throws naming both chain ids on a mismatch', async () => {
-    await expect(assertRpcChainId(providerOn(11155111n), 1, 'audit', 1_000))
-      .rejects.toThrow('audit RPC is chain 11155111, CROWDFUND_CHAIN_ID is 1')
-  })
+  it("throws naming both chain ids on a mismatch", async () => {
+    await expect(
+      assertRpcChainId(providerOn(11155111n), 1, "audit", 1_000),
+    ).rejects.toThrow("audit RPC is chain 11155111, CROWDFUND_CHAIN_ID is 1");
+  });
 
   // WHY: an RPC error must surface without leaking the API key embedded in the URL.
-  it('wraps RPC errors with the URL path redacted', async () => {
-    const failing = { getNetwork: async () => { throw new Error('request to https://eth.example.com/v2/SECRETKEY failed') } }
-    const message = await assertRpcChainId(failing, 1, 'primary', 1_000).then(() => 'resolved', (e: Error) => e.message)
-    expect(message).toContain('primary RPC chain id check failed')
-    expect(message).not.toContain('SECRETKEY')
-  })
+  it("wraps RPC errors with the URL path redacted", async () => {
+    const failing = {
+      getNetwork: async () => {
+        throw new Error(
+          "request to https://eth.example.com/v2/SECRETKEY failed",
+        );
+      },
+    };
+    const message = await assertRpcChainId(failing, 1, "primary", 1_000).then(
+      () => "resolved",
+      (e: Error) => e.message,
+    );
+    expect(message).toContain("primary RPC chain id check failed");
+    expect(message).not.toContain("SECRETKEY");
+  });
 
   // WHY: a refused connection surfaces as an AggregateError with an empty message; the
   // operator still needs to see why the check failed.
-  it('falls back to the error code when the message is empty', async () => {
-    const refused = { getNetwork: async () => { throw Object.assign(new AggregateError([], ''), { code: 'ECONNREFUSED' }) } }
-    await expect(assertRpcChainId(refused, 1, 'audit', 1_000))
-      .rejects.toThrow('audit RPC chain id check failed: ECONNREFUSED')
-  })
+  it("falls back to the error code when the message is empty", async () => {
+    const refused = {
+      getNetwork: async () => {
+        throw Object.assign(new AggregateError([], ""), {
+          code: "ECONNREFUSED",
+        });
+      },
+    };
+    await expect(assertRpcChainId(refused, 1, "audit", 1_000)).rejects.toThrow(
+      "audit RPC chain id check failed: ECONNREFUSED",
+    );
+  });
 
   // WHY: ethers retries network detection forever on an unreachable RPC; startup must
   // fail within the configured RPC timeout rather than hang.
-  it('times out when the RPC never answers', async () => {
-    const hanging = { getNetwork: () => new Promise<{ chainId: bigint }>(() => {}) }
-    await expect(assertRpcChainId(hanging, 1, 'primary', 20))
-      .rejects.toThrow('primary RPC chain id check failed: no response within 20ms')
-  })
-})
+  it("times out when the RPC never answers", async () => {
+    const hanging = {
+      getNetwork: () => new Promise<{ chainId: bigint }>(() => {}),
+    };
+    await expect(assertRpcChainId(hanging, 1, "primary", 20)).rejects.toThrow(
+      "primary RPC chain id check failed: no response within 20ms",
+    );
+  });
+});
 
-describe('checkRpcChainIds', () => {
+describe("checkRpcChainIds", () => {
   // WHY: the audit RPC is optional; an unset URL is skipped, a set one is checked.
-  it('checks every configured URL and skips unset ones', async () => {
-    const checked: string[] = []
+  it("checks every configured URL and skips unset ones", async () => {
+    const checked: string[] = [];
     const factory = (url: string) => ({
-      getNetwork: async () => { checked.push(url); return { chainId: 1n } },
+      getNetwork: async () => {
+        checked.push(url);
+        return { chainId: 1n };
+      },
       destroy: () => {},
-    })
-    await checkRpcChainIds([{ name: 'primary', url: 'https://a' }, { name: 'audit', url: null }], 1, 1_000, factory)
-    expect(checked).toEqual(['https://a'])
-  })
+    });
+    await checkRpcChainIds(
+      [
+        { name: "primary", url: "https://a" },
+        { name: "audit", url: null },
+      ],
+      1,
+      1_000,
+      factory,
+    );
+    expect(checked).toEqual(["https://a"]);
+  });
 
   // WHY: one wrong-chain RPC is enough to refuse startup, and each provider is destroyed so
   // its network-detection retry loop cannot keep the process alive.
-  it('rejects when any URL is on the wrong chain and destroys every provider', async () => {
-    const destroyed: string[] = []
+  it("rejects when any URL is on the wrong chain and destroys every provider", async () => {
+    const destroyed: string[] = [];
     const factory = (url: string) => ({
-      getNetwork: async () => ({ chainId: url === 'https://audit' ? 11155111n : 1n }),
-      destroy: () => { destroyed.push(url) },
-    })
-    await expect(checkRpcChainIds(
-      [{ name: 'primary', url: 'https://primary' }, { name: 'audit', url: 'https://audit' }], 1, 1_000, factory,
-    )).rejects.toThrow('audit RPC is chain 11155111, CROWDFUND_CHAIN_ID is 1')
-    expect(destroyed).toEqual(['https://primary', 'https://audit'])
-  })
-})
-
+      getNetwork: async () => ({
+        chainId: url === "https://audit" ? 11155111n : 1n,
+      }),
+      destroy: () => {
+        destroyed.push(url);
+      },
+    });
+    await expect(
+      checkRpcChainIds(
+        [
+          { name: "primary", url: "https://primary" },
+          { name: "audit", url: "https://audit" },
+        ],
+        1,
+        1_000,
+        factory,
+      ),
+    ).rejects.toThrow("audit RPC is chain 11155111, CROWDFUND_CHAIN_ID is 1");
+    expect(destroyed).toEqual(["https://primary", "https://audit"]);
+  });
+});

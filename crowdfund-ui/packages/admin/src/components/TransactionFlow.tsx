@@ -1,35 +1,42 @@
 // ABOUTME: Shared transaction state UI component.
 // ABOUTME: Displays pending, submitted, confirmed, and error states for contract writes.
 
-import type { TxState } from '@/hooks/useTransactionFlow'
+import type { TxState } from "@/hooks/useTransactionFlow";
 
 export interface TransactionFlowProps {
-  state: TxState
-  onReset: () => void
-  successMessage?: string
-  explorerUrl?: string
+  state: TxState;
+  onReset: () => void;
+  successMessage?: string;
+  explorerUrl?: string;
 }
 
 export function TransactionFlow(props: TransactionFlowProps) {
-  const { state, onReset, successMessage = 'Transaction confirmed!', explorerUrl } = props
+  const {
+    state,
+    onReset,
+    successMessage = "Transaction confirmed!",
+    explorerUrl,
+  } = props;
 
-  if (state.status === 'idle') return null
+  if (state.status === "idle") return null;
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-2">
-      {state.status === 'pending' && (
+      {state.status === "pending" && (
         <div className="flex items-center gap-2">
           <span className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
           <span className="">Waiting for wallet confirmation...</span>
         </div>
       )}
 
-      {state.status === 'submitted' && (
+      {state.status === "submitted" && (
         <div className="flex items-center gap-2">
           <span className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-          <span className="">Transaction submitted. Waiting for confirmation...</span>
-          {state.txHash && (
-            explorerUrl ? (
+          <span className="">
+            Transaction submitted. Waiting for confirmation...
+          </span>
+          {state.txHash &&
+            (explorerUrl ? (
               <a
                 href={`${explorerUrl}/tx/${state.txHash}`}
                 target="_blank"
@@ -42,12 +49,11 @@ export function TransactionFlow(props: TransactionFlowProps) {
               <span className="text-muted-foreground">
                 {state.txHash.slice(0, 10)}...
               </span>
-            )
-          )}
+            ))}
         </div>
       )}
 
-      {state.status === 'confirmed' && (
+      {state.status === "confirmed" && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-success">
             <span className="">{successMessage}</span>
@@ -62,26 +68,20 @@ export function TransactionFlow(props: TransactionFlowProps) {
               View on explorer
             </a>
           )}
-          <button
-            className="text-primary hover:underline"
-            onClick={onReset}
-          >
+          <button className="text-primary hover:underline" onClick={onReset}>
             Dismiss
           </button>
         </div>
       )}
 
-      {state.status === 'error' && (
+      {state.status === "error" && (
         <div className="space-y-2">
           <div className="text-destructive">{state.error}</div>
-          <button
-            className="text-primary hover:underline"
-            onClick={onReset}
-          >
+          <button className="text-primary hover:underline" onClick={onReset}>
             Try again
           </button>
         </div>
       )}
     </div>
-  )
+  );
 }

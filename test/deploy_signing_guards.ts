@@ -7,13 +7,25 @@ import hre from "hardhat";
 import { ethers } from "ethers";
 import type { RequestArguments } from "hardhat/types";
 import {
-  SendGuardProvider, LedgerOnlyAccountsProvider, GasHeadroomProvider, withGasHeadroom,
-  TRANSACTION_GAS_LIMIT_CAP, LEDGER_PLUGIN_NAME, type SendGuardIO,
+  SendGuardProvider,
+  LedgerOnlyAccountsProvider,
+  GasHeadroomProvider,
+  withGasHeadroom,
+  TRANSACTION_GAS_LIMIT_CAP,
+  LEDGER_PLUGIN_NAME,
+  type SendGuardIO,
 } from "../scripts/send-guard";
 import {
-  awaitExpectedNonce, crowdfundHandoffNonce, CROWDFUND_OPEN_MIN_LEAD_SECONDS, CROWDFUND_OPEN_MIN_LEAD_FLOOR_SECONDS,
+  awaitExpectedNonce,
+  crowdfundHandoffNonce,
+  CROWDFUND_OPEN_MIN_LEAD_SECONDS,
+  CROWDFUND_OPEN_MIN_LEAD_FLOOR_SECONDS,
 } from "../scripts/deploy-utils";
-import { assertLedgerSigner, assertSignedBy, ledgerPreflightMessage } from "../scripts/ledger-preflight";
+import {
+  assertLedgerSigner,
+  assertSignedBy,
+  ledgerPreflightMessage,
+} from "../scripts/ledger-preflight";
 
 /** Records every request and replays scripted results (a value, or an Error to throw). */
 function scriptedProvider(results: Array<unknown>) {
@@ -27,11 +39,51 @@ function scriptedProvider(results: Array<unknown>) {
         if (next instanceof Error) throw next;
         return next;
       },
-      on() { return this; }, once() { return this; }, off() { return this; },
-      addListener() { return this; }, removeListener() { return this; }, removeAllListeners() { return this; },
-      emit() { return false; }, listeners() { return []; }, listenerCount() { return 0; },
-      prependListener() { return this; }, prependOnceListener() { return this; }, rawListeners() { return []; },
-      eventNames() { return []; }, setMaxListeners() { return this; }, getMaxListeners() { return 10; },
+      on() {
+        return this;
+      },
+      once() {
+        return this;
+      },
+      off() {
+        return this;
+      },
+      addListener() {
+        return this;
+      },
+      removeListener() {
+        return this;
+      },
+      removeAllListeners() {
+        return this;
+      },
+      emit() {
+        return false;
+      },
+      listeners() {
+        return [];
+      },
+      listenerCount() {
+        return 0;
+      },
+      prependListener() {
+        return this;
+      },
+      prependOnceListener() {
+        return this;
+      },
+      rawListeners() {
+        return [];
+      },
+      eventNames() {
+        return [];
+      },
+      setMaxListeners() {
+        return this;
+      },
+      getMaxListeners() {
+        return 10;
+      },
     } as any,
   };
 }
@@ -41,8 +93,13 @@ function scriptedIO(answers: boolean[]) {
   const lines: string[] = [];
   const questions: string[] = [];
   const io: SendGuardIO = {
-    log: (m) => { lines.push(m); },
-    confirmRetry: async (q) => { questions.push(q); return answers.shift() ?? false; },
+    log: (m) => {
+      lines.push(m);
+    },
+    confirmRetry: async (q) => {
+      questions.push(q);
+      return answers.shift() ?? false;
+    },
   };
   return { io, lines, questions };
 }
@@ -54,8 +111,13 @@ function ledgerError(message: string): Error {
 
 const HASH = "0x" + "ab".repeat(32);
 const LEDGER_TX = {
-  from: "0x00000000000000000000000000000000000000ab", to: "0x00000000000000000000000000000000000000cd",
-  gas: "0x5208", maxFeePerGas: "0x3b9aca00", maxPriorityFeePerGas: "0x1", nonce: "0x2a", value: "0x0",
+  from: "0x00000000000000000000000000000000000000ab",
+  to: "0x00000000000000000000000000000000000000cd",
+  gas: "0x5208",
+  maxFeePerGas: "0x3b9aca00",
+  maxPriorityFeePerGas: "0x1",
+  nonce: "0x2a",
+  value: "0x0",
 };
 
 describe("Human-paced deploy guards", function () {
@@ -66,7 +128,12 @@ describe("Human-paced deploy guards", function () {
       const { provider } = scriptedProvider([HASH]);
       const { io, lines } = scriptedIO([]);
       const guard = new SendGuardProvider(provider, io);
-      expect(await guard.request({ method: "eth_sendTransaction", params: [LEDGER_TX] })).to.equal(HASH);
+      expect(
+        await guard.request({
+          method: "eth_sendTransaction",
+          params: [LEDGER_TX],
+        }),
+      ).to.equal(HASH);
       expect(lines.join("\n")).to.include("nonce 42").and.include(HASH);
     });
 
@@ -75,11 +142,20 @@ describe("Human-paced deploy guards", function () {
     it("logs the nonce and hash of a locally signed raw send", async function () {
       const wallet = ethers.Wallet.createRandom();
       const raw = await wallet.signTransaction({
-        chainId: 1, nonce: 7, to: LEDGER_TX.to, gasLimit: 21000n, maxFeePerGas: 1n, maxPriorityFeePerGas: 1n, type: 2,
+        chainId: 1,
+        nonce: 7,
+        to: LEDGER_TX.to,
+        gasLimit: 21000n,
+        maxFeePerGas: 1n,
+        maxPriorityFeePerGas: 1n,
+        type: 2,
       });
       const { provider } = scriptedProvider([HASH]);
       const { io, lines } = scriptedIO([]);
-      await new SendGuardProvider(provider, io).request({ method: "eth_sendRawTransaction", params: [raw] });
+      await new SendGuardProvider(provider, io).request({
+        method: "eth_sendRawTransaction",
+        params: [raw],
+      });
       expect(lines.join("\n")).to.include("nonce 7").and.include(HASH);
     });
 
@@ -87,32 +163,51 @@ describe("Human-paced deploy guards", function () {
     // identical request re-signs the same nonce and fee fields, so no nonce is skipped and the
     // launch pauses instead of becoming an interrupted launch.
     it("retries a pre-broadcast Ledger failure with the identical request when the operator agrees", async function () {
-      const { provider, calls } = scriptedProvider([ledgerError("denied by the user (0x6985)"), HASH]);
+      const { provider, calls } = scriptedProvider([
+        ledgerError("denied by the user (0x6985)"),
+        HASH,
+      ]);
       const { io, questions } = scriptedIO([true]);
-      const result = await new SendGuardProvider(provider, io)
-        .request({ method: "eth_sendTransaction", params: [LEDGER_TX] });
+      const result = await new SendGuardProvider(provider, io).request({
+        method: "eth_sendTransaction",
+        params: [LEDGER_TX],
+      });
       expect(result).to.equal(HASH);
       expect(calls).to.have.length(2);
       expect(calls[1]).to.deep.equal(calls[0]);
-      expect(questions[0]).to.include("nothing was broadcast").and.include("nonce 42");
+      expect(questions[0])
+        .to.include("nothing was broadcast")
+        .and.include("nonce 42");
     });
 
     // WHY: the operator decides; declining must surface the original error and stop the stage.
     it("rethrows the Ledger error when the operator declines", async function () {
-      const { provider, calls } = scriptedProvider([ledgerError("locked device (0x5515)")]);
+      const { provider, calls } = scriptedProvider([
+        ledgerError("locked device (0x5515)"),
+      ]);
       const { io } = scriptedIO([false]);
-      await expect(new SendGuardProvider(provider, io)
-        .request({ method: "eth_sendTransaction", params: [LEDGER_TX] })).to.be.rejectedWith(/locked device/);
+      await expect(
+        new SendGuardProvider(provider, io).request({
+          method: "eth_sendTransaction",
+          params: [LEDGER_TX],
+        }),
+      ).to.be.rejectedWith(/locked device/);
       expect(calls).to.have.length(1);
     });
 
     // WHY: an RPC error from eth_sendRawTransaction may mean the transaction WAS broadcast.
     // Re-sending could not be judged safe, so only Ledger-plugin errors are ever retried.
     it("never retries a non-Ledger error", async function () {
-      const { provider, calls } = scriptedProvider([new Error("connection reset")]);
+      const { provider, calls } = scriptedProvider([
+        new Error("connection reset"),
+      ]);
       const { io, questions } = scriptedIO([true]);
-      await expect(new SendGuardProvider(provider, io)
-        .request({ method: "eth_sendTransaction", params: [LEDGER_TX] })).to.be.rejectedWith(/connection reset/);
+      await expect(
+        new SendGuardProvider(provider, io).request({
+          method: "eth_sendTransaction",
+          params: [LEDGER_TX],
+        }),
+      ).to.be.rejectedWith(/connection reset/);
       expect(calls).to.have.length(1);
       expect(questions).to.have.length(0);
     });
@@ -121,7 +216,11 @@ describe("Human-paced deploy guards", function () {
     it("passes other methods through untouched", async function () {
       const { provider, calls } = scriptedProvider(["0x1"]);
       const { io, lines } = scriptedIO([]);
-      expect(await new SendGuardProvider(provider, io).request({ method: "eth_chainId" })).to.equal("0x1");
+      expect(
+        await new SendGuardProvider(provider, io).request({
+          method: "eth_chainId",
+        }),
+      ).to.equal("0x1");
       expect(calls).to.deep.equal([{ method: "eth_chainId" }]);
       expect(lines).to.have.length(0);
     });
@@ -134,8 +233,14 @@ describe("Human-paced deploy guards", function () {
     it("reports only the Ledger address, whatever the node exposes", async function () {
       const ledger = "0x00000000000000000000000000000000000000Ab";
       for (const method of ["eth_accounts", "eth_requestAccounts"]) {
-        const { provider, calls } = scriptedProvider([["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", ledger]]);
-        expect(await new LedgerOnlyAccountsProvider(provider, ledger).request({ method })).to.deep.equal([ledger]);
+        const { provider, calls } = scriptedProvider([
+          ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", ledger],
+        ]);
+        expect(
+          await new LedgerOnlyAccountsProvider(provider, ledger).request({
+            method,
+          }),
+        ).to.deep.equal([ledger]);
         expect(calls, method).to.have.length(0);
       }
     });
@@ -144,7 +249,11 @@ describe("Human-paced deploy guards", function () {
     it("passes other methods through", async function () {
       const { provider, calls } = scriptedProvider([HASH]);
       const args = { method: "eth_sendTransaction", params: [LEDGER_TX] };
-      expect(await new LedgerOnlyAccountsProvider(provider, LEDGER_TX.from).request(args)).to.equal(HASH);
+      expect(
+        await new LedgerOnlyAccountsProvider(provider, LEDGER_TX.from).request(
+          args,
+        ),
+      ).to.equal(HASH);
       expect(calls).to.deep.equal([args]);
     });
   });
@@ -165,18 +274,28 @@ describe("Human-paced deploy guards", function () {
     // so headroom stops at the cap, and an estimate already above it is left for the node to reject.
     it("never raises a limit above the per-transaction gas cap", function () {
       expect(TRANSACTION_GAS_LIMIT_CAP).to.equal(16_777_216n);
-      expect(withGasHeadroom(9_000_000n, 2)).to.equal(TRANSACTION_GAS_LIMIT_CAP);
+      expect(withGasHeadroom(9_000_000n, 2)).to.equal(
+        TRANSACTION_GAS_LIMIT_CAP,
+      );
       expect(withGasHeadroom(17_000_000n, 2)).to.equal(17_000_000n);
     });
 
     // WHY: only estimates change; every other call, and estimate errors (e.g. the timelock's
     // "not ready" retry signal), pass through untouched.
     it("rewrites eth_estimateGas results only", async function () {
-      const { provider } = scriptedProvider(["0x186a0", "0x1", new Error("operation is not ready")]);
+      const { provider } = scriptedProvider([
+        "0x186a0",
+        "0x1",
+        new Error("operation is not ready"),
+      ]);
       const headroom = new GasHeadroomProvider(provider, 2);
-      expect(await headroom.request({ method: "eth_estimateGas", params: [{}] })).to.equal("0x30d40");
+      expect(
+        await headroom.request({ method: "eth_estimateGas", params: [{}] }),
+      ).to.equal("0x30d40");
       expect(await headroom.request({ method: "eth_chainId" })).to.equal("0x1");
-      await expect(headroom.request({ method: "eth_estimateGas", params: [{}] })).to.be.rejectedWith(/not ready/);
+      await expect(
+        headroom.request({ method: "eth_estimateGas", params: [{}] }),
+      ).to.be.rejectedWith(/not ready/);
     });
   });
 
@@ -188,10 +307,20 @@ describe("Human-paced deploy guards", function () {
 
     /** Run a node snippet after `require("hardhat")` with only the given deploy env set. */
     function withHardhat(env: Record<string, string>, snippet: string) {
-      return spawnSync(process.execPath, ["-r", "ts-node/register", "-e", snippet], {
-        cwd: REPO, encoding: "utf8",
-        env: { PATH: process.env.PATH, HOME: process.env.HOME, TS_NODE_TRANSPILE_ONLY: "true", ...env },
-      });
+      return spawnSync(
+        process.execPath,
+        ["-r", "ts-node/register", "-e", snippet],
+        {
+          cwd: REPO,
+          encoding: "utf8",
+          env: {
+            PATH: process.env.PATH,
+            HOME: process.env.HOME,
+            TS_NODE_TRANSPILE_ONLY: "true",
+            ...env,
+          },
+        },
+      );
     }
     const PRINT_NETWORKS = `
       const n = require("hardhat").config.networks;
@@ -203,7 +332,10 @@ describe("Human-paced deploy guards", function () {
     // NO local account — Hardhat lists local accounts first, so a leftover key (or the Anvil
     // fallback) would become signer[0] and deploy instead of the Ledger.
     it("routes every live network through the Ledger and drops local accounts", function () {
-      const r = withHardhat({ DEPLOYER_LEDGER_ADDRESS: LEDGER }, PRINT_NETWORKS);
+      const r = withHardhat(
+        { DEPLOYER_LEDGER_ADDRESS: LEDGER },
+        PRINT_NETWORKS,
+      );
       expect(r.status, r.stderr).to.equal(0);
       const nets = JSON.parse(r.stdout.trim().split("\n").pop()!);
       for (const [name, net] of Object.entries(nets) as Array<[string, any]>) {
@@ -214,7 +346,10 @@ describe("Human-paced deploy guards", function () {
 
     // WHY: the hot-key path is unchanged and does not load the Ledger plugin.
     it("keeps the private-key path when no Ledger is configured", function () {
-      const r = withHardhat({ DEPLOYER_PRIVATE_KEY: "0x" + "11".repeat(32) }, PRINT_NETWORKS);
+      const r = withHardhat(
+        { DEPLOYER_PRIVATE_KEY: "0x" + "11".repeat(32) },
+        PRINT_NETWORKS,
+      );
       expect(r.status, r.stderr).to.equal(0);
       const nets = JSON.parse(r.stdout.trim().split("\n").pop()!);
       expect(nets.mainnetHub.accounts).to.have.length(1);
@@ -223,8 +358,13 @@ describe("Human-paced deploy guards", function () {
 
     // WHY: secrets.env sets a key by default; adding a Ledger on top must stop, not pick one.
     it("refuses to load with both a key and a Ledger address", function () {
-      const r = withHardhat({ DEPLOYER_PRIVATE_KEY: "0x" + "11".repeat(32), DEPLOYER_LEDGER_ADDRESS: LEDGER },
-        PRINT_NETWORKS);
+      const r = withHardhat(
+        {
+          DEPLOYER_PRIVATE_KEY: "0x" + "11".repeat(32),
+          DEPLOYER_LEDGER_ADDRESS: LEDGER,
+        },
+        PRINT_NETWORKS,
+      );
       expect(r.status).to.not.equal(0);
       expect(r.stderr).to.include("not both");
     });
@@ -264,42 +404,72 @@ describe("Human-paced deploy guards", function () {
           }
           srv.close(); process.exit(0);
         });`;
-      const r = withHardhat({ DEPLOYER_LEDGER_ADDRESS: LEDGER, DEPLOY_ENV: "sepolia", HARDHAT_NETWORK: "sepoliaHub" }, snippet);
+      const r = withHardhat(
+        {
+          DEPLOYER_LEDGER_ADDRESS: LEDGER,
+          DEPLOY_ENV: "sepolia",
+          HARDHAT_NETWORK: "sepoliaHub",
+        },
+        snippet,
+      );
       expect(r.status, r.stderr).to.equal(0);
       const line = r.stdout.split("\n").find((l) => l.startsWith("RESULT "))!;
       const result = JSON.parse(line.slice("RESULT ".length));
-      const accountsLine = r.stdout.split("\n").find((l) => l.startsWith("ACCOUNTS "))!;
-      expect(JSON.parse(accountsLine.slice("ACCOUNTS ".length))).to.deep.equal([LEDGER]);
+      const accountsLine = r.stdout
+        .split("\n")
+        .find((l) => l.startsWith("ACCOUNTS "))!;
+      expect(JSON.parse(accountsLine.slice("ACCOUNTS ".length))).to.deep.equal([
+        LEDGER,
+      ]);
       expect(result.pluginName).to.equal(LEDGER_PLUGIN_NAME);
       expect(result.seen).to.not.include("eth_sendRawTransaction");
-      expect(r.stderr).to.include("nothing was broadcast — nonce 5 is still unused");
+      expect(r.stderr).to.include(
+        "nothing was broadcast — nonce 5 is still unused",
+      );
       expect(r.stderr).to.include("stdin is not interactive — not retrying");
     });
   });
 
   describe("awaitExpectedNonce (stage-to-stage nonce handoff)", function () {
     /** A nonce reader that returns the scripted values in order, then repeats the last. */
-    const readsOf = (...values: number[]) => async () => values.length > 1 ? values.shift()! : values[0];
+    const readsOf =
+      (...values: number[]) =>
+      async () =>
+        values.length > 1 ? values.shift()! : values[0];
 
     // Retries log a "read-back failed" line per attempt; capture them so the cases can assert
     // on the expected lag output instead of printing it.
     let logged: string[];
     let log: typeof console.log;
-    beforeEach(() => { logged = []; log = console.log; console.log = (line: string) => { logged.push(line); }; });
-    afterEach(() => { console.log = log; });
+    beforeEach(() => {
+      logged = [];
+      log = console.log;
+      console.log = (line: string) => {
+        logged.push(line);
+      };
+    });
+    afterEach(() => {
+      console.log = log;
+    });
 
     // WHY: the crowdfund stage starts seconds after governance's last transaction. A lagging
     // load-balanced RPC node can still report the older, already-used nonce; seeding from it
     // makes the first send fail "nonce too low" or hang on a transaction that can never mine.
     it("waits out a lagging node until the nonce reaches the recorded handoff", async function () {
-      expect(await awaitExpectedNonce(readsOf(20, 20, 21), 21, 5, 0)).to.equal(21);
+      expect(await awaitExpectedNonce(readsOf(20, 20, 21), 21, 5, 0)).to.equal(
+        21,
+      );
       expect(logged).to.have.length(2);
-      expect(logged[0]).to.include("Deployer nonce: read-back failed (possible RPC lag)");
+      expect(logged[0]).to.include(
+        "Deployer nonce: read-back failed (possible RPC lag)",
+      );
     });
 
     // WHY: a node that stays behind is not lag the deploy can safely wait out forever.
     it("gives up when the node never catches up", async function () {
-      await expect(awaitExpectedNonce(readsOf(20), 21, 3, 0)).to.be.rejectedWith(/behind/);
+      await expect(
+        awaitExpectedNonce(readsOf(20), 21, 3, 0),
+      ).to.be.rejectedWith(/behind/);
       expect(logged).to.have.length(2);
     });
 
@@ -308,9 +478,13 @@ describe("Human-paced deploy guards", function () {
     // stop immediately rather than retry, and point at the recovery runbook.
     it("aborts at once when the deployer nonce is ahead of the handoff", async function () {
       let reads = 0;
-      const read = async () => { reads++; return 23; };
-      await expect(awaitExpectedNonce(read, 21, 5, 0))
-        .to.be.rejectedWith(/2 transaction\(s\) outside this deploy[\s\S]*interrupted-launch-recovery/);
+      const read = async () => {
+        reads++;
+        return 23;
+      };
+      await expect(awaitExpectedNonce(read, 21, 5, 0)).to.be.rejectedWith(
+        /2 transaction\(s\) outside this deploy[\s\S]*interrupted-launch-recovery/,
+      );
       expect(reads).to.equal(1);
       expect(logged).to.have.length(0);
     });
@@ -318,10 +492,16 @@ describe("Human-paced deploy guards", function () {
     // WHY: against a real chain the handoff is exactly the signer's next nonce after its sends.
     it("matches a real signer's nonce after its sends", async function () {
       const [signer] = await hre.ethers.getSigners();
-      await (await signer.sendTransaction({ to: signer.address, value: 0n })).wait();
+      await (
+        await signer.sendTransaction({ to: signer.address, value: 0n })
+      ).wait();
       const next = await signer.getNonce();
-      expect(await awaitExpectedNonce(() => signer.getNonce(), next, 1, 0)).to.equal(next);
-      await expect(awaitExpectedNonce(() => signer.getNonce(), next - 1, 1, 0)).to.be.rejectedWith(/outside this deploy/);
+      expect(
+        await awaitExpectedNonce(() => signer.getNonce(), next, 1, 0),
+      ).to.equal(next);
+      await expect(
+        awaitExpectedNonce(() => signer.getNonce(), next - 1, 1, 0),
+      ).to.be.rejectedWith(/outside this deploy/);
     });
   });
 
@@ -329,20 +509,34 @@ describe("Human-paced deploy guards", function () {
     // WHY: a hardened run is CCTP-record → governance → crowdfund with nothing in between
     // (deploy_mainnet.ts), so the crowdfund stage must start exactly where governance ended.
     it("returns governance's recorded nonce for a hardened live run", function () {
-      expect(crowdfundHandoffNonce({ deployerNonceAfterGovernance: 21 }, true, false)).to.equal(21);
+      expect(
+        crowdfundHandoffNonce(
+          { deployerNonceAfterGovernance: 21 },
+          true,
+          false,
+        ),
+      ).to.equal(21);
     });
 
     // WHY: without the record the stage would fall back to a single, possibly stale, nonce read —
     // the exact failure the handoff exists to prevent. Refuse before any transaction.
     it("refuses a hardened live run whose governance manifest has no recorded nonce", function () {
-      expect(() => crowdfundHandoffNonce({}, true, false)).to.throw(/deployerNonceAfterGovernance/);
+      expect(() => crowdfundHandoffNonce({}, true, false)).to.throw(
+        /deployerNonceAfterGovernance/,
+      );
     });
 
     // WHY: non-hardened runs (e.g. the full Sepolia pipeline) deploy other stages between
     // governance and crowdfund, so governance's final nonce is not the crowdfund's start nonce.
     // Local runs let ethers pick nonces.
     it("does not apply to non-hardened or local runs", function () {
-      expect(crowdfundHandoffNonce({ deployerNonceAfterGovernance: 21 }, false, false)).to.equal(undefined);
+      expect(
+        crowdfundHandoffNonce(
+          { deployerNonceAfterGovernance: 21 },
+          false,
+          false,
+        ),
+      ).to.equal(undefined);
       expect(crowdfundHandoffNonce({}, true, true)).to.equal(undefined);
     });
   });
@@ -370,9 +564,15 @@ describe("Human-paced deploy guards", function () {
     // WHY: if a local account shadowed the Ledger (a leftover key, the Anvil fallback), signer[0]
     // would not be the device. Catch it before the first transaction, not after it is signed.
     it("rejects a signer[0] that is not the configured Ledger address", function () {
-      expect(() => assertLedgerSigner(wallet.address, wallet.address.toLowerCase())).to.not.throw();
-      expect(() => assertLedgerSigner(wallet.address, "0x00000000000000000000000000000000000000cd"))
-        .to.throw(/not the Ledger/);
+      expect(() =>
+        assertLedgerSigner(wallet.address, wallet.address.toLowerCase()),
+      ).to.not.throw();
+      expect(() =>
+        assertLedgerSigner(
+          wallet.address,
+          "0x00000000000000000000000000000000000000cd",
+        ),
+      ).to.throw(/not the Ledger/);
     });
 
     // WHY: the signed message proves the device is connected, unlocked, in the Ethereum app and
@@ -380,16 +580,29 @@ describe("Human-paced deploy guards", function () {
     it("accepts a signature from the Ledger address and rejects any other signer", async function () {
       const message = ledgerPreflightMessage(1, "a".repeat(40));
       const other = ethers.Wallet.createRandom();
-      expect(() => assertSignedBy(message, wallet.signMessageSync(message), wallet.address)).to.not.throw();
-      expect(() => assertSignedBy(message, other.signMessageSync(message), wallet.address)).to.throw(/signed by/);
+      expect(() =>
+        assertSignedBy(
+          message,
+          wallet.signMessageSync(message),
+          wallet.address,
+        ),
+      ).to.not.throw();
+      expect(() =>
+        assertSignedBy(message, other.signMessageSync(message), wallet.address),
+      ).to.throw(/signed by/);
     });
 
     // WHY: the operator reads the message on the device; it must say which chain and build the
     // approval is for, and that approving it sends no transaction.
     it("names the chain and commit, and says no transaction is sent", function () {
       const message = ledgerPreflightMessage(1, "a".repeat(40));
-      expect(message).to.include("Chain: 1").and.include("a".repeat(40)).and.include("No transaction");
-      expect(ledgerPreflightMessage(11155111, undefined)).to.include("not pinned");
+      expect(message)
+        .to.include("Chain: 1")
+        .and.include("a".repeat(40))
+        .and.include("No transaction");
+      expect(ledgerPreflightMessage(11155111, undefined)).to.include(
+        "not pinned",
+      );
     });
   });
 
@@ -432,11 +645,22 @@ describe("Human-paced deploy guards", function () {
           console.log("GASLIMIT " + (raw ? Transaction.from(raw).gasLimit : "none"));
           srv.close(); process.exit(0);
         });`;
-      const r = spawnSync(process.execPath, ["-r", "ts-node/register", "-e", snippet], {
-        cwd: path.join(__dirname, ".."), encoding: "utf8",
-        env: { PATH: process.env.PATH, HOME: process.env.HOME, TS_NODE_TRANSPILE_ONLY: "true",
-          DEPLOY_ENV: "sepolia", HARDHAT_NETWORK: "sepoliaHub", DEPLOYER_PRIVATE_KEY: key },
-      });
+      const r = spawnSync(
+        process.execPath,
+        ["-r", "ts-node/register", "-e", snippet],
+        {
+          cwd: path.join(__dirname, ".."),
+          encoding: "utf8",
+          env: {
+            PATH: process.env.PATH,
+            HOME: process.env.HOME,
+            TS_NODE_TRANSPILE_ONLY: "true",
+            DEPLOY_ENV: "sepolia",
+            HARDHAT_NETWORK: "sepoliaHub",
+            DEPLOYER_PRIVATE_KEY: key,
+          },
+        },
+      );
       expect(r.status, r.stderr).to.equal(0);
       expect(r.stdout).to.include("ESTIMATE 200000");
       expect(r.stdout).to.include("GASLIMIT 200000");

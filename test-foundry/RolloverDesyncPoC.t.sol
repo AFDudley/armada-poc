@@ -20,9 +20,8 @@ contract MerkleProbe is PrivacyPoolStorage {
     }
 
     function callModule(address module, uint256 count) external returns (uint256 treeNum, uint256 startIndex) {
-        (bool ok, bytes memory ret) = module.delegatecall(
-            abi.encodeWithSignature("getInsertionTreeNumberAndStartingIndex(uint256)", count)
-        );
+        (bool ok, bytes memory ret) =
+            module.delegatecall(abi.encodeWithSignature("getInsertionTreeNumberAndStartingIndex(uint256)", count));
         require(ok, "delegatecall failed");
         return abi.decode(ret, (uint256, uint256));
     }

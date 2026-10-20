@@ -5,11 +5,11 @@ export {
   HeroParticipantList,
   HeroParticipantControls,
   HeroParticipantsMobileStack,
-} from './HeroParticipantsPanel.js'
+} from "./HeroParticipantsPanel.js";
 export type {
   HeroParticipantListProps,
   HeroParticipantControlsProps,
   HeroParticipantsMobileStackProps,
   HeroHopFilter,
   HeroParticipant,
-} from './HeroParticipantsPanel.js'
+} from "./HeroParticipantsPanel.js";

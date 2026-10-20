@@ -26,7 +26,6 @@ interface IArmadaGovernorSC {
 ///         indefinite pausing without governance accountability (since governance is
 ///         disabled after wind-down).
 contract ShieldPauseController is IShieldPauseController {
-
     // ============ State ============
 
     /// @notice Governor contract (reads securityCouncil from here)

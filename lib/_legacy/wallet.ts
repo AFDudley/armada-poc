@@ -22,15 +22,16 @@ import { buildPoseidon, buildEddsa } from "circomlibjs";
 
 // ============ Constants ============
 
-export const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+export const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 // ============ Types ============
 
 export interface RailgunWallet {
   spendingKey: Uint8Array;
   nullifyingKey: bigint;
-  publicKey: [bigint, bigint];  // EdDSA public key (Ax, Ay)
-  mpk: bigint;  // Master Public Key
+  publicKey: [bigint, bigint]; // EdDSA public key (Ax, Ay)
+  mpk: bigint; // Master Public Key
 }
 
 export interface Note {
@@ -54,7 +55,7 @@ export interface SpentNote extends Note {
 
 let poseidon: any = null;
 let eddsa: any = null;
-let F: any = null;  // Field operations
+let F: any = null; // Field operations
 
 /**
  * Initialize cryptographic primitives
@@ -76,7 +77,7 @@ export function poseidonHash(inputs: bigint[]): bigint {
   if (!poseidon) {
     throw new Error("Crypto not initialized. Call initCrypto() first.");
   }
-  const hash = poseidon(inputs.map(x => F.e(x)));
+  const hash = poseidon(inputs.map((x) => F.e(x)));
   return BigInt(F.toString(hash));
 }
 
@@ -93,7 +94,9 @@ export function poseidonHashHex(inputs: bigint[]): string {
 /**
  * Create a new Railgun wallet from a spending key
  */
-export async function createWallet(spendingKeyHex?: string): Promise<RailgunWallet> {
+export async function createWallet(
+  spendingKeyHex?: string,
+): Promise<RailgunWallet> {
   await initCrypto();
 
   // Generate or use provided spending key
@@ -114,24 +117,30 @@ export async function createWallet(spendingKeyHex?: string): Promise<RailgunWall
   const publicKey = eddsa.prv2pub(spendingKey);
   const publicKeyBigInt: [bigint, bigint] = [
     BigInt(F.toString(publicKey[0])),
-    BigInt(F.toString(publicKey[1]))
+    BigInt(F.toString(publicKey[1])),
   ];
 
   // Compute Master Public Key: Poseidon(Ax, Ay, nullifyingKey)
-  const mpk = poseidonHash([publicKeyBigInt[0], publicKeyBigInt[1], nullifyingKey]);
+  const mpk = poseidonHash([
+    publicKeyBigInt[0],
+    publicKeyBigInt[1],
+    nullifyingKey,
+  ]);
 
   return {
     spendingKey,
     nullifyingKey,
     publicKey: publicKeyBigInt,
-    mpk
+    mpk,
   };
 }
 
 /**
  * Create wallet from hex string
  */
-export async function walletFromHex(spendingKeyHex: string): Promise<RailgunWallet> {
+export async function walletFromHex(
+  spendingKeyHex: string,
+): Promise<RailgunWallet> {
   return createWallet(spendingKeyHex);
 }
 
@@ -157,7 +166,11 @@ export function computeNpk(mpk: bigint, random: bigint): bigint {
  * Compute note commitment
  * commitment = Poseidon(npk, token, value)
  */
-export function computeCommitment(npk: bigint, token: bigint, value: bigint): bigint {
+export function computeCommitment(
+  npk: bigint,
+  token: bigint,
+  value: bigint,
+): bigint {
   return poseidonHash([npk, token, value]);
 }
 
@@ -165,7 +178,10 @@ export function computeCommitment(npk: bigint, token: bigint, value: bigint): bi
  * Compute nullifier for a note
  * nullifier = Poseidon(nullifyingKey, leafIndex)
  */
-export function computeNullifier(nullifyingKey: bigint, leafIndex: bigint): bigint {
+export function computeNullifier(
+  nullifyingKey: bigint,
+  leafIndex: bigint,
+): bigint {
   return poseidonHash([nullifyingKey, leafIndex]);
 }
 
@@ -176,7 +192,7 @@ export function createNote(
   wallet: RailgunWallet,
   tokenAddress: string,
   value: bigint,
-  random?: bigint
+  random?: bigint,
 ): Note {
   random = random ?? generateRandom();
 
@@ -190,7 +206,7 @@ export function createNote(
     npk,
     token,
     value,
-    random
+    random,
   };
 }
 
@@ -209,7 +225,7 @@ export function getNoteCommitment(note: Note): bigint {
  */
 export function signMessage(
   spendingKey: Uint8Array,
-  message: bigint
+  message: bigint,
 ): [bigint, bigint, bigint] {
   if (!eddsa) {
     throw new Error("Crypto not initialized. Call initCrypto() first.");
@@ -220,7 +236,7 @@ export function signMessage(
   return [
     BigInt(F.toString(signature.R8[0])),
     BigInt(F.toString(signature.R8[1])),
-    BigInt(signature.S.toString())
+    BigInt(signature.S.toString()),
   ];
 }
 
@@ -232,7 +248,7 @@ export function computeTransactionMessage(
   merkleRoot: bigint,
   boundParamsHash: bigint,
   nullifiers: bigint[],
-  commitments: bigint[]
+  commitments: bigint[],
 ): bigint {
   const inputs = [merkleRoot, boundParamsHash, ...nullifiers, ...commitments];
   return poseidonHash(inputs);
@@ -277,6 +293,6 @@ export function exportWallet(wallet: RailgunWallet): {
     spendingKey: ethers.hexlify(wallet.spendingKey),
     nullifyingKey: toBytes32(wallet.nullifyingKey),
     publicKey: [toBytes32(wallet.publicKey[0]), toBytes32(wallet.publicKey[1])],
-    mpk: toBytes32(wallet.mpk)
+    mpk: toBytes32(wallet.mpk),
   };
 }

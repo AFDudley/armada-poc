@@ -68,18 +68,10 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
     event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
 
     /// @notice Emitted when shielded USDC is lent and ayUSDC is re-shielded (trustless)
-    event LendAndShield(
-        bytes32 indexed npk,
-        uint256 usdcAmount,
-        uint256 sharesMinted
-    );
+    event LendAndShield(bytes32 indexed npk, uint256 usdcAmount, uint256 sharesMinted);
 
     /// @notice Emitted when shielded ayUSDC is redeemed and USDC is re-shielded (trustless)
-    event RedeemAndShield(
-        bytes32 indexed npk,
-        uint256 sharesBurned,
-        uint256 usdcRedeemed
-    );
+    event RedeemAndShield(bytes32 indexed npk, uint256 sharesBurned, uint256 usdcRedeemed);
 
     // ============ Modifiers ============
 
@@ -136,17 +128,13 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
 
     /// @dev Reverts if this adapter is not fully authorized in the governance registry.
     function _requireAuthorized() internal view {
-        require(
-            adapterRegistry.authorizedAdapters(address(this)),
-            "ArmadaYieldAdapter: not authorized"
-        );
+        require(adapterRegistry.authorizedAdapters(address(this)), "ArmadaYieldAdapter: not authorized");
     }
 
     /// @dev Reverts if this adapter is neither authorized nor in withdraw-only mode.
     function _requireAuthorizedOrWithdrawOnly() internal view {
         require(
-            adapterRegistry.authorizedAdapters(address(this)) ||
-            adapterRegistry.withdrawOnlyAdapters(address(this)),
+            adapterRegistry.authorizedAdapters(address(this)) || adapterRegistry.withdrawOnlyAdapters(address(this)),
             "ArmadaYieldAdapter: not authorized or withdraw-only"
         );
     }
@@ -178,19 +166,16 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
      * @param _shieldCiphertext Ciphertext for recipient to decrypt
      * @return shares Amount of ayUSDC shares minted and shielded
      */
-    function lendAndShield(
-        Transaction calldata _transaction,
-        bytes32 _npk,
-        ShieldCiphertext calldata _shieldCiphertext
-    ) external nonReentrant returns (uint256 shares) {
+    function lendAndShield(Transaction calldata _transaction, bytes32 _npk, ShieldCiphertext calldata _shieldCiphertext)
+        external
+        nonReentrant
+        returns (uint256 shares)
+    {
         _requireAuthorized();
         require(privacyPool != address(0), "ArmadaYieldAdapter: no privacyPool");
 
         // 1. Verify this transaction is bound to this adapter
-        require(
-            _transaction.boundParams.adaptContract == address(this),
-            "ArmadaYieldAdapter: invalid adaptContract"
-        );
+        require(_transaction.boundParams.adaptContract == address(this), "ArmadaYieldAdapter: invalid adaptContract");
 
         // 2. Verify adaptParams binds the npk and ciphertext
         //    This ensures adapter MUST use user's committed shield destination
@@ -206,8 +191,7 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
 
         // 3. Verify this is a NORMAL unshield of USDC paying this adapter
         require(
-            _transaction.unshieldPreimage.token.tokenAddress == address(usdc),
-            "ArmadaYieldAdapter: not USDC unshield"
+            _transaction.unshieldPreimage.token.tokenAddress == address(usdc), "ArmadaYieldAdapter: not USDC unshield"
         );
         _requireUnshieldToAdapter(_transaction);
 
@@ -224,8 +208,7 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
         uint256 amount = _transaction.unshieldPreimage.value;
         require(amount > 0, "ArmadaYieldAdapter: zero amount");
         require(
-            usdc.balanceOf(address(this)) - usdcBefore == amount,
-            "ArmadaYieldAdapter: unshield amount not received"
+            usdc.balanceOf(address(this)) - usdcBefore == amount, "ArmadaYieldAdapter: unshield amount not received"
         );
 
         // 6. Deposit USDC to vault, receive shares to this adapter
@@ -235,12 +218,8 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
         ShieldRequest[] memory shieldRequests = new ShieldRequest[](1);
         shieldRequests[0] = ShieldRequest({
             preimage: CommitmentPreimage({
-                npk: _npk,  // User's npk from verified adaptParams
-                token: TokenData({
-                    tokenType: TokenType.ERC20,
-                    tokenAddress: address(shareToken),
-                    tokenSubID: 0
-                }),
+                npk: _npk, // User's npk from verified adaptParams
+                token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(shareToken), tokenSubID: 0}),
                 value: uint120(shares)
             }),
             ciphertext: _shieldCiphertext
@@ -276,10 +255,7 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
         require(privacyPool != address(0), "ArmadaYieldAdapter: no privacyPool");
 
         // 1. Verify this transaction is bound to this adapter
-        require(
-            _transaction.boundParams.adaptContract == address(this),
-            "ArmadaYieldAdapter: invalid adaptContract"
-        );
+        require(_transaction.boundParams.adaptContract == address(this), "ArmadaYieldAdapter: invalid adaptContract");
 
         // 2. Verify adaptParams binds the user's shield destination, the relayer's fee-shield
         //    destination, and the fee amount. Binding all three makes the fee relayer-immutable: the
@@ -358,7 +334,7 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
         shieldRequests[0] = ShieldRequest({
             preimage: CommitmentPreimage({
                 npk: _npk, // User's npk from verified adaptParams
-                token: TokenData({ tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0 }),
+                token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0}),
                 value: uint120(_assets - _feeAmount)
             }),
             ciphertext: _shieldCiphertext
@@ -367,7 +343,7 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
             shieldRequests[1] = ShieldRequest({
                 preimage: CommitmentPreimage({
                     npk: _feeNpk, // Relayer's 0zk npk from verified adaptParams
-                    token: TokenData({ tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0 }),
+                    token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0}),
                     value: uint120(_feeAmount)
                 }),
                 ciphertext: _feeShieldCiphertext
@@ -406,10 +382,7 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
      *      balance.
      */
     function _requireUnshieldToAdapter(Transaction calldata _transaction) internal view {
-        require(
-            _transaction.boundParams.unshield == UnshieldType.NORMAL,
-            "ArmadaYieldAdapter: not a normal unshield"
-        );
+        require(_transaction.boundParams.unshield == UnshieldType.NORMAL, "ArmadaYieldAdapter: not a normal unshield");
         require(
             _transaction.unshieldPreimage.npk == bytes32(uint256(uint160(address(this)))),
             "ArmadaYieldAdapter: unshield not to adapter"
@@ -422,11 +395,7 @@ contract ArmadaYieldAdapter is ReentrancyGuard {
      * @param to Recipient address
      * @param amount Amount to rescue
      */
-    function rescueTokens(
-        address token,
-        address to,
-        uint256 amount
-    ) external onlyOwner {
+    function rescueTokens(address token, address to, uint256 amount) external onlyOwner {
         IERC20(token).safeTransfer(to, amount);
     }
 }

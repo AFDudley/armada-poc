@@ -18,7 +18,7 @@ export interface VectorSelection {
 export function selectVectors(
   argv: string[],
   env: Record<string, string | undefined>,
-  manifestIds: string[]
+  manifestIds: string[],
 ): VectorSelection {
   const args = argv.filter((a) => a !== "--");
   const all = args.includes("--all") || env.REPLAY_ALL === "1";
@@ -26,7 +26,10 @@ export function selectVectors(
 
   const requested = [
     ...args.filter((a) => !a.startsWith("--")),
-    ...(env.REPLAY_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+    ...(env.REPLAY_IDS ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
   ];
 
   if (all || requested.length === 0) {
@@ -36,7 +39,9 @@ export function selectVectors(
   const known = new Set(manifestIds);
   const unknown = requested.filter((id) => !known.has(id));
   if (unknown.length > 0) {
-    throw new Error(`replay-check: unknown vector id(s): ${unknown.join(", ")}`);
+    throw new Error(
+      `replay-check: unknown vector id(s): ${unknown.join(", ")}`,
+    );
   }
   return { ids: requested, genesis };
 }

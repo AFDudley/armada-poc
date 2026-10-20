@@ -6,4 +6,4 @@ export {
   type WalletConfirmStepProps,
   type WalletTransactionItem,
   type WalletTransactionStatus,
-} from './WalletConfirmStep'
+} from "./WalletConfirmStep";

@@ -11,7 +11,10 @@ import { buildPoseidon } from "circomlibjs";
 
 // Load Poseidon bytecode for deployment
 const poseidonBytecode = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "lib", "poseidon_bytecode.json"), "utf-8")
+  fs.readFileSync(
+    path.join(__dirname, "..", "lib", "poseidon_bytecode.json"),
+    "utf-8",
+  ),
 );
 
 // Import artifact loading for verification keys
@@ -88,27 +91,40 @@ describe("CCTP V2 Fast Finality", function () {
     hubUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
     await hubUsdc.waitForDeployment();
 
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.hub, relayerAddress);
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
+    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.hub,
+      relayerAddress,
+    );
     await hubMessageTransmitter.waitForDeployment();
 
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     hubTokenMessenger = await MockTokenMessengerV2.deploy(
       await hubMessageTransmitter.getAddress(),
       await hubUsdc.getAddress(),
-      DOMAINS.hub
+      DOMAINS.hub,
     );
     await hubTokenMessenger.waitForDeployment();
 
-    await hubMessageTransmitter.setTokenMessenger(await hubTokenMessenger.getAddress());
+    await hubMessageTransmitter.setTokenMessenger(
+      await hubTokenMessenger.getAddress(),
+    );
     await hubUsdc.addMinter(await hubTokenMessenger.getAddress());
 
     // Deploy Poseidon libraries
-    const poseidonT3Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT3.bytecode });
+    const poseidonT3Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT3.bytecode,
+    });
     const poseidonT3Receipt = await poseidonT3Tx.wait();
     const poseidonT3Address = poseidonT3Receipt!.contractAddress!;
 
-    const poseidonT4Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT4.bytecode });
+    const poseidonT4Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT4.bytecode,
+    });
     const poseidonT4Receipt = await poseidonT4Tx.wait();
     const poseidonT4Address = poseidonT4Receipt!.contractAddress!;
 
@@ -150,11 +166,14 @@ describe("CCTP V2 Fast Finality", function () {
       await hubUsdc.getAddress(),
       DOMAINS.hub,
       deployerAddress,
-      treasuryAddress
+      treasuryAddress,
     );
 
     const CCTPHookRouter = await ethers.getContractFactory("CCTPHookRouter");
-    hubHookRouter = await CCTPHookRouter.deploy(await hubMessageTransmitter.getAddress(), await hubTokenMessenger.getAddress());
+    hubHookRouter = await CCTPHookRouter.deploy(
+      await hubMessageTransmitter.getAddress(),
+      await hubTokenMessenger.getAddress(),
+    );
     await hubHookRouter.waitForDeployment();
 
     // Load verification keys
@@ -166,22 +185,32 @@ describe("CCTP V2 Fast Finality", function () {
     clientUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
     await clientUsdc.waitForDeployment();
 
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.client, relayerAddress);
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
+    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.client,
+      relayerAddress,
+    );
     await clientMessageTransmitter.waitForDeployment();
 
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     clientTokenMessenger = await MockTokenMessengerV2.deploy(
       await clientMessageTransmitter.getAddress(),
       await clientUsdc.getAddress(),
-      DOMAINS.client
+      DOMAINS.client,
     );
     await clientTokenMessenger.waitForDeployment();
 
-    await clientMessageTransmitter.setTokenMessenger(await clientTokenMessenger.getAddress());
+    await clientMessageTransmitter.setTokenMessenger(
+      await clientTokenMessenger.getAddress(),
+    );
     await clientUsdc.addMinter(await clientTokenMessenger.getAddress());
 
-    const PrivacyPoolClient = await ethers.getContractFactory("PrivacyPoolClient");
+    const PrivacyPoolClient =
+      await ethers.getContractFactory("PrivacyPoolClient");
     privacyPoolClient = await PrivacyPoolClient.deploy();
     await privacyPoolClient.waitForDeployment();
     clientAddress = await privacyPoolClient.getAddress();
@@ -193,11 +222,14 @@ describe("CCTP V2 Fast Finality", function () {
       DOMAINS.client,
       DOMAINS.hub,
       ethers.ZeroHash,
-      deployerAddress
+      deployerAddress,
     );
 
     const CCTPHookRouter = await ethers.getContractFactory("CCTPHookRouter");
-    clientHookRouter = await CCTPHookRouter.deploy(await clientMessageTransmitter.getAddress(), await clientTokenMessenger.getAddress());
+    clientHookRouter = await CCTPHookRouter.deploy(
+      await clientMessageTransmitter.getAddress(),
+      await clientTokenMessenger.getAddress(),
+    );
     await clientHookRouter.waitForDeployment();
   }
 
@@ -208,29 +240,53 @@ describe("CCTP V2 Fast Finality", function () {
     await privacyPool.setRemotePool(DOMAINS.client, clientBytes32);
     await privacyPoolClient.setHubPool(DOMAINS.hub, hubPoolBytes32);
 
-    const hubTmBytes32 = ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32);
-    const clientTmBytes32 = ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32);
+    const hubTmBytes32 = ethers.zeroPadValue(
+      await hubTokenMessenger.getAddress(),
+      32,
+    );
+    const clientTmBytes32 = ethers.zeroPadValue(
+      await clientTokenMessenger.getAddress(),
+      32,
+    );
 
-    await hubTokenMessenger.setRemoteTokenMessenger(DOMAINS.client, clientTmBytes32);
-    await clientTokenMessenger.setRemoteTokenMessenger(DOMAINS.hub, hubTmBytes32);
+    await hubTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.client,
+      clientTmBytes32,
+    );
+    await clientTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.hub,
+      hubTmBytes32,
+    );
 
     await privacyPool.setHookRouter(await hubHookRouter.getAddress());
     await privacyPoolClient.setHookRouter(await clientHookRouter.getAddress());
 
     // Pin the destination hook routers on-chain (destinationCaller is no longer
     // a per-call parameter — the router is fixed by the operator).
-    await privacyPoolClient.setHubHookRouter(ethers.zeroPadValue(await hubHookRouter.getAddress(), 32));
-    await privacyPool.setRemoteHookRouter(DOMAINS.client, ethers.zeroPadValue(await clientHookRouter.getAddress(), 32));
+    await privacyPoolClient.setHubHookRouter(
+      ethers.zeroPadValue(await hubHookRouter.getAddress(), 32),
+    );
+    await privacyPool.setRemoteHookRouter(
+      DOMAINS.client,
+      ethers.zeroPadValue(await clientHookRouter.getAddress(), 32),
+    );
 
-    await hubMessageTransmitter.connect(relayer).setRelayer(await hubHookRouter.getAddress());
-    await clientMessageTransmitter.connect(relayer).setRelayer(await clientHookRouter.getAddress());
+    await hubMessageTransmitter
+      .connect(relayer)
+      .setRelayer(await hubHookRouter.getAddress());
+    await clientMessageTransmitter
+      .connect(relayer)
+      .setRelayer(await clientHookRouter.getAddress());
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HELPER: Extract encoded CCTP message from a transaction receipt
   // ═══════════════════════════════════════════════════════════════════════════
 
-  function extractMessageSent(receipt: any, transmitterContract: Contract): string {
+  function extractMessageSent(
+    receipt: any,
+    transmitterContract: Contract,
+  ): string {
     const transmitterInterface = transmitterContract.interface;
     for (const log of receipt.logs) {
       try {
@@ -247,7 +303,8 @@ describe("CCTP V2 Fast Finality", function () {
 
   // Helper: create valid shield parameters
   function makeShieldParams(seed: string) {
-    const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+    const SNARK_SCALAR_FIELD =
+      21888242871839275222246405745257275088548364400416034343698204186575808495617n;
     const rawNpk = BigInt(ethers.keccak256(ethers.toUtf8Bytes(seed)));
     const validNpk = rawNpk % SNARK_SCALAR_FIELD;
     return {
@@ -263,7 +320,9 @@ describe("CCTP V2 Fast Finality", function () {
 
   // Helper: parse minFinalityThreshold from a CCTP MessageV2 envelope
   function parseMinFinality(encodedMessage: string): number {
-    const msgHex = encodedMessage.startsWith("0x") ? encodedMessage.slice(2) : encodedMessage;
+    const msgHex = encodedMessage.startsWith("0x")
+      ? encodedMessage.slice(2)
+      : encodedMessage;
     // Offset 140 (4 bytes) = minFinalityThreshold in MessageV2 envelope
     const minFinalityHex = msgHex.slice(280, 288); // offset 140 * 2 = 280, 4 bytes = 8 hex chars
     return parseInt(minFinalityHex, 16);
@@ -280,18 +339,25 @@ describe("CCTP V2 Fast Finality", function () {
     });
 
     it("should allow owner to set default finality threshold to FAST on PrivacyPoolClient", async function () {
-      const tx = await privacyPoolClient.setDefaultFinalityThreshold(FINALITY.FAST);
+      const tx = await privacyPoolClient.setDefaultFinalityThreshold(
+        FINALITY.FAST,
+      );
       const receipt = await tx.wait();
 
       const event = receipt?.logs.find((log: any) => {
         try {
-          return privacyPoolClient.interface.parseLog(log)?.name === "DefaultFinalityThresholdSet";
+          return (
+            privacyPoolClient.interface.parseLog(log)?.name ===
+            "DefaultFinalityThresholdSet"
+          );
         } catch {
           return false;
         }
       });
       expect(event).to.not.be.undefined;
-      expect(await privacyPoolClient.defaultFinalityThreshold()).to.equal(FINALITY.FAST);
+      expect(await privacyPoolClient.defaultFinalityThreshold()).to.equal(
+        FINALITY.FAST,
+      );
 
       // Reset
       await privacyPoolClient.setDefaultFinalityThreshold(FINALITY.STANDARD);
@@ -299,7 +365,9 @@ describe("CCTP V2 Fast Finality", function () {
 
     it("should allow owner to set default finality threshold on PrivacyPool (Hub)", async function () {
       await privacyPool.setDefaultFinalityThreshold(FINALITY.FAST);
-      expect(await privacyPool.defaultFinalityThreshold()).to.equal(FINALITY.FAST);
+      expect(await privacyPool.defaultFinalityThreshold()).to.equal(
+        FINALITY.FAST,
+      );
 
       // Reset
       await privacyPool.setDefaultFinalityThreshold(FINALITY.STANDARD);
@@ -307,27 +375,29 @@ describe("CCTP V2 Fast Finality", function () {
 
     it("should reject invalid finality threshold values on PrivacyPoolClient", async function () {
       await expect(
-        privacyPoolClient.setDefaultFinalityThreshold(500)
+        privacyPoolClient.setDefaultFinalityThreshold(500),
       ).to.be.revertedWith("PrivacyPoolClient: Invalid threshold");
 
       await expect(
-        privacyPoolClient.setDefaultFinalityThreshold(0)
+        privacyPoolClient.setDefaultFinalityThreshold(0),
       ).to.be.revertedWith("PrivacyPoolClient: Invalid threshold");
 
       await expect(
-        privacyPoolClient.setDefaultFinalityThreshold(3000)
+        privacyPoolClient.setDefaultFinalityThreshold(3000),
       ).to.be.revertedWith("PrivacyPoolClient: Invalid threshold");
     });
 
     it("should reject non-owner setting finality threshold on PrivacyPoolClient", async function () {
       await expect(
-        privacyPoolClient.connect(alice).setDefaultFinalityThreshold(FINALITY.FAST)
+        privacyPoolClient
+          .connect(alice)
+          .setDefaultFinalityThreshold(FINALITY.FAST),
       ).to.be.revertedWith("PrivacyPoolClient: Only owner");
     });
 
     it("should reject non-owner setting finality threshold on PrivacyPool", async function () {
       await expect(
-        privacyPool.connect(alice).setDefaultFinalityThreshold(FINALITY.FAST)
+        privacyPool.connect(alice).setDefaultFinalityThreshold(FINALITY.FAST),
       ).to.be.revertedWith("PrivacyPool: Only owner");
     });
   });
@@ -349,14 +419,18 @@ describe("CCTP V2 Fast Finality", function () {
 
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
-        0,                    // maxFee
-        FINALITY.FAST,        // minFinalityThreshold — user explicitly picks FAST
+        0, // maxFee
+        FINALITY.FAST, // minFinalityThreshold — user explicitly picks FAST
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const minFinality = parseMinFinality(encodedMessage);
       expect(minFinality).to.equal(FINALITY.FAST);
@@ -369,13 +443,17 @@ describe("CCTP V2 Fast Finality", function () {
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
         0,
-        FINALITY.STANDARD,   // user explicitly picks STANDARD
+        FINALITY.STANDARD, // user explicitly picks STANDARD
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const minFinality = parseMinFinality(encodedMessage);
       expect(minFinality).to.equal(FINALITY.STANDARD);
@@ -391,13 +469,17 @@ describe("CCTP V2 Fast Finality", function () {
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
         0,
-        0,                    // 0 = use contract default
+        0, // 0 = use contract default
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const minFinality = parseMinFinality(encodedMessage);
       expect(minFinality).to.equal(FINALITY.FAST);
@@ -408,7 +490,8 @@ describe("CCTP V2 Fast Finality", function () {
 
     it("should fall back to STANDARD when user passes 0 and no default set", async function () {
       // Deploy a fresh client with no default set (defaultFinalityThreshold = 0)
-      const PrivacyPoolClient = await ethers.getContractFactory("PrivacyPoolClient");
+      const PrivacyPoolClient =
+        await ethers.getContractFactory("PrivacyPoolClient");
       const freshClient = await PrivacyPoolClient.deploy();
       await freshClient.waitForDeployment();
       const freshClientAddress = await freshClient.getAddress();
@@ -420,25 +503,33 @@ describe("CCTP V2 Fast Finality", function () {
         DOMAINS.client,
         DOMAINS.hub,
         ethers.zeroPadValue(privacyPoolAddress, 32),
-        deployerAddress
+        deployerAddress,
       );
       await freshClient.setHookRouter(await clientHookRouter.getAddress());
-      await freshClient.setHubHookRouter(ethers.zeroPadValue(await hubHookRouter.getAddress(), 32));
+      await freshClient.setHubHookRouter(
+        ethers.zeroPadValue(await hubHookRouter.getAddress(), 32),
+      );
 
       await clientUsdc.mint(aliceAddress, SHIELD_AMOUNT);
-      await clientUsdc.connect(alice).approve(freshClientAddress, SHIELD_AMOUNT);
+      await clientUsdc
+        .connect(alice)
+        .approve(freshClientAddress, SHIELD_AMOUNT);
       const params = makeShieldParams("per-tx-default-standard");
 
       const tx = await freshClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
         0,
-        0,                    // 0, and defaultFinalityThreshold is also 0 → STANDARD
+        0, // 0, and defaultFinalityThreshold is also 0 → STANDARD
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const minFinality = parseMinFinality(encodedMessage);
       expect(minFinality).to.equal(FINALITY.STANDARD);
@@ -452,11 +543,12 @@ describe("CCTP V2 Fast Finality", function () {
         privacyPoolClient.connect(alice).crossChainShield(
           SHIELD_AMOUNT,
           0,
-          500,                // invalid — not FAST or STANDARD
+          500, // invalid — not FAST or STANDARD
           params.npk,
           params.encryptedBundle,
           params.shieldKey,
-          ethers.ZeroAddress)
+          ethers.ZeroAddress,
+        ),
       ).to.be.revertedWith("PrivacyPoolClient: Invalid finality threshold");
     });
 
@@ -468,11 +560,12 @@ describe("CCTP V2 Fast Finality", function () {
         privacyPoolClient.connect(alice).crossChainShield(
           SHIELD_AMOUNT,
           0,
-          1500,               // invalid — between FAST and STANDARD
+          1500, // invalid — between FAST and STANDARD
           params.npk,
           params.encryptedBundle,
           params.shieldKey,
-          ethers.ZeroAddress)
+          ethers.ZeroAddress,
+        ),
       ).to.be.revertedWith("PrivacyPoolClient: Invalid finality threshold");
     });
   });
@@ -494,14 +587,18 @@ describe("CCTP V2 Fast Finality", function () {
 
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
-        0,                    // no CCTP fee
-        FINALITY.FAST,        // user picks FAST
+        0, // no CCTP fee
+        FINALITY.FAST, // user picks FAST
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const merkleRootBefore = await privacyPool.merkleRoot();
 
@@ -522,13 +619,17 @@ describe("CCTP V2 Fast Finality", function () {
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
         MAX_FEE,
-        FINALITY.FAST,        // user picks FAST
+        FINALITY.FAST, // user picks FAST
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const poolBalanceBefore = await hubUsdc.balanceOf(privacyPoolAddress);
       const treasuryBalanceBefore = await hubUsdc.balanceOf(treasuryAddress);
@@ -537,14 +638,16 @@ describe("CCTP V2 Fast Finality", function () {
 
       // In mock: feeExecuted = maxFee, so actual minted = SHIELD_AMOUNT - MAX_FEE = 49 USDC
       const amountAfterCCTP = SHIELD_AMOUNT - MAX_FEE;
-      const shieldFeeAmount = amountAfterCCTP * 50n / 10000n; // 0.50% shield fee
+      const shieldFeeAmount = (amountAfterCCTP * 50n) / 10000n; // 0.50% shield fee
       const poolNetReceived = amountAfterCCTP - shieldFeeAmount;
 
       const poolBalanceAfter = await hubUsdc.balanceOf(privacyPoolAddress);
       expect(poolBalanceAfter - poolBalanceBefore).to.equal(poolNetReceived);
 
       const treasuryBalanceAfter = await hubUsdc.balanceOf(treasuryAddress);
-      expect(treasuryBalanceAfter - treasuryBalanceBefore).to.equal(shieldFeeAmount);
+      expect(treasuryBalanceAfter - treasuryBalanceBefore).to.equal(
+        shieldFeeAmount,
+      );
     });
 
     it("should accept standard finality shield alongside fast", async function () {
@@ -552,16 +655,22 @@ describe("CCTP V2 Fast Finality", function () {
       await clientUsdc.connect(alice).approve(clientAddress, SHIELD_AMOUNT);
       const params = makeShieldParams("standard-alongside-fast");
 
-      const tx = await privacyPoolClient.connect(alice).crossChainShield(
-        SHIELD_AMOUNT,
-        0,
-        FINALITY.STANDARD,
-        params.npk,
-        params.encryptedBundle,
-        params.shieldKey,
-        ethers.ZeroAddress);
+      const tx = await privacyPoolClient
+        .connect(alice)
+        .crossChainShield(
+          SHIELD_AMOUNT,
+          0,
+          FINALITY.STANDARD,
+          params.npk,
+          params.encryptedBundle,
+          params.shieldKey,
+          ethers.ZeroAddress,
+        );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const merkleRootBefore = await privacyPool.merkleRoot();
 
@@ -585,34 +694,46 @@ describe("CCTP V2 Fast Finality", function () {
       // the authorization + finality checks pass (the handler will revert on
       // malformed message body, which proves it got past auth checks).
       const tokenMessengerAddr = await privacyPoolClient.tokenMessenger();
-      const tokenMessengerSigner = await ethers.getImpersonatedSigner(tokenMessengerAddr);
-      await ethers.provider.send("hardhat_setBalance", [tokenMessengerAddr, "0xDE0B6B3A7640000"]);
+      const tokenMessengerSigner =
+        await ethers.getImpersonatedSigner(tokenMessengerAddr);
+      await ethers.provider.send("hardhat_setBalance", [
+        tokenMessengerAddr,
+        "0xDE0B6B3A7640000",
+      ]);
 
       // Should not revert with "Unauthorized caller" or "Finality below minimum"
       // — will revert on message body decode instead (proving auth passed)
       await expect(
-        privacyPoolClient.connect(tokenMessengerSigner).handleReceiveUnfinalizedMessage(
-          DOMAINS.hub,
-          ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32),
-          FINALITY.FAST,
-          ethers.ZeroHash  // malformed body — will fail on decode, not auth
-        )
+        privacyPoolClient
+          .connect(tokenMessengerSigner)
+          .handleReceiveUnfinalizedMessage(
+            DOMAINS.hub,
+            ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32),
+            FINALITY.FAST,
+            ethers.ZeroHash, // malformed body — will fail on decode, not auth
+          ),
       ).to.not.be.revertedWith("PrivacyPoolClient: Unauthorized caller");
     });
 
     it("should accept fast finality messages on Hub PrivacyPool (always enabled)", async function () {
       const tokenMessengerAddr = await privacyPool.tokenMessenger();
-      const tokenMessengerSigner = await ethers.getImpersonatedSigner(tokenMessengerAddr);
-      await ethers.provider.send("hardhat_setBalance", [tokenMessengerAddr, "0xDE0B6B3A7640000"]);
+      const tokenMessengerSigner =
+        await ethers.getImpersonatedSigner(tokenMessengerAddr);
+      await ethers.provider.send("hardhat_setBalance", [
+        tokenMessengerAddr,
+        "0xDE0B6B3A7640000",
+      ]);
 
       // Should not revert with auth or finality errors
       await expect(
-        privacyPool.connect(tokenMessengerSigner).handleReceiveUnfinalizedMessage(
-          DOMAINS.client,
-          ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32),
-          FINALITY.FAST,
-          ethers.ZeroHash
-        )
+        privacyPool
+          .connect(tokenMessengerSigner)
+          .handleReceiveUnfinalizedMessage(
+            DOMAINS.client,
+            ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32),
+            FINALITY.FAST,
+            ethers.ZeroHash,
+          ),
       ).to.not.be.revertedWith("PrivacyPool: Unauthorized caller");
     });
   });
@@ -632,20 +753,26 @@ describe("CCTP V2 Fast Finality", function () {
       await clientUsdc.connect(alice).approve(clientAddress, SHIELD_AMOUNT);
       const params = makeShieldParams("hookrouter-standard");
 
-      const tx = await privacyPoolClient.connect(alice).crossChainShield(
-        SHIELD_AMOUNT,
-        0,
-        FINALITY.STANDARD,
-        params.npk,
-        params.encryptedBundle,
-        params.shieldKey,
-        ethers.ZeroAddress);
+      const tx = await privacyPoolClient
+        .connect(alice)
+        .crossChainShield(
+          SHIELD_AMOUNT,
+          0,
+          FINALITY.STANDARD,
+          params.npk,
+          params.encryptedBundle,
+          params.shieldKey,
+          ethers.ZeroAddress,
+        );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       // Should succeed via handleReceiveFinalizedMessage (standard path)
       await expect(
-        hubHookRouter.connect(relayer).relayWithHook(encodedMessage, "0x")
+        hubHookRouter.connect(relayer).relayWithHook(encodedMessage, "0x"),
       ).to.not.be.reverted;
     });
 
@@ -653,20 +780,26 @@ describe("CCTP V2 Fast Finality", function () {
       await clientUsdc.connect(alice).approve(clientAddress, SHIELD_AMOUNT);
       const params = makeShieldParams("hookrouter-fast");
 
-      const tx = await privacyPoolClient.connect(alice).crossChainShield(
-        SHIELD_AMOUNT,
-        0,
-        FINALITY.FAST,
-        params.npk,
-        params.encryptedBundle,
-        params.shieldKey,
-        ethers.ZeroAddress);
+      const tx = await privacyPoolClient
+        .connect(alice)
+        .crossChainShield(
+          SHIELD_AMOUNT,
+          0,
+          FINALITY.FAST,
+          params.npk,
+          params.encryptedBundle,
+          params.shieldKey,
+          ethers.ZeroAddress,
+        );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       // Should succeed — Hub always accepts fast finality messages
       await expect(
-        hubHookRouter.connect(relayer).relayWithHook(encodedMessage, "0x")
+        hubHookRouter.connect(relayer).relayWithHook(encodedMessage, "0x"),
       ).to.not.be.reverted;
     });
   });
@@ -681,7 +814,8 @@ describe("CCTP V2 Fast Finality", function () {
     it("should use STANDARD finality by default (threshold=0)", async function () {
       // defaultFinalityThreshold may be 0 (initial) or STANDARD (2000) — both mean standard
       const threshold = await privacyPoolClient.defaultFinalityThreshold();
-      expect(threshold === 0n || threshold === BigInt(FINALITY.STANDARD)).to.be.true;
+      expect(threshold === 0n || threshold === BigInt(FINALITY.STANDARD)).to.be
+        .true;
 
       await clientUsdc.mint(aliceAddress, SHIELD_AMOUNT);
       await clientUsdc.connect(alice).approve(clientAddress, SHIELD_AMOUNT);
@@ -690,13 +824,17 @@ describe("CCTP V2 Fast Finality", function () {
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
         0,
-        0,                    // user passes 0 → use contract default → STANDARD
+        0, // user passes 0 → use contract default → STANDARD
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const minFinality = parseMinFinality(encodedMessage);
       expect(minFinality).to.equal(FINALITY.STANDARD);
@@ -712,13 +850,17 @@ describe("CCTP V2 Fast Finality", function () {
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
         0,
-        0,                    // user passes 0 → uses contract default → FAST
+        0, // user passes 0 → uses contract default → FAST
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const minFinality = parseMinFinality(encodedMessage);
       expect(minFinality).to.equal(FINALITY.FAST);
@@ -739,13 +881,17 @@ describe("CCTP V2 Fast Finality", function () {
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
         0,
-        FINALITY.FAST,        // user overrides contract default
+        FINALITY.FAST, // user overrides contract default
         params.npk,
         params.encryptedBundle,
         params.shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
-      const encodedMessage = extractMessageSent(receipt, clientMessageTransmitter);
+      const encodedMessage = extractMessageSent(
+        receipt,
+        clientMessageTransmitter,
+      );
 
       const minFinality = parseMinFinality(encodedMessage);
       expect(minFinality).to.equal(FINALITY.FAST);

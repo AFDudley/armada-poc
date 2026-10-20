@@ -18,27 +18,32 @@ import {
   MerklerootValidator,
   GetLatestValidatedRailgunTxid,
   PollingJsonRpcProvider,
-} from '@railgun-community/engine';
+} from "@railgun-community/engine";
 import {
   Artifact,
   assertArtifactExists,
   Chain,
   isDefined,
-} from '@railgun-community/shared-models';
+} from "@railgun-community/shared-models";
 // @ts-ignore - leveldown types
-import leveldown from 'leveldown';
-import * as path from 'path';
-import * as fs from 'fs';
-import { HUB_CHAIN, HUB_RPC, CLIENT_RPC, DEPLOYMENT_BLOCK } from './chain-config';
-import { ethers, FallbackProvider } from 'ethers';
+import leveldown from "leveldown";
+import * as path from "path";
+import * as fs from "fs";
+import {
+  HUB_CHAIN,
+  HUB_RPC,
+  CLIENT_RPC,
+  DEPLOYMENT_BLOCK,
+} from "./chain-config";
+import { ethers, FallbackProvider } from "ethers";
 
 // Armada's own circuit artifacts (replaces unlicensed railgun-circuit-test-artifacts)
-import { getArtifact } from './armada-artifacts';
+import { getArtifact } from "./armada-artifacts";
 
 // ============ Storage Configuration ============
 
-const DATA_DIR = path.join(__dirname, '../../data');
-const DEFAULT_DB_PATH = path.join(DATA_DIR, 'railgun-db');
+const DATA_DIR = path.join(__dirname, "../../data");
+const DEFAULT_DB_PATH = path.join(DATA_DIR, "railgun-db");
 
 // Ensure default data directory exists. Callers that pass a custom dbPath own their own
 // directory existence — see initializeEngine's `dbPath` parameter.
@@ -55,7 +60,7 @@ let engine: RailgunEngine | undefined;
  */
 export function getEngine(): RailgunEngine {
   if (!engine) {
-    throw new Error('Engine not initialized. Call initializeEngine() first.');
+    throw new Error("Engine not initialized. Call initializeEngine() first.");
   }
   return engine;
 }
@@ -111,7 +116,7 @@ async function getArtifacts(inputs: {
   } catch (error) {
     throw new Error(
       `Failed to load Armada artifacts for ${key}. ` +
-        `Run scripts/fetch-circuits.sh to install the pinned release. Error: ${error}`
+        `Run scripts/fetch-circuits.sh to install the pinned release. Error: ${error}`,
     );
   }
 }
@@ -122,10 +127,10 @@ async function getArtifacts(inputs: {
  */
 async function getArtifactsPOI(
   maxInputs: number,
-  maxOutputs: number
+  maxOutputs: number,
 ): Promise<Artifact> {
   // POI not used in local devnet
-  throw new Error('POI artifacts not available in local devnet');
+  throw new Error("POI artifacts not available in local devnet");
 }
 
 /**
@@ -146,7 +151,7 @@ const artifactGetter: ArtifactGetter = {
 const quickSyncEvents: QuickSyncEvents = async (
   txidVersion: TXIDVersion,
   chain: Chain,
-  startingBlock: number
+  startingBlock: number,
 ): Promise<AccumulatedEvents> => {
   // Local devnet doesn't need quick sync - we scan from block 0
   return {
@@ -161,7 +166,7 @@ const quickSyncEvents: QuickSyncEvents = async (
  */
 const quickSyncRailgunTransactionsV2: QuickSyncRailgunTransactionsV2 = async (
   chain: Chain,
-  latestGraphID: string | undefined
+  latestGraphID: string | undefined,
 ): Promise<any[]> => {
   // Not used in local devnet
   return [];
@@ -175,7 +180,7 @@ const validateRailgunTxidMerkleroot: MerklerootValidator = async (
   chain: Chain,
   tree: number,
   index: number,
-  merkleroot: string
+  merkleroot: string,
 ): Promise<boolean> => {
   // In local devnet, we trust all merkleroots
   return true;
@@ -186,7 +191,7 @@ const validateRailgunTxidMerkleroot: MerklerootValidator = async (
  */
 const getLatestValidatedRailgunTxid: GetLatestValidatedRailgunTxid = async (
   txidVersion: TXIDVersion,
-  chain: Chain
+  chain: Chain,
 ): Promise<{
   txidIndex: number | undefined;
   merkleroot: string | undefined;
@@ -215,7 +220,10 @@ const engineDebugger = {
     // print it so scan/RPC failures are diagnosable rather than the generic wrapper message.
     const cause = (error as Error & { cause?: unknown }).cause;
     if (cause !== undefined) {
-      console.error('[Engine Error]   ↳ cause:', cause instanceof Error ? cause.message : cause);
+      console.error(
+        "[Engine Error]   ↳ cause:",
+        cause instanceof Error ? cause.message : cause,
+      );
     }
   },
   verboseScanLogging: false,
@@ -233,15 +241,15 @@ const engineDebugger = {
  * @returns Initialized RailgunEngine instance
  */
 export async function initializeEngine(
-  walletSource: string = 'cctppoc',
-  dbPath: string = DEFAULT_DB_PATH
+  walletSource: string = "cctppoc",
+  dbPath: string = DEFAULT_DB_PATH,
 ): Promise<RailgunEngine> {
   if (engine) {
-    console.log('Engine already initialized');
+    console.log("Engine already initialized");
     return engine;
   }
 
-  console.log('Initializing Railgun Engine...');
+  console.log("Initializing Railgun Engine...");
   console.log(`  Database: ${dbPath}`);
   console.log(`  Wallet source: ${walletSource}`);
 
@@ -258,10 +266,10 @@ export async function initializeEngine(
     validateRailgunTxidMerkleroot,
     getLatestValidatedRailgunTxid,
     engineDebugger,
-    false // skipMerkletreeScans
+    false, // skipMerkletreeScans
   );
 
-  console.log('Engine initialized successfully');
+  console.log("Engine initialized successfully");
 
   return engine;
 }
@@ -280,7 +288,7 @@ export async function initializeEngine(
  */
 export async function loadNetwork(
   chain: Chain,
-  railgunProxyAddress: string
+  railgunProxyAddress: string,
 ): Promise<void> {
   const eng = getEngine();
 
@@ -307,7 +315,9 @@ export async function loadNetwork(
   // For our POC, we'll skip full network loading and use direct contract calls.
   // The engine is still useful for wallet creation and key derivation.
 
-  console.log(`  Note: Skipping full network load (not needed for POC wallet operations)`);
+  console.log(
+    `  Note: Skipping full network load (not needed for POC wallet operations)`,
+  );
   console.log(`Network setup complete for chain ${chain.id}`);
 }
 
@@ -318,7 +328,7 @@ export async function shutdownEngine(): Promise<void> {
   if (engine) {
     await engine.unload();
     engine = undefined;
-    console.log('Engine shut down');
+    console.log("Engine shut down");
   }
 }
 
@@ -329,6 +339,6 @@ export async function shutdownEngine(): Promise<void> {
 export function clearDatabase(): void {
   if (fs.existsSync(DEFAULT_DB_PATH)) {
     fs.rmSync(DEFAULT_DB_PATH, { recursive: true, force: true });
-    console.log('Database cleared');
+    console.log("Database cleared");
   }
 }

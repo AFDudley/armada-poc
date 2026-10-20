@@ -15,7 +15,9 @@ import {
   type PersistedPendingMessage,
 } from "../../lib/pending-state-store";
 
-function samplePending(overrides: Partial<PersistedPendingMessage> = {}): PersistedPendingMessage {
+function samplePending(
+  overrides: Partial<PersistedPendingMessage> = {},
+): PersistedPendingMessage {
   return {
     messageBytes: "0xabcd",
     messageHash: "0xhash1",
@@ -71,7 +73,11 @@ describe("PendingStateStore", function () {
       const store = new PendingStateStore(dir);
       const pending = [
         samplePending({ messageHash: "0xa", sourceTxHash: "0xtxA" }),
-        samplePending({ messageHash: "0xb", sourceTxHash: "0xtxB", pollAttempts: 5 }),
+        samplePending({
+          messageHash: "0xb",
+          sourceTxHash: "0xtxB",
+          pollAttempts: 5,
+        }),
       ];
       await store.write("hub", pending, processedMap("0xdone1", "0xdone2"));
 
@@ -79,16 +85,25 @@ describe("PendingStateStore", function () {
       expect(got?.pending).to.have.lengthOf(2);
       expect(got?.pending[0]?.messageHash).to.equal("0xa");
       expect(got?.pending[1]?.pollAttempts).to.equal(5);
-      expect(got?.processed.map((e) => e.key)).to.have.members(["0xdone1", "0xdone2"]);
+      expect(got?.processed.map((e) => e.key)).to.have.members([
+        "0xdone1",
+        "0xdone2",
+      ]);
       // Timestamps survive — they're what the pruner uses.
-      expect(got?.processed.every((e) => typeof e.at === "number")).to.equal(true);
+      expect(got?.processed.every((e) => typeof e.at === "number")).to.equal(
+        true,
+      );
     });
 
     it("sorts processed records by key on write — stable file content across runs", async function () {
       const store = new PendingStateStore(dir);
       await store.write("hub", [], processedMap("0xb", "0xa", "0xc"));
       const got = await store.read("hub");
-      expect(got?.processed.map((e) => e.key)).to.deep.equal(["0xa", "0xb", "0xc"]);
+      expect(got?.processed.map((e) => e.key)).to.deep.equal([
+        "0xa",
+        "0xb",
+        "0xc",
+      ]);
     });
   });
 
@@ -119,7 +134,12 @@ describe("PendingStateStore", function () {
       const path = join(dir, "pending-hub.json");
       await writeFile(
         path,
-        JSON.stringify({ pending: "oops", processed: [], updatedAt: 1, version: 3 }),
+        JSON.stringify({
+          pending: "oops",
+          processed: [],
+          updatedAt: 1,
+          version: 3,
+        }),
         "utf8",
       );
       try {
@@ -139,7 +159,10 @@ describe("PendingStateStore", function () {
         path,
         JSON.stringify({
           pending: [],
-          processed: [{ key: "0xtx:0", at: 1 }, { key: 42, at: 1 }],
+          processed: [
+            { key: "0xtx:0", at: 1 },
+            { key: 42, at: 1 },
+          ],
           updatedAt: 1,
           version: 3,
         }),
@@ -149,7 +172,9 @@ describe("PendingStateStore", function () {
         await store.read("hub");
         expect.fail("should have thrown");
       } catch (err) {
-        expect((err as Error).message).to.match(/processed\[1\]\.key.*not a string/);
+        expect((err as Error).message).to.match(
+          /processed\[1\]\.key.*not a string/,
+        );
       }
     });
 
@@ -170,7 +195,9 @@ describe("PendingStateStore", function () {
         await store.read("hub");
         expect.fail("should have thrown");
       } catch (err) {
-        expect((err as Error).message).to.match(/processed\[0\]\.at.*not a finite number/);
+        expect((err as Error).message).to.match(
+          /processed\[0\]\.at.*not a finite number/,
+        );
       }
     });
 
@@ -179,7 +206,12 @@ describe("PendingStateStore", function () {
       const path = join(dir, "pending-hub.json");
       await writeFile(
         path,
-        JSON.stringify({ pending: [], processed: [], updatedAt: 1, version: 99 }),
+        JSON.stringify({
+          pending: [],
+          processed: [],
+          updatedAt: 1,
+          version: 99,
+        }),
         "utf8",
       );
       try {
@@ -227,7 +259,12 @@ describe("PendingStateStore", function () {
       };
       await writeFile(
         path,
-        JSON.stringify({ pending: [halfPopulated], processed: [], updatedAt: 1, version: 3 }),
+        JSON.stringify({
+          pending: [halfPopulated],
+          processed: [],
+          updatedAt: 1,
+          version: 3,
+        }),
         "utf8",
       );
       try {
@@ -297,8 +334,13 @@ describe("PendingStateStore", function () {
       const got = await store.read("hub");
       expect(got?.version).to.equal(3);
       expect(got?.pending[0]?.dedupKey).to.equal("0xtxV2:0"); // v2 already had dedupKey — preserved
-      expect(got?.processed.map((e) => e.key)).to.deep.equal(["0xkeyA", "0xkeyB"]);
-      expect(got?.processed.every((e) => typeof e.at === "number")).to.equal(true);
+      expect(got?.processed.map((e) => e.key)).to.deep.equal([
+        "0xkeyA",
+        "0xkeyB",
+      ]);
+      expect(got?.processed.every((e) => typeof e.at === "number")).to.equal(
+        true,
+      );
     });
 
     it("after migration, a re-persist stamps v3 — a second read does not re-trigger the migrator", async function () {
@@ -306,7 +348,12 @@ describe("PendingStateStore", function () {
       const path = join(dir, "pending-hub.json");
       await writeFile(
         path,
-        JSON.stringify({ pending: [], processed: ["0xprev_hash"], updatedAt: 1, version: 2 }),
+        JSON.stringify({
+          pending: [],
+          processed: ["0xprev_hash"],
+          updatedAt: 1,
+          version: 2,
+        }),
         "utf8",
       );
       const firstRead = await store.read("hub");
@@ -319,15 +366,25 @@ describe("PendingStateStore", function () {
       );
       const secondRead = await store.read("hub");
       expect(secondRead?.version).to.equal(3);
-      expect(secondRead?.processed.map((e) => e.key)).to.deep.equal(["0xprev_hash"]);
+      expect(secondRead?.processed.map((e) => e.key)).to.deep.equal([
+        "0xprev_hash",
+      ]);
     });
   });
 
   describe("per-chain isolation", function () {
     it("hub and base-sepolia have independent files", async function () {
       const store = new PendingStateStore(dir);
-      await store.write("hub", [samplePending({ messageHash: "0xhub" })], processedMap("0xpHub"));
-      await store.write("base-sepolia", [samplePending({ messageHash: "0xbase" })], processedMap("0xpBase"));
+      await store.write(
+        "hub",
+        [samplePending({ messageHash: "0xhub" })],
+        processedMap("0xpHub"),
+      );
+      await store.write(
+        "base-sepolia",
+        [samplePending({ messageHash: "0xbase" })],
+        processedMap("0xpBase"),
+      );
 
       const hub = await store.read("hub");
       const base = await store.read("base-sepolia");

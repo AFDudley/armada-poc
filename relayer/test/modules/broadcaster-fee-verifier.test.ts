@@ -117,7 +117,11 @@ function emptyTransaction(): unknown {
 /** ShieldCiphertext filler — three bytes32 + a key. Not inspected; ethers just needs the shape. */
 function emptyShieldCiphertext(): unknown {
   return {
-    encryptedBundle: ["0x" + "00".repeat(32), "0x" + "00".repeat(32), "0x" + "00".repeat(32)],
+    encryptedBundle: [
+      "0x" + "00".repeat(32),
+      "0x" + "00".repeat(32),
+      "0x" + "00".repeat(32),
+    ],
     shieldKey: "0x" + "00".repeat(32),
   };
 }
@@ -237,7 +241,9 @@ describe("verifyBroadcasterFee", () => {
           ADVERTISED_FEE,
         ),
         "FEE_INSUFFICIENT",
-        new RegExp(`paid ${ADVERTISED_FEE - 1n} USDC raw, advertised ${ADVERTISED_FEE}`),
+        new RegExp(
+          `paid ${ADVERTISED_FEE - 1n} USDC raw, advertised ${ADVERTISED_FEE}`,
+        ),
       );
     });
 
@@ -249,7 +255,9 @@ describe("verifyBroadcasterFee", () => {
       // don't relay" — regardless of whether the failure was at the decoder or the value
       // check.
       const wallet = stubWalletThrowing(
-        new Error("Contract method atomicCrossChainUnshield invalid: expected transact"),
+        new Error(
+          "Contract method atomicCrossChainUnshield invalid: expected transact",
+        ),
       );
       await expectRejectedAs(
         verifyBroadcasterFee(
@@ -271,14 +279,19 @@ describe("verifyBroadcasterFee", () => {
       // A regression that routed wrapper calldata straight to the SDK would surface as
       // "Contract method lendAndShield invalid: expected transact" — the failure mode A2
       // documented as the reason for the verifier's selector-narrowing decision.
-      const rec = recordingStubWallet({ [USDC_ADDRESS.toLowerCase()]: ADVERTISED_FEE * 2n });
+      const rec = recordingStubWallet({
+        [USDC_ADDRESS.toLowerCase()]: ADVERTISED_FEE * 2n,
+      });
       const wrapperCalldata = encodeWrapperCalldata("lendAndShield");
 
       const paid = await verifyBroadcasterFee(
         ctxFor(rec.wallet),
         // `to` here would normally be ArmadaYieldAdapter's address, NOT the PrivacyPool. The
         // normaliser must rewrite the synthetic request's `to` to the PrivacyPool regardless.
-        { to: "0x4444444444444444444444444444444444444444", data: wrapperCalldata },
+        {
+          to: "0x4444444444444444444444444444444444444444",
+          data: wrapperCalldata,
+        },
         ADVERTISED_FEE,
       );
 
@@ -327,7 +340,9 @@ describe("verifyBroadcasterFee", () => {
       // wouldn't fire because the selector would fall through to the unknown branch — INVALID_DATA
       // — but privacy-relay's allowlist would have already gated this from the live path, leaving
       // a confusing two-layer rejection rather than a clean "low fee" signal in tests).
-      const rec = recordingStubWallet({ [USDC_ADDRESS.toLowerCase()]: ADVERTISED_FEE * 3n });
+      const rec = recordingStubWallet({
+        [USDC_ADDRESS.toLowerCase()]: ADVERTISED_FEE * 3n,
+      });
       const wrapperCalldata = encodeWrapperCalldata("atomicCrossChainUnshield");
 
       const paid = await verifyBroadcasterFee(
@@ -354,7 +369,9 @@ describe("verifyBroadcasterFee", () => {
       // WHY: symmetric to the lendAndShield insufficient-fee test — A5's xchain path must
       // enforce the same lower bound, otherwise cross-chain unshields become a free relay
       // tier while every other kind keeps paying.
-      const rec = recordingStubWallet({ [USDC_ADDRESS.toLowerCase()]: ADVERTISED_FEE - 1n });
+      const rec = recordingStubWallet({
+        [USDC_ADDRESS.toLowerCase()]: ADVERTISED_FEE - 1n,
+      });
       const wrapperCalldata = encodeWrapperCalldata("atomicCrossChainUnshield");
       await expectRejectedAs(
         verifyBroadcasterFee(
@@ -363,7 +380,9 @@ describe("verifyBroadcasterFee", () => {
           ADVERTISED_FEE,
         ),
         "FEE_INSUFFICIENT",
-        new RegExp(`paid ${ADVERTISED_FEE - 1n} USDC raw, advertised ${ADVERTISED_FEE}`),
+        new RegExp(
+          `paid ${ADVERTISED_FEE - 1n} USDC raw, advertised ${ADVERTISED_FEE}`,
+        ),
       );
     });
 
@@ -372,16 +391,23 @@ describe("verifyBroadcasterFee", () => {
       // the Transaction is normalisation, not exemption. A regression that bypassed the
       // amount check on the wrapper branch would let yield ops pay $0 in broadcaster fees
       // while transact() kept enforcing.
-      const rec = recordingStubWallet({ [USDC_ADDRESS.toLowerCase()]: ADVERTISED_FEE - 1n });
+      const rec = recordingStubWallet({
+        [USDC_ADDRESS.toLowerCase()]: ADVERTISED_FEE - 1n,
+      });
       const wrapperCalldata = encodeWrapperCalldata("lendAndShield");
       await expectRejectedAs(
         verifyBroadcasterFee(
           ctxFor(rec.wallet),
-          { to: "0x4444444444444444444444444444444444444444", data: wrapperCalldata },
+          {
+            to: "0x4444444444444444444444444444444444444444",
+            data: wrapperCalldata,
+          },
           ADVERTISED_FEE,
         ),
         "FEE_INSUFFICIENT",
-        new RegExp(`paid ${ADVERTISED_FEE - 1n} USDC raw, advertised ${ADVERTISED_FEE}`),
+        new RegExp(
+          `paid ${ADVERTISED_FEE - 1n} USDC raw, advertised ${ADVERTISED_FEE}`,
+        ),
       );
     });
   });
@@ -553,7 +579,9 @@ describe("verifyBroadcasterFee — armada backend (SDK decode API)", () => {
     await expectRejectedAs(
       verifyBroadcasterFee(armadaCtx(), { to: SDK_POOL, data }, ADVERTISED_FEE),
       "FEE_INSUFFICIENT",
-      new RegExp(`paid ${ADVERTISED_FEE - 1n} USDC raw, advertised ${ADVERTISED_FEE}`),
+      new RegExp(
+        `paid ${ADVERTISED_FEE - 1n} USDC raw, advertised ${ADVERTISED_FEE}`,
+      ),
     );
   });
 

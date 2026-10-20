@@ -21,42 +21,67 @@
  *   npx hardhat run scripts/capture/e2e-armada-circuits-sepolia.ts --network sepoliaHub
  */
 
-import { ethers } from 'hardhat';
+import { ethers } from "hardhat";
 
-import { initializeEngine, shutdownEngine, clearDatabase, getEngine } from '../../lib/sdk/init';
-import { createWallet, DEFAULT_ENCRYPTION_KEY } from '../../lib/sdk/wallet';
-import { initializeProver } from '../../lib/sdk/prover';
-import { createShieldRequest, generateShieldPrivateKey } from '../../lib/sdk/shield';
-import { loadNetworkIntoEngine, scanWalletBalances } from '../../lib/sdk/network';
-import { createPrivateTransfer, createUnshield } from '../../lib/sdk/transfer';
-import { getNetworkConfig } from '../../config/networks';
-import { ChainType, Chain } from '@railgun-community/shared-models';
+import {
+  initializeEngine,
+  shutdownEngine,
+  clearDatabase,
+  getEngine,
+} from "../../lib/sdk/init";
+import { createWallet, DEFAULT_ENCRYPTION_KEY } from "../../lib/sdk/wallet";
+import { initializeProver } from "../../lib/sdk/prover";
+import {
+  createShieldRequest,
+  generateShieldPrivateKey,
+} from "../../lib/sdk/shield";
+import {
+  loadNetworkIntoEngine,
+  scanWalletBalances,
+} from "../../lib/sdk/network";
+import { createPrivateTransfer, createUnshield } from "../../lib/sdk/transfer";
+import { getNetworkConfig } from "../../config/networks";
+import { ChainType, Chain } from "@railgun-community/shared-models";
 
-import { TXIDVersion, POI, POINodeInterface } from '@railgun-community/engine';
+import { TXIDVersion, POI, POINodeInterface } from "@railgun-community/engine";
 
 // POI stub
 class StubPOINodeInterface extends POINodeInterface {
-  isActive(): boolean { return false; }
-  async isRequired(): Promise<boolean> { return false; }
-  async getPOIsPerList(): Promise<Record<string, any>> { return {}; }
-  async getPOIMerkleProofs(): Promise<any[]> { return []; }
-  async validatePOIMerkleroots(): Promise<boolean> { return true; }
-  async submitPOI(): Promise<void> { /* no-op */ }
-  async submitLegacyTransactProofs(): Promise<void> { /* no-op */ }
+  isActive(): boolean {
+    return false;
+  }
+  async isRequired(): Promise<boolean> {
+    return false;
+  }
+  async getPOIsPerList(): Promise<Record<string, any>> {
+    return {};
+  }
+  async getPOIMerkleProofs(): Promise<any[]> {
+    return [];
+  }
+  async validatePOIMerkleroots(): Promise<boolean> {
+    return true;
+  }
+  async submitPOI(): Promise<void> {
+    /* no-op */
+  }
+  async submitLegacyTransactProofs(): Promise<void> {
+    /* no-op */
+  }
 }
 POI.init([], new StubPOINodeInterface());
 
-const SHIELD_AMOUNT = ethers.parseUnits('1', 6); // 1 USDC — small amount for test
-const TRANSFER_AMOUNT = ethers.parseUnits('0.3', 6); // 0.3 USDC
-const UNSHIELD_AMOUNT = ethers.parseUnits('0.1', 6); // 0.1 USDC
+const SHIELD_AMOUNT = ethers.parseUnits("1", 6); // 1 USDC — small amount for test
+const TRANSFER_AMOUNT = ethers.parseUnits("0.3", 6); // 0.3 USDC
+const UNSHIELD_AMOUNT = ethers.parseUnits("0.1", 6); // 0.1 USDC
 
 async function main() {
-  console.log('='.repeat(60));
-  console.log('  End-to-End: Armada Circuits on Sepolia');
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
+  console.log("  End-to-End: Armada Circuits on Sepolia");
+  console.log("=".repeat(60));
 
   // Load deployment
-  const deployments = require('../../deployments/privacy-pool-hub-sepolia.json');
+  const deployments = require("../../deployments/privacy-pool-hub-sepolia.json");
   const chainId = deployments.chainId;
   console.log(`Chain ID: ${chainId}`);
   console.log(`PrivacyPool: ${deployments.contracts.privacyPool}`);
@@ -67,33 +92,45 @@ async function main() {
   console.log(`Bob: ${await bobSigner.getAddress()}`);
 
   // Load contracts
-  const privacyPool = await ethers.getContractAt('PrivacyPool', deployments.contracts.privacyPool);
+  const privacyPool = await ethers.getContractAt(
+    "PrivacyPool",
+    deployments.contracts.privacyPool,
+  );
 
   // Get USDC address from env (real Sepolia USDC)
   const usdcAddress = process.env.HUB_USDC ?? deployments.cctp?.usdc;
-  if (!usdcAddress) throw new Error('HUB_USDC not set. Source config/sepolia.env first.');
-  const usdc = await ethers.getContractAt('IERC20', usdcAddress);
+  if (!usdcAddress)
+    throw new Error("HUB_USDC not set. Source config/sepolia.env first.");
+  const usdc = await ethers.getContractAt("IERC20", usdcAddress);
   console.log(`USDC: ${usdcAddress}`);
 
   // Check balances
   const deployerUsdcBal = await usdc.balanceOf(await deployer.getAddress());
-  console.log(`\nDeployer USDC balance: ${ethers.formatUnits(deployerUsdcBal, 6)}`);
+  console.log(
+    `\nDeployer USDC balance: ${ethers.formatUnits(deployerUsdcBal, 6)}`,
+  );
   if (deployerUsdcBal < SHIELD_AMOUNT) {
     throw new Error(
       `Insufficient USDC. Need ${ethers.formatUnits(SHIELD_AMOUNT, 6)}, have ${ethers.formatUnits(deployerUsdcBal, 6)}.\n` +
-      `Get testnet USDC from https://faucet.circle.com/`
+        `Get testnet USDC from https://faucet.circle.com/`,
     );
   }
 
-  const deployerEthBal = await ethers.provider.getBalance(await deployer.getAddress());
+  const deployerEthBal = await ethers.provider.getBalance(
+    await deployer.getAddress(),
+  );
   console.log(`Deployer ETH balance: ${ethers.formatEther(deployerEthBal)}`);
-  if (deployerEthBal < ethers.parseEther('0.01')) {
-    console.warn('WARNING: Low ETH balance. Deployment + testing may fail.');
+  if (deployerEthBal < ethers.parseEther("0.01")) {
+    console.warn("WARNING: Low ETH balance. Deployment + testing may fail.");
   }
 
   // Verify on-chain vkeys
-  console.log('\nVerifying on-chain verification keys...');
-  for (const [n, m] of [[1, 1], [1, 2], [2, 2]]) {
+  console.log("\nVerifying on-chain verification keys...");
+  for (const [n, m] of [
+    [1, 1],
+    [1, 2],
+    [2, 2],
+  ]) {
     const vkey = await privacyPool.getVerificationKey(n, m);
     if (vkey.alpha1.x === 0n) {
       throw new Error(`VK not set for ${n}x${m}. Run setup:sepolia first.`);
@@ -105,14 +142,16 @@ async function main() {
   const testingMode = await privacyPool.testingMode();
   console.log(`  Testing mode: ${testingMode}`);
   if (testingMode) {
-    throw new Error('Testing mode is ON — proofs are not verified! Run verify:snark:sepolia');
+    throw new Error(
+      "Testing mode is ON — proofs are not verified! Run verify:snark:sepolia",
+    );
   }
-  console.log('  ✓ SNARK verification enabled');
+  console.log("  ✓ SNARK verification enabled");
 
   // Initialize engine
-  console.log('\nInitializing engine with Armada circuits...');
+  console.log("\nInitializing engine with Armada circuits...");
   clearDatabase();
-  await initializeEngine('sepoliae2e');
+  await initializeEngine("sepoliae2e");
 
   const chain: Chain = { type: ChainType.EVM, id: chainId };
   const rpcUrl = getNetworkConfig().hub.rpc;
@@ -140,9 +179,9 @@ async function main() {
   // ═══════════════════════════════════════════════════════════
   // STEP 1: SHIELD
   // ═══════════════════════════════════════════════════════════
-  console.log('\n' + '─'.repeat(40));
+  console.log("\n" + "─".repeat(40));
   console.log(`  STEP 1: SHIELD ${ethers.formatUnits(SHIELD_AMOUNT, 6)} USDC`);
-  console.log('─'.repeat(40));
+  console.log("─".repeat(40));
 
   const shieldPrivateKey = generateShieldPrivateKey();
   const { shieldRequest } = await createShieldRequest(
@@ -155,34 +194,51 @@ async function main() {
   );
 
   // Approve + shield (real USDC — no mint)
-  console.log('Approving USDC...');
-  await (await usdc.approve(await privacyPool.getAddress(), SHIELD_AMOUNT)).wait();
+  console.log("Approving USDC...");
+  await (
+    await usdc.approve(await privacyPool.getAddress(), SHIELD_AMOUNT)
+  ).wait();
 
-  console.log('Submitting shield tx...');
-  const shieldTx = await privacyPool.shield([shieldRequest], ethers.ZeroAddress);
+  console.log("Submitting shield tx...");
+  const shieldTx = await privacyPool.shield(
+    [shieldRequest],
+    ethers.ZeroAddress,
+  );
   const shieldReceipt = await shieldTx.wait();
-  console.log(`✓ Shield tx: ${shieldReceipt!.hash} (block ${shieldReceipt!.blockNumber})`);
+  console.log(
+    `✓ Shield tx: ${shieldReceipt!.hash} (block ${shieldReceipt!.blockNumber})`,
+  );
 
   // Wait for engine to sync
-  console.log('Waiting for engine sync (Sepolia finality delay)...');
-  await new Promise(r => setTimeout(r, 15000)); // Wait for RPC to catch up
+  console.log("Waiting for engine sync (Sepolia finality delay)...");
+  await new Promise((r) => setTimeout(r, 15000)); // Wait for RPC to catch up
   await scanWalletBalances(aliceWalletInfo.id, chain);
-  await new Promise(r => setTimeout(r, 10000));
+  await new Promise((r) => setTimeout(r, 10000));
 
-  const aliceTxos = await aliceWallet.TXOs(TXIDVersion.V2_PoseidonMerkle, chain);
-  const shieldedAmount = aliceTxos.length > 0 ? ethers.formatUnits(aliceTxos[0].note.value, 6) : '0';
-  console.log(`✓ Alice has ${aliceTxos.length} UTXO(s), value=${shieldedAmount} USDC`);
+  const aliceTxos = await aliceWallet.TXOs(
+    TXIDVersion.V2_PoseidonMerkle,
+    chain,
+  );
+  const shieldedAmount =
+    aliceTxos.length > 0 ? ethers.formatUnits(aliceTxos[0].note.value, 6) : "0";
+  console.log(
+    `✓ Alice has ${aliceTxos.length} UTXO(s), value=${shieldedAmount} USDC`,
+  );
 
   if (aliceTxos.length === 0) {
-    throw new Error('No UTXOs found after shield. Engine may need more time to sync.');
+    throw new Error(
+      "No UTXOs found after shield. Engine may need more time to sync.",
+    );
   }
 
   // ═══════════════════════════════════════════════════════════
   // STEP 2: PRIVATE TRANSFER (Alice → Bob)
   // ═══════════════════════════════════════════════════════════
-  console.log('\n' + '─'.repeat(40));
-  console.log(`  STEP 2: PRIVATE TRANSFER ${ethers.formatUnits(TRANSFER_AMOUNT, 6)} USDC`);
-  console.log('─'.repeat(40));
+  console.log("\n" + "─".repeat(40));
+  console.log(
+    `  STEP 2: PRIVATE TRANSFER ${ethers.formatUnits(TRANSFER_AMOUNT, 6)} USDC`,
+  );
+  console.log("─".repeat(40));
 
   const transferResult = await createPrivateTransfer({
     wallet: aliceWallet,
@@ -191,33 +247,41 @@ async function main() {
     recipientAddress: bobWalletInfo.railgunAddress,
     amount: TRANSFER_AMOUNT,
     encryptionKey: DEFAULT_ENCRYPTION_KEY,
-    progressCallback: (p: any) => process.stdout.write('.'),
+    progressCallback: (p: any) => process.stdout.write("."),
   });
-  console.log('');
+  console.log("");
 
   const transferTx = await deployer.sendTransaction({
     to: transferResult.contractTransaction.to,
     data: transferResult.contractTransaction.data,
   });
   const transferReceipt = await transferTx.wait();
-  console.log(`✓ Transfer tx: ${transferReceipt!.hash} (block ${transferReceipt!.blockNumber})`);
+  console.log(
+    `✓ Transfer tx: ${transferReceipt!.hash} (block ${transferReceipt!.blockNumber})`,
+  );
 
   const provedTx = transferResult.transactions[0];
-  console.log(`✓ Circuit shape: ${provedTx.nullifiers.length}x${provedTx.commitments.length}`);
-  console.log('✓ Proof verified on-chain (tx succeeded = Groth16 pairing check passed)');
+  console.log(
+    `✓ Circuit shape: ${provedTx.nullifiers.length}x${provedTx.commitments.length}`,
+  );
+  console.log(
+    "✓ Proof verified on-chain (tx succeeded = Groth16 pairing check passed)",
+  );
 
   // Sync Bob
   await scanWalletBalances(bobWalletInfo.id, chain);
-  await new Promise(r => setTimeout(r, 10000));
+  await new Promise((r) => setTimeout(r, 10000));
   const bobTxos = await bobWallet.TXOs(TXIDVersion.V2_PoseidonMerkle, chain);
   console.log(`✓ Bob has ${bobTxos.length} UTXO(s)`);
 
   // ═══════════════════════════════════════════════════════════
   // STEP 3: UNSHIELD (Bob → public address)
   // ═══════════════════════════════════════════════════════════
-  console.log('\n' + '─'.repeat(40));
-  console.log(`  STEP 3: UNSHIELD ${ethers.formatUnits(UNSHIELD_AMOUNT, 6)} USDC`);
-  console.log('─'.repeat(40));
+  console.log("\n" + "─".repeat(40));
+  console.log(
+    `  STEP 3: UNSHIELD ${ethers.formatUnits(UNSHIELD_AMOUNT, 6)} USDC`,
+  );
+  console.log("─".repeat(40));
 
   const bobPublicAddress = await bobSigner.getAddress();
   const bobBalBefore = await usdc.balanceOf(bobPublicAddress);
@@ -229,44 +293,62 @@ async function main() {
     recipientAddress: bobPublicAddress,
     amount: UNSHIELD_AMOUNT,
     encryptionKey: DEFAULT_ENCRYPTION_KEY,
-    progressCallback: (p: any) => process.stdout.write('.'),
+    progressCallback: (p: any) => process.stdout.write("."),
   });
-  console.log('');
+  console.log("");
 
   const unshieldTx = await bobSigner.sendTransaction({
     to: unshieldResult.contractTransaction.to,
     data: unshieldResult.contractTransaction.data,
   });
   const unshieldReceipt = await unshieldTx.wait();
-  console.log(`✓ Unshield tx: ${unshieldReceipt!.hash} (block ${unshieldReceipt!.blockNumber})`);
+  console.log(
+    `✓ Unshield tx: ${unshieldReceipt!.hash} (block ${unshieldReceipt!.blockNumber})`,
+  );
 
   const unshieldProvedTx = unshieldResult.transactions[0];
-  console.log(`✓ Circuit shape: ${unshieldProvedTx.nullifiers.length}x${unshieldProvedTx.commitments.length}`);
-  console.log('✓ Proof verified on-chain (tx succeeded = Groth16 pairing check passed)');
+  console.log(
+    `✓ Circuit shape: ${unshieldProvedTx.nullifiers.length}x${unshieldProvedTx.commitments.length}`,
+  );
+  console.log(
+    "✓ Proof verified on-chain (tx succeeded = Groth16 pairing check passed)",
+  );
 
   // Verify balance increased
   const bobBalAfter = await usdc.balanceOf(bobPublicAddress);
-  console.log(`✓ Bob public balance: ${ethers.formatUnits(bobBalBefore, 6)} → ${ethers.formatUnits(bobBalAfter, 6)}`);
+  console.log(
+    `✓ Bob public balance: ${ethers.formatUnits(bobBalBefore, 6)} → ${ethers.formatUnits(bobBalAfter, 6)}`,
+  );
 
   // ═══════════════════════════════════════════════════════════
   // SUMMARY
   // ═══════════════════════════════════════════════════════════
-  console.log('\n' + '='.repeat(60));
-  console.log('  SEPOLIA END-TO-END VERIFICATION PASSED');
-  console.log('='.repeat(60));
-  console.log(`  ✓ Shield:   ${ethers.formatUnits(SHIELD_AMOUNT, 6)} USDC (Armada vkeys on-chain)`);
-  console.log(`  ✓ Transfer: ${ethers.formatUnits(TRANSFER_AMOUNT, 6)} USDC (${provedTx.nullifiers.length}x${provedTx.commitments.length} circuit)`);
-  console.log(`  ✓ Unshield: ${ethers.formatUnits(UNSHIELD_AMOUNT, 6)} USDC (${unshieldProvedTx.nullifiers.length}x${unshieldProvedTx.commitments.length} circuit)`);
-  console.log('  ✓ All proofs generated by Armada WASM/ZKEY');
-  console.log('  ✓ All proofs verified on-chain via Groth16 pairing checks');
-  console.log('  ✓ SNARK testing mode OFF — real verification');
-  console.log('  ✓ Armada circuit artifacts in use');
+  console.log("\n" + "=".repeat(60));
+  console.log("  SEPOLIA END-TO-END VERIFICATION PASSED");
+  console.log("=".repeat(60));
+  console.log(
+    `  ✓ Shield:   ${ethers.formatUnits(SHIELD_AMOUNT, 6)} USDC (Armada vkeys on-chain)`,
+  );
+  console.log(
+    `  ✓ Transfer: ${ethers.formatUnits(TRANSFER_AMOUNT, 6)} USDC (${provedTx.nullifiers.length}x${provedTx.commitments.length} circuit)`,
+  );
+  console.log(
+    `  ✓ Unshield: ${ethers.formatUnits(UNSHIELD_AMOUNT, 6)} USDC (${unshieldProvedTx.nullifiers.length}x${unshieldProvedTx.commitments.length} circuit)`,
+  );
+  console.log("  ✓ All proofs generated by Armada WASM/ZKEY");
+  console.log("  ✓ All proofs verified on-chain via Groth16 pairing checks");
+  console.log("  ✓ SNARK testing mode OFF — real verification");
+  console.log("  ✓ Armada circuit artifacts in use");
 
   await shutdownEngine();
 }
 
 main().catch(async (err) => {
-  console.error('\n❌ Sepolia E2E test failed:', err);
-  try { await shutdownEngine(); } catch { /* ignore */ }
+  console.error("\n❌ Sepolia E2E test failed:", err);
+  try {
+    await shutdownEngine();
+  } catch {
+    /* ignore */
+  }
   process.exit(1);
 });

@@ -45,12 +45,7 @@ contract GovernorHandler is Test {
     mapping(uint256 => uint8) public ghost_highestState;
     uint256 public ghost_stateMonotonicityViolations;
 
-    constructor(
-        ArmadaGovernor _governor,
-        ArmadaToken _armToken,
-        address[] memory _actors,
-        address _treasuryAddr
-    ) {
+    constructor(ArmadaGovernor _governor, ArmadaToken _armToken, address[] memory _actors, address _treasuryAddr) {
         governor = _governor;
         armToken = _armToken;
         actors = _actors;
@@ -166,13 +161,9 @@ contract GovernorHandler is Test {
         calldatas[0] = abi.encodeWithSignature("proposalCount()"); // harmless read
 
         vm.prank(actor);
-        try governor.propose(
-            ProposalType.Standard,
-            targets,
-            values,
-            calldatas,
-            "Test proposal"
-        ) returns (uint256 proposalId) {
+        try governor.propose(ProposalType.Standard, targets, values, calldatas, "Test proposal") returns (
+            uint256 proposalId
+        ) {
             ghost_proposalCount = proposalId;
             ghost_highestState[proposalId] = 0; // Pending
             ghost_quorumAtCreation[proposalId] = governor.quorum(proposalId);
@@ -199,13 +190,9 @@ contract GovernorHandler is Test {
         bytes[] memory calldatas = new bytes[](0);
 
         vm.prank(actor);
-        try governor.propose(
-            ProposalType.Signaling,
-            targets,
-            values,
-            calldatas,
-            "Signaling proposal"
-        ) returns (uint256 proposalId) {
+        try governor.propose(ProposalType.Signaling, targets, values, calldatas, "Signaling proposal") returns (
+            uint256 proposalId
+        ) {
             ghost_proposalCount = proposalId;
             ghost_highestState[proposalId] = 0; // Pending
             ghost_quorumAtCreation[proposalId] = governor.quorum(proposalId);
@@ -232,10 +219,7 @@ contract GovernorHandler is Test {
         vm.prank(actor);
         try governor.castVote(proposalIdx, support) {
             if (!alreadyVoted) {
-                _voteRecords.push(VoteRecord({
-                    proposalId: proposalIdx,
-                    voter: actor
-                }));
+                _voteRecords.push(VoteRecord({proposalId: proposalIdx, voter: actor}));
             }
             ghost_voteCount++;
         } catch {}
@@ -329,11 +313,7 @@ contract GovernorInvariantTest is Test, GovernorDeployHelper {
         treasuryAddr = address(0xBABE);
 
         // Deploy Governor
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            treasuryAddr
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), treasuryAddr);
 
         // Grant governor the proposer role on timelock
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
@@ -384,11 +364,7 @@ contract GovernorInvariantTest is Test, GovernorDeployHelper {
 
     /// @notice ARM token total supply never changes from INITIAL_SUPPLY
     function invariant_armTotalSupplyConstant() public view {
-        assertEq(
-            armToken.totalSupply(),
-            armToken.INITIAL_SUPPLY(),
-            "INV-G1: ARM total supply changed"
-        );
+        assertEq(armToken.totalSupply(), armToken.INITIAL_SUPPLY(), "INV-G1: ARM total supply changed");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -400,10 +376,7 @@ contract GovernorInvariantTest is Test, GovernorDeployHelper {
         uint256 uniqueRecords = handler.ghost_uniqueVoteRecords();
         for (uint256 i = 0; i < uniqueRecords; i++) {
             (uint256 proposalId, address voter) = handler.ghost_voteAt(i);
-            assertTrue(
-                governor.hasVoted(proposalId, voter),
-                "INV-G2: Vote not recorded in hasVoted mapping"
-            );
+            assertTrue(governor.hasVoted(proposalId, voter), "INV-G2: Vote not recorded in hasVoted mapping");
         }
     }
 
@@ -413,11 +386,7 @@ contract GovernorInvariantTest is Test, GovernorDeployHelper {
 
     /// @notice No proposal state ever went backward
     function invariant_proposalStateMonotonic() public view {
-        assertEq(
-            handler.ghost_stateMonotonicityViolations(),
-            0,
-            "INV-G3: Proposal state went backward"
-        );
+        assertEq(handler.ghost_stateMonotonicityViolations(), 0, "INV-G3: Proposal state went backward");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -431,11 +400,7 @@ contract GovernorInvariantTest is Test, GovernorDeployHelper {
             uint256 creationQuorum = handler.ghost_quorumAtCreation(i);
             if (creationQuorum == 0) continue; // proposal creation may have failed
             uint256 currentQuorum = governor.quorum(i);
-            assertEq(
-                currentQuorum,
-                creationQuorum,
-                "INV-G5: Quorum changed after proposal creation"
-            );
+            assertEq(currentQuorum, creationQuorum, "INV-G5: Quorum changed after proposal creation");
         }
     }
 
@@ -450,11 +415,7 @@ contract GovernorInvariantTest is Test, GovernorDeployHelper {
         for (uint256 i = 1; i <= count; i++) {
             uint256 creationQuorum = handler.ghost_quorumAtCreation(i);
             if (creationQuorum == 0) continue; // proposal creation may have failed
-            assertGe(
-                creationQuorum,
-                floor,
-                "INV-G6: Quorum below QUORUM_FLOOR"
-            );
+            assertGe(creationQuorum, floor, "INV-G6: Quorum below QUORUM_FLOOR");
         }
     }
 

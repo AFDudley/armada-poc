@@ -28,7 +28,6 @@ contract ArmadaGovernorV2Mock is ArmadaGovernor {
 
 /// @title GovernorUpgradeTest — UUPS upgrade lifecycle tests
 contract GovernorUpgradeTest is Test, GovernorDeployHelper {
-
     ArmadaGovernor public governor;
     ArmadaToken public armToken;
     TimelockController public timelock;
@@ -56,11 +55,7 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
         treasury = new ArmadaTreasuryGov(address(timelock));
 
         // Deploy governor behind proxy
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Grant timelock roles to governor
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
@@ -168,8 +163,7 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
         governor.upgradeTo(address(v2Impl));
 
         // Verify params persist
-        (delay, period, execDelay, quorum) =
-            governor.proposalTypeParams(ProposalType.Standard);
+        (delay, period, execDelay, quorum) = governor.proposalTypeParams(ProposalType.Standard);
         assertEq(delay, 2 days);
         assertEq(period, 7 days);
         assertEq(execDelay, 3 days);
@@ -180,22 +174,14 @@ contract GovernorUpgradeTest is Test, GovernorDeployHelper {
 
     function test_initialize_cannotReinitialize() public {
         vm.expectRevert("Initializable: contract is already initialized");
-        governor.initialize(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor.initialize(address(armToken), payable(address(timelock)), address(treasury));
     }
 
     function test_initialize_implementationCannotBeInitialized() public {
         ArmadaGovernor impl = new ArmadaGovernor();
 
         vm.expectRevert("Initializable: contract is already initialized");
-        impl.initialize(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        impl.initialize(address(armToken), payable(address(timelock)), address(treasury));
     }
 
     // ============ Extended Classification ============

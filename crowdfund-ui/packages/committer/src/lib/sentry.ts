@@ -1,10 +1,10 @@
 // ABOUTME: Sentry initialization for the crowdfund committer app.
 // ABOUTME: No-op when VITE_SENTRY_DSN is unset so local/dev runs incur no overhead.
 
-import * as Sentry from '@sentry/react'
-import type { ErrorEvent, Breadcrumb } from '@sentry/react'
+import * as Sentry from "@sentry/react";
+import type { ErrorEvent, Breadcrumb } from "@sentry/react";
 
-let initialized = false
+let initialized = false;
 
 /**
  * Remove the query string (and everything after it) from a URL-like string.
@@ -12,8 +12,8 @@ let initialized = false
  * token), so nothing with a query string may leave the app.
  */
 export function stripQueryString(url: string): string {
-  const i = url.indexOf('?')
-  return i === -1 ? url : url.slice(0, i)
+  const i = url.indexOf("?");
+  return i === -1 ? url : url.slice(0, i);
 }
 
 /**
@@ -22,15 +22,15 @@ export function stripQueryString(url: string): string {
  */
 export function scrubEventUrls(event: ErrorEvent): ErrorEvent {
   if (event.request?.url) {
-    event.request.url = stripQueryString(event.request.url)
+    event.request.url = stripQueryString(event.request.url);
   }
   for (const value of event.exception?.values ?? []) {
     for (const frame of value.stacktrace?.frames ?? []) {
-      if (frame.abs_path) frame.abs_path = stripQueryString(frame.abs_path)
-      if (frame.filename) frame.filename = stripQueryString(frame.filename)
+      if (frame.abs_path) frame.abs_path = stripQueryString(frame.abs_path);
+      if (frame.filename) frame.filename = stripQueryString(frame.filename);
     }
   }
-  return event
+  return event;
 }
 
 /**
@@ -38,18 +38,18 @@ export function scrubEventUrls(event: ErrorEvent): ErrorEvent {
  * (navigation `from`/`to`, fetch/xhr `url`). Mutates and returns the crumb.
  */
 export function scrubBreadcrumbUrls(breadcrumb: Breadcrumb): Breadcrumb {
-  const data = breadcrumb.data
+  const data = breadcrumb.data;
   if (data) {
-    if (typeof data.url === 'string') data.url = stripQueryString(data.url)
-    if (typeof data.from === 'string') data.from = stripQueryString(data.from)
-    if (typeof data.to === 'string') data.to = stripQueryString(data.to)
+    if (typeof data.url === "string") data.url = stripQueryString(data.url);
+    if (typeof data.from === "string") data.from = stripQueryString(data.from);
+    if (typeof data.to === "string") data.to = stripQueryString(data.to);
   }
-  return breadcrumb
+  return breadcrumb;
 }
 
 /** Whether Sentry was actually initialized (DSN present). */
 export function isSentryEnabled(): boolean {
-  return initialized
+  return initialized;
 }
 
 /**
@@ -57,23 +57,26 @@ export function isSentryEnabled(): boolean {
  * missing, NaN, or out of range falls back to 0 (tracing disabled).
  */
 function getTracesSampleRate(): number {
-  const raw = import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE
-  if (raw == null || raw === '') return 0
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n < 0 || n > 1) return 0
-  return n
+  const raw = import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE;
+  if (raw == null || raw === "") return 0;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 1) return 0;
+  return n;
 }
 
 export function initSentry(): void {
-  if (initialized) return
-  const dsn = import.meta.env.VITE_SENTRY_DSN
-  if (!dsn) return
+  if (initialized) return;
+  const dsn = import.meta.env.VITE_SENTRY_DSN;
+  if (!dsn) return;
 
-  const tracesSampleRate = getTracesSampleRate()
+  const tracesSampleRate = getTracesSampleRate();
 
   Sentry.init({
     dsn,
-    environment: import.meta.env.VITE_SENTRY_ENVIRONMENT ?? import.meta.env.MODE ?? 'production',
+    environment:
+      import.meta.env.VITE_SENTRY_ENVIRONMENT ??
+      import.meta.env.MODE ??
+      "production",
     release: import.meta.env.VITE_SENTRY_RELEASE,
     // Performance tracing is opt-in per environment via
     // VITE_SENTRY_TRACES_SAMPLE_RATE (e.g. 0.1 for 10% sampling). Defaults to 0
@@ -93,27 +96,27 @@ export function initSentry(): void {
     // nonce, deadline). Even though invite signatures aren't secret, we don't
     // want inviter addresses leaking into Sentry transactions / breadcrumbs.
     beforeSendTransaction(event) {
-      if (event.transaction && event.transaction.includes('?')) {
-        event.transaction = event.transaction.split('?')[0]
+      if (event.transaction && event.transaction.includes("?")) {
+        event.transaction = event.transaction.split("?")[0];
       }
-      if (event.request?.url && event.request.url.includes('?')) {
-        event.request.url = event.request.url.split('?')[0]
+      if (event.request?.url && event.request.url.includes("?")) {
+        event.request.url = event.request.url.split("?")[0];
       }
-      return event
+      return event;
     },
     // Error events (unlike transactions) carry request.url = the full
     // window.location.href and stack-frame source URLs. Strip query strings so
     // an invite-link signature can't ride out on a render error.
     beforeSend(event) {
-      return scrubEventUrls(event)
+      return scrubEventUrls(event);
     },
     // Default breadcrumbs capture navigation/fetch/xhr URLs verbatim. Scrub
     // their query strings for the same reason.
     beforeBreadcrumb(breadcrumb) {
-      return scrubBreadcrumbUrls(breadcrumb)
+      return scrubBreadcrumbUrls(breadcrumb);
     },
-  })
-  initialized = true
+  });
+  initialized = true;
 }
 
 /**
@@ -121,26 +124,33 @@ export function initSentry(): void {
  * rejection, chain mismatch, etc.) with a `wallet` tag and structured breadcrumb so
  * Sentry filters and the issue triage flow can split wallet errors from contract errors.
  */
-export function captureWalletError(err: unknown, context?: Record<string, unknown>): void {
-  if (!initialized) return
+export function captureWalletError(
+  err: unknown,
+  context?: Record<string, unknown>,
+): void {
+  if (!initialized) return;
   Sentry.withScope((scope) => {
-    scope.setTag('source', 'wallet')
-    if (context) scope.setContext('wallet', context as Record<string, unknown>)
-    Sentry.captureException(err)
-  })
+    scope.setTag("source", "wallet");
+    if (context) scope.setContext("wallet", context as Record<string, unknown>);
+    Sentry.captureException(err);
+  });
 }
 
 /**
  * Capture an error originating from a contract write (revert, gas estimation failure,
  * receipt mismatch, etc.). Tag + breadcrumb mirror the wallet path so triage stays simple.
  */
-export function captureContractError(err: unknown, context?: Record<string, unknown>): void {
-  if (!initialized) return
+export function captureContractError(
+  err: unknown,
+  context?: Record<string, unknown>,
+): void {
+  if (!initialized) return;
   Sentry.withScope((scope) => {
-    scope.setTag('source', 'contract')
-    if (context) scope.setContext('contract', context as Record<string, unknown>)
-    Sentry.captureException(err)
-  })
+    scope.setTag("source", "contract");
+    if (context)
+      scope.setContext("contract", context as Record<string, unknown>);
+    Sentry.captureException(err);
+  });
 }
 
-export const SentryErrorBoundary = Sentry.ErrorBoundary
+export const SentryErrorBoundary = Sentry.ErrorBoundary;

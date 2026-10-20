@@ -73,7 +73,7 @@ describe("Crowdfund EIP-712 Invites", function () {
     inviter: string,
     fromHop: number,
     nonce: number,
-    deadline: number
+    deadline: number,
   ) {
     return { inviter, fromHop, nonce, deadline };
   }
@@ -83,7 +83,7 @@ describe("Crowdfund EIP-712 Invites", function () {
     signer: SignerWithAddress,
     fromHop: number,
     nonce: number,
-    deadline: number
+    deadline: number,
   ): Promise<string> {
     const value = inviteValue(signer.address, fromHop, nonce, deadline);
     return signer.signTypedData(domain, inviteTypes, value);
@@ -96,8 +96,18 @@ describe("Crowdfund EIP-712 Invites", function () {
 
   beforeEach(async function () {
     allSigners = await ethers.getSigners();
-    [deployer, seed1, seed2, hop1a, hop1b, hop1c, hop1d, treasury, outsider, alice] =
-      allSigners;
+    [
+      deployer,
+      seed1,
+      seed2,
+      hop1a,
+      hop1b,
+      hop1c,
+      hop1d,
+      treasury,
+      outsider,
+      alice,
+    ] = allSigners;
     securityCouncil = allSigners[10];
 
     // Deploy MockUSDCV2
@@ -118,9 +128,9 @@ describe("Crowdfund EIP-712 Invites", function () {
       await usdc.getAddress(),
       await armToken.getAddress(),
       treasury.address,
-      deployer.address,         // launchTeam
-      securityCouncil.address,  // securityCouncil
-      openTimestamp
+      deployer.address, // launchTeam
+      securityCouncil.address, // securityCouncil
+      openTimestamp,
     );
     await crowdfund.waitForDeployment();
     const cfAddr = await crowdfund.getAddress();
@@ -162,13 +172,20 @@ describe("Crowdfund EIP-712 Invites", function () {
         seed1,
         0, // fromHop
         nonce,
-        deadline
+        deadline,
       );
 
       const commitAmount = USDC(1_000);
       const tx = await crowdfund
         .connect(hop1a)
-        .commitWithInvite(seed1.address, 0, nonce, deadline, signature, commitAmount);
+        .commitWithInvite(
+          seed1.address,
+          0,
+          nonce,
+          deadline,
+          signature,
+          commitAmount,
+        );
 
       // Verify Invited event with the actual nonce (not 0)
       await expect(tx)
@@ -191,17 +208,19 @@ describe("Crowdfund EIP-712 Invites", function () {
       const pastDeadline = (await time.latest()) - 1;
       const nonce = 1;
 
-      const signature = await signInvite(
-        seed1,
-        0,
-        nonce,
-        pastDeadline
-      );
+      const signature = await signInvite(seed1, 0, nonce, pastDeadline);
 
       await expect(
         crowdfund
           .connect(hop1a)
-          .commitWithInvite(seed1.address, 0, nonce, pastDeadline, signature, USDC(1_000))
+          .commitWithInvite(
+            seed1.address,
+            0,
+            nonce,
+            pastDeadline,
+            signature,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: invite expired");
     });
 
@@ -214,7 +233,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(hop1a)
-          .commitWithInvite(seed1.address, 0, 0, deadline, signature, USDC(1_000))
+          .commitWithInvite(
+            seed1.address,
+            0,
+            0,
+            deadline,
+            signature,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: zero nonce");
     });
 
@@ -234,7 +260,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(hop1b)
-          .commitWithInvite(seed1.address, 0, nonce, deadline, sig2, USDC(1_000))
+          .commitWithInvite(
+            seed1.address,
+            0,
+            nonce,
+            deadline,
+            sig2,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: nonce already used");
     });
 
@@ -251,7 +284,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(hop1a)
-          .commitWithInvite(seed1.address, 0, nonce, deadline, signature, USDC(1_000))
+          .commitWithInvite(
+            seed1.address,
+            0,
+            nonce,
+            deadline,
+            signature,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: nonce already used");
     });
 
@@ -261,18 +301,20 @@ describe("Crowdfund EIP-712 Invites", function () {
       const nonce = 1;
 
       // outsider signs instead of seed1
-      const signature = await signInvite(
-        outsider,
-        0,
-        nonce,
-        deadline
-      );
+      const signature = await signInvite(outsider, 0, nonce, deadline);
 
       // hop1a calls with inviter=seed1, but signature is from outsider
       await expect(
         crowdfund
           .connect(hop1a)
-          .commitWithInvite(seed1.address, 0, nonce, deadline, signature, USDC(1_000))
+          .commitWithInvite(
+            seed1.address,
+            0,
+            nonce,
+            deadline,
+            signature,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: invalid invite signature");
     });
 
@@ -289,7 +331,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(hop1a)
-          .commitWithInvite(outsider.address, 0, nonce, deadline, signature, USDC(1_000))
+          .commitWithInvite(
+            outsider.address,
+            0,
+            nonce,
+            deadline,
+            signature,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: invalid invite signature");
     });
 
@@ -305,7 +354,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       const commitAmount = USDC(1_000);
       const tx = await crowdfund
         .connect(hop1a)
-        .commitWithInvite(seed1.address, 0, nonce, deadline, signature, commitAmount);
+        .commitWithInvite(
+          seed1.address,
+          0,
+          nonce,
+          deadline,
+          signature,
+          commitAmount,
+        );
 
       await expect(tx)
         .to.emit(crowdfund, "Invited")
@@ -325,7 +381,14 @@ describe("Crowdfund EIP-712 Invites", function () {
         const sig = await signInvite(seed1, 0, i + 1, deadline);
         await crowdfund
           .connect(invitee)
-          .commitWithInvite(seed1.address, 0, i + 1, deadline, sig, USDC(1_000));
+          .commitWithInvite(
+            seed1.address,
+            0,
+            i + 1,
+            deadline,
+            sig,
+            USDC(1_000),
+          );
       }
 
       // 4th invite should fail
@@ -333,7 +396,7 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(hop1d)
-          .commitWithInvite(seed1.address, 0, 4, deadline, sig4, USDC(1_000))
+          .commitWithInvite(seed1.address, 0, 4, deadline, sig4, USDC(1_000)),
       ).to.be.revertedWith("ArmadaCrowdfund: invite limit reached");
     });
 
@@ -352,7 +415,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(hop1a)
-          .commitWithInvite(seed1.address, 0, nonce, deadline, signature, USDC(1_000))
+          .commitWithInvite(
+            seed1.address,
+            0,
+            nonce,
+            deadline,
+            signature,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: not active window");
     });
 
@@ -369,11 +439,20 @@ describe("Crowdfund EIP-712 Invites", function () {
       const commitAmount = USDC(500);
       await crowdfund
         .connect(hop1b)
-        .commitWithInvite(hop1a.address, 1, nonce, deadline, signature, commitAmount);
+        .commitWithInvite(
+          hop1a.address,
+          1,
+          nonce,
+          deadline,
+          signature,
+          commitAmount,
+        );
 
       // Verify hop1b is whitelisted at hop-2 with correct commitment
       expect(await crowdfund.isWhitelisted(hop1b.address, 2)).to.be.true;
-      expect(await crowdfund.getCommitment(hop1b.address, 2)).to.equal(commitAmount);
+      expect(await crowdfund.getCommitment(hop1b.address, 2)).to.equal(
+        commitAmount,
+      );
     });
 
     it("should revert with fromHop=2 (hop-2 cannot invite further)", async function () {
@@ -391,7 +470,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(hop1c)
-          .commitWithInvite(hop1b.address, 2, nonce, deadline, signature, USDC(500))
+          .commitWithInvite(
+            hop1b.address,
+            2,
+            nonce,
+            deadline,
+            signature,
+            USDC(500),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: max hop reached");
     });
 
@@ -409,7 +495,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(deployer)
-          .commitWithInvite(seed1.address, 0, nonce, deadline, signature, USDC(1_000))
+          .commitWithInvite(
+            seed1.address,
+            0,
+            nonce,
+            deadline,
+            signature,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: launch team cannot commit");
     });
 
@@ -435,7 +528,14 @@ describe("Crowdfund EIP-712 Invites", function () {
       await expect(
         crowdfund
           .connect(alice)
-          .commitWithInvite(seeds[10].address, 0, nonce, deadline, signature, USDC(1_000))
+          .commitWithInvite(
+            seeds[10].address,
+            0,
+            nonce,
+            deadline,
+            signature,
+            USDC(1_000),
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: max invites received");
     });
   });
@@ -460,7 +560,7 @@ describe("Crowdfund EIP-712 Invites", function () {
 
     it("should revert when revoking nonce zero", async function () {
       await expect(
-        crowdfund.connect(seed1).revokeInviteNonce(0)
+        crowdfund.connect(seed1).revokeInviteNonce(0),
       ).to.be.revertedWith("ArmadaCrowdfund: zero nonce");
     });
 
@@ -473,11 +573,18 @@ describe("Crowdfund EIP-712 Invites", function () {
       const signature = await signInvite(seed1, 0, nonce, deadline);
       await crowdfund
         .connect(hop1a)
-        .commitWithInvite(seed1.address, 0, nonce, deadline, signature, USDC(1_000));
+        .commitWithInvite(
+          seed1.address,
+          0,
+          nonce,
+          deadline,
+          signature,
+          USDC(1_000),
+        );
 
       // Now seed1 tries to revoke the already-used nonce
       await expect(
-        crowdfund.connect(seed1).revokeInviteNonce(nonce)
+        crowdfund.connect(seed1).revokeInviteNonce(nonce),
       ).to.be.revertedWith("ArmadaCrowdfund: nonce already used");
     });
 
@@ -487,7 +594,7 @@ describe("Crowdfund EIP-712 Invites", function () {
       await crowdfund.connect(seed1).revokeInviteNonce(nonce);
 
       await expect(
-        crowdfund.connect(seed1).revokeInviteNonce(nonce)
+        crowdfund.connect(seed1).revokeInviteNonce(nonce),
       ).to.be.revertedWith("ArmadaCrowdfund: nonce already used");
     });
   });
@@ -505,9 +612,9 @@ describe("Crowdfund EIP-712 Invites", function () {
       const signature = await signInvite(seed1, 0, nonce, deadline);
 
       await expect(
-        crowdfund.connect(hop1a).commitWithInvite(
-          seed1.address, 0, nonce, deadline, signature, 0n
-        )
+        crowdfund
+          .connect(hop1a)
+          .commitWithInvite(seed1.address, 0, nonce, deadline, signature, 0n),
       ).to.be.revertedWith("ArmadaCrowdfund: below minimum commitment");
     });
 
@@ -520,9 +627,16 @@ describe("Crowdfund EIP-712 Invites", function () {
 
       // $49.999999 (one wei below MIN_COMMIT)
       await expect(
-        crowdfund.connect(hop1a).commitWithInvite(
-          seed1.address, 0, nonce, deadline, signature, USDC(50) - 1n
-        )
+        crowdfund
+          .connect(hop1a)
+          .commitWithInvite(
+            seed1.address,
+            0,
+            nonce,
+            deadline,
+            signature,
+            USDC(50) - 1n,
+          ),
       ).to.be.revertedWith("ArmadaCrowdfund: below minimum commitment");
     });
 
@@ -533,9 +647,16 @@ describe("Crowdfund EIP-712 Invites", function () {
 
       const signature = await signInvite(seed1, 0, nonce, deadline);
 
-      await crowdfund.connect(hop1a).commitWithInvite(
-        seed1.address, 0, nonce, deadline, signature, USDC(50)
-      );
+      await crowdfund
+        .connect(hop1a)
+        .commitWithInvite(
+          seed1.address,
+          0,
+          nonce,
+          deadline,
+          signature,
+          USDC(50),
+        );
 
       const committed = await crowdfund.getCommitment(hop1a.address, 1);
       expect(committed).to.equal(USDC(50));

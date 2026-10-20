@@ -134,11 +134,7 @@ contract YieldInvariantTest is Test {
 
     /// @notice totalAssets() equals USDC held by vault in the spoke
     function invariant_totalAssetsConsistency() public view {
-        assertEq(
-            vault.totalAssets(),
-            spoke.getUserSuppliedAssets(0, address(vault)),
-            "totalAssets != spoke balance"
-        );
+        assertEq(vault.totalAssets(), spoke.getUserSuppliedAssets(0, address(vault)), "totalAssets != spoke balance");
     }
 
     /// @notice sum of (shares * exchangeRate) <= totalAssets (no share inflation)

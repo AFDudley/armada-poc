@@ -30,10 +30,10 @@ contract YieldFullHandler is Test {
     // Ghost variables
     uint256 public ghost_totalDeposited;
     uint256 public ghost_totalRedeemed;
-    uint256 public ghost_lastSharePrice;      // scaled by 1e18
+    uint256 public ghost_lastSharePrice; // scaled by 1e18
     bool public ghost_sharePriceInitialized;
     uint256 public ghost_sharePriceViolations; // should always be 0
-    bool public ghost_skipNextPriceCheck;     // skip after fee-extracting operations
+    bool public ghost_skipNextPriceCheck; // skip after fee-extracting operations
 
     constructor(
         ArmadaYieldVault _vault,
@@ -222,20 +222,12 @@ contract YieldFullInvariantTest is Test {
     /// @dev In a proper atomic operation, the adapter deposits USDC into vault
     ///      and shields the resulting shares. Between operations, balance should be 0.
     function invariant_adapterHoldsZeroUsdc() public view {
-        assertEq(
-            usdc.balanceOf(address(adapter)),
-            0,
-            "INV-Y1: Adapter holds USDC between operations"
-        );
+        assertEq(usdc.balanceOf(address(adapter)), 0, "INV-Y1: Adapter holds USDC between operations");
     }
 
     /// @notice Adapter should never hold any ayUSDC between operations
     function invariant_adapterHoldsZeroShares() public view {
-        assertEq(
-            vault.balanceOf(address(adapter)),
-            0,
-            "INV-Y1: Adapter holds ayUSDC between operations"
-        );
+        assertEq(vault.balanceOf(address(adapter)), 0, "INV-Y1: Adapter holds ayUSDC between operations");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -258,11 +250,7 @@ contract YieldFullInvariantTest is Test {
 
     /// @notice Share price monotonicity: no violations recorded
     function invariant_sharePriceNonDecreasing() public view {
-        assertEq(
-            handler.ghost_sharePriceViolations(),
-            0,
-            "INV-Y3: Share price decreased during sequence"
-        );
+        assertEq(handler.ghost_sharePriceViolations(), 0, "INV-Y3: Share price decreased during sequence");
     }
 
     /// @notice Current share price within 1 bps of last recorded price.
@@ -279,11 +267,7 @@ contract YieldFullInvariantTest is Test {
 
         // Check decrease is within 1 bps tolerance
         uint256 decrease = lastPrice - currentPrice;
-        assertLe(
-            decrease * 10000,
-            lastPrice,
-            "INV-Y3: Share price decreased by more than 1 bps"
-        );
+        assertLe(decrease * 10000, lastPrice, "INV-Y3: Share price decreased by more than 1 bps");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -292,11 +276,7 @@ contract YieldFullInvariantTest is Test {
 
     /// @notice totalAssets matches what the spoke reports
     function invariant_totalAssetsConsistency() public view {
-        assertEq(
-            vault.totalAssets(),
-            spoke.getUserSuppliedAssets(0, address(vault)),
-            "totalAssets != spoke balance"
-        );
+        assertEq(vault.totalAssets(), spoke.getUserSuppliedAssets(0, address(vault)), "totalAssets != spoke balance");
     }
 }
 
@@ -318,13 +298,7 @@ contract YieldNoProfitTest is Test {
 
         // Unified ArmadaTreasuryGov as fee sink (#152/#154); owner arg unused by invariants here.
         treasury = new ArmadaTreasuryGov(address(this));
-        vault = new ArmadaYieldVault(
-            address(spoke),
-            0,
-            address(treasury),
-            "Armada Yield USDC",
-            "ayUSDC"
-        );
+        vault = new ArmadaYieldVault(address(spoke), 0, address(treasury), "Armada Yield USDC", "ayUSDC");
     }
 
     /// @notice INV-Y4: deposit(x) then immediately redeem(shares) returns <= x
@@ -346,11 +320,7 @@ contract YieldNoProfitTest is Test {
         uint256 assetsOut = vault.redeem(shares, user, user);
 
         // Should get back <= what was deposited (no free profit)
-        assertLe(
-            assetsOut,
-            depositAmount,
-            "INV-Y4: Got more out than deposited (free profit)"
-        );
+        assertLe(assetsOut, depositAmount, "INV-Y4: Got more out than deposited (free profit)");
 
         // Should get back exactly depositAmount when no yield and no fee
         // (since yield = 0, fee = 0, grossAssets may equal depositAmount)
@@ -383,11 +353,7 @@ contract YieldNoProfitTest is Test {
         uint256 assetsOut = vault.redeem(totalShares, user, user);
 
         // Should get back <= total deposited
-        assertLe(
-            assetsOut,
-            amount1 + amount2,
-            "INV-Y4: Multi-deposit free profit"
-        );
+        assertLe(assetsOut, amount1 + amount2, "INV-Y4: Multi-deposit free profit");
     }
 
     /// @notice Yield fee extraction: after yield accrues, user gets (principal + 90% of yield)
@@ -411,18 +377,15 @@ contract YieldNoProfitTest is Test {
         uint256 assetsOut = vault.redeem(shares, user, user);
 
         // Assets out should be >= principal (yield - fee > 0 for realistic durations)
-        assertGe(
-            assetsOut,
-            depositAmount,
-            "INV-Y4: Got less than principal after yield accrual"
-        );
+        assertGe(assetsOut, depositAmount, "INV-Y4: Got less than principal after yield accrual");
 
         // The treasury should have received exactly 10% of yield
         uint256 treasuryBalance = usdc.balanceOf(address(treasury));
         uint256 totalYield = assetsOut + treasuryBalance - depositAmount;
 
         // Treasury should have ~10% of yield (allow 1 wei rounding)
-        if (totalYield > 10) { // only check if meaningful yield
+        if (totalYield > 10) {
+            // only check if meaningful yield
             assertGe(treasuryBalance, 0, "Treasury received negative fee");
             // treasuryBalance should be approximately totalYield * 1000 / 10000
             // but due to integer math, we just verify it's > 0 and <= totalYield

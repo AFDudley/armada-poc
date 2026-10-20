@@ -50,9 +50,14 @@ function isBlockRangeError(err: unknown): boolean {
     if (typeof inner.message === "string") candidates.push(inner.message);
   }
   if (typeof e.info === "object" && e.info !== null) {
-    const info = e.info as { responseBody?: unknown; error?: { message?: unknown } };
-    if (typeof info.responseBody === "string") candidates.push(info.responseBody);
-    if (typeof info.error?.message === "string") candidates.push(info.error.message);
+    const info = e.info as {
+      responseBody?: unknown;
+      error?: { message?: unknown };
+    };
+    if (typeof info.responseBody === "string")
+      candidates.push(info.responseBody);
+    if (typeof info.error?.message === "string")
+      candidates.push(info.error.message);
   }
   return candidates.some((s) => RANGE_ERROR_PATTERNS.some((p) => p.test(s)));
 }
@@ -126,7 +131,9 @@ async function bisectEthGetLogs(
 }
 
 const PATCHED_FLAG = Symbol.for("armada.bisectingGetLogs.patched");
-type PatchedPrototype = typeof JsonRpcProvider.prototype & { [PATCHED_FLAG]?: boolean };
+type PatchedPrototype = typeof JsonRpcProvider.prototype & {
+  [PATCHED_FLAG]?: boolean;
+};
 
 /**
  * Patches `JsonRpcProvider.prototype.send` to intercept eth_getLogs calls and bisect on range
@@ -150,7 +157,11 @@ export function installBisectingGetLogs(): void {
     method: string,
     params: unknown[],
   ) {
-    if (method !== "eth_getLogs" || !Array.isArray(params) || params.length === 0) {
+    if (
+      method !== "eth_getLogs" ||
+      !Array.isArray(params) ||
+      params.length === 0
+    ) {
       return originalSend.call(this, method, params);
     }
     const filter = params[0];
@@ -179,4 +190,7 @@ export function _uninstallBisectingGetLogs(): void {
 }
 
 // Internal exports for tests. Don't import these from app code.
-export { bisectEthGetLogs as _bisectEthGetLogs, isBlockRangeError as _isBlockRangeError };
+export {
+  bisectEthGetLogs as _bisectEthGetLogs,
+  isBlockRangeError as _isBlockRangeError,
+};

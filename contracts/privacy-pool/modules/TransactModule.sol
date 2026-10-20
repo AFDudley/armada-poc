@@ -66,12 +66,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
             require(valid, string(abi.encodePacked("TransactModule: ", reason)));
 
             // Nullify inputs and accumulate commitments
-            commitmentsStartOffset = _accumulateAndNullify(
-                _transactions[i],
-                commitmentHashes,
-                commitmentsStartOffset,
-                ciphertext
-            );
+            commitmentsStartOffset =
+                _accumulateAndNullify(_transactions[i], commitmentHashes, commitmentsStartOffset, ciphertext);
         }
 
         // Second pass: process unshields (after all nullifiers are marked)
@@ -83,8 +79,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
 
         // Insert new commitments into merkle tree
         if (commitmentsCount > 0) {
-            (uint256 insertionTreeNumber, uint256 insertionStartIndex) = IMerkleModule(address(this))
-                .getInsertionTreeNumberAndStartingIndex(commitmentsCount);
+            (uint256 insertionTreeNumber, uint256 insertionStartIndex) =
+                IMerkleModule(address(this)).getInsertionTreeNumberAndStartingIndex(commitmentsCount);
 
             // Announce the new notes for wallet sync
             emit Transact(insertionTreeNumber, insertionStartIndex, commitmentHashes, ciphertext);
@@ -146,23 +142,17 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
     ) internal view {
         require(destinationDomain != localDomain, "TransactModule: Use local unshield");
         require(finalRecipient != address(0), "TransactModule: Invalid recipient");
-        require(
-            _transaction.boundParams.unshield != UnshieldType.NONE,
-            "TransactModule: Must include unshield"
-        );
+        require(_transaction.boundParams.unshield != UnshieldType.NONE, "TransactModule: Must include unshield");
         // CCTP only bridges USDC, and the burn below always spends the pool's `usdc` for the
         // note's value, so the note being unshielded must itself be a USDC note (spec OQ-9).
         // The pool stays multi-asset: other tokens still shield, transfer and unshield locally.
         require(
-            _transaction.unshieldPreimage.token.tokenType == TokenType.ERC20 &&
-                _transaction.unshieldPreimage.token.tokenAddress == usdc,
+            _transaction.unshieldPreimage.token.tokenType == TokenType.ERC20
+                && _transaction.unshieldPreimage.token.tokenAddress == usdc,
             "TransactModule: Cross-chain unshield is USDC-only"
         );
         require(remotePools[destinationDomain] != bytes32(0), "TransactModule: Unknown destination");
-        require(
-            remoteHookRouters[destinationDomain] != bytes32(0),
-            "TransactModule: Hook router not configured"
-        );
+        require(remoteHookRouters[destinationDomain] != bytes32(0), "TransactModule: Hook router not configured");
 
         // Bind the CCTP destination tuple (recipient + domain + fee) to the proof. These are
         // plaintext arguments the SNARK does not otherwise cover; without binding, a relayer or
@@ -172,17 +162,9 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
         // so the prover sets it to CCTPBindingLib.encode(...) and we reject any mismatch here. This
         // also blocks hijacking a local unshield (adaptParams == 0) through this path. No circuit
         // change; destinationCaller is pinned on-chain separately.
+        require(_transaction.boundParams.adaptContract == address(0), "TransactModule: unexpected adaptContract");
         require(
-            _transaction.boundParams.adaptContract == address(0),
-            "TransactModule: unexpected adaptContract"
-        );
-        require(
-            CCTPBindingLib.verify(
-                _transaction.boundParams.adaptParams,
-                finalRecipient,
-                destinationDomain,
-                maxFee
-            ),
+            CCTPBindingLib.verify(_transaction.boundParams.adaptParams, finalRecipient, destinationDomain, maxFee),
             "TransactModule: destination not bound to proof"
         );
 
@@ -213,8 +195,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
             _accumulateAndNullify(_transaction, commitmentHashes, 0, ciphertext);
 
             // Insert non-unshield commitments into merkle tree
-            (uint256 insertionTreeNumber, uint256 insertionStartIndex) = IMerkleModule(address(this))
-                .getInsertionTreeNumberAndStartingIndex(commitmentsCount);
+            (uint256 insertionTreeNumber, uint256 insertionStartIndex) =
+                IMerkleModule(address(this)).getInsertionTreeNumberAndStartingIndex(commitmentsCount);
 
             emit Transact(insertionTreeNumber, insertionStartIndex, commitmentHashes, ciphertext);
             IMerkleModule(address(this)).insertLeaves(commitmentHashes);
@@ -248,24 +230,24 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
         require(maxFee < base, "TransactModule: maxFee must be below amount");
 
         // Encode the hook payload the client-side pool will decode
-        bytes memory hookData = CCTPPayloadLib.encodeUnshield(
-            UnshieldData({ recipient: finalRecipient, uniqueNonce: uniqueNonce })
-        );
+        bytes memory hookData =
+            CCTPPayloadLib.encodeUnshield(UnshieldData({recipient: finalRecipient, uniqueNonce: uniqueNonce}));
 
         // Burn via CCTP (allowance reset first, then exact per-call approval)
         IERC20(usdc).safeApprove(tokenMessenger, 0);
         IERC20(usdc).safeApprove(tokenMessenger, base);
 
-        ITokenMessengerV2(tokenMessenger).depositForBurnWithHook(
-            base,
-            destinationDomain,
-            remotePools[destinationDomain],
-            usdc,
-            remoteHookRouters[destinationDomain],
-            maxFee,
-            defaultFinalityThreshold > 0 ? defaultFinalityThreshold : CCTPFinality.STANDARD,
-            hookData
-        );
+        ITokenMessengerV2(tokenMessenger)
+            .depositForBurnWithHook(
+                base,
+                destinationDomain,
+                remotePools[destinationDomain],
+                usdc,
+                remoteHookRouters[destinationDomain],
+                maxFee,
+                defaultFinalityThreshold > 0 ? defaultFinalityThreshold : CCTPFinality.STANDARD,
+                hookData
+            );
         nonce = 0; // CCTP V2 depositForBurnWithHook does not return a nonce
 
         // Emit events
@@ -290,9 +272,11 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
     /// @param _transaction The transaction to validate.
     /// @return valid Whether the transaction passed all checks.
     /// @return reason The failure reason when invalid (callers prefix the module name).
-    function _validateTransaction(
-        Transaction calldata _transaction
-    ) internal view returns (bool valid, string memory reason) {
+    function _validateTransaction(Transaction calldata _transaction)
+        internal
+        view
+        returns (bool valid, string memory reason)
+    {
         // Gas floor for legacy-fee transactions
         if (tx.gasprice < _transaction.boundParams.minGasPrice) {
             return (false, "Gas price too low");
@@ -300,8 +284,7 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
 
         // An adapt contract may only be bound by the adapt contract itself
         if (
-            _transaction.boundParams.adaptContract != address(0) &&
-            _transaction.boundParams.adaptContract != msg.sender
+            _transaction.boundParams.adaptContract != address(0) && _transaction.boundParams.adaptContract != msg.sender
         ) {
             return (false, "Invalid Adapt Contract");
         }
@@ -335,8 +318,8 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
             // An ERC-20 note's tokenSubID is not hashed, so only the canonical 0 is accepted; any
             // other value would surface unchecked in the Unshield event.
             if (
-                _transaction.unshieldPreimage.token.tokenType == TokenType.ERC20 &&
-                _transaction.unshieldPreimage.token.tokenSubID != 0
+                _transaction.unshieldPreimage.token.tokenType == TokenType.ERC20
+                    && _transaction.unshieldPreimage.token.tokenSubID != 0
             ) {
                 return (false, "Invalid Unshield Token");
             }
@@ -345,11 +328,13 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
             bytes32 hash;
             if (_transaction.boundParams.unshield == UnshieldType.REDIRECT) {
                 // Redirect: bind the output hash to the submitting caller
-                hash = _hashCommitment(CommitmentPreimage({
-                    npk: bytes32(uint256(uint160(msg.sender))),
-                    token: _transaction.unshieldPreimage.token,
-                    value: _transaction.unshieldPreimage.value
-                }));
+                hash = _hashCommitment(
+                    CommitmentPreimage({
+                        npk: bytes32(uint256(uint160(msg.sender))),
+                        token: _transaction.unshieldPreimage.token,
+                        value: _transaction.unshieldPreimage.value
+                    })
+                );
             } else {
                 hash = _hashCommitment(_transaction.unshieldPreimage);
             }
@@ -451,11 +436,7 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
 
     /// @notice Computes the commitment leaf hash (spec section 2.2).
     function _hashCommitment(CommitmentPreimage memory _note) internal pure returns (bytes32) {
-        return PoseidonT4.poseidon([
-            _note.npk,
-            _getTokenID(_note.token),
-            bytes32(uint256(_note.value))
-        ]);
+        return PoseidonT4.poseidon([_note.npk, _getTokenID(_note.token), bytes32(uint256(_note.value))]);
     }
 
     /// @notice Derives the field-element token identifier (spec section 2.2).
@@ -475,10 +456,7 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
     ///         enables one (Launch 1's ShieldPauseController has it disabled, #589).
     function _requireNotEmergencyPaused() internal view {
         if (shieldPauseContract == address(0)) return;
-        require(
-            !IShieldPauseController(shieldPauseContract).emergencyPaused(),
-            "TransactModule: emergency paused"
-        );
+        require(!IShieldPauseController(shieldPauseContract).emergencyPaused(), "TransactModule: emergency paused");
     }
 
     /// @notice Reverts if the pool is in withdraw-only mode and any transaction in the
@@ -489,10 +467,7 @@ contract TransactModule is PrivacyPoolStorage, ITransactModule {
         if (!IShieldPauseController(shieldPauseContract).withdrawOnlyMode()) return;
 
         for (uint256 i = 0; i < _transactions.length; i++) {
-            require(
-                _transactions[i].boundParams.unshield != UnshieldType.NONE,
-                "TransactModule: withdraw only"
-            );
+            require(_transactions[i].boundParams.unshield != UnshieldType.NONE, "TransactModule: withdraw only");
         }
     }
 }

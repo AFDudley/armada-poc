@@ -59,14 +59,18 @@ async function main() {
   console.log(`Signer: ${signer.address}`);
   console.log(`Environment: ${config.env}`);
   console.log(`CCTP Mode: ${config.cctpMode}`);
-  console.log(`Target: ${client.name} (${client.role}, domain ${client.cctpDomain})`);
+  console.log(
+    `Target: ${client.name} (${client.role}, domain ${client.cctpDomain})`,
+  );
   console.log("");
 
   // Load Hub deployment (must already be live)
   const hubFilename = getPrivacyPoolDeploymentFile("hub");
   const hubDeployment = loadDeployment(hubFilename);
   if (!hubDeployment) {
-    throw new Error(`Hub deployment not found (${hubFilename}). The hub must be deployed and linked first.`);
+    throw new Error(
+      `Hub deployment not found (${hubFilename}). The hub must be deployed and linked first.`,
+    );
   }
 
   const hubPoolAddress = hubDeployment.contracts.privacyPool;
@@ -82,9 +86,13 @@ async function main() {
   // Guard against re-adding an already-wired client (idempotent-friendly): warn if the domain
   // already has a remote pool set, but proceed — setRemotePool is an overwritable mapping write.
   const privacyPool = await ethers.getContractAt("PrivacyPool", hubPoolAddress);
-  const existingRemote: string = await privacyPool.remotePools(client.cctpDomain);
+  const existingRemote: string = await privacyPool.remotePools(
+    client.cctpDomain,
+  );
   if (existingRemote && existingRemote !== ethers.ZeroHash) {
-    console.log(`Note: domain ${client.cctpDomain} already has a remote pool set (${existingRemote}); re-wiring.`);
+    console.log(
+      `Note: domain ${client.cctpDomain} already has a remote pool set (${existingRemote}); re-wiring.`,
+    );
     console.log("");
   }
 
@@ -93,13 +101,17 @@ async function main() {
 
   // Verify
   const remotePool = await privacyPool.remotePools(client.cctpDomain);
-  const remoteHookRouter = await privacyPool.remoteHookRouters(client.cctpDomain);
+  const remoteHookRouter = await privacyPool.remoteHookRouters(
+    client.cctpDomain,
+  );
   console.log("=== Add Client Complete ===");
   console.log(`  ${client.name} (Domain ${client.cctpDomain})`);
   console.log(`  remotePool:       ${remotePool}`);
   console.log(`  remoteHookRouter: ${remoteHookRouter}`);
   console.log("");
-  console.log("Next: add the new chain to the relayer config and restart the relayer.");
+  console.log(
+    "Next: add the new chain to the relayer config and restart the relayer.",
+  );
 }
 
 main()

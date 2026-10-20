@@ -8,17 +8,13 @@ import {SymTest} from "halmos-cheatcodes/SymTest.sol";
 /// @dev Proves the binary search in ERC20Votes-style _checkpointsLookup returns the correct
 ///      value for ALL possible checkpoint arrays (up to bounded length) and block numbers.
 contract HalmosCheckpointTest is Test, SymTest {
-
     struct Checkpoint {
         uint32 fromBlock;
         uint224 lockedAmount;
     }
 
     /// @dev Mirror of ERC20Votes-style _checkpointsLookup binary search
-    function _checkpointsLookup(
-        Checkpoint[] memory ckpts,
-        uint256 blockNumber
-    ) internal pure returns (uint256) {
+    function _checkpointsLookup(Checkpoint[] memory ckpts, uint256 blockNumber) internal pure returns (uint256) {
         uint256 len = ckpts.length;
         if (len == 0) return 0;
 
@@ -45,10 +41,7 @@ contract HalmosCheckpointTest is Test, SymTest {
     }
 
     /// @dev Naive linear search (reference implementation)
-    function _linearLookup(
-        Checkpoint[] memory ckpts,
-        uint256 blockNumber
-    ) internal pure returns (uint256) {
+    function _linearLookup(Checkpoint[] memory ckpts, uint256 blockNumber) internal pure returns (uint256) {
         uint256 result = 0;
         for (uint256 i = 0; i < ckpts.length; i++) {
             if (ckpts[i].fromBlock <= blockNumber) {
@@ -137,11 +130,7 @@ contract HalmosCheckpointTest is Test, SymTest {
     }
 
     /// @notice PROVE: query before first checkpoint returns 0
-    function check_queryBeforeFirstReturnsZero(
-        uint32 block0,
-        uint224 amount0,
-        uint256 queryBlock
-    ) public pure {
+    function check_queryBeforeFirstReturnsZero(uint32 block0, uint224 amount0, uint256 queryBlock) public pure {
         vm.assume(queryBlock < block0);
 
         Checkpoint[] memory ckpts = new Checkpoint[](1);

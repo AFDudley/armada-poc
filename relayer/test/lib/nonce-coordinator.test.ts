@@ -5,7 +5,10 @@
 // mempool and a user's transaction silently never mines — the exact bug it exists to prevent.
 
 import { expect } from "chai";
-import { NonceCoordinator, type NonceProvider } from "../../lib/nonce-coordinator";
+import {
+  NonceCoordinator,
+  type NonceProvider,
+} from "../../lib/nonce-coordinator";
 
 /**
  * Controllable stub provider. Records how many times the nonce was queried and from which
@@ -15,7 +18,10 @@ import { NonceCoordinator, type NonceProvider } from "../../lib/nonce-coordinato
 class StubProvider implements NonceProvider {
   public calls: Array<{ address: string; blockTag?: string }> = [];
   constructor(public nextNonce: number) {}
-  async getTransactionCount(address: string, blockTag?: string): Promise<number> {
+  async getTransactionCount(
+    address: string,
+    blockTag?: string,
+  ): Promise<number> {
     this.calls.push({ address, blockTag });
     return this.nextNonce;
   }
@@ -65,7 +71,9 @@ describe("NonceCoordinator", function () {
     await Promise.all(tasks);
 
     const sorted = [...allocated].sort((a, b) => a - b);
-    expect(sorted).to.deep.equal([100, 101, 102, 103, 104, 105, 106, 107, 108, 109]);
+    expect(sorted).to.deep.equal([
+      100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
+    ]);
     // Seeded exactly once despite 10 concurrent callers.
     expect(provider.calls.length).to.equal(1);
   });
@@ -162,10 +170,9 @@ describe("NonceCoordinator", function () {
           throw Object.assign(new Error("boom"), { nonce: n });
         })
         .catch((e) => results.push({ ok: false, nonce: e.nonce })),
-      coord
-        .withNonce(1, provider, ADDR, async (n) => {
-          results.push({ ok: true, nonce: n });
-        }),
+      coord.withNonce(1, provider, ADDR, async (n) => {
+        results.push({ ok: true, nonce: n });
+      }),
     ]);
 
     // First reserved 7 and failed (no consume); second reused 7 and succeeded.

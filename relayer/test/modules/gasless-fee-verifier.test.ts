@@ -81,15 +81,37 @@ const CLIENT_PARAMS = [
 
 /** Hub calldata: [userNote, feeNote]. feeNote carries feeNpk + feeValue. */
 function encodeHubShield(feeNpk: bigint, feeValue: bigint): string {
-  const userNote = [[USER_NPK, [0, TOKEN, 0n], 100_000n], [ZERO_BUNDLE, ethers.ZeroHash]];
-  const feeNote = [[ethers.toBeHex(feeNpk, 32), [0, TOKEN, 0n], feeValue], [ZERO_BUNDLE, ethers.ZeroHash]];
-  return HUB_IFACE.encodeFunctionData("gaslessShield", [HUB_PARAMS, INTENT_SIG, [userNote, feeNote]]);
+  const userNote = [
+    [USER_NPK, [0, TOKEN, 0n], 100_000n],
+    [ZERO_BUNDLE, ethers.ZeroHash],
+  ];
+  const feeNote = [
+    [ethers.toBeHex(feeNpk, 32), [0, TOKEN, 0n], feeValue],
+    [ZERO_BUNDLE, ethers.ZeroHash],
+  ];
+  return HUB_IFACE.encodeFunctionData("gaslessShield", [
+    HUB_PARAMS,
+    INTENT_SIG,
+    [userNote, feeNote],
+  ]);
 }
 
 /** Client calldata: userNote + feeNote args. */
 function encodeClientShield(feeNpk: bigint, feeValue: bigint): string {
-  const userNote = [USER_NPK, 100_000n, ZERO_BUNDLE, ethers.ZeroHash, ethers.ZeroAddress];
-  const feeNote = [ethers.toBeHex(feeNpk, 32), feeValue, ZERO_BUNDLE, ethers.ZeroHash, ethers.ZeroAddress];
+  const userNote = [
+    USER_NPK,
+    100_000n,
+    ZERO_BUNDLE,
+    ethers.ZeroHash,
+    ethers.ZeroAddress,
+  ];
+  const feeNote = [
+    ethers.toBeHex(feeNpk, 32),
+    feeValue,
+    ZERO_BUNDLE,
+    ethers.ZeroHash,
+    ethers.ZeroAddress,
+  ];
   return CLIENT_IFACE.encodeFunctionData("gaslessCrossChainShield", [
     CLIENT_PARAMS,
     INTENT_SIG,
@@ -126,20 +148,41 @@ describe("verifyGaslessFee", () => {
     // WHY: the load-bearing happy path — the frontend built the fee note to the relayer's own 0zk
     // with RANDOM_A and passes RANDOM_A; the recomputed npk must match, proving the relayer is paid.
     const data = encodeHubShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED);
-    verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: HUB_WRAPPER, data }, ADVERTISED, RANDOM_A);
+    verifyGaslessFee(
+      ctx(),
+      { chainId: HUB_CHAIN, to: HUB_WRAPPER, data },
+      ADVERTISED,
+      RANDOM_A,
+    );
   });
 
   it("accepts a hub request that overpays", () => {
-    const data = encodeHubShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED * 2n);
-    verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: HUB_WRAPPER, data }, ADVERTISED, RANDOM_A);
+    const data = encodeHubShield(
+      noteKey(RELAYER_MPK, RANDOM_A),
+      ADVERTISED * 2n,
+    );
+    verifyGaslessFee(
+      ctx(),
+      { chainId: HUB_CHAIN, to: HUB_WRAPPER, data },
+      ADVERTISED,
+      RANDOM_A,
+    );
   });
 
   it("rejects a hub request whose fee note underpays with FEE_INSUFFICIENT", () => {
     // WHY: THE reason the verifier exists — a client crafts a fee note below the quote and the
     // relayer would eat gas for less compensation than advertised. Pin the >= check.
-    const data = encodeHubShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED - 1n);
+    const data = encodeHubShield(
+      noteKey(RELAYER_MPK, RANDOM_A),
+      ADVERTISED - 1n,
+    );
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: HUB_WRAPPER, data }, ADVERTISED, RANDOM_A),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: HUB_CHAIN, to: HUB_WRAPPER, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
     ).to.throw(RelayError, /FEE_INSUFFICIENT|below advertised/);
   });
 
@@ -149,75 +192,139 @@ describe("verifyGaslessFee", () => {
     // supplied random and find no matching note → refuse rather than pay gas for nothing.
     const data = encodeHubShield(noteKey(ATTACKER_MPK, RANDOM_A), ADVERTISED);
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: HUB_WRAPPER, data }, ADVERTISED, RANDOM_A),
-    ).to.throw(RelayError, /FEE_INSUFFICIENT|no fee note addressed to the relayer/);
+      verifyGaslessFee(
+        ctx(),
+        { chainId: HUB_CHAIN, to: HUB_WRAPPER, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
+    ).to.throw(
+      RelayError,
+      /FEE_INSUFFICIENT|no fee note addressed to the relayer/,
+    );
   });
 
   it("rejects when feeShieldRandom is missing", () => {
     // WHY: without the random we cannot prove the fee is ours — must refuse, not submit blind.
     const data = encodeHubShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED);
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: HUB_WRAPPER, data }, ADVERTISED, undefined),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: HUB_CHAIN, to: HUB_WRAPPER, data },
+        ADVERTISED,
+        undefined,
+      ),
     ).to.throw(RelayError, /INVALID_DATA|requires feeShieldRandom/);
   });
 
   it("rejects a hub request to a non-wrapper target with INVALID_TARGET", () => {
     const data = encodeHubShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED);
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: ATTACKER_TARGET, data }, ADVERTISED, RANDOM_A),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: HUB_CHAIN, to: ATTACKER_TARGET, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
     ).to.throw(RelayError, /INVALID_TARGET|does not match configured wrapper/);
   });
 
   it("rejects a request with an unconfigured chainId", () => {
     const data = encodeHubShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED);
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: 999_999, to: HUB_WRAPPER, data }, ADVERTISED, RANDOM_A),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: 999_999, to: HUB_WRAPPER, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
     ).to.throw(RelayError, /INVALID_CHAIN|No gasless wrapper configured/);
   });
 
   it("rejects a request whose target is a wrapper for the WRONG chain", () => {
     const data = encodeHubShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED);
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: CLIENT_CHAIN, to: HUB_WRAPPER, data }, ADVERTISED, RANDOM_A),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: CLIENT_CHAIN, to: HUB_WRAPPER, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
     ).to.throw(RelayError, /does not match configured wrapper/);
   });
 
   it("accepts a client cross-chain request whose fee note is shielded to the relayer", () => {
     const data = encodeClientShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED);
-    verifyGaslessFee(ctx(), { chainId: CLIENT_CHAIN, to: CLIENT_WRAPPER, data }, ADVERTISED, RANDOM_A);
+    verifyGaslessFee(
+      ctx(),
+      { chainId: CLIENT_CHAIN, to: CLIENT_WRAPPER, data },
+      ADVERTISED,
+      RANDOM_A,
+    );
   });
 
   it("rejects a client request that underpays with FEE_INSUFFICIENT", () => {
-    const data = encodeClientShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED - 1n);
+    const data = encodeClientShield(
+      noteKey(RELAYER_MPK, RANDOM_A),
+      ADVERTISED - 1n,
+    );
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: CLIENT_CHAIN, to: CLIENT_WRAPPER, data }, ADVERTISED, RANDOM_A),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: CLIENT_CHAIN, to: CLIENT_WRAPPER, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
     ).to.throw(RelayError, /below advertised/);
   });
 
   it("rejects a client request whose fee note is addressed to someone else", () => {
-    const data = encodeClientShield(noteKey(ATTACKER_MPK, RANDOM_A), ADVERTISED);
+    const data = encodeClientShield(
+      noteKey(ATTACKER_MPK, RANDOM_A),
+      ADVERTISED,
+    );
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: CLIENT_CHAIN, to: CLIENT_WRAPPER, data }, ADVERTISED, RANDOM_A),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: CLIENT_CHAIN, to: CLIENT_WRAPPER, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
     ).to.throw(RelayError, /no fee note addressed to the relayer/);
   });
 
   it("rejects an unknown selector with INVALID_DATA", () => {
     const data = "0xdeadbeef" + "00".repeat(64);
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: HUB_WRAPPER, data }, ADVERTISED, RANDOM_A),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: HUB_CHAIN, to: HUB_WRAPPER, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
     ).to.throw(RelayError, /INVALID_DATA|not a supported gasless wrapper/);
   });
 
   it("rejects malformed gaslessShield calldata with INVALID_DATA", () => {
     const data = GASLESS_SHIELD_SELECTOR + "00".repeat(8); // selector + garbage
     expect(() =>
-      verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: HUB_WRAPPER, data }, ADVERTISED, RANDOM_A),
+      verifyGaslessFee(
+        ctx(),
+        { chainId: HUB_CHAIN, to: HUB_WRAPPER, data },
+        ADVERTISED,
+        RANDOM_A,
+      ),
     ).to.throw(RelayError, /INVALID_DATA|Failed to decode/);
   });
 
   it("ignores the request `to` casing — addresses normalize to lowercase", () => {
     const data = encodeHubShield(noteKey(RELAYER_MPK, RANDOM_A), ADVERTISED);
     const mixedCaseWrapper = ethers.getAddress(HUB_WRAPPER); // checksummed
-    verifyGaslessFee(ctx(), { chainId: HUB_CHAIN, to: mixedCaseWrapper, data }, ADVERTISED, RANDOM_A);
+    verifyGaslessFee(
+      ctx(),
+      { chainId: HUB_CHAIN, to: mixedCaseWrapper, data },
+      ADVERTISED,
+      RANDOM_A,
+    );
   });
 });

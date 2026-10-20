@@ -57,9 +57,8 @@ contract GaslessShieldWrapper is EIP712 {
     /// @notice EIP-712 typehash for the intent the user signs alongside the permit.
     /// @dev `requestsHash` is `keccak256(abi.encode(shieldRequests))` — binds every note (user note +
     ///      relayer fee note) so the submitter cannot alter any recipient, value, or ciphertext.
-    bytes32 public constant SHIELD_INTENT_TYPEHASH = keccak256(
-        "ShieldIntent(address user,bytes32 requestsHash,address integrator,uint256 deadline,uint256 nonce)"
-    );
+    bytes32 public constant SHIELD_INTENT_TYPEHASH =
+        keccak256("ShieldIntent(address user,bytes32 requestsHash,address integrator,uint256 deadline,uint256 nonce)");
 
     // ══════════════════════════════════════════════════════════════════════════
     // STRUCTS
@@ -86,12 +85,7 @@ contract GaslessShieldWrapper is EIP712 {
      *      in the ShieldIntent. Lets any watcher confirm off-chain that the submitted array matched the
      *      user's intent. `totalAmount` is the sum of all note values pulled from the user.
      */
-    event GaslessShield(
-        address indexed user,
-        bytes32 requestsHash,
-        uint256 totalAmount,
-        uint256 nonce
-    );
+    event GaslessShield(address indexed user, bytes32 requestsHash, uint256 totalAmount, uint256 nonce);
 
     // ══════════════════════════════════════════════════════════════════════════
     // CONSTRUCTOR
@@ -146,35 +140,24 @@ contract GaslessShieldWrapper is EIP712 {
     // ══════════════════════════════════════════════════════════════════════════
 
     /// @dev Recompute the EIP-712 digest and require a valid EOA/EIP-1271 signature from `user`.
-    function _verifyIntent(
-        ShieldIntentParams calldata params,
-        bytes32 requestsHash,
-        bytes calldata intentSig
-    ) internal view {
+    function _verifyIntent(ShieldIntentParams calldata params, bytes32 requestsHash, bytes calldata intentSig)
+        internal
+        view
+    {
         bytes32 structHash = keccak256(
             abi.encode(
-                SHIELD_INTENT_TYPEHASH,
-                params.user,
-                requestsHash,
-                params.integrator,
-                params.deadline,
-                params.nonce
+                SHIELD_INTENT_TYPEHASH, params.user, requestsHash, params.integrator, params.deadline, params.nonce
             )
         );
         bytes32 digest = _hashTypedDataV4(structHash);
         require(
-            SignatureChecker.isValidSignatureNow(params.user, digest, intentSig),
-            "GaslessShieldWrapper: bad intent sig"
+            SignatureChecker.isValidSignatureNow(params.user, digest, intentSig), "GaslessShieldWrapper: bad intent sig"
         );
     }
 
     /// @dev Require every note is USDC/ERC20 with a non-zero value and return the summed amount the
     ///      wrapper must pull from the user (gross of the pool's per-note shield fee).
-    function _validateAndSum(ShieldRequest[] calldata shieldRequests)
-        internal
-        view
-        returns (uint256 totalAmount)
-    {
+    function _validateAndSum(ShieldRequest[] calldata shieldRequests) internal view returns (uint256 totalAmount) {
         uint256 numRequests = shieldRequests.length;
         require(numRequests > 0, "GaslessShieldWrapper: no requests");
         for (uint256 i = 0; i < numRequests; i++) {
@@ -198,9 +181,11 @@ contract GaslessShieldWrapper is EIP712 {
         //    above), not the permit, authorizes this spend. The permit is public in the mempool, so
         //    anyone may have submitted it already, consuming its nonce; tolerate a failed permit as long
         //    as the allowance is in place.
-        try IERC20Permit(usdc).permit(
-            params.user, address(this), totalAmount, params.deadline, params.permitV, params.permitR, params.permitS
-        ) {} catch {
+        try IERC20Permit(usdc)
+            .permit(
+                params.user, address(this), totalAmount, params.deadline, params.permitV, params.permitR, params.permitS
+            ) {}
+        catch {
             require(
                 IERC20(usdc).allowance(params.user, address(this)) >= totalAmount,
                 "GaslessShieldWrapper: permit failed and allowance too low"

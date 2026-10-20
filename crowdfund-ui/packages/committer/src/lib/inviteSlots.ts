@@ -7,10 +7,12 @@
  * the number literal `0` is always false, so the gate must use `0n`.
  */
 export function hasNoInviteSlots(remaining: bigint): boolean {
-  return remaining === 0n
+  return remaining === 0n;
 }
 
-type InviteSlotSectionLike = { config: { slots: ReadonlyArray<{ status: string }> } }
+type InviteSlotSectionLike = {
+  config: { slots: ReadonlyArray<{ status: string }> };
+};
 
 /**
  * Whether any invite section still has a free (empty) slot — the same
@@ -21,8 +23,10 @@ export function hasFreeInviteSlot(
   sections: ReadonlyArray<InviteSlotSectionLike> | undefined,
 ): boolean {
   return Boolean(
-    sections?.some((section) => section.config.slots.some((slot) => slot.status === 'empty')),
-  )
+    sections?.some((section) =>
+      section.config.slots.some((slot) => slot.status === "empty"),
+    ),
+  );
 }
 
 /**
@@ -36,8 +40,9 @@ export function countFreeInviteSlots(
   return (
     sections?.reduce(
       (total, section) =>
-        total + section.config.slots.filter((slot) => slot.status === 'empty').length,
+        total +
+        section.config.slots.filter((slot) => slot.status === "empty").length,
       0,
     ) ?? 0
-  )
+  );
 }

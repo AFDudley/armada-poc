@@ -4,16 +4,17 @@
 /** The subset of the Vite env we validate. All fields optional so the pure
  *  function can be exercised with plain records in tests. */
 export interface EnvRecord {
-  PROD?: boolean
-  VITE_NETWORK?: string
-  VITE_CROWDFUND_PROFILE?: string
-  VITE_DEPLOYMENT_INSTANCE?: string
+  PROD?: boolean;
+  VITE_NETWORK?: string;
+  VITE_CROWDFUND_PROFILE?: string;
+  VITE_DEPLOYMENT_INSTANCE?: string;
 }
 
-export type EnvValidationResult = { ok: true } | { ok: false; errors: string[] }
+export type EnvValidationResult =
+  { ok: true } | { ok: false; errors: string[] };
 
 function missing(value?: string): boolean {
-  return value === undefined || value.trim() === ''
+  return value === undefined || value.trim() === "";
 }
 
 /**
@@ -30,37 +31,42 @@ function missing(value?: string): boolean {
  * profile-driven CROWDFUND_CONSTANTS, so the instance/profile pairing still matters.
  */
 export function validateEnv(env: EnvRecord): EnvValidationResult {
-  const isProd = env.PROD === true
-  const network = env.VITE_NETWORK?.trim()
+  const isProd = env.PROD === true;
+  const network = env.VITE_NETWORK?.trim();
 
-  if (!isProd || network === 'local') {
-    return { ok: true }
+  if (!isProd || network === "local") {
+    return { ok: true };
   }
 
-  const errors: string[] = []
+  const errors: string[] = [];
 
   if (missing(network)) {
-    errors.push('VITE_NETWORK is not set (expected "sepolia" or "mainnet" for production).')
-  }
-  if (!missing(env.VITE_DEPLOYMENT_INSTANCE) && missing(env.VITE_CROWDFUND_PROFILE)) {
     errors.push(
-      'VITE_CROWDFUND_PROFILE is not set while VITE_DEPLOYMENT_INSTANCE is — ' +
-        'the UI would apply mainnet sale constants to the deployed instance.',
-    )
+      'VITE_NETWORK is not set (expected "sepolia" or "mainnet" for production).',
+    );
+  }
+  if (
+    !missing(env.VITE_DEPLOYMENT_INSTANCE) &&
+    missing(env.VITE_CROWDFUND_PROFILE)
+  ) {
+    errors.push(
+      "VITE_CROWDFUND_PROFILE is not set while VITE_DEPLOYMENT_INSTANCE is — " +
+        "the UI would apply mainnet sale constants to the deployed instance.",
+    );
   }
   // A non-mainnet profile (e.g. the medi/Sepolia profile) on a mainnet build would
   // render $1k-scale sale numbers over the real $1.2M sale. Unset is allowed — it
   // defaults to the mainnet profile.
   if (
-    network === 'mainnet' &&
+    network === "mainnet" &&
     !missing(env.VITE_CROWDFUND_PROFILE) &&
-    env.VITE_CROWDFUND_PROFILE!.trim() !== 'mainnet'
+    env.VITE_CROWDFUND_PROFILE!.trim() !== "mainnet"
   ) {
     errors.push(
       `VITE_CROWDFUND_PROFILE is "${env.VITE_CROWDFUND_PROFILE!.trim()}" on a mainnet build — ` +
         'mainnet must use the "mainnet" profile (or leave it unset, which defaults to mainnet).',
-    )
+    );
   }
 
-  return errors.length > 0 ? { ok: false, errors } : { ok: true }
+  return errors.length > 0 ? { ok: false, errors } : { ok: true };
 }

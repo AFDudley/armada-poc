@@ -62,8 +62,14 @@ export interface PrivacyPoolDeployment {
 /**
  * Get the pool contract address from a deployment, handling hub vs client key names.
  */
-export function getPoolAddress(deployment: PrivacyPoolDeployment): string | null {
-  return deployment.contracts.privacyPool ?? deployment.contracts.privacyPoolClient ?? null;
+export function getPoolAddress(
+  deployment: PrivacyPoolDeployment,
+): string | null {
+  return (
+    deployment.contracts.privacyPool ??
+    deployment.contracts.privacyPoolClient ??
+    null
+  );
 }
 
 export interface YieldDeployment {
@@ -182,7 +188,7 @@ function loadChainDeployments(role: ChainRole): ChainDeployments {
   return {
     cctp: loadJson<CCTPDeployment>(getCCTPDeploymentFile(role)),
     privacyPool: loadJson<PrivacyPoolDeployment>(
-      getPrivacyPoolDeploymentFile(role)
+      getPrivacyPoolDeploymentFile(role),
     ),
   };
 }
@@ -216,7 +222,7 @@ export function loadAllDeployments(env: DeployEnv): AllDeployments {
  */
 export function getChainDeploymentsByRole(
   deployments: AllDeployments,
-  role: ChainRole
+  role: ChainRole,
 ): ChainDeployments | undefined {
   if (role === "hub") return deployments.hub;
   return deployments.clients.find((c) => c.role === role);

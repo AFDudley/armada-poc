@@ -19,12 +19,27 @@ import { task } from "hardhat/config";
 import * as fs from "fs";
 import * as path from "path";
 
-const StateNames = ["PENDING", "ACTIVE", "DEFEATED", "SUCCEEDED", "QUEUED", "EXECUTED", "CANCELED"];
+const StateNames = [
+  "PENDING",
+  "ACTIVE",
+  "DEFEATED",
+  "SUCCEEDED",
+  "QUEUED",
+  "EXECUTED",
+  "CANCELED",
+];
 
 function loadDeployment(networkName: string) {
-  const filePath = path.join(__dirname, "..", "deployments", `governance-${networkName}.json`);
+  const filePath = path.join(
+    __dirname,
+    "..",
+    "deployments",
+    `governance-${networkName}.json`,
+  );
   if (!fs.existsSync(filePath)) {
-    throw new Error(`Deployment file not found: ${filePath}. Run deploy_governance.ts first.`);
+    throw new Error(
+      `Deployment file not found: ${filePath}. Run deploy_governance.ts first.`,
+    );
   }
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
@@ -46,11 +61,16 @@ task("delegate", "Delegate ARM voting power to an address")
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const deployment = loadDeployment(getNetworkName(chainId));
 
-    const armToken = await ethers.getContractAt("ArmadaToken", deployment.contracts.armToken);
+    const armToken = await ethers.getContractAt(
+      "ArmadaToken",
+      deployment.contracts.armToken,
+    );
     await armToken.delegate(args.to);
 
     const votes = await armToken.getVotes(args.to);
-    console.log(`Delegated voting power to ${args.to}. Delegatee voting power: ${ethers.formatUnits(votes, 18)} ARM`);
+    console.log(
+      `Delegated voting power to ${args.to}. Delegatee voting power: ${ethers.formatUnits(votes, 18)} ARM`,
+    );
   });
 
 task("arm-balance", "Check ARM balance and voting power")
@@ -62,7 +82,10 @@ task("arm-balance", "Check ARM balance and voting power")
     const deployment = loadDeployment(getNetworkName(chainId));
 
     const account = args.account || signer.address;
-    const armToken = await ethers.getContractAt("ArmadaToken", deployment.contracts.armToken);
+    const armToken = await ethers.getContractAt(
+      "ArmadaToken",
+      deployment.contracts.armToken,
+    );
 
     const balance = await armToken.balanceOf(account);
     const votes = await armToken.getVotes(account);
@@ -86,19 +109,37 @@ task("propose", "Create a governance proposal")
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const deployment = loadDeployment(getNetworkName(chainId));
 
-    const governor = await ethers.getContractAt("ArmadaGovernor", deployment.contracts.governor);
+    const governor = await ethers.getContractAt(
+      "ArmadaGovernor",
+      deployment.contracts.governor,
+    );
 
-    const typeMap: Record<string, number> = { parameter: 0, treasury: 1, steward: 2 };
+    const typeMap: Record<string, number> = {
+      parameter: 0,
+      treasury: 1,
+      steward: 2,
+    };
     const proposalType = typeMap[args.type];
-    if (proposalType === undefined) throw new Error("Invalid type. Use: parameter, treasury, steward");
+    if (proposalType === undefined)
+      throw new Error("Invalid type. Use: parameter, treasury, steward");
 
-    const targets = args.target ? [args.target] : [deployment.contracts.treasury];
+    const targets = args.target
+      ? [args.target]
+      : [deployment.contracts.treasury];
     const values = [0n];
     const calldatas = args.calldata ? [args.calldata] : ["0x"];
 
-    await governor.propose(proposalType, targets, values, calldatas, args.description);
+    await governor.propose(
+      proposalType,
+      targets,
+      values,
+      calldatas,
+      args.description,
+    );
     const count = await governor.proposalCount();
-    console.log(`Proposal #${count} created: "${args.description}" (type: ${args.type})`);
+    console.log(
+      `Proposal #${count} created: "${args.description}" (type: ${args.type})`,
+    );
   });
 
 task("vote", "Cast a vote on a proposal")
@@ -109,14 +150,24 @@ task("vote", "Cast a vote on a proposal")
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const deployment = loadDeployment(getNetworkName(chainId));
 
-    const governor = await ethers.getContractAt("ArmadaGovernor", deployment.contracts.governor);
+    const governor = await ethers.getContractAt(
+      "ArmadaGovernor",
+      deployment.contracts.governor,
+    );
 
-    const supportMap: Record<string, number> = { against: 0, for: 1, abstain: 2 };
+    const supportMap: Record<string, number> = {
+      against: 0,
+      for: 1,
+      abstain: 2,
+    };
     const support = supportMap[args.support];
-    if (support === undefined) throw new Error("Invalid support. Use: for, against, abstain");
+    if (support === undefined)
+      throw new Error("Invalid support. Use: for, against, abstain");
 
     await governor.castVote(Number(args.proposal), support);
-    console.log(`Voted ${args.support.toUpperCase()} on proposal #${args.proposal}`);
+    console.log(
+      `Voted ${args.support.toUpperCase()} on proposal #${args.proposal}`,
+    );
   });
 
 task("proposal-state", "Check the state of a proposal")
@@ -126,20 +177,34 @@ task("proposal-state", "Check the state of a proposal")
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const deployment = loadDeployment(getNetworkName(chainId));
 
-    const governor = await ethers.getContractAt("ArmadaGovernor", deployment.contracts.governor);
+    const governor = await ethers.getContractAt(
+      "ArmadaGovernor",
+      deployment.contracts.governor,
+    );
 
     const stateId = Number(await governor.state(Number(args.proposal)));
-    const [proposer, proposalType, voteStart, voteEnd, forVotes, againstVotes, abstainVotes] =
-      await governor.getProposal(Number(args.proposal));
+    const [
+      proposer,
+      proposalType,
+      voteStart,
+      voteEnd,
+      forVotes,
+      againstVotes,
+      abstainVotes,
+    ] = await governor.getProposal(Number(args.proposal));
 
     console.log(`Proposal #${args.proposal}:`);
     console.log(`  State: ${StateNames[stateId]}`);
     console.log(`  Proposer: ${proposer}`);
-    console.log(`  Type: ${["ParameterChange", "Treasury", "StewardElection"][Number(proposalType)]}`);
+    console.log(
+      `  Type: ${["ParameterChange", "Treasury", "StewardElection"][Number(proposalType)]}`,
+    );
     console.log(`  For: ${ethers.formatUnits(forVotes, 18)} ARM`);
     console.log(`  Against: ${ethers.formatUnits(againstVotes, 18)} ARM`);
     console.log(`  Abstain: ${ethers.formatUnits(abstainVotes, 18)} ARM`);
-    console.log(`  Quorum required: ${ethers.formatUnits(await governor.quorum(Number(args.proposal)), 18)} ARM`);
+    console.log(
+      `  Quorum required: ${ethers.formatUnits(await governor.quorum(Number(args.proposal)), 18)} ARM`,
+    );
   });
 
 task("queue-proposal", "Queue a succeeded proposal to timelock")
@@ -149,7 +214,10 @@ task("queue-proposal", "Queue a succeeded proposal to timelock")
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const deployment = loadDeployment(getNetworkName(chainId));
 
-    const governor = await ethers.getContractAt("ArmadaGovernor", deployment.contracts.governor);
+    const governor = await ethers.getContractAt(
+      "ArmadaGovernor",
+      deployment.contracts.governor,
+    );
     await governor.queue(Number(args.proposal));
     console.log(`Proposal #${args.proposal} queued to timelock`);
   });
@@ -161,7 +229,10 @@ task("execute-proposal", "Execute a queued proposal")
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const deployment = loadDeployment(getNetworkName(chainId));
 
-    const governor = await ethers.getContractAt("ArmadaGovernor", deployment.contracts.governor);
+    const governor = await ethers.getContractAt(
+      "ArmadaGovernor",
+      deployment.contracts.governor,
+    );
     await governor.execute(Number(args.proposal));
     console.log(`Proposal #${args.proposal} executed`);
   });
@@ -177,30 +248,40 @@ task("steward-spend", "Steward: spend from operational budget")
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const deployment = loadDeployment(getNetworkName(chainId));
 
-    const treasury = await ethers.getContractAt("ArmadaTreasuryGov", deployment.contracts.treasury);
+    const treasury = await ethers.getContractAt(
+      "ArmadaTreasuryGov",
+      deployment.contracts.treasury,
+    );
     await treasury.stewardSpend(args.token, args.to, BigInt(args.amount));
     console.log(`Steward spent ${args.amount} to ${args.to}`);
   });
 
-task("steward-status", "Check steward status")
-  .setAction(async (_, hre) => {
-    const { ethers } = hre;
-    const chainId = Number((await ethers.provider.getNetwork()).chainId);
-    const deployment = loadDeployment(getNetworkName(chainId));
+task("steward-status", "Check steward status").setAction(async (_, hre) => {
+  const { ethers } = hre;
+  const chainId = Number((await ethers.provider.getNetwork()).chainId);
+  const deployment = loadDeployment(getNetworkName(chainId));
 
-    const steward = await ethers.getContractAt("TreasurySteward", deployment.contracts.steward);
-    const treasury = await ethers.getContractAt("ArmadaTreasuryGov", deployment.contracts.treasury);
+  const steward = await ethers.getContractAt(
+    "TreasurySteward",
+    deployment.contracts.steward,
+  );
+  const treasury = await ethers.getContractAt(
+    "ArmadaTreasuryGov",
+    deployment.contracts.treasury,
+  );
 
-    const isActive = await steward.isStewardActive();
-    const currentSteward = await steward.currentSteward();
-    const treasurySteward = await treasury.steward();
+  const isActive = await steward.isStewardActive();
+  const currentSteward = await steward.currentSteward();
+  const treasurySteward = await treasury.steward();
 
-    console.log("Steward Status:");
-    console.log(`  Active: ${isActive}`);
-    console.log(`  Steward (TreasurySteward): ${currentSteward}`);
-    console.log(`  Steward (Treasury): ${treasurySteward}`);
-    if (isActive) {
-      const termEnd = await steward.termEnd();
-      console.log(`  Term ends: ${new Date(Number(termEnd) * 1000).toISOString()}`);
-    }
-  });
+  console.log("Steward Status:");
+  console.log(`  Active: ${isActive}`);
+  console.log(`  Steward (TreasurySteward): ${currentSteward}`);
+  console.log(`  Steward (Treasury): ${treasurySteward}`);
+  if (isActive) {
+    const termEnd = await steward.termEnd();
+    console.log(
+      `  Term ends: ${new Date(Number(termEnd) * 1000).toISOString()}`,
+    );
+  }
+});

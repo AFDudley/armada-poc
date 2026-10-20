@@ -12,31 +12,23 @@ import "./ArmadaToken.sol";
 import "./IArmadaGovernance.sol";
 import "../crowdfund/IArmadaCrowdfund.sol";
 
-
 /// @dev Minimal interface for reading treasury limits at queue time.
 ///      Matches the signatures of ArmadaTreasuryGov.getOutflowStatus and getStewardBudget.
 ///      The `Outflow` name is retained because the queue-time gates collectively guard
 ///      treasury outflow paths (rolling-window outflow ceiling + per-token steward budget).
 interface IArmadaTreasuryOutflow {
-    function getOutflowStatus(address token) external view returns (
-        uint256 effectiveLimit,
-        uint256 recentOutflow,
-        uint256 available
-    );
-    function getStewardBudget(address token) external view returns (
-        uint256 budget,
-        uint256 spent,
-        uint256 remaining
-    );
+    function getOutflowStatus(address token)
+        external
+        view
+        returns (uint256 effectiveLimit, uint256 recentOutflow, uint256 available);
+    function getStewardBudget(address token) external view returns (uint256 budget, uint256 spent, uint256 remaining);
 }
-
 
 /// @title ArmadaGovernor — UUPS-upgradeable governance with typed proposals and ERC20Votes delegation
 /// @notice Implements the Armada governance spec: proposal lifecycle, per-type quorum/timing,
 ///         voting via delegated ARM tokens, and timelock execution. Upgradeable via UUPS,
 ///         gated by the timelock (requires extended governance proposal).
 contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
-
     // ============ Custom Errors ============
 
     error Gov_NotDeployer();
@@ -179,8 +171,8 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
     uint256 internal constant MAX_VOTING_PERIOD = 30 days;
     uint256 internal constant MIN_EXECUTION_DELAY = 2 days;
     uint256 internal constant MAX_EXECUTION_DELAY = 14 days;
-    uint256 internal constant MIN_QUORUM_BPS = 500;   // 5%
-    uint256 internal constant MAX_QUORUM_BPS = 5000;  // 50%
+    uint256 internal constant MIN_QUORUM_BPS = 500; // 5%
+    uint256 internal constant MAX_QUORUM_BPS = 5000; // 50%
 
     // Succeeded proposals must be queued within this window or they expire
     uint256 internal constant QUEUE_GRACE_PERIOD = 14 days;
@@ -284,7 +276,9 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         string description
     );
     event VoteCast(address indexed voter, uint256 indexed proposalId, uint8 support, uint256 weight);
-    event VoteChanged(address indexed voter, uint256 indexed proposalId, uint8 oldSupport, uint8 newSupport, uint256 weight);
+    event VoteChanged(
+        address indexed voter, uint256 indexed proposalId, uint8 oldSupport, uint8 newSupport, uint256 weight
+    );
     event ProposalQueued(uint256 indexed proposalId, bytes32 timelockId);
     event ProposalExecuted(uint256 indexed proposalId);
     event ProposalCanceled(uint256 indexed proposalId);
@@ -317,11 +311,7 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
     /// @param _armToken ARM governance token address
     /// @param _timelock TimelockController address for execution
     /// @param _treasuryAddress Treasury contract address
-    function initialize(
-        address _armToken,
-        address payable _timelock,
-        address _treasuryAddress
-    ) external initializer {
+    function initialize(address _armToken, address payable _timelock, address _treasuryAddress) external initializer {
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
@@ -334,31 +324,19 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         deployer = msg.sender;
 
         // Standard proposals: 2d delay, 7d voting, 3d execution, 20% quorum
-        proposalTypeParams[ProposalType.Standard] = ProposalParams({
-            votingDelay: 2 days,
-            votingPeriod: 7 days,
-            executionDelay: 3 days,
-            quorumBps: 2000
-        });
+        proposalTypeParams[ProposalType.Standard] =
+            ProposalParams({votingDelay: 2 days, votingPeriod: 7 days, executionDelay: 3 days, quorumBps: 2000});
 
         // Extended proposals: 2d delay, 14d voting, 7d execution, 30% quorum
-        proposalTypeParams[ProposalType.Extended] = ProposalParams({
-            votingDelay: 2 days,
-            votingPeriod: 14 days,
-            executionDelay: 7 days,
-            quorumBps: 3000
-        });
+        proposalTypeParams[ProposalType.Extended] =
+            ProposalParams({votingDelay: 2 days, votingPeriod: 14 days, executionDelay: 7 days, quorumBps: 3000});
 
         // VetoRatification: immediate voting, 14d period, no execution delay, 20% quorum.
         // These params bypass setProposalTypeParams() bounds (MIN_VOTING_DELAY=1d,
         // MIN_EXECUTION_DELAY=2d), making VetoRatification timing effectively immutable
         // via governance. Only the veto mechanism can create these proposals.
-        proposalTypeParams[ProposalType.VetoRatification] = ProposalParams({
-            votingDelay: 0,
-            votingPeriod: 14 days,
-            executionDelay: 0,
-            quorumBps: 2000
-        });
+        proposalTypeParams[ProposalType.VetoRatification] =
+            ProposalParams({votingDelay: 0, votingPeriod: 14 days, executionDelay: 0, quorumBps: 2000});
 
         // Steward: immediate voting, 7d review window, 2d timelock, 20% quorum.
         // Total lifecycle: 9 days (0d delay + 7d vote + 2d timelock).
@@ -368,21 +346,13 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         // VetoRatification proposal before the steward spend executes.
         // These params bypass setProposalTypeParams() bounds, making Steward timing
         // effectively immutable via governance. Only proposeStewardSpend() creates these.
-        proposalTypeParams[ProposalType.Steward] = ProposalParams({
-            votingDelay: 0,
-            votingPeriod: 7 days,
-            executionDelay: 2 days,
-            quorumBps: 2000
-        });
+        proposalTypeParams[ProposalType.Steward] =
+            ProposalParams({votingDelay: 0, votingPeriod: 7 days, executionDelay: 2 days, quorumBps: 2000});
 
         // Signaling: non-executable text-only proposals. Standard timing, no execution phase.
         // Immutable — cannot be changed via setProposalTypeParams().
-        proposalTypeParams[ProposalType.Signaling] = ProposalParams({
-            votingDelay: 2 days,
-            votingPeriod: 7 days,
-            executionDelay: 0,
-            quorumBps: 2000
-        });
+        proposalTypeParams[ProposalType.Signaling] =
+            ProposalParams({votingDelay: 2 days, votingPeriod: 7 days, executionDelay: 0, quorumBps: 2000});
 
         // Hardcoded extended selectors per governance spec §Scope table.
         // These cannot be misconfigured at deployment. Governance can expand or
@@ -446,7 +416,7 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
 
         // Fail-closed default: selectors explicitly permitted at Standard classification.
         // Any selector NOT in extendedSelectors AND NOT in standardSelectors defaults to Extended.
-        standardSelectors[DISTRIBUTE_SELECTOR] = true;  // distribute() below the 5% threshold
+        standardSelectors[DISTRIBUTE_SELECTOR] = true; // distribute() below the 5% threshold
         standardSelectors[DISTRIBUTE_ETH_SELECTOR] = true; // distributeETH() below the 5% threshold
         standardSelectors[bytes4(keccak256("stewardSpend(address,address,uint256)"))] = true;
         // transferTo / transferETHTo are intentionally NOT registered. They are
@@ -581,15 +551,21 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
     /// @notice Update proposal type parameters (timing and quorum).
     /// @dev Only callable by the timelock (requires a governance vote). All fields are bounded
     ///      to prevent adversarial parameter changes that could freeze or trivialize governance.
-    function setProposalTypeParams(
-        ProposalType proposalType,
-        ProposalParams calldata params
-    ) external {
+    function setProposalTypeParams(ProposalType proposalType, ProposalParams calldata params) external {
         if (msg.sender != address(timelock)) revert Gov_NotTimelock();
-        if (proposalType == ProposalType.VetoRatification || proposalType == ProposalType.Steward || proposalType == ProposalType.Signaling) revert Gov_ImmutableProposalType();
-        if (params.votingDelay < MIN_VOTING_DELAY || params.votingDelay > MAX_VOTING_DELAY) revert Gov_VotingDelayOutOfBounds();
-        if (params.votingPeriod < MIN_VOTING_PERIOD || params.votingPeriod > MAX_VOTING_PERIOD) revert Gov_VotingPeriodOutOfBounds();
-        if (params.executionDelay < MIN_EXECUTION_DELAY || params.executionDelay > MAX_EXECUTION_DELAY) revert Gov_ExecutionDelayOutOfBounds();
+        if (
+            proposalType == ProposalType.VetoRatification || proposalType == ProposalType.Steward
+                || proposalType == ProposalType.Signaling
+        ) revert Gov_ImmutableProposalType();
+        if (params.votingDelay < MIN_VOTING_DELAY || params.votingDelay > MAX_VOTING_DELAY) {
+            revert Gov_VotingDelayOutOfBounds();
+        }
+        if (params.votingPeriod < MIN_VOTING_PERIOD || params.votingPeriod > MAX_VOTING_PERIOD) {
+            revert Gov_VotingPeriodOutOfBounds();
+        }
+        if (params.executionDelay < MIN_EXECUTION_DELAY || params.executionDelay > MAX_EXECUTION_DELAY) {
+            revert Gov_ExecutionDelayOutOfBounds();
+        }
         if (params.quorumBps < MIN_QUORUM_BPS || params.quorumBps > MAX_QUORUM_BPS) revert Gov_QuorumBpsOutOfBounds();
 
         // Extended timing invariant: the full Extended proposal cycle must stay strictly
@@ -709,9 +685,7 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
 
         // Cancel the timelock operation
         TimelockController tl = timelock;
-        bytes32 timelockId = tl.hashOperationBatch(
-            p.targets, p.values, p.calldatas, 0, _proposalSalt(proposalId)
-        );
+        bytes32 timelockId = tl.hashOperationBatch(p.targets, p.values, p.calldatas, 0, _proposalSalt(proposalId));
         tl.cancel(timelockId);
 
         // Auto-create ratification vote
@@ -761,7 +735,9 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
             // Cache timelock: read twice (audit-76).
             TimelockController tl = timelock;
             tl.scheduleBatch(
-                orig.targets, orig.values, orig.calldatas,
+                orig.targets,
+                orig.values,
+                orig.calldatas,
                 0, // no predecessor
                 _proposalSalt(vetoedId),
                 tl.getMinDelay()
@@ -780,10 +756,10 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
     }
 
     /// @dev Create a ratification proposal internally (bypasses propose() guards).
-    function _createRatificationProposal(
-        uint256 vetoedProposalId,
-        bytes32 rationaleHash
-    ) internal returns (uint256 ratId) {
+    function _createRatificationProposal(uint256 vetoedProposalId, bytes32 rationaleHash)
+        internal
+        returns (uint256 ratId)
+    {
         ratId = ++proposalCount;
 
         // Description is generic; vetoedProposalId and rationaleHash are queryable
@@ -800,10 +776,7 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         ratificationOf[ratId] = vetoedProposalId;
         vetoRatificationId[vetoedProposalId] = ratId;
 
-        emit ProposalCreated(
-            ratId, msg.sender, ProposalType.VetoRatification,
-            voteStart_, voteEnd_, desc
-        );
+        emit ProposalCreated(ratId, msg.sender, ProposalType.VetoRatification, voteStart_, voteEnd_, desc);
     }
 
     // ============ Steward Proposals ============
@@ -849,17 +822,17 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         bytes[] memory calldatas = new bytes[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
             targets[i] = treasury_;
-            calldatas[i] = abi.encodeWithSignature(
-                "stewardSpend(address,address,uint256)",
-                tokens[i], recipients[i], amounts[i]
-            );
+            calldatas[i] =
+                abi.encodeWithSignature("stewardSpend(address,address,uint256)", tokens[i], recipients[i], amounts[i]);
         }
 
         // Defense-in-depth: verify steward calldata would not classify as Extended.
         // Currently safe because stewardSpend is not an extended selector, but this
         // guard protects against future selector additions that could allow sensitive
         // operations to bypass Extended classification via the pass-by-default path.
-        if (_classifyProposal(ProposalType.Standard, targets, calldatas) == ProposalType.Extended) revert Gov_StewardCalldataClassifiedAsExtended();
+        if (_classifyProposal(ProposalType.Standard, targets, calldatas) == ProposalType.Extended) {
+            revert Gov_StewardCalldataClassifiedAsExtended();
+        }
 
         proposalId = ++proposalCount;
         // NOTE: would prefer to consume _initProposal's tuple return per audit-75,
@@ -873,10 +846,7 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         p.values = values;
         p.calldatas = calldatas;
 
-        emit ProposalCreated(
-            proposalId, msg.sender, ProposalType.Steward,
-            p.voteStart, p.voteEnd, description
-        );
+        emit ProposalCreated(proposalId, msg.sender, ProposalType.Steward, p.voteStart, p.voteEnd, description);
     }
 
     // ============ Wind-Down ============
@@ -931,7 +901,9 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         string memory description
     ) external returns (uint256 proposalId) {
         if (windDownActive) revert Gov_GovernanceEnded();
-        if (proposalType == ProposalType.VetoRatification || proposalType == ProposalType.Steward) revert Gov_AutoCreatedOnly();
+        if (proposalType == ProposalType.VetoRatification || proposalType == ProposalType.Steward) {
+            revert Gov_AutoCreatedOnly();
+        }
         _checkQuietPeriod();
         _checkProposalThreshold(msg.sender);
 
@@ -973,10 +945,7 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         p.values = values;
         p.calldatas = calldatas;
 
-        emit ProposalCreated(
-            proposalId, msg.sender, effectiveType,
-            p.voteStart, p.voteEnd, description
-        );
+        emit ProposalCreated(proposalId, msg.sender, effectiveType, p.voteStart, p.voteEnd, description);
     }
 
     /// @dev Check that proposer has at least PROPOSAL_THRESHOLD delegated voting power
@@ -987,11 +956,10 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
 
     /// @dev Initialize proposal scalar fields. Returns (voteStart, voteEnd) so the
     ///      caller's ProposalCreated emit doesn't re-SLOAD them (audit-75).
-    function _initProposal(
-        uint256 proposalId,
-        ProposalType proposalType,
-        string memory description
-    ) internal returns (uint256 voteStart_, uint256 voteEnd_) {
+    function _initProposal(uint256 proposalId, ProposalType proposalType, string memory description)
+        internal
+        returns (uint256 voteStart_, uint256 voteEnd_)
+    {
         ProposalParams storage params = proposalTypeParams[proposalType];
         Proposal storage p = _proposals[proposalId];
         p.id = proposalId;
@@ -1127,7 +1095,9 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         // _minDelay floor here prevents the audit-103 brick from materializing.
         uint256 minDelay = tl.getMinDelay();
         tl.scheduleBatch(
-            tgts, vals, cdatas,
+            tgts,
+            vals,
+            cdatas,
             0, // no predecessor
             salt,
             minDelay > p.executionDelay ? minDelay : p.executionDelay
@@ -1163,7 +1133,9 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         p.executed = true;
 
         timelock.executeBatch{value: msg.value}(
-            p.targets, p.values, p.calldatas,
+            p.targets,
+            p.values,
+            p.calldatas,
             0, // no predecessor
             _proposalSalt(proposalId)
         );
@@ -1181,7 +1153,9 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
 
         ProposalState currentState = state(proposalId);
         if (p.proposalType == ProposalType.Steward) {
-            if (currentState != ProposalState.Pending && currentState != ProposalState.Active) revert Gov_NotPendingOrActive();
+            if (currentState != ProposalState.Pending && currentState != ProposalState.Active) {
+                revert Gov_NotPendingOrActive();
+            }
         } else {
             if (currentState != ProposalState.Pending) revert Gov_NotPending();
         }
@@ -1253,31 +1227,41 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
     }
 
     /// @notice Get proposal details
-    function getProposal(uint256 proposalId) external view returns (
-        address proposer,
-        ProposalType proposalType,
-        uint256 voteStart,
-        uint256 voteEnd,
-        uint256 forVotes,
-        uint256 againstVotes,
-        uint256 abstainVotes,
-        uint256 snapshotBlock,
-        uint256 snapshotEligibleSupply
-    ) {
+    function getProposal(uint256 proposalId)
+        external
+        view
+        returns (
+            address proposer,
+            ProposalType proposalType,
+            uint256 voteStart,
+            uint256 voteEnd,
+            uint256 forVotes,
+            uint256 againstVotes,
+            uint256 abstainVotes,
+            uint256 snapshotBlock,
+            uint256 snapshotEligibleSupply
+        )
+    {
         Proposal storage p = _proposals[proposalId];
         return (
-            p.proposer, p.proposalType, p.voteStart, p.voteEnd,
-            p.forVotes, p.againstVotes, p.abstainVotes, p.snapshotBlock,
+            p.proposer,
+            p.proposalType,
+            p.voteStart,
+            p.voteEnd,
+            p.forVotes,
+            p.againstVotes,
+            p.abstainVotes,
+            p.snapshotBlock,
             p.snapshotEligibleSupply
         );
     }
 
     /// @notice Get proposal execution data
-    function getProposalActions(uint256 proposalId) external view returns (
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas
-    ) {
+    function getProposalActions(uint256 proposalId)
+        external
+        view
+        returns (address[] memory targets, uint256[] memory values, bytes[] memory calldatas)
+    {
         Proposal storage p = _proposals[proposalId];
         return (p.targets, p.values, p.calldatas);
     }
@@ -1338,7 +1322,9 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
     ///      (queue-time effective-limit gate) so the two checks can never disagree on
     ///      how a given calldata is interpreted.
     function _decodeTreasuryDistribute(bytes memory data)
-        internal pure returns (address token, uint256 amount, bool ok)
+        internal
+        pure
+        returns (address token, uint256 amount, bool ok)
     {
         if (data.length < 4) return (address(0), 0, false);
         bytes4 selector = bytes4(data);
@@ -1352,7 +1338,7 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
             for (uint256 j = 0; j < params.length; j++) {
                 params[j] = data[j + 4];
             }
-            (token, , amount) = abi.decode(params, (address, address, uint256));
+            (token,, amount) = abi.decode(params, (address, address, uint256));
             return (token, amount, true);
         }
 
@@ -1379,11 +1365,11 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
     ///      of the spot treasury balance, force Extended. Per-token aggregation
     ///      prevents a proposer from batch-splitting one large drain into many
     ///      sub-threshold calls.
-    function _classifyProposal(
-        ProposalType declaredType,
-        address[] memory targets,
-        bytes[] memory calldatas
-    ) internal view returns (ProposalType) {
+    function _classifyProposal(ProposalType declaredType, address[] memory targets, bytes[] memory calldatas)
+        internal
+        view
+        returns (ProposalType)
+    {
         // If already Extended, no need to check further
         if (declaredType == ProposalType.Extended) return ProposalType.Extended;
 
@@ -1440,11 +1426,9 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
         }
 
         for (uint256 k = 0; k < tokenCount; k++) {
-            uint256 treasuryBalance = tokens[k] == address(0)
-                ? treasury_.balance
-                : IERC20(tokens[k]).balanceOf(treasury_);
-            if (treasuryBalance > 0 &&
-                sums[k] > (treasuryBalance * TREASURY_EXTENDED_THRESHOLD_BPS) / 10000) {
+            uint256 treasuryBalance =
+                tokens[k] == address(0) ? treasury_.balance : IERC20(tokens[k]).balanceOf(treasury_);
+            if (treasuryBalance > 0 && sums[k] > (treasuryBalance * TREASURY_EXTENDED_THRESHOLD_BPS) / 10000) {
                 return ProposalType.Extended;
             }
         }
@@ -1480,10 +1464,7 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
     ///      classification gate and the feasibility gate cannot disagree on how a
     ///      given calldata is interpreted. View-only; reverts before any governor or
     ///      timelock state is written.
-    function _checkOutflowFeasibility(
-        address[] memory targets,
-        bytes[] memory calldatas
-    ) internal view {
+    function _checkOutflowFeasibility(address[] memory targets, bytes[] memory calldatas) internal view {
         // Aggregate amounts per token using parallel arrays in memory. Proposal
         // batches are small (bounded by block gas), so O(n^2) is acceptable and
         // avoids needing a mapping or a storage slot.
@@ -1502,9 +1483,10 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
             if (targets[i] != treasury_) continue;
             if (calldatas[i].length < 4) continue;
             bytes4 selector = bytes4(calldatas[i]);
-            if (selector != DISTRIBUTE_SELECTOR &&
-                selector != STEWARD_SPEND_SELECTOR &&
-                selector != DISTRIBUTE_ETH_SELECTOR) continue;
+            if (
+                selector != DISTRIBUTE_SELECTOR && selector != STEWARD_SPEND_SELECTOR
+                    && selector != DISTRIBUTE_ETH_SELECTOR
+            ) continue;
 
             (address token, uint256 amount, bool ok) = _decodeTreasuryDistribute(calldatas[i]);
             if (!ok) continue;
@@ -1599,12 +1581,10 @@ contract ArmadaGovernor is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrad
                 // role from a non-governor account (e.g. a future backup proposer)
                 // is allowed.
                 if (
-                    account == address(this) &&
-                    (
-                        role == TIMELOCK_PROPOSER_ROLE ||
-                        role == TIMELOCK_EXECUTOR_ROLE ||
-                        role == TIMELOCK_CANCELLER_ROLE
-                    )
+                    account == address(this)
+                        && (role == TIMELOCK_PROPOSER_ROLE
+                            || role == TIMELOCK_EXECUTOR_ROLE
+                            || role == TIMELOCK_CANCELLER_ROLE)
                 ) {
                     revert Gov_CannotRevokeGovernorRole(role);
                 }

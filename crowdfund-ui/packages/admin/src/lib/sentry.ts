@@ -1,32 +1,35 @@
 // ABOUTME: Sentry initialization for the crowdfund admin app.
 // ABOUTME: No-op when VITE_SENTRY_DSN is unset so local/dev runs incur no overhead.
 
-import * as Sentry from '@sentry/react'
+import * as Sentry from "@sentry/react";
 
-let initialized = false
+let initialized = false;
 
 /**
  * Parse VITE_SENTRY_TRACES_SAMPLE_RATE into a number in [0, 1]. Anything
  * missing, NaN, or out of range falls back to 0 (tracing disabled).
  */
 function getTracesSampleRate(): number {
-  const raw = import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE
-  if (raw == null || raw === '') return 0
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n < 0 || n > 1) return 0
-  return n
+  const raw = import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE;
+  if (raw == null || raw === "") return 0;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 1) return 0;
+  return n;
 }
 
 export function initSentry(): void {
-  if (initialized) return
-  const dsn = import.meta.env.VITE_SENTRY_DSN
-  if (!dsn) return
+  if (initialized) return;
+  const dsn = import.meta.env.VITE_SENTRY_DSN;
+  if (!dsn) return;
 
-  const tracesSampleRate = getTracesSampleRate()
+  const tracesSampleRate = getTracesSampleRate();
 
   Sentry.init({
     dsn,
-    environment: import.meta.env.VITE_SENTRY_ENVIRONMENT ?? import.meta.env.MODE ?? 'production',
+    environment:
+      import.meta.env.VITE_SENTRY_ENVIRONMENT ??
+      import.meta.env.MODE ??
+      "production",
     release: import.meta.env.VITE_SENTRY_RELEASE,
     // Performance tracing is opt-in per environment via
     // VITE_SENTRY_TRACES_SAMPLE_RATE (e.g. 0.1 for 10% sampling). Defaults to 0
@@ -45,16 +48,16 @@ export function initSentry(): void {
     // URLs before send so any address/nonce/sig params can't leak via the
     // browser-tracing instrumentation when it's turned on.
     beforeSendTransaction(event) {
-      if (event.transaction && event.transaction.includes('?')) {
-        event.transaction = event.transaction.split('?')[0]
+      if (event.transaction && event.transaction.includes("?")) {
+        event.transaction = event.transaction.split("?")[0];
       }
-      if (event.request?.url && event.request.url.includes('?')) {
-        event.request.url = event.request.url.split('?')[0]
+      if (event.request?.url && event.request.url.includes("?")) {
+        event.request.url = event.request.url.split("?")[0];
       }
-      return event
+      return event;
     },
-  })
-  initialized = true
+  });
+  initialized = true;
 }
 
 /**
@@ -62,13 +65,16 @@ export function initSentry(): void {
  * batch, sweep, etc.). Tag + structured breadcrumb separate admin failures from
  * generic render errors in Sentry triage.
  */
-export function captureAdminError(err: unknown, context?: Record<string, unknown>): void {
-  if (!initialized) return
+export function captureAdminError(
+  err: unknown,
+  context?: Record<string, unknown>,
+): void {
+  if (!initialized) return;
   Sentry.withScope((scope) => {
-    scope.setTag('source', 'admin')
-    if (context) scope.setContext('admin', context as Record<string, unknown>)
-    Sentry.captureException(err)
-  })
+    scope.setTag("source", "admin");
+    if (context) scope.setContext("admin", context as Record<string, unknown>);
+    Sentry.captureException(err);
+  });
 }
 
-export const SentryErrorBoundary = Sentry.ErrorBoundary
+export const SentryErrorBoundary = Sentry.ErrorBoundary;

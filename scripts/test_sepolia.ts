@@ -23,7 +23,10 @@
  */
 
 import { ethers } from "ethers";
-import { getNetworkConfig, getPrivacyPoolDeploymentFile } from "../config/networks";
+import {
+  getNetworkConfig,
+  getPrivacyPoolDeploymentFile,
+} from "../config/networks";
 import { loadDeployment } from "./deploy-utils";
 
 // ============================================================================
@@ -63,7 +66,8 @@ const PRIVACY_POOL_CLIENT_ABI = [
 // Helpers
 // ============================================================================
 
-const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 function formatUsdc(amount: bigint): string {
   const abs = amount < 0n ? -amount : amount;
@@ -73,31 +77,52 @@ function formatUsdc(amount: bigint): string {
   return `${sign}${whole}.${frac}`;
 }
 
-function passed(msg: string) { console.log(`  \x1b[32m✓\x1b[0m ${msg}`); }
-function failed(msg: string) { console.log(`  \x1b[31m✗\x1b[0m ${msg}`); }
-function info(msg: string)   { console.log(`  → ${msg}`); }
+function passed(msg: string) {
+  console.log(`  \x1b[32m✓\x1b[0m ${msg}`);
+}
+function failed(msg: string) {
+  console.log(`  \x1b[31m✗\x1b[0m ${msg}`);
+}
+function info(msg: string) {
+  console.log(`  → ${msg}`);
+}
 
 /** Wait for tx receipt with retries (public RPCs can return transient errors like "indexing in progress") */
-async function waitForTx(tx: ethers.TransactionResponse, retries = 10, delayMs = 5000): Promise<ethers.TransactionReceipt> {
+async function waitForTx(
+  tx: ethers.TransactionResponse,
+  retries = 10,
+  delayMs = 5000,
+): Promise<ethers.TransactionReceipt> {
   for (let i = 0; i < retries; i++) {
     try {
       const receipt = await tx.wait();
       if (receipt) return receipt;
     } catch (e: any) {
       const msg = e?.error?.message ?? e?.message ?? "";
-      if (msg.includes("indexing") || msg.includes("coalesce") || msg.includes("not found")) {
-        info(`Receipt not ready (attempt ${i + 1}/${retries}), retrying in ${delayMs / 1000}s...`);
-        await new Promise(r => setTimeout(r, delayMs));
+      if (
+        msg.includes("indexing") ||
+        msg.includes("coalesce") ||
+        msg.includes("not found")
+      ) {
+        info(
+          `Receipt not ready (attempt ${i + 1}/${retries}), retrying in ${delayMs / 1000}s...`,
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
         continue;
       }
       throw e; // re-throw non-transient errors
     }
   }
-  throw new Error(`Tx ${tx.hash} — receipt not available after ${retries} retries`);
+  throw new Error(
+    `Tx ${tx.hash} — receipt not available after ${retries} retries`,
+  );
 }
 
 /** Get EIP-1559 fee overrides with a bumped priority fee to avoid stuck txs on public testnets */
-async function getFeeOverrides(provider: ethers.JsonRpcProvider, gasLimit = 200000) {
+async function getFeeOverrides(
+  provider: ethers.JsonRpcProvider,
+  gasLimit = 200000,
+) {
   const feeData = await provider.getFeeData();
   const baseFee = feeData.maxFeePerGas ?? 2000000000n; // 2 gwei fallback
   const tip = feeData.maxPriorityFeePerGas ?? 1000000000n; // 1 gwei fallback
@@ -125,10 +150,21 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
   // Hub chain
   console.log("\n  Hub (Ethereum Sepolia):");
   const hubDeployment = loadDeployment("privacy-pool-hub-sepolia.json");
-  if (!hubDeployment) { failed("Hub deployment not found"); return false; }
+  if (!hubDeployment) {
+    failed("Hub deployment not found");
+    return false;
+  }
 
-  const hubPool = new ethers.Contract(hubDeployment.contracts.privacyPool, PRIVACY_POOL_ABI, hubProvider);
-  const hubUsdc = new ethers.Contract(hubDeployment.cctp.usdc, ERC20_ABI, hubProvider);
+  const hubPool = new ethers.Contract(
+    hubDeployment.contracts.privacyPool,
+    PRIVACY_POOL_ABI,
+    hubProvider,
+  );
+  const hubUsdc = new ethers.Contract(
+    hubDeployment.cctp.usdc,
+    ERC20_ABI,
+    hubProvider,
+  );
 
   try {
     const owner = await hubPool.owner();
@@ -180,16 +216,24 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
     // Check authorized spoke clients (Hub's remotePools mapping)
     const remotePoolA = await hubPool.remotePools(config.clients[0].cctpDomain);
     if (remotePoolA !== ethers.ZeroHash) {
-      passed(`Client A authorized on Hub (domain ${config.clients[0].cctpDomain}): ${remotePoolA}`);
+      passed(
+        `Client A authorized on Hub (domain ${config.clients[0].cctpDomain}): ${remotePoolA}`,
+      );
     } else {
-      failed(`Client A not authorized on Hub (domain ${config.clients[0].cctpDomain})`);
+      failed(
+        `Client A not authorized on Hub (domain ${config.clients[0].cctpDomain})`,
+      );
     }
 
     const remotePoolB = await hubPool.remotePools(config.clients[1].cctpDomain);
     if (remotePoolB !== ethers.ZeroHash) {
-      passed(`Client B authorized on Hub (domain ${config.clients[1].cctpDomain}): ${remotePoolB}`);
+      passed(
+        `Client B authorized on Hub (domain ${config.clients[1].cctpDomain}): ${remotePoolB}`,
+      );
     } else {
-      info(`Client B not authorized on Hub (domain ${config.clients[1].cctpDomain})`);
+      info(
+        `Client B not authorized on Hub (domain ${config.clients[1].cctpDomain})`,
+      );
     }
   } catch (e: any) {
     failed(`Hub contract calls failed: ${e.message}`);
@@ -198,10 +242,19 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
 
   // Client A chain
   console.log("\n  Client A (Base Sepolia):");
-  const clientDeployment = loadDeployment(getPrivacyPoolDeploymentFile("client1"));
-  if (!clientDeployment) { failed("Client A deployment not found"); return false; }
+  const clientDeployment = loadDeployment(
+    getPrivacyPoolDeploymentFile("client1"),
+  );
+  if (!clientDeployment) {
+    failed("Client A deployment not found");
+    return false;
+  }
 
-  const clientPool = new ethers.Contract(clientDeployment.contracts.privacyPoolClient, PRIVACY_POOL_CLIENT_ABI, clientAProvider);
+  const clientPool = new ethers.Contract(
+    clientDeployment.contracts.privacyPoolClient,
+    PRIVACY_POOL_CLIENT_ABI,
+    clientAProvider,
+  );
 
   try {
     const owner = await clientPool.owner();
@@ -209,7 +262,9 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
     const hubDomain = await clientPool.hubDomain();
     const hubPoolAddr = await clientPool.hubPool();
 
-    passed(`PrivacyPoolClient at ${clientDeployment.contracts.privacyPoolClient}`);
+    passed(
+      `PrivacyPoolClient at ${clientDeployment.contracts.privacyPoolClient}`,
+    );
     info(`Owner: ${owner}`);
     info(`Domain: ${domain}, Hub domain: ${hubDomain}`);
     info(`Hub pool: ${hubPoolAddr}`);
@@ -220,12 +275,18 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
 
   // Client B chain
   console.log("\n  Client B (Arbitrum Sepolia):");
-  const clientBDeployment = loadDeployment(getPrivacyPoolDeploymentFile("client2"));
+  const clientBDeployment = loadDeployment(
+    getPrivacyPoolDeploymentFile("client2"),
+  );
   if (!clientBDeployment) {
     info("Client B deployment not found (skipped)");
   } else {
     const clientBProvider = new ethers.JsonRpcProvider(config.clients[1].rpc);
-    const clientBPool = new ethers.Contract(clientBDeployment.contracts.privacyPoolClient, PRIVACY_POOL_CLIENT_ABI, clientBProvider);
+    const clientBPool = new ethers.Contract(
+      clientBDeployment.contracts.privacyPoolClient,
+      PRIVACY_POOL_CLIENT_ABI,
+      clientBProvider,
+    );
 
     try {
       const owner = await clientBPool.owner();
@@ -233,7 +294,9 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
       const hubDomain = await clientBPool.hubDomain();
       const hubPoolAddr = await clientBPool.hubPool();
 
-      passed(`PrivacyPoolClient at ${clientBDeployment.contracts.privacyPoolClient}`);
+      passed(
+        `PrivacyPoolClient at ${clientBDeployment.contracts.privacyPoolClient}`,
+      );
       info(`Owner: ${owner}`);
       info(`Domain: ${domain}, Hub domain: ${hubDomain}`);
       info(`Hub pool: ${hubPoolAddr}`);
@@ -252,7 +315,11 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
   info(`Hub ETH:  ${ethers.formatEther(hubEth)}`);
   info(`Hub USDC: ${formatUsdc(BigInt(hubUsdcBal))}`);
 
-  const clientAUsdc = new ethers.Contract(clientDeployment.cctp.usdc, ERC20_ABI, clientAProvider);
+  const clientAUsdc = new ethers.Contract(
+    clientDeployment.cctp.usdc,
+    ERC20_ABI,
+    clientAProvider,
+  );
   const clientAEth = await clientAProvider.getBalance(deployerAddress);
   const clientAUsdcBal = await clientAUsdc.balanceOf(deployerAddress);
   info(`Client A ETH:  ${ethers.formatEther(clientAEth)}`);
@@ -260,7 +327,11 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
 
   if (clientBDeployment) {
     const clientBProvider = new ethers.JsonRpcProvider(config.clients[1].rpc);
-    const clientBUsdc = new ethers.Contract(clientBDeployment.cctp.usdc, ERC20_ABI, clientBProvider);
+    const clientBUsdc = new ethers.Contract(
+      clientBDeployment.cctp.usdc,
+      ERC20_ABI,
+      clientBProvider,
+    );
     const clientBEth = await clientBProvider.getBalance(deployerAddress);
     const clientBUsdcBal = await clientBUsdc.balanceOf(deployerAddress);
     info(`Client B ETH:  ${ethers.formatEther(clientBEth)}`);
@@ -268,7 +339,9 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
   }
 
   if (hubUsdcBal === 0n && clientAUsdcBal === 0n) {
-    console.log("\n  ⚠  No USDC on either chain. Get testnet USDC from https://faucet.circle.com/");
+    console.log(
+      "\n  ⚠  No USDC on either chain. Get testnet USDC from https://faucet.circle.com/",
+    );
   }
 
   return true;
@@ -278,7 +351,10 @@ async function testConnectivity(config: ReturnType<typeof getNetworkConfig>) {
 // Test: Hub Shield
 // ============================================================================
 
-async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount: bigint) {
+async function testHubShield(
+  config: ReturnType<typeof getNetworkConfig>,
+  amount: bigint,
+) {
   console.log("\n" + "=".repeat(60));
   console.log("  CHECK 2: Hub Shield");
   console.log("=".repeat(60));
@@ -288,19 +364,28 @@ async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount
   const deployerAddress = signer.address;
 
   const hubDeployment = loadDeployment("privacy-pool-hub-sepolia.json");
-  if (!hubDeployment) { failed("Hub deployment not found"); return false; }
+  if (!hubDeployment) {
+    failed("Hub deployment not found");
+    return false;
+  }
 
   const privacyPoolAddress = hubDeployment.contracts.privacyPool;
   const usdcAddress = hubDeployment.cctp.usdc;
 
   const usdc = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
-  const privacyPool = new ethers.Contract(privacyPoolAddress, PRIVACY_POOL_ABI, signer);
+  const privacyPool = new ethers.Contract(
+    privacyPoolAddress,
+    PRIVACY_POOL_ABI,
+    signer,
+  );
 
   // Check balance
   const balance = BigInt(await usdc.balanceOf(deployerAddress));
   info(`USDC balance: ${formatUsdc(balance)}`);
   if (balance < amount) {
-    failed(`Insufficient USDC. Need ${formatUsdc(amount)}, have ${formatUsdc(balance)}`);
+    failed(
+      `Insufficient USDC. Need ${formatUsdc(amount)}, have ${formatUsdc(balance)}`,
+    );
     info("Get testnet USDC from https://faucet.circle.com/");
     return false;
   }
@@ -317,7 +402,9 @@ async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount
   // Approve
   console.log("\n  Step 1: Approve USDC...");
   const fees = await getFeeOverrides(hubProvider);
-  info(`Gas: maxFee=${ethers.formatUnits(fees.maxFeePerGas, "gwei")} gwei, tip=${ethers.formatUnits(fees.maxPriorityFeePerGas, "gwei")} gwei`);
+  info(
+    `Gas: maxFee=${ethers.formatUnits(fees.maxFeePerGas, "gwei")} gwei, tip=${ethers.formatUnits(fees.maxPriorityFeePerGas, "gwei")} gwei`,
+  );
   const approveTx = await usdc.approve(privacyPoolAddress, amount, fees);
   info(`Tx: ${approveTx.hash}`);
   await waitForTx(approveTx);
@@ -325,7 +412,9 @@ async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount
 
   // Build shield request
   console.log("  Step 2: Shield...");
-  const rawNpk = BigInt(ethers.keccak256(ethers.toUtf8Bytes(`sepolia-smoke-test-${Date.now()}`)));
+  const rawNpk = BigInt(
+    ethers.keccak256(ethers.toUtf8Bytes(`sepolia-smoke-test-${Date.now()}`)),
+  );
   const validNpk = rawNpk % SNARK_SCALAR_FIELD;
   const npk = ethers.zeroPadValue(ethers.toBeHex(validNpk), 32);
 
@@ -351,7 +440,11 @@ async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount
 
   const fees2 = await getFeeOverrides(hubProvider, 2000000); // shield needs ~1.5M gas (Poseidon + Merkle tree)
   // integrator = address(0): no integrator-fee split (the smoke test isn't testing integrator fees)
-  const shieldTx = await privacyPool.shield([shieldRequest], ethers.ZeroAddress, fees2);
+  const shieldTx = await privacyPool.shield(
+    [shieldRequest],
+    ethers.ZeroAddress,
+    fees2,
+  );
   info(`Tx: ${shieldTx.hash}`);
   const receipt = await waitForTx(shieldTx);
   passed(`Shield confirmed in block ${receipt.blockNumber}`);
@@ -363,7 +456,7 @@ async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount
   const treasuryBalAfter = BigInt(await usdc.balanceOf(treasury));
 
   const shieldFee = BigInt(await privacyPool.shieldFee());
-  const expectedFee = amount * shieldFee / 10000n;
+  const expectedFee = (amount * shieldFee) / 10000n;
   const expectedBase = amount - expectedFee;
 
   if (merkleRootAfter !== merkleRootBefore) {
@@ -374,9 +467,13 @@ async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount
 
   const poolReceived = poolBalAfter - poolBalBefore;
   if (poolReceived === expectedBase) {
-    passed(`Pool received ${formatUsdc(poolReceived)} USDC (base after ${shieldFee} bps fee)`);
+    passed(
+      `Pool received ${formatUsdc(poolReceived)} USDC (base after ${shieldFee} bps fee)`,
+    );
   } else {
-    failed(`Pool received ${formatUsdc(poolReceived)} USDC (expected ${formatUsdc(expectedBase)})`);
+    failed(
+      `Pool received ${formatUsdc(poolReceived)} USDC (expected ${formatUsdc(expectedBase)})`,
+    );
   }
 
   const treasuryReceived = treasuryBalAfter - treasuryBalBefore;
@@ -384,14 +481,20 @@ async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount
     // Treasury == sender: net change is -(base), since sender pays amount but gets fee back
     const expectedNet = expectedFee - amount;
     if (treasuryReceived === expectedNet) {
-      passed(`Treasury fee correct (treasury == sender, net change: ${formatUsdc(expectedNet)} USDC, fee: ${formatUsdc(expectedFee)})`);
+      passed(
+        `Treasury fee correct (treasury == sender, net change: ${formatUsdc(expectedNet)} USDC, fee: ${formatUsdc(expectedFee)})`,
+      );
     } else {
-      failed(`Treasury net change ${formatUsdc(treasuryReceived)} USDC (expected ${formatUsdc(expectedNet)})`);
+      failed(
+        `Treasury net change ${formatUsdc(treasuryReceived)} USDC (expected ${formatUsdc(expectedNet)})`,
+      );
     }
   } else if (treasuryReceived === expectedFee) {
     passed(`Treasury received ${formatUsdc(treasuryReceived)} USDC fee`);
   } else {
-    failed(`Treasury received ${formatUsdc(treasuryReceived)} USDC (expected ${formatUsdc(expectedFee)})`);
+    failed(
+      `Treasury received ${formatUsdc(treasuryReceived)} USDC (expected ${formatUsdc(expectedFee)})`,
+    );
   }
 
   return true;
@@ -401,36 +504,56 @@ async function testHubShield(config: ReturnType<typeof getNetworkConfig>, amount
 // Test: Cross-Chain Shield (Client A → Hub)
 // ============================================================================
 
-async function testCrossChainShield(config: ReturnType<typeof getNetworkConfig>, amount: bigint) {
+async function testCrossChainShield(
+  config: ReturnType<typeof getNetworkConfig>,
+  amount: bigint,
+) {
   console.log("\n" + "=".repeat(60));
-  console.log("  CHECK 3: Cross-Chain Shield (Base Sepolia → Ethereum Sepolia)");
+  console.log(
+    "  CHECK 3: Cross-Chain Shield (Base Sepolia → Ethereum Sepolia)",
+  );
   console.log("=".repeat(60));
 
   const clientAProvider = new ethers.JsonRpcProvider(config.clients[0].rpc);
   const signer = new ethers.Wallet(config.deployerPrivateKey, clientAProvider);
   const deployerAddress = signer.address;
 
-  const clientDeployment = loadDeployment(getPrivacyPoolDeploymentFile("client1"));
-  if (!clientDeployment) { failed("Client A deployment not found"); return false; }
+  const clientDeployment = loadDeployment(
+    getPrivacyPoolDeploymentFile("client1"),
+  );
+  if (!clientDeployment) {
+    failed("Client A deployment not found");
+    return false;
+  }
 
   const clientAddress = clientDeployment.contracts.privacyPoolClient;
   const usdcAddress = clientDeployment.cctp.usdc;
 
   const usdc = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
-  const client = new ethers.Contract(clientAddress, PRIVACY_POOL_CLIENT_ABI, signer);
+  const client = new ethers.Contract(
+    clientAddress,
+    PRIVACY_POOL_CLIENT_ABI,
+    signer,
+  );
 
   // Check balance
   const balance = BigInt(await usdc.balanceOf(deployerAddress));
   info(`Base Sepolia USDC balance: ${formatUsdc(balance)}`);
   if (balance < amount) {
-    failed(`Insufficient USDC on Base Sepolia. Need ${formatUsdc(amount)}, have ${formatUsdc(balance)}`);
-    info("Get testnet USDC from https://faucet.circle.com/ (select Base Sepolia)");
+    failed(
+      `Insufficient USDC on Base Sepolia. Need ${formatUsdc(amount)}, have ${formatUsdc(balance)}`,
+    );
+    info(
+      "Get testnet USDC from https://faucet.circle.com/ (select Base Sepolia)",
+    );
     return false;
   }
 
   // Cross-chain shield params
   const MAX_FEE = ethers.parseUnits("0", 6); // 0 fee for testing (CCTP testnet doesn't charge)
-  const rawNpk = BigInt(ethers.keccak256(ethers.toUtf8Bytes(`sepolia-xchain-${Date.now()}`)));
+  const rawNpk = BigInt(
+    ethers.keccak256(ethers.toUtf8Bytes(`sepolia-xchain-${Date.now()}`)),
+  );
   const validNpk = rawNpk % SNARK_SCALAR_FIELD;
   const npk = ethers.zeroPadValue(ethers.toBeHex(validNpk), 32);
   const encryptedBundle: [string, string, string] = [
@@ -443,7 +566,9 @@ async function testCrossChainShield(config: ReturnType<typeof getNetworkConfig>,
   // Approve
   console.log("\n  Step 1: Approve USDC on Base Sepolia...");
   const fees = await getFeeOverrides(clientAProvider);
-  info(`Gas: maxFee=${ethers.formatUnits(fees.maxFeePerGas, "gwei")} gwei, tip=${ethers.formatUnits(fees.maxPriorityFeePerGas, "gwei")} gwei`);
+  info(
+    `Gas: maxFee=${ethers.formatUnits(fees.maxFeePerGas, "gwei")} gwei, tip=${ethers.formatUnits(fees.maxPriorityFeePerGas, "gwei")} gwei`,
+  );
   const approveTx = await usdc.approve(clientAddress, amount, fees);
   info(`Tx: ${approveTx.hash}`);
   await waitForTx(approveTx);
@@ -460,7 +585,7 @@ async function testCrossChainShield(config: ReturnType<typeof getNetworkConfig>,
     encryptedBundle,
     shieldKey,
     ethers.ZeroAddress, // integrator: none
-    fees2
+    fees2,
   );
   info(`Tx: ${shieldTx.hash}`);
   const receipt = await waitForTx(shieldTx);
@@ -472,7 +597,9 @@ async function testCrossChainShield(config: ReturnType<typeof getNetworkConfig>,
   if (spent === amount) {
     passed(`${formatUsdc(amount)} USDC burned on Base Sepolia`);
   } else {
-    failed(`Expected to burn ${formatUsdc(amount)}, actual: ${formatUsdc(spent)}`);
+    failed(
+      `Expected to burn ${formatUsdc(amount)}, actual: ${formatUsdc(spent)}`,
+    );
   }
 
   console.log("\n  Step 3: Wait for relay...");
@@ -514,8 +641,12 @@ async function main() {
   console.log("  SEPOLIA SMOKE TEST");
   console.log("=".repeat(60));
   console.log(`  Hub:      ${config.hub.name} (${config.hub.rpc})`);
-  console.log(`  Client A: ${config.clients[0].name} (${config.clients[0].rpc})`);
-  console.log(`  Client B: ${config.clients[1].name} (${config.clients[1].rpc})`);
+  console.log(
+    `  Client A: ${config.clients[0].name} (${config.clients[0].rpc})`,
+  );
+  console.log(
+    `  Client B: ${config.clients[1].name} (${config.clients[1].rpc})`,
+  );
 
   // Always run connectivity check
   const connected = await testConnectivity(config);
@@ -525,7 +656,9 @@ async function main() {
   }
 
   if (checkOnly) {
-    console.log("\n✓ Connectivity check passed. Use --shield or --cross-chain to run transactions.");
+    console.log(
+      "\n✓ Connectivity check passed. Use --shield or --cross-chain to run transactions.",
+    );
     process.exit(0);
   }
 

@@ -1,43 +1,48 @@
 // ABOUTME: Wallet connection state wrapping wagmi hooks.
 // ABOUTME: Provides ethers Signer via adapter for backwards compatibility.
 
-import { useCallback, useMemo } from 'react'
-import { useAccount, useWalletClient, useDisconnect } from 'wagmi'
-import { useConnectModal, useChainModal } from '@rainbow-me/rainbowkit'
-import { walletClientToSigner } from '@/lib/wagmiAdapter'
-import { getHubChainId } from '@/config/network'
-import { useMobileChainReconciliation } from './useMobileChainReconciliation'
-import type { JsonRpcSigner } from 'ethers'
+import { useCallback, useMemo } from "react";
+import { useAccount, useWalletClient, useDisconnect } from "wagmi";
+import { useConnectModal, useChainModal } from "@rainbow-me/rainbowkit";
+import { walletClientToSigner } from "@/lib/wagmiAdapter";
+import { getHubChainId } from "@/config/network";
+import { useMobileChainReconciliation } from "./useMobileChainReconciliation";
+import type { JsonRpcSigner } from "ethers";
 
 export interface UseWalletResult {
-  address: string | null
-  signer: JsonRpcSigner | null
-  chainId: number | null
-  connected: boolean
-  connecting: boolean
-  isWrongNetwork: boolean
-  error: string | null
-  connect: () => void
-  disconnect: () => void
-  switchNetwork: () => void
+  address: string | null;
+  signer: JsonRpcSigner | null;
+  chainId: number | null;
+  connected: boolean;
+  connecting: boolean;
+  isWrongNetwork: boolean;
+  error: string | null;
+  connect: () => void;
+  disconnect: () => void;
+  switchNetwork: () => void;
 }
 
 export function useWallet(): UseWalletResult {
-  const { address: rawAddress, isConnected, isConnecting, chainId: accountChainId, connector } =
-    useAccount()
-  const { openConnectModal } = useConnectModal()
-  const { openChainModal } = useChainModal()
-  const { disconnect: wagmiDisconnect } = useDisconnect()
+  const {
+    address: rawAddress,
+    isConnected,
+    isConnecting,
+    chainId: accountChainId,
+    connector,
+  } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const { openChainModal } = useChainModal();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
 
   // Mobile-only, read-only correction for a stale wagmi chainId after a mobile
   // network switch (MetaMask Mobile can drop `chainChanged` — wagmi #4551/#4600,
   // MM #6706 — leaving `useAccount().chainId` pointing at the old chain). On
   // DESKTOP this is always `undefined`, so `effectiveChainId === accountChainId`
   // and every derived value below is identical to the wagmi-only behavior.
-  const observedChainId = useMobileChainReconciliation(connector)
-  const effectiveChainId = observedChainId ?? accountChainId
+  const observedChainId = useMobileChainReconciliation(connector);
+  const effectiveChainId = observedChainId ?? accountChainId;
 
-  const expectedChainId = getHubChainId()
+  const expectedChainId = getHubChainId();
   // Detect the wrong network from `useAccount().chainId` (the per-connection
   // value, which tracks the wallet's actual chain) rather than `useChainId()`.
   // With a single-chain config, `useChainId()` always returns the configured
@@ -46,7 +51,9 @@ export function useWallet(): UseWalletResult {
   // `effectiveChainId` substitutes the provider-observed chain when wagmi's value
   // is stale; on desktop it is exactly `accountChainId`.
   const isWrongNetwork =
-    isConnected && effectiveChainId !== undefined && effectiveChainId !== expectedChainId
+    isConnected &&
+    effectiveChainId !== undefined &&
+    effectiveChainId !== expectedChainId;
 
   // The wallet-client query must not fetch while the wallet sits on an
   // unconfigured chain. wagmi's useWalletClient always requests the CONFIG's
@@ -63,7 +70,7 @@ export function useWallet(): UseWalletResult {
   // mid-session retains its signer (see the signer comment below).
   const { data: walletClient } = useWalletClient({
     query: { enabled: isConnected && !isWrongNetwork },
-  })
+  });
 
   // TODO: invite-link signing (useInviteLinks.createLink/revokeLink) and direct
   // invites (useInviteSlots.onInviteOnchain) still consume this hook-derived
@@ -79,20 +86,20 @@ export function useWallet(): UseWalletResult {
   // (commit + claim gate on `connected`); a genuine wrong-chain send still fails
   // loudly via wagmi's connector chain assertion rather than vanishing.
   const signer = useMemo(() => {
-    if (!walletClient) return null
+    if (!walletClient) return null;
     try {
-      return walletClientToSigner(walletClient)
+      return walletClientToSigner(walletClient);
     } catch {
-      return null
+      return null;
     }
-  }, [walletClient])
+  }, [walletClient]);
 
   // Open RainbowKit's chain modal so the user explicitly switches to the hub
   // chain — a clear, deliberate affordance consistent with the participate
   // flow's "Switch network" button, rather than a silent programmatic switch.
   const switchNetwork = useCallback(() => {
-    openChainModal?.()
-  }, [openChainModal])
+    openChainModal?.();
+  }, [openChainModal]);
 
   return {
     address: rawAddress ? rawAddress.toLowerCase() : null,
@@ -101,9 +108,11 @@ export function useWallet(): UseWalletResult {
     connected: isConnected && !isWrongNetwork,
     connecting: isConnecting,
     isWrongNetwork,
-    error: isWrongNetwork ? `Wrong network. Please switch to chain ${expectedChainId}.` : null,
+    error: isWrongNetwork
+      ? `Wrong network. Please switch to chain ${expectedChainId}.`
+      : null,
     connect: () => openConnectModal?.(),
     disconnect: () => wagmiDisconnect(),
     switchNetwork,
-  }
+  };
 }

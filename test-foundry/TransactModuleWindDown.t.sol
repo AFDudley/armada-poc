@@ -17,7 +17,10 @@ import "./helpers/PoseidonLinker.sol";
 /// @notice Minimal mock that satisfies IArmadaGovernorSC (securityCouncil() view)
 contract MockGovernorSC {
     address public securityCouncil;
-    constructor(address _sc) { securityCouncil = _sc; }
+
+    constructor(address _sc) {
+        securityCouncil = _sc;
+    }
 }
 
 /// @title TransactModuleWindDownTest — Withdraw-only mode blocks private transfers
@@ -118,9 +121,7 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
 
         return Transaction({
             proof: SnarkProof({
-                a: G1Point(0, 0),
-                b: G2Point([uint256(0), uint256(0)], [uint256(0), uint256(0)]),
-                c: G1Point(0, 0)
+                a: G1Point(0, 0), b: G2Point([uint256(0), uint256(0)], [uint256(0), uint256(0)]), c: G1Point(0, 0)
             }),
             merkleRoot: bytes32(0),
             nullifiers: nullifiers,
@@ -136,11 +137,7 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
             }),
             unshieldPreimage: CommitmentPreimage({
                 npk: bytes32(uint256(uint160(address(0xBEEF)))),
-                token: TokenData({
-                    tokenType: TokenType.ERC20,
-                    tokenAddress: address(usdc),
-                    tokenSubID: 0
-                }),
+                token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0}),
                 value: 1000
             })
         });
@@ -172,7 +169,7 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
 
         Transaction[] memory txs = new Transaction[](2);
         txs[0] = _buildMinimalTransaction(UnshieldType.NORMAL); // unshield
-        txs[1] = _buildMinimalTransaction(UnshieldType.NONE);   // pure transfer
+        txs[1] = _buildMinimalTransaction(UnshieldType.NONE); // pure transfer
 
         // Use a different nullifier to avoid double-spend revert
         txs[1].nullifiers[0] = bytes32(uint256(0x9999));
@@ -195,8 +192,9 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
         txs[0] = _buildMinimalTransaction(UnshieldType.NORMAL);
 
         try pool.transact(txs) {
-            // If it succeeds, that's fine — guard didn't block it
-        } catch Error(string memory reason) {
+        // If it succeeds, that's fine — guard didn't block it
+        }
+        catch Error(string memory reason) {
             // If it reverted, ensure it's NOT the withdraw-only guard
             assertTrue(
                 keccak256(bytes(reason)) != keccak256(bytes("TransactModule: withdraw only")),
@@ -215,8 +213,9 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
         Transaction memory tx0 = _buildMinimalTransaction(UnshieldType.NORMAL);
 
         try pool.atomicCrossChainUnshield(tx0, 1, address(0xBEEF), 0, bytes32(0)) {
-            // Success — guard didn't block
-        } catch Error(string memory reason) {
+        // Success — guard didn't block
+        }
+        catch Error(string memory reason) {
             assertTrue(
                 keccak256(bytes(reason)) != keccak256(bytes("TransactModule: withdraw only")),
                 "Cross-chain unshield should not be blocked by withdraw-only mode"
@@ -237,8 +236,9 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
         txs[0] = _buildMinimalTransaction(UnshieldType.NONE);
 
         try pool.transact(txs) {
-            // Success — guard didn't block
-        } catch Error(string memory reason) {
+        // Success — guard didn't block
+        }
+        catch Error(string memory reason) {
             assertTrue(
                 keccak256(bytes(reason)) != keccak256(bytes("TransactModule: withdraw only")),
                 "Pre-wind-down transfer should not trigger withdraw-only guard"
@@ -266,8 +266,9 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
         txs[0] = _buildMinimalTransaction(UnshieldType.NONE);
 
         try pool.transact(txs) {
-            // Success — guard didn't block
-        } catch Error(string memory reason) {
+        // Success — guard didn't block
+        }
+        catch Error(string memory reason) {
             assertTrue(
                 keccak256(bytes(reason)) != keccak256(bytes("TransactModule: withdraw only")),
                 "SC pause should not trigger withdraw-only guard on transfers"
@@ -288,8 +289,9 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
         txs[0] = _buildMinimalTransaction(UnshieldType.NONE);
 
         try pool.transact(txs) {
-            // Success
-        } catch Error(string memory reason) {
+        // Success
+        }
+        catch Error(string memory reason) {
             assertTrue(
                 keccak256(bytes(reason)) != keccak256(bytes("TransactModule: withdraw only")),
                 "No pause controller should not trigger withdraw-only guard"

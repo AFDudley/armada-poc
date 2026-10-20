@@ -38,7 +38,10 @@ async function main() {
   console.log("PrivacyPool address:", privacyPoolAddress);
 
   // Get contract instance
-  const privacyPool = await ethers.getContractAt("PrivacyPool", privacyPoolAddress);
+  const privacyPool = await ethers.getContractAt(
+    "PrivacyPool",
+    privacyPoolAddress,
+  );
 
   // Check testingMode
   const testingMode = await privacyPool.testingMode();
@@ -83,7 +86,7 @@ async function main() {
   }
 
   console.log(
-    `\n  ${loaded}/${TESTING_ARTIFACT_CONFIGS.length} verification keys registered on-chain`
+    `\n  ${loaded}/${TESTING_ARTIFACT_CONFIGS.length} verification keys registered on-chain`,
   );
   if (missing.length > 0) {
     console.log(`  ⚠️  Missing (${missing.length}): ${missing.join(", ")}`);

@@ -2,9 +2,17 @@
 // ABOUTME: Hardened launches fail on retained deployer authority; partial deployments warn.
 import { ethers } from "hardhat";
 
-export async function timelockBootstrapChecks(address: string, deployer: string, expectedDelay?: bigint) {
+export async function timelockBootstrapChecks(
+  address: string,
+  deployer: string,
+  expectedDelay?: bigint,
+) {
   const timelock = await ethers.getContractAt("TimelockController", address);
-  const checks: { check: string; status: "PASS" | "WARN" | "FAIL"; detail: string }[] = [];
+  const checks: {
+    check: string;
+    status: "PASS" | "WARN" | "FAIL";
+    detail: string;
+  }[] = [];
   for (const [name, role] of [
     ["TIMELOCK_ADMIN_ROLE", await timelock.TIMELOCK_ADMIN_ROLE()],
     ["PROPOSER_ROLE", await timelock.PROPOSER_ROLE()],
@@ -12,14 +20,23 @@ export async function timelockBootstrapChecks(address: string, deployer: string,
     ["CANCELLER_ROLE", await timelock.CANCELLER_ROLE()],
   ]) {
     const retained = await timelock.hasRole(role, deployer);
-    checks.push({ check: `Deployer renounced ${name}`,
-      status: retained ? (expectedDelay === undefined ? "WARN" : "FAIL") : "PASS",
-      detail: retained ? `Deployer retains ${name}` : "" });
+    checks.push({
+      check: `Deployer renounced ${name}`,
+      status: retained
+        ? expectedDelay === undefined
+          ? "WARN"
+          : "FAIL"
+        : "PASS",
+      detail: retained ? `Deployer retains ${name}` : "",
+    });
   }
   if (expectedDelay !== undefined) {
     const actual = await timelock.getMinDelay();
-    checks.push({ check: "Production timelock delay", status: actual === expectedDelay ? "PASS" : "FAIL",
-      detail: `Expected ${expectedDelay}s, actual ${actual}s` });
+    checks.push({
+      check: "Production timelock delay",
+      status: actual === expectedDelay ? "PASS" : "FAIL",
+      detail: `Expected ${expectedDelay}s, actual ${actual}s`,
+    });
   }
   return checks;
 }
@@ -29,12 +46,18 @@ const LOG_CHUNK_MIN = 10;
 
 /** Enumerate historical role holders, then verify their current membership. The
  * timelock's AccessControl implementation has no enumerable role membership. */
-export async function timelockUnexpectedRoleHolders(address: string, fromBlock: number,
-  expectedGovernor: string): Promise<string[]> {
-  if (!Number.isSafeInteger(fromBlock) || fromBlock < 0) throw new Error("Invalid timelock deployment block");
+export async function timelockUnexpectedRoleHolders(
+  address: string,
+  fromBlock: number,
+  expectedGovernor: string,
+): Promise<string[]> {
+  if (!Number.isSafeInteger(fromBlock) || fromBlock < 0)
+    throw new Error("Invalid timelock deployment block");
   const timelock = await ethers.getContractAt("TimelockController", address);
-  const topics = [timelock.interface.getEvent("RoleGranted")!.topicHash,
-    timelock.interface.getEvent("RoleRevoked")!.topicHash];
+  const topics = [
+    timelock.interface.getEvent("RoleGranted")!.topicHash,
+    timelock.interface.getEvent("RoleRevoked")!.topicHash,
+  ];
   const accounts = new Map<string, string>();
   const latest = await ethers.provider.getBlockNumber();
   // Public RPCs cap eth_getLogs ranges at differing sizes. Halve the chunk on error and
@@ -44,7 +67,12 @@ export async function timelockUnexpectedRoleHolders(address: string, fromBlock: 
     const toBlock = Math.min(start + chunk - 1, latest);
     let logs;
     try {
-      logs = await ethers.provider.getLogs({ address, fromBlock: start, toBlock, topics: [topics] });
+      logs = await ethers.provider.getLogs({
+        address,
+        fromBlock: start,
+        toBlock,
+        topics: [topics],
+      });
     } catch (error) {
       if (chunk <= LOG_CHUNK_MIN) throw error;
       chunk = Math.max(LOG_CHUNK_MIN, Math.floor(chunk / 2));
@@ -52,19 +80,29 @@ export async function timelockUnexpectedRoleHolders(address: string, fromBlock: 
     }
     for (const log of logs) {
       const parsed = timelock.interface.parseLog(log);
-      if (parsed) accounts.set(ethers.getAddress(parsed.args.account), parsed.args.account);
+      if (parsed)
+        accounts.set(
+          ethers.getAddress(parsed.args.account),
+          parsed.args.account,
+        );
     }
     start = toBlock + 1;
   }
-  const roles = [await timelock.TIMELOCK_ADMIN_ROLE(), await timelock.PROPOSER_ROLE(),
-    await timelock.EXECUTOR_ROLE(), await timelock.CANCELLER_ROLE()];
+  const roles = [
+    await timelock.TIMELOCK_ADMIN_ROLE(),
+    await timelock.PROPOSER_ROLE(),
+    await timelock.EXECUTOR_ROLE(),
+    await timelock.CANCELLER_ROLE(),
+  ];
   const unexpected: string[] = [];
   for (const account of accounts.values()) {
     for (const role of roles) {
-      const permitted = role === roles[0]
-        ? ethers.getAddress(account) === ethers.getAddress(address)
-        : ethers.getAddress(account) === ethers.getAddress(expectedGovernor);
-      if (await timelock.hasRole(role, account) && !permitted) unexpected.push(`${account}: ${role}`);
+      const permitted =
+        role === roles[0]
+          ? ethers.getAddress(account) === ethers.getAddress(address)
+          : ethers.getAddress(account) === ethers.getAddress(expectedGovernor);
+      if ((await timelock.hasRole(role, account)) && !permitted)
+        unexpected.push(`${account}: ${role}`);
     }
   }
   return unexpected;

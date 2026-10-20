@@ -46,7 +46,8 @@ describe("Gas Benchmarks", function () {
 
   describe("Crowdfund finalize() gas scaling", function () {
     const participantCounts = [70, 100, 180]; // min 67 for MIN_SALE, max 180 (MAX_SEEDS cap)
-    const results: { count: number; gas: bigint; perParticipant: bigint }[] = [];
+    const results: { count: number; gas: bigint; perParticipant: bigint }[] =
+      [];
 
     for (const count of participantCounts) {
       it(`finalize() with ${count} participants`, async function () {
@@ -55,10 +56,14 @@ describe("Gas Benchmarks", function () {
         const usdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
 
         const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-        const armToken = await ArmadaToken.deploy(deployer.address, deployer.address);
-      await armToken.initWhitelist([deployer.address]);
+        const armToken = await ArmadaToken.deploy(
+          deployer.address,
+          deployer.address,
+        );
+        await armToken.initWhitelist([deployer.address]);
 
-        const ArmadaCrowdfund = await ethers.getContractFactory("ArmadaCrowdfund");
+        const ArmadaCrowdfund =
+          await ethers.getContractFactory("ArmadaCrowdfund");
         const openTimestamp1 = (await time.latest()) + 300;
         const crowdfund = await ArmadaCrowdfund.deploy(
           await usdc.getAddress(),
@@ -66,7 +71,7 @@ describe("Gas Benchmarks", function () {
           deployer.address, // treasury
           deployer.address, // launchTeam
           deployer.address, // securityCouncil
-          openTimestamp1    // openTimestamp
+          openTimestamp1, // openTimestamp
         );
 
         await armToken.addToWhitelist(await crowdfund.getAddress());
@@ -77,8 +82,11 @@ describe("Gas Benchmarks", function () {
 
         // Add seeds — all participants are hop-0 for simplicity
         const seeds = allSigners.slice(1, count + 1);
-        { const ws = Number(await crowdfund.windowStart()); if ((await time.latest()) < ws) await time.increaseTo(ws); }
-        await crowdfund.addSeeds(seeds.map(s => s.address));
+        {
+          const ws = Number(await crowdfund.windowStart());
+          if ((await time.latest()) < ws) await time.increaseTo(ws);
+        }
+        await crowdfund.addSeeds(seeds.map((s) => s.address));
 
         // Each seed commits $15K (max hop-0 cap)
         // Total: count * $15K. Need >= $1M (MIN_SALE) for finalize() to succeed.
@@ -87,7 +95,9 @@ describe("Gas Benchmarks", function () {
         const commitAmount = USDC(15_000);
         for (const s of seeds) {
           await usdc.mint(s.address, commitAmount);
-          await usdc.connect(s).approve(await crowdfund.getAddress(), commitAmount);
+          await usdc
+            .connect(s)
+            .approve(await crowdfund.getAddress(), commitAmount);
           await crowdfund.connect(s).commit(0, commitAmount);
         }
 
@@ -108,16 +118,20 @@ describe("Gas Benchmarks", function () {
 
           console.log(
             `    finalize() | ${count} participants | ` +
-            `${gasUsed.toLocaleString()} gas | ` +
-            `${perParticipant.toLocaleString()} gas/participant | ` +
-            `${isRefundMode ? "REFUND_MODE" : "FINALIZED"}`
+              `${gasUsed.toLocaleString()} gas | ` +
+              `${perParticipant.toLocaleString()} gas/participant | ` +
+              `${isRefundMode ? "REFUND_MODE" : "FINALIZED"}`,
           );
         } catch (e: any) {
           if (e.message?.includes("out of gas")) {
             console.log(
-              `    finalize() | ${count} participants | OOG (>30M gas)`
+              `    finalize() | ${count} participants | OOG (>30M gas)`,
             );
-            results.push({ count, gas: 30_000_000n, perParticipant: 30_000_000n / BigInt(count) });
+            results.push({
+              count,
+              gas: 30_000_000n,
+              perParticipant: 30_000_000n / BigInt(count),
+            });
           } else {
             throw e;
           }
@@ -127,38 +141,53 @@ describe("Gas Benchmarks", function () {
 
     after(function () {
       // Print summary table and extrapolations
-      console.log("\n    ═══════════════════════════════════════════════════════════════");
+      console.log(
+        "\n    ═══════════════════════════════════════════════════════════════",
+      );
       console.log("    CROWDFUND finalize() GAS SCALING SUMMARY");
-      console.log("    ═══════════════════════════════════════════════════════════════");
-      console.log("    Participants │ Gas Used      │ Gas/Participant │ Status");
-      console.log("    ─────────────┼───────────────┼────────────────┼────────────────");
+      console.log(
+        "    ═══════════════════════════════════════════════════════════════",
+      );
+      console.log(
+        "    Participants │ Gas Used      │ Gas/Participant │ Status",
+      );
+      console.log(
+        "    ─────────────┼───────────────┼────────────────┼────────────────",
+      );
       for (const r of results) {
         console.log(
-          `    ${String(r.count).padStart(12)} │ ${r.gas.toLocaleString().padStart(13)} │ ${r.perParticipant.toLocaleString().padStart(14)} │ Finalized`
+          `    ${String(r.count).padStart(12)} │ ${r.gas.toLocaleString().padStart(13)} │ ${r.perParticipant.toLocaleString().padStart(14)} │ Finalized`,
         );
       }
 
       // Extrapolate using the per-participant cost from the largest finalized test
-      const finalizedResults = results.filter(r => BigInt(r.count) * 15_000n >= 1_000_000n);
+      const finalizedResults = results.filter(
+        (r) => BigInt(r.count) * 15_000n >= 1_000_000n,
+      );
       if (finalizedResults.length > 0) {
         const lastResult = finalizedResults[finalizedResults.length - 1];
         const perP = lastResult.perParticipant;
         // Estimate base cost (overhead) from difference between two measurements
-        const baseGas = finalizedResults.length >= 2
-          ? lastResult.gas - perP * BigInt(lastResult.count)
-          : 50_000n; // rough estimate
+        const baseGas =
+          finalizedResults.length >= 2
+            ? lastResult.gas - perP * BigInt(lastResult.count)
+            : 50_000n; // rough estimate
 
-        console.log("    ─────────────┼───────────────┼────────────────┼────────────────");
+        console.log(
+          "    ─────────────┼───────────────┼────────────────┼────────────────",
+        );
         console.log("    EXTRAPOLATED │               │                │");
         for (const extCount of [500, 1000, 2000, 5000]) {
           const estGas = baseGas + perP * BigInt(extCount);
           const exceedsL1 = estGas > ETHEREUM_MAINNET_LIMIT;
           console.log(
-            `    ${String(extCount).padStart(12)} │ ${estGas.toLocaleString().padStart(13)} │ ${perP.toLocaleString().padStart(14)} │ ${exceedsL1 ? "⚠ EXCEEDS L1 30M LIMIT" : "OK (L1)"}`
+            `    ${String(extCount).padStart(12)} │ ${estGas.toLocaleString().padStart(13)} │ ${perP.toLocaleString().padStart(14)} │ ${exceedsL1 ? "⚠ EXCEEDS L1 30M LIMIT" : "OK (L1)"}`,
           );
         }
       }
-      console.log("    ═══════════════════════════════════════════════════════════════\n");
+      console.log(
+        "    ═══════════════════════════════════════════════════════════════\n",
+      );
     });
   });
 
@@ -175,10 +204,14 @@ describe("Gas Benchmarks", function () {
         const usdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
 
         const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-        const armToken = await ArmadaToken.deploy(deployer.address, deployer.address);
-      await armToken.initWhitelist([deployer.address]);
+        const armToken = await ArmadaToken.deploy(
+          deployer.address,
+          deployer.address,
+        );
+        await armToken.initWhitelist([deployer.address]);
 
-        const ArmadaCrowdfund = await ethers.getContractFactory("ArmadaCrowdfund");
+        const ArmadaCrowdfund =
+          await ethers.getContractFactory("ArmadaCrowdfund");
         const openTimestamp2 = (await time.latest()) + 300;
         const crowdfund = await ArmadaCrowdfund.deploy(
           await usdc.getAddress(),
@@ -186,7 +219,7 @@ describe("Gas Benchmarks", function () {
           deployer.address, // treasury
           deployer.address, // launchTeam
           deployer.address, // securityCouncil
-          openTimestamp2    // openTimestamp
+          openTimestamp2, // openTimestamp
         );
         await armToken.addToWhitelist(await crowdfund.getAddress());
         const ARM = (n: number) => ethers.parseUnits(n.toString(), 18);
@@ -195,15 +228,15 @@ describe("Gas Benchmarks", function () {
         await time.increaseTo(await crowdfund.windowStart());
 
         const seeds = allSigners.slice(1, batchSize + 1);
-        const tx = await crowdfund.addSeeds(seeds.map(s => s.address));
+        const tx = await crowdfund.addSeeds(seeds.map((s) => s.address));
         const receipt = await tx.wait();
         const gasUsed = receipt!.gasUsed;
         const perSeed = gasUsed / BigInt(batchSize);
 
         console.log(
           `    addSeeds() | batch=${batchSize} | ` +
-          `${gasUsed.toLocaleString()} gas | ` +
-          `${perSeed.toLocaleString()} gas/seed`
+            `${gasUsed.toLocaleString()} gas | ` +
+            `${perSeed.toLocaleString()} gas/seed`,
         );
       });
     }
@@ -220,10 +253,14 @@ describe("Gas Benchmarks", function () {
       const usdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
 
       const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-      const armToken = await ArmadaToken.deploy(deployer.address, deployer.address);
+      const armToken = await ArmadaToken.deploy(
+        deployer.address,
+        deployer.address,
+      );
       await armToken.initWhitelist([deployer.address]);
 
-      const ArmadaCrowdfund = await ethers.getContractFactory("ArmadaCrowdfund");
+      const ArmadaCrowdfund =
+        await ethers.getContractFactory("ArmadaCrowdfund");
       const openTimestamp3 = (await time.latest()) + 300;
       const crowdfund = await ArmadaCrowdfund.deploy(
         await usdc.getAddress(),
@@ -231,7 +268,7 @@ describe("Gas Benchmarks", function () {
         deployer.address, // treasury
         deployer.address, // launchTeam
         deployer.address, // securityCouncil
-        openTimestamp3    // openTimestamp
+        openTimestamp3, // openTimestamp
       );
 
       const cfAddr = await crowdfund.getAddress();
@@ -242,12 +279,17 @@ describe("Gas Benchmarks", function () {
 
       const count = 100;
       const seeds = allSigners.slice(1, count + 1);
-      { const ws = Number(await crowdfund.windowStart()); if ((await time.latest()) < ws) await time.increaseTo(ws); }
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      {
+        const ws = Number(await crowdfund.windowStart());
+        if ((await time.latest()) < ws) await time.increaseTo(ws);
+      }
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await usdc.mint(s.address, USDC(15_000));
-        await usdc.connect(s).approve(await crowdfund.getAddress(), USDC(15_000));
+        await usdc
+          .connect(s)
+          .approve(await crowdfund.getAddress(), USDC(15_000));
         await crowdfund.connect(s).commit(0, USDC(15_000));
       }
 
@@ -277,12 +319,16 @@ describe("Gas Benchmarks", function () {
       const midReceipt = await midTx.wait();
       claimGas.push({ position: "middle (50th)", gas: midReceipt!.gasUsed });
 
-      const lastTx = await crowdfund.connect(seeds[99]).claim(seeds[99].address);
+      const lastTx = await crowdfund
+        .connect(seeds[99])
+        .claim(seeds[99].address);
       const lastReceipt = await lastTx.wait();
       claimGas.push({ position: "last (100th)", gas: lastReceipt!.gasUsed });
 
       for (const c of claimGas) {
-        console.log(`    claim() | ${c.position} | ${c.gas.toLocaleString()} gas`);
+        console.log(
+          `    claim() | ${c.position} | ${c.gas.toLocaleString()} gas`,
+        );
       }
 
       // Verify gas is roughly constant (within 10% of first claim)
@@ -290,7 +336,10 @@ describe("Gas Benchmarks", function () {
       for (const c of claimGas) {
         const diff = c.gas > baseGas ? c.gas - baseGas : baseGas - c.gas;
         const pctDiff = (diff * 100n) / baseGas;
-        expect(Number(pctDiff)).to.be.lessThan(20, `claim() gas should be roughly constant, got ${pctDiff}% diff for ${c.position}`);
+        expect(Number(pctDiff)).to.be.lessThan(
+          20,
+          `claim() gas should be roughly constant, got ${pctDiff}% diff for ${c.position}`,
+        );
       }
     });
   });
@@ -302,7 +351,10 @@ describe("Gas Benchmarks", function () {
   describe("ERC20Votes checkpoint scaling", function () {
     it("getPastVotes() gas with 10, 100, 500, 1000 checkpoints (binary search)", async function () {
       const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-      const armToken = await ArmadaToken.deploy(deployer.address, deployer.address);
+      const armToken = await ArmadaToken.deploy(
+        deployer.address,
+        deployer.address,
+      );
       await armToken.initWhitelist([deployer.address]);
 
       const alice = allSigners[1];
@@ -327,7 +379,8 @@ describe("Gas Benchmarks", function () {
         for (let i = 0; i < toCreate; i++) {
           await mine(1);
           // Alternate between self-delegation and delegating to bob
-          const delegatee = (currentCheckpoints + i) % 2 === 0 ? alice.address : bob.address;
+          const delegatee =
+            (currentCheckpoints + i) % 2 === 0 ? alice.address : bob.address;
           await armToken.connect(alice).delegate(delegatee);
         }
         currentCheckpoints = target;
@@ -338,12 +391,15 @@ describe("Gas Benchmarks", function () {
         currentCheckpoints++;
 
         const queryBlock = (await ethers.provider.getBlockNumber()) - 1;
-        const gas = await armToken.getPastVotes.estimateGas(alice.address, queryBlock);
+        const gas = await armToken.getPastVotes.estimateGas(
+          alice.address,
+          queryBlock,
+        );
 
         results.push({ checkpoints: target, gas });
 
         console.log(
-          `    getPastVotes() | ${target} checkpoints | ${gas.toLocaleString()} gas`
+          `    getPastVotes() | ${target} checkpoints | ${gas.toLocaleString()} gas`,
         );
       }
 
@@ -355,22 +411,31 @@ describe("Gas Benchmarks", function () {
         const gasRatio = Number(last.gas) / Number(first.gas);
         console.log(
           `    Scaling: ${countRatio}x checkpoints → ${gasRatio.toFixed(2)}x gas ` +
-          `(linear would be ${countRatio}x, O(log n) expected ~${(Math.log2(countRatio) + 1).toFixed(1)}x)`
+            `(linear would be ${countRatio}x, O(log n) expected ~${(Math.log2(countRatio) + 1).toFixed(1)}x)`,
         );
       }
     });
 
     it("castVote() gas with deep checkpoint history", async function () {
       const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-      const armToken = await ArmadaToken.deploy(deployer.address, deployer.address);
+      const armToken = await ArmadaToken.deploy(
+        deployer.address,
+        deployer.address,
+      );
       await armToken.initWhitelist([deployer.address]);
 
       const voters = allSigners.slice(1, 6); // 5 voters with varying checkpoint depths
       const delegateTarget = allSigners[6]; // alternate delegation target
 
       // Setup TimelockController
-      const TimelockController = await ethers.getContractFactory("TimelockController");
-      const timelock = await TimelockController.deploy(0, [deployer.address], [deployer.address], deployer.address);
+      const TimelockController =
+        await ethers.getContractFactory("TimelockController");
+      const timelock = await TimelockController.deploy(
+        0,
+        [deployer.address],
+        [deployer.address],
+        deployer.address,
+      );
 
       // Deploy governor
       const governor = await deployGovernorProxy(
@@ -430,7 +495,7 @@ describe("Gas Benchmarks", function () {
         [deployer.address],
         [0],
         [ethers.hexlify(ethers.toUtf8Bytes(""))],
-        "Gas benchmark proposal"
+        "Gas benchmark proposal",
       );
       await proposeTx.wait();
       const proposalId = await governor.proposalCount();
@@ -439,7 +504,8 @@ describe("Gas Benchmarks", function () {
       await time.increase(2 * ONE_DAY + 1);
 
       // Cast votes and measure gas
-      const voteResults: { voter: string; checkpoints: number; gas: bigint }[] = [];
+      const voteResults: { voter: string; checkpoints: number; gas: bigint }[] =
+        [];
       const checkpointCounts = [501, 101, 11, 1, 1]; // approximate
 
       for (let i = 0; i < voters.length; i++) {
@@ -452,14 +518,20 @@ describe("Gas Benchmarks", function () {
         });
       }
 
-      console.log("\n    ═══════════════════════════════════════════════════════════════");
-      console.log("    castVote() GAS vs CHECKPOINT DEPTH (ERC20Votes delegation)");
-      console.log("    ═══════════════════════════════════════════════════════════════");
+      console.log(
+        "\n    ═══════════════════════════════════════════════════════════════",
+      );
+      console.log(
+        "    castVote() GAS vs CHECKPOINT DEPTH (ERC20Votes delegation)",
+      );
+      console.log(
+        "    ═══════════════════════════════════════════════════════════════",
+      );
       console.log("    Voter     │ Checkpoints │ Gas Used");
       console.log("    ──────────┼─────────────┼─────────────");
       for (const r of voteResults) {
         console.log(
-          `    ${r.voter.padEnd(9)} │ ${String(r.checkpoints).padStart(11)} │ ${r.gas.toLocaleString().padStart(11)}`
+          `    ${r.voter.padEnd(9)} │ ${String(r.checkpoints).padStart(11)} │ ${r.gas.toLocaleString().padStart(11)}`,
         );
       }
 
@@ -469,12 +541,17 @@ describe("Gas Benchmarks", function () {
       const ratio = Number(gasLarge) / Number(gasSmall);
       console.log(
         `    Gas ratio (500 checkpoints vs 1): ${ratio.toFixed(2)}x ` +
-        `(O(log2(500)) ≈ ${Math.log2(500).toFixed(1)}x expected overhead)`
+          `(O(log2(500)) ≈ ${Math.log2(500).toFixed(1)}x expected overhead)`,
       );
-      console.log("    ═══════════════════════════════════════════════════════════════\n");
+      console.log(
+        "    ═══════════════════════════════════════════════════════════════\n",
+      );
 
       // The gas should not grow by more than 2x even with 500x more checkpoints (O(log n))
-      expect(ratio).to.be.lessThan(3, "castVote gas should scale O(log n) with checkpoints");
+      expect(ratio).to.be.lessThan(
+        3,
+        "castVote gas should scale O(log n) with checkpoints",
+      );
     });
   });
 
@@ -488,10 +565,14 @@ describe("Gas Benchmarks", function () {
       const usdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
 
       const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-      const armToken = await ArmadaToken.deploy(deployer.address, deployer.address);
+      const armToken = await ArmadaToken.deploy(
+        deployer.address,
+        deployer.address,
+      );
       await armToken.initWhitelist([deployer.address]);
 
-      const ArmadaCrowdfund = await ethers.getContractFactory("ArmadaCrowdfund");
+      const ArmadaCrowdfund =
+        await ethers.getContractFactory("ArmadaCrowdfund");
       const openTimestamp4 = (await time.latest()) + 300;
       const crowdfund = await ArmadaCrowdfund.deploy(
         await usdc.getAddress(),
@@ -499,7 +580,7 @@ describe("Gas Benchmarks", function () {
         deployer.address, // treasury
         deployer.address, // launchTeam
         deployer.address, // securityCouncil
-        openTimestamp4    // openTimestamp
+        openTimestamp4, // openTimestamp
       );
 
       await armToken.addToWhitelist(await crowdfund.getAddress());
@@ -507,13 +588,18 @@ describe("Gas Benchmarks", function () {
       await crowdfund.loadArm();
 
       const seeds = allSigners.slice(1, 4);
-      { const ws = Number(await crowdfund.windowStart()); if ((await time.latest()) < ws) await time.increaseTo(ws); }
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      {
+        const ws = Number(await crowdfund.windowStart());
+        if ((await time.latest()) < ws) await time.increaseTo(ws);
+      }
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       // Fund all seeds
       for (const s of seeds) {
         await usdc.mint(s.address, USDC(15_000));
-        await usdc.connect(s).approve(await crowdfund.getAddress(), USDC(15_000));
+        await usdc
+          .connect(s)
+          .approve(await crowdfund.getAddress(), USDC(15_000));
       }
 
       // First commit (cold storage write — more expensive)
@@ -528,9 +614,15 @@ describe("Gas Benchmarks", function () {
       const tx3 = await crowdfund.connect(seeds[1]).commit(0, USDC(5_000));
       const r3 = await tx3.wait();
 
-      console.log(`    commit() | first commit (cold)    | ${r1!.gasUsed.toLocaleString()} gas`);
-      console.log(`    commit() | second commit (warm)   | ${r2!.gasUsed.toLocaleString()} gas`);
-      console.log(`    commit() | first commit (addr #2) | ${r3!.gasUsed.toLocaleString()} gas`);
+      console.log(
+        `    commit() | first commit (cold)    | ${r1!.gasUsed.toLocaleString()} gas`,
+      );
+      console.log(
+        `    commit() | second commit (warm)   | ${r2!.gasUsed.toLocaleString()} gas`,
+      );
+      console.log(
+        `    commit() | first commit (addr #2) | ${r3!.gasUsed.toLocaleString()} gas`,
+      );
     });
   });
 
@@ -541,20 +633,38 @@ describe("Gas Benchmarks", function () {
   describe("Block gas limit analysis", function () {
     it("reports finalize() feasibility on different chains", async function () {
       // This is a reporting test — just prints analysis based on measured data
-      console.log("\n    ═══════════════════════════════════════════════════════════════");
+      console.log(
+        "\n    ═══════════════════════════════════════════════════════════════",
+      );
       console.log("    BLOCK GAS LIMIT FEASIBILITY ANALYSIS");
-      console.log("    ═══════════════════════════════════════════════════════════════");
+      console.log(
+        "    ═══════════════════════════════════════════════════════════════",
+      );
       console.log("    Chain            │ Block Gas Limit │ Notes");
-      console.log("    ─────────────────┼─────────────────┼────────────────────────────");
-      console.log("    Ethereum L1      │ 30,000,000      │ Standard block limit");
-      console.log("    Arbitrum One     │ ~1.125T         │ Effectively unlimited");
+      console.log(
+        "    ─────────────────┼─────────────────┼────────────────────────────",
+      );
+      console.log(
+        "    Ethereum L1      │ 30,000,000      │ Standard block limit",
+      );
+      console.log(
+        "    Arbitrum One     │ ~1.125T         │ Effectively unlimited",
+      );
       console.log("    Polygon          │ 30,000,000      │ Similar to L1");
       console.log("    Base             │ 60,000,000      │ Higher L2 limit");
-      console.log("    ─────────────────┼─────────────────┼────────────────────────────");
-      console.log("    RECOMMENDATION: If finalize() exceeds 15M gas for target");
-      console.log("    participant count, implement batched finalization for L1.");
+      console.log(
+        "    ─────────────────┼─────────────────┼────────────────────────────",
+      );
+      console.log(
+        "    RECOMMENDATION: If finalize() exceeds 15M gas for target",
+      );
+      console.log(
+        "    participant count, implement batched finalization for L1.",
+      );
       console.log("    L2 deployment relaxes this constraint significantly.");
-      console.log("    ═══════════════════════════════════════════════════════════════\n");
+      console.log(
+        "    ═══════════════════════════════════════════════════════════════\n",
+      );
     });
   });
 });

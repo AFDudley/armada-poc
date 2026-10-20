@@ -42,8 +42,10 @@ import { selectVectors } from "./lib/select-vectors";
 //   REPLAY_FIXTURES_DIR=test-foundry/fixtures/contract-vectors-v2
 const FIXTURES_DIR = path.resolve(
   __dirname,
-  "..", "..",
-  process.env.REPLAY_FIXTURES_DIR || path.join("test-foundry", "fixtures", "contract-vectors")
+  "..",
+  "..",
+  process.env.REPLAY_FIXTURES_DIR ||
+    path.join("test-foundry", "fixtures", "contract-vectors"),
 );
 
 const ONE_USDC = 1_000_000n;
@@ -72,7 +74,9 @@ function compareEvents(recorded: any[], actual: any[]): Comparison {
     data: e.data,
   });
   if (recorded.length !== actual.length) {
-    mismatches.push(`event count: recorded ${recorded.length} vs actual ${actual.length}`);
+    mismatches.push(
+      `event count: recorded ${recorded.length} vs actual ${actual.length}`,
+    );
   }
   const n = Math.min(recorded.length, actual.length);
   for (let i = 0; i < n; i++) {
@@ -80,7 +84,7 @@ function compareEvents(recorded: any[], actual: any[]): Comparison {
     // not raw addresses. Within one deployment raw comparison is exact.
     if (!deepEqual(slim(recorded[i]), slim(actual[i]))) {
       mismatches.push(
-        `event[${i}] mismatch:\n  recorded: ${JSON.stringify(slim(recorded[i]))}\n  actual:   ${JSON.stringify(slim(actual[i]))}`
+        `event[${i}] mismatch:\n  recorded: ${JSON.stringify(slim(recorded[i]))}\n  actual:   ${JSON.stringify(slim(actual[i]))}`,
       );
     }
   }
@@ -95,7 +99,7 @@ function compareEvents(recorded: any[], actual: any[]): Comparison {
  */
 async function runStateReads(
   keys: string[],
-  ctx: { pool: any; usdc: any; addressBook: Record<string, string> }
+  ctx: { pool: any; usdc: any; addressBook: Record<string, string> },
 ): Promise<Record<string, any>> {
   const { pool, usdc, addressBook } = ctx;
   const out: Record<string, any> = {};
@@ -113,7 +117,9 @@ async function runStateReads(
       continue;
     }
     // pool.nullifiers[tree][nullifier] / pool.rootHistory[tree][root]
-    m = key.match(/^pool\.(nullifiers|rootHistory)\[(\d+|postTree)\]\[(0x[0-9a-fA-F]+|postRoot)\]$/);
+    m = key.match(
+      /^pool\.(nullifiers|rootHistory)\[(\d+|postTree)\]\[(0x[0-9a-fA-F]+|postRoot)\]$/,
+    );
     if (m) {
       const tree = m[2] === "postTree" ? await pool.treeNumber() : BigInt(m[2]);
       const slot =
@@ -133,7 +139,9 @@ async function runStateReads(
       out[key] = await pool[m[1]](m[2]);
       continue;
     }
-    console.warn(`  replay-check: no read binding for state key "${key}" — skipped`);
+    console.warn(
+      `  replay-check: no read binding for state key "${key}" — skipped`,
+    );
   }
   return out;
 }
@@ -164,7 +172,10 @@ async function replayVector(id: string, ctx: any): Promise<boolean> {
   if (vector.requiresImpersonation) {
     const addr = ctx.addressBook[vector.requiresImpersonation];
     await ctx.rawProvider.send("anvil_impersonateAccount", [addr]);
-    await ctx.rawProvider.send("anvil_setBalance", [addr, "0x56BC75E2D63100000"]);
+    await ctx.rawProvider.send("anvil_setBalance", [
+      addr,
+      "0x56BC75E2D63100000",
+    ]);
     from = await ctx.rawProvider.getSigner(addr);
   }
   if (!from) {
@@ -181,7 +192,13 @@ async function replayVector(id: string, ctx: any): Promise<boolean> {
     }
     const setupTo = ctx.addressBook[s.to] ?? s.toAddress;
     // Empty resolution = contract-creation setup tx (mirrors capture).
-    await (await setupFrom.sendTransaction({ ...(setupTo ? { to: setupTo } : {}), data: s.calldata, value: 0 })).wait();
+    await (
+      await setupFrom.sendTransaction({
+        ...(setupTo ? { to: setupTo } : {}),
+        data: s.calldata,
+        value: 0,
+      })
+    ).wait();
   }
 
   // ── Send the recorded calldata ─────────────────────────────────────────────
@@ -211,7 +228,9 @@ async function replayVector(id: string, ctx: any): Promise<boolean> {
 
   // ── Status ─────────────────────────────────────────────────────────────────
   if (receipt.status !== vector.result.status) {
-    mismatches.push(`status: recorded ${vector.result.status} vs actual ${receipt.status}`);
+    mismatches.push(
+      `status: recorded ${vector.result.status} vs actual ${receipt.status}`,
+    );
   }
 
   // ── Events (success vectors only; reverted txs emit nothing) ───────────────
@@ -221,20 +240,30 @@ async function replayVector(id: string, ctx: any): Promise<boolean> {
   }
 
   // ── Post-state reads ───────────────────────────────────────────────────────
-  const postKeys = Object.keys(vector.postState).filter((k) => !VOLATILE_STATE_KEYS.has(k));
+  const postKeys = Object.keys(vector.postState).filter(
+    (k) => !VOLATILE_STATE_KEYS.has(k),
+  );
   const actualPost = await runStateReads(postKeys, ctx);
   for (const k of postKeys) {
     if (!(k in actualPost)) continue; // skipped (warned above)
-    if (hex(actualPost[k]) !== vector.postState[k] && String(actualPost[k]) !== String(vector.postState[k])) {
-      mismatches.push(`postState[${k}]: recorded ${vector.postState[k]} vs actual ${hex(actualPost[k])}`);
+    if (
+      hex(actualPost[k]) !== vector.postState[k] &&
+      String(actualPost[k]) !== String(vector.postState[k])
+    ) {
+      mismatches.push(
+        `postState[${k}]: recorded ${vector.postState[k]} vs actual ${hex(actualPost[k])}`,
+      );
     }
   }
 
   // ── Gas: report only (tolerance policy is a Phase 2c decision) ─────────────
-  const gasDelta = Number(receipt.gasUsed) - parseInt(vector.result.gasUsed, 16);
+  const gasDelta =
+    Number(receipt.gasUsed) - parseInt(vector.result.gasUsed, 16);
 
   if (mismatches.length === 0) {
-    console.log(`[${id}] MATCH (gas delta ${gasDelta >= 0 ? "+" : ""}${gasDelta})`);
+    console.log(
+      `[${id}] MATCH (gas delta ${gasDelta >= 0 ? "+" : ""}${gasDelta})`,
+    );
     return true;
   }
   console.error(`[${id}] MISMATCH:`);
@@ -247,17 +276,21 @@ async function main() {
   // rejects `--flag` args after the script path, HH305); positional ids are still accepted.
   // REPLAY_GENESIS performs the capture-time genesis setup (mock deployment + funding +
   // approvals) — required when replaying against a freshly booted fixturenet.
-  const manifest = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "manifest.json"), "utf-8"));
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(FIXTURES_DIR, "manifest.json"), "utf-8"),
+  );
   const { ids, genesis } = selectVectors(
     process.argv.slice(2),
     process.env,
-    manifest.vectors.map((v: any) => v.id)
+    manifest.vectors.map((v: any) => v.id),
   );
 
   const addressBook: Record<string, string> = manifest.addressBook;
   const pool = await ethers.getContractAt("PrivacyPool", addressBook.POOL);
   const usdc = await ethers.getContractAt("MockUSDCV2", addressBook.USDC);
-  const rawProvider = new ethers.JsonRpcProvider(process.env.HUB_RPC || "http://localhost:8545");
+  const rawProvider = new ethers.JsonRpcProvider(
+    process.env.HUB_RPC || "http://localhost:8545",
+  );
   const ctx = { pool, usdc, addressBook, rawProvider };
 
   // ── Capture-window clock guard ─────────────────────────────────────────────
@@ -275,10 +308,18 @@ async function main() {
   const latestBlock = await rawProvider.getBlock("latest");
   if (!latestBlock) throw new Error("replay-check: cannot read latest block");
   if (latestBlock.timestamp > generatedAtUnix + 1800) {
-    console.error(`replay-check: chain clock (${latestBlock.timestamp}) is past the capture window`);
-    console.error(`  (corpus generatedAt ${manifest.generatedAt}; the gasless-vector EIP-2612 permit`);
-    console.error(`   expires 1h after capture). Reboot the fixturenet with a pinned genesis time:`);
-    console.error(`  anvil --port 8545 --chain-id 31337 --block-time 1 --accounts 200 --timestamp ${generatedAtUnix}`);
+    console.error(
+      `replay-check: chain clock (${latestBlock.timestamp}) is past the capture window`,
+    );
+    console.error(
+      `  (corpus generatedAt ${manifest.generatedAt}; the gasless-vector EIP-2612 permit`,
+    );
+    console.error(
+      `   expires 1h after capture). Reboot the fixturenet with a pinned genesis time:`,
+    );
+    console.error(
+      `  anvil --port 8545 --chain-id 31337 --block-time 1 --accounts 200 --timestamp ${generatedAtUnix}`,
+    );
     process.exit(1);
   }
 
@@ -301,16 +342,22 @@ async function main() {
     if (addressBook.MOCK_ADAPTER_REGISTRY) {
       const mockRegistry = await deployMock(deployer, "MockAdapterRegistry");
       if (mockRegistry.address !== addressBook.MOCK_ADAPTER_REGISTRY) {
-        console.error(`genesis: registry mock diverges: ${mockRegistry.address} vs ${addressBook.MOCK_ADAPTER_REGISTRY}`);
+        console.error(
+          `genesis: registry mock diverges: ${mockRegistry.address} vs ${addressBook.MOCK_ADAPTER_REGISTRY}`,
+        );
         process.exit(1);
       }
     }
     if (addressBook.MALICIOUS_TOKEN) {
-      const evilFactory = await ethers.getContractFactory("MaliciousReentrantToken");
+      const evilFactory = await ethers.getContractFactory(
+        "MaliciousReentrantToken",
+      );
       evil = await evilFactory.deploy();
       await evil.waitForDeployment();
       if ((await evil.getAddress()) !== addressBook.MALICIOUS_TOKEN) {
-        console.error(`genesis: malicious token diverges: ${await evil.getAddress()} vs ${addressBook.MALICIOUS_TOKEN}`);
+        console.error(
+          `genesis: malicious token diverges: ${await evil.getAddress()} vs ${addressBook.MALICIOUS_TOKEN}`,
+        );
         process.exit(1);
       }
     }
@@ -318,28 +365,50 @@ async function main() {
       mockPause.address !== addressBook.MOCK_PAUSE ||
       mockFee.address !== addressBook.MOCK_FEE_MODULE
     ) {
-      console.error("genesis: mock addresses diverge from the manifest addressBook —");
-      console.error(`  pause: ${mockPause.address} vs ${addressBook.MOCK_PAUSE}`);
-      console.error(`  fee:   ${mockFee.address} vs ${addressBook.MOCK_FEE_MODULE}`);
-      console.error("  replay must start from a freshly booted fixturenet (see README).");
+      console.error(
+        "genesis: mock addresses diverge from the manifest addressBook —",
+      );
+      console.error(
+        `  pause: ${mockPause.address} vs ${addressBook.MOCK_PAUSE}`,
+      );
+      console.error(
+        `  fee:   ${mockFee.address} vs ${addressBook.MOCK_FEE_MODULE}`,
+      );
+      console.error(
+        "  replay must start from a freshly booted fixturenet (see README).",
+      );
       process.exit(1);
     }
     await (await usdc.mint(alice.address, 10_000n * ONE_USDC)).wait();
     await (await usdc.mint(bob.address, 1_000n * ONE_USDC)).wait();
     await (await usdc.mint(carol.address, 1_000n * ONE_USDC)).wait();
-    await (await usdc.connect(alice).approve(addressBook.POOL, ethers.MaxUint256)).wait();
-    await (await usdc.connect(bob).approve(addressBook.POOL, ethers.MaxUint256)).wait();
-    await (await usdc.connect(carol).approve(addressBook.POOL, ethers.MaxUint256)).wait();
+    await (
+      await usdc.connect(alice).approve(addressBook.POOL, ethers.MaxUint256)
+    ).wait();
+    await (
+      await usdc.connect(bob).approve(addressBook.POOL, ethers.MaxUint256)
+    ).wait();
+    await (
+      await usdc.connect(carol).approve(addressBook.POOL, ethers.MaxUint256)
+    ).wait();
     if (evil) {
       await (await evil.mint(alice.address, 100n * ONE_USDC)).wait();
-      await (await evil.connect(alice).approve(addressBook.POOL, ethers.MaxUint256)).wait();
+      await (
+        await evil.connect(alice).approve(addressBook.POOL, ethers.MaxUint256)
+      ).wait();
     }
     console.log("genesis: done");
   }
 
-  console.log(`replay-check: ${ids.length} vector(s) against POOL=${addressBook.POOL}`);
-  console.log("NOTE: assumes the deployment is at the recorded pre-state of the");
-  console.log("      first requested vector (use --genesis on a fresh fixturenet).");
+  console.log(
+    `replay-check: ${ids.length} vector(s) against POOL=${addressBook.POOL}`,
+  );
+  console.log(
+    "NOTE: assumes the deployment is at the recorded pre-state of the",
+  );
+  console.log(
+    "      first requested vector (use --genesis on a fresh fixturenet).",
+  );
 
   let failed = 0;
   for (const id of ids) {

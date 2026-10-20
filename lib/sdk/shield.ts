@@ -13,25 +13,25 @@ import {
   ShieldNoteERC20,
   ByteUtils,
   ShieldRequestStruct,
-} from '@railgun-community/engine';
-import { ethers } from 'ethers';
+} from "@railgun-community/engine";
+import { ethers } from "ethers";
 
 // ============ Types ============
 
 export interface ShieldInput {
-  railgunAddress: string;  // 0zk... format
-  amount: bigint;          // Token amount in base units
-  tokenAddress: string;    // Token contract address
+  railgunAddress: string; // 0zk... format
+  amount: bigint; // Token amount in base units
+  tokenAddress: string; // Token contract address
 }
 
 export interface ShieldResult {
   shieldRequest: ShieldRequestStruct;
-  random: string;          // Hex string - needed for note tracking
+  random: string; // Hex string - needed for note tracking
 }
 
 export interface ShieldBatchResult {
   shieldRequests: ShieldRequestStruct[];
-  random: string;          // Shared random for batch
+  random: string; // Shared random for batch
 }
 
 // ============ Constants ============
@@ -40,7 +40,7 @@ export interface ShieldBatchResult {
  * Message to sign for deriving shield private key
  * User signs this with their wallet to derive the shieldPrivateKey
  */
-export const SHIELD_SIGNATURE_MESSAGE = 'RAILGUN_SHIELD';
+export const SHIELD_SIGNATURE_MESSAGE = "RAILGUN_SHIELD";
 
 // ============ Shield Private Key ============
 
@@ -89,11 +89,11 @@ export function generateShieldPrivateKey(): string {
  */
 export async function createShieldRequest(
   input: ShieldInput,
-  shieldPrivateKey: string
+  shieldPrivateKey: string,
 ): Promise<ShieldResult> {
   // Decode Railgun address to get public keys
   const { masterPublicKey, viewingPublicKey } = RailgunEngine.decodeAddress(
-    input.railgunAddress
+    input.railgunAddress,
   );
 
   // Generate random for note (16 bytes = 32 hex chars)
@@ -104,14 +104,14 @@ export async function createShieldRequest(
     masterPublicKey,
     random,
     input.amount,
-    input.tokenAddress
+    input.tokenAddress,
   );
 
   // Serialize to ShieldRequestStruct
   // This encrypts the random using ECIES with the viewing keys
   const shieldRequest = await shieldNote.serialize(
     ByteUtils.hexToBytes(shieldPrivateKey),
-    viewingPublicKey
+    viewingPublicKey,
   );
 
   return {
@@ -132,10 +132,10 @@ export async function createShieldRequest(
  */
 export async function createShieldRequestBatch(
   inputs: ShieldInput[],
-  shieldPrivateKey: string
+  shieldPrivateKey: string,
 ): Promise<ShieldBatchResult> {
   if (inputs.length === 0) {
-    throw new Error('At least one shield input required');
+    throw new Error("At least one shield input required");
   }
 
   // Generate shared random for batch
@@ -146,18 +146,18 @@ export async function createShieldRequestBatch(
   const shieldRequests = await Promise.all(
     inputs.map(async (input) => {
       const { masterPublicKey, viewingPublicKey } = RailgunEngine.decodeAddress(
-        input.railgunAddress
+        input.railgunAddress,
       );
 
       const shieldNote = new ShieldNoteERC20(
         masterPublicKey,
         random,
         input.amount,
-        input.tokenAddress
+        input.tokenAddress,
       );
 
       return shieldNote.serialize(shieldPrivateKeyBytes, viewingPublicKey);
-    })
+    }),
   );
 
   return {
@@ -177,14 +177,16 @@ export async function createShieldRequestBatch(
  * @param shieldRequest - Shield request struct from SDK
  * @returns ABI-encoded bytes
  */
-export function encodeShieldRequest(shieldRequest: ShieldRequestStruct): string {
+export function encodeShieldRequest(
+  shieldRequest: ShieldRequestStruct,
+): string {
   // Encode the full shield request structure
   // This matches what HubCCTPReceiver expects to decode
   return ethers.AbiCoder.defaultAbiCoder().encode(
     [
-      'tuple(tuple(bytes32 npk, tuple(uint8 tokenType, address tokenAddress, uint256 tokenSubID) token, uint120 value) preimage, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey) ciphertext)',
+      "tuple(tuple(bytes32 npk, tuple(uint8 tokenType, address tokenAddress, uint256 tokenSubID) token, uint120 value) preimage, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey) ciphertext)",
     ],
-    [shieldRequest]
+    [shieldRequest],
   );
 }
 
@@ -198,19 +200,19 @@ export function encodeShieldRequest(shieldRequest: ShieldRequestStruct): string 
  * @returns ABI-encoded bytes with simplified structure
  */
 export function encodeShieldRequestSimple(
-  shieldRequest: ShieldRequestStruct
+  shieldRequest: ShieldRequestStruct,
 ): string {
   const { preimage, ciphertext } = shieldRequest;
 
   return ethers.AbiCoder.defaultAbiCoder().encode(
-    ['bytes32', 'uint120', 'address', 'bytes32[3]', 'bytes32'],
+    ["bytes32", "uint120", "address", "bytes32[3]", "bytes32"],
     [
       preimage.npk,
       preimage.value,
       preimage.token.tokenAddress,
       ciphertext.encryptedBundle,
       ciphertext.shieldKey,
-    ]
+    ],
   );
 }
 
@@ -228,8 +230,8 @@ export function decodeShieldPayload(encoded: string): {
   shieldKey: string;
 } {
   const decoded = ethers.AbiCoder.defaultAbiCoder().decode(
-    ['bytes32', 'uint120', 'address', 'bytes32[3]', 'bytes32'],
-    encoded
+    ["bytes32", "uint120", "address", "bytes32[3]", "bytes32"],
+    encoded,
   );
 
   return {
@@ -261,7 +263,7 @@ export function calculateNpk(masterPublicKey: bigint, random: string): bigint {
   // NPK = Poseidon(masterPublicKey, random)
 
   // Import from engine - ShieldNote is abstract but has static method
-  const { ShieldNote } = require('@railgun-community/engine');
+  const { ShieldNote } = require("@railgun-community/engine");
   return ShieldNote.getNotePublicKey(masterPublicKey, random);
 }
 
@@ -275,7 +277,7 @@ export function calculateNpk(masterPublicKey: bigint, random: string): bigint {
  */
 export function isValidRailgunAddress(address: string): boolean {
   try {
-    if (!address.startsWith('0zk')) {
+    if (!address.startsWith("0zk")) {
       return false;
     }
     // Try to decode - will throw if invalid
@@ -294,7 +296,7 @@ export function isValidRailgunAddress(address: string): boolean {
  */
 export function isValidShieldPrivateKey(key: string): boolean {
   // Should be 64 hex chars (32 bytes), no 0x prefix
-  if (key.startsWith('0x')) {
+  if (key.startsWith("0x")) {
     return false;
   }
   if (key.length !== 64) {

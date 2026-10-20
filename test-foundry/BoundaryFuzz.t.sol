@@ -9,11 +9,11 @@ contract BoundaryFuzzTest is Test {
     uint120 private constant BASIS_POINTS = 10000;
 
     /// @dev Mirror of ShieldModule/TransactModule._getFee
-    function _getFee(
-        uint136 _amount,
-        bool _isInclusive,
-        uint120 _feeBP
-    ) internal pure returns (uint120 base, uint120 fee) {
+    function _getFee(uint136 _amount, bool _isInclusive, uint120 _feeBP)
+        internal
+        pure
+        returns (uint120 base, uint120 fee)
+    {
         if (_feeBP == 0) return (uint120(_amount), 0);
         if (_isInclusive) {
             base = uint120(_amount - (_amount * _feeBP) / BASIS_POINTS);

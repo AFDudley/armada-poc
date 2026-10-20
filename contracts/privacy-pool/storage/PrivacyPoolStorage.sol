@@ -125,8 +125,7 @@ abstract contract PrivacyPoolStorage {
     /// @dev Consensus-critical value, pinned as a hard-coded literal (spec section 2): the
     ///      empty-tree root and every higher-level zero node derive from it.
     ///      The public getter is part of the frozen ABI.
-    bytes32 public constant ZERO_VALUE =
-        0x0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc;
+    bytes32 public constant ZERO_VALUE = 0x0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc;
 
     /// @notice Index of next leaf to be inserted
     uint256 public nextLeafIndex;

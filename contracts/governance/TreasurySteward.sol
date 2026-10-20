@@ -12,10 +12,9 @@ import "./IArmadaGovernance.sol";
 ///         pass-by-default governance proposals. This contract tracks steward identity only:
 ///         election, term duration, removal, and active status.
 contract TreasurySteward {
-
     // ============ State ============
 
-    address public immutable timelock;     // TimelockController address (governance-controlled)
+    address public immutable timelock; // TimelockController address (governance-controlled)
     address public currentSteward;
 
     uint256 public termStart;

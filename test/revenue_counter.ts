@@ -31,7 +31,8 @@ describe("RevenueCounter", function () {
     [owner, alice, bob] = await ethers.getSigners();
 
     // Deploy mock fee collector
-    const MockFeeCollector = await ethers.getContractFactory("MockFeeCollector");
+    const MockFeeCollector =
+      await ethers.getContractFactory("MockFeeCollector");
     mockFeeCollector = await MockFeeCollector.deploy();
     await mockFeeCollector.waitForDeployment();
 
@@ -41,7 +42,9 @@ describe("RevenueCounter", function () {
     await impl.waitForDeployment();
 
     // Deploy ERC1967Proxy pointing to implementation, calling initialize()
-    const initData = RevenueCounter.interface.encodeFunctionData("initialize", [owner.address]);
+    const initData = RevenueCounter.interface.encodeFunctionData("initialize", [
+      owner.address,
+    ]);
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
     const proxy = await ERC1967Proxy.deploy(await impl.getAddress(), initData);
     await proxy.waitForDeployment();
@@ -68,9 +71,9 @@ describe("RevenueCounter", function () {
     });
 
     it("should not allow re-initialization", async function () {
-      await expect(
-        revenueCounter.initialize(alice.address)
-      ).to.be.revertedWith("Initializable: contract is already initialized");
+      await expect(revenueCounter.initialize(alice.address)).to.be.revertedWith(
+        "Initializable: contract is already initialized",
+      );
     });
 
     // WHY: A misdeploy that passes address(0) as the owner would leave the
@@ -81,12 +84,13 @@ describe("RevenueCounter", function () {
       const RevenueCounter = await ethers.getContractFactory("RevenueCounter");
       const impl = await RevenueCounter.deploy();
       await impl.waitForDeployment();
-      const initData = RevenueCounter.interface.encodeFunctionData("initialize", [
-        ethers.ZeroAddress,
-      ]);
+      const initData = RevenueCounter.interface.encodeFunctionData(
+        "initialize",
+        [ethers.ZeroAddress],
+      );
       const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
       await expect(
-        ERC1967Proxy.deploy(await impl.getAddress(), initData)
+        ERC1967Proxy.deploy(await impl.getAddress(), initData),
       ).to.be.revertedWith("RevenueCounter: zero owner");
     });
   });
@@ -108,7 +112,7 @@ describe("RevenueCounter", function () {
 
       // Revenue should be scaled to 18 decimals: 50,000 * 1e12 = 50,000e18
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("50000", 18)
+        ethers.parseUnits("50000", 18),
       );
     });
 
@@ -122,7 +126,7 @@ describe("RevenueCounter", function () {
       await revenueCounter.syncStablecoinRevenue();
 
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("120000", 18)
+        ethers.parseUnits("120000", 18),
       );
     });
 
@@ -134,7 +138,7 @@ describe("RevenueCounter", function () {
       await revenueCounter.syncStablecoinRevenue();
 
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("50000", 18)
+        ethers.parseUnits("50000", 18),
       );
     });
 
@@ -145,7 +149,7 @@ describe("RevenueCounter", function () {
       await revenueCounter.connect(alice).syncStablecoinRevenue();
 
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("10000", 18)
+        ethers.parseUnits("10000", 18),
       );
     });
 
@@ -155,16 +159,22 @@ describe("RevenueCounter", function () {
       const impl = await RevenueCounter.deploy();
       await impl.waitForDeployment();
 
-      const initData = RevenueCounter.interface.encodeFunctionData("initialize", [owner.address]);
+      const initData = RevenueCounter.interface.encodeFunctionData(
+        "initialize",
+        [owner.address],
+      );
       const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-      const proxy = await ERC1967Proxy.deploy(await impl.getAddress(), initData);
+      const proxy = await ERC1967Proxy.deploy(
+        await impl.getAddress(),
+        initData,
+      );
       await proxy.waitForDeployment();
 
       const freshCounter = RevenueCounter.attach(await proxy.getAddress());
 
-      await expect(
-        freshCounter.syncStablecoinRevenue()
-      ).to.be.revertedWith("RevenueCounter: no fee collector");
+      await expect(freshCounter.syncStablecoinRevenue()).to.be.revertedWith(
+        "RevenueCounter: no fee collector",
+      );
     });
 
     it("should scale USDC 6-decimal to 18-decimal USD correctly", async function () {
@@ -174,7 +184,7 @@ describe("RevenueCounter", function () {
       await revenueCounter.syncStablecoinRevenue();
 
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("1", 18)
+        ethers.parseUnits("1", 18),
       );
     });
 
@@ -198,7 +208,7 @@ describe("RevenueCounter", function () {
       await mockFeeCollector.setCumulativeFees(ethers.parseUnits("100000", 6));
       await revenueCounter.syncStablecoinRevenue();
       expect(await revenueCounter.lastSyncedCumulative()).to.equal(
-        ethers.parseUnits("100000", 6)
+        ethers.parseUnits("100000", 6),
       );
 
       // Collector regresses to 80K (e.g. replacement collector that hasn't
@@ -208,10 +218,10 @@ describe("RevenueCounter", function () {
 
       // Baseline tracks the new lower value; recognized counter unchanged.
       expect(await revenueCounter.lastSyncedCumulative()).to.equal(
-        ethers.parseUnits("80000", 6)
+        ethers.parseUnits("80000", 6),
       );
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("100000", 18)
+        ethers.parseUnits("100000", 18),
       );
     });
 
@@ -227,7 +237,7 @@ describe("RevenueCounter", function () {
       await mockFeeCollector.setCumulativeFees(ethers.parseUnits("80000", 6));
       await revenueCounter.syncStablecoinRevenue();
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("100000", 18)
+        ethers.parseUnits("100000", 18),
       );
 
       // New collector (or recovering collector) accrues to 110K. Delta from
@@ -235,7 +245,7 @@ describe("RevenueCounter", function () {
       await mockFeeCollector.setCumulativeFees(ethers.parseUnits("110000", 6));
       await revenueCounter.syncStablecoinRevenue();
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("130000", 18)
+        ethers.parseUnits("130000", 18),
       );
     });
   });
@@ -258,7 +268,7 @@ describe("RevenueCounter", function () {
 
       // Attestation below current should revert
       await expect(
-        revenueCounter.attestRevenue(ethers.parseUnits("50000", 18))
+        revenueCounter.attestRevenue(ethers.parseUnits("50000", 18)),
       ).to.be.revertedWith("RevenueCounter: not monotonic");
     });
 
@@ -274,7 +284,9 @@ describe("RevenueCounter", function () {
 
     it("should reject attestation from non-owner", async function () {
       await expect(
-        revenueCounter.connect(alice).attestRevenue(ethers.parseUnits("100000", 18))
+        revenueCounter
+          .connect(alice)
+          .attestRevenue(ethers.parseUnits("100000", 18)),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -309,12 +321,14 @@ describe("RevenueCounter", function () {
     // the contract integrates it without overwriting concurrent stable accrual.
     it("should increment recognizedRevenueUsd by deltaUsd", async function () {
       await revenueCounter.addRevenue(ethers.parseUnits("100", 18));
-      expect(await revenueCounter.recognizedRevenueUsd())
-        .to.equal(ethers.parseUnits("100", 18));
+      expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
+        ethers.parseUnits("100", 18),
+      );
 
       await revenueCounter.addRevenue(ethers.parseUnits("50", 18));
-      expect(await revenueCounter.recognizedRevenueUsd())
-        .to.equal(ethers.parseUnits("150", 18));
+      expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
+        ethers.parseUnits("150", 18),
+      );
     });
 
     // WHY: Zero-delta no-op matches the attestRevenue same-value early-return —
@@ -322,16 +336,19 @@ describe("RevenueCounter", function () {
     it("should be a no-op for zero delta (no event emitted)", async function () {
       await revenueCounter.addRevenue(ethers.parseUnits("200", 18));
 
-      await expect(revenueCounter.addRevenue(0))
-        .to.not.emit(revenueCounter, "RevenueUpdated");
+      await expect(revenueCounter.addRevenue(0)).to.not.emit(
+        revenueCounter,
+        "RevenueUpdated",
+      );
 
-      expect(await revenueCounter.recognizedRevenueUsd())
-        .to.equal(ethers.parseUnits("200", 18));
+      expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
+        ethers.parseUnits("200", 18),
+      );
     });
 
     it("should reject calls from non-owner", async function () {
       await expect(
-        revenueCounter.connect(alice).addRevenue(ethers.parseUnits("100", 18))
+        revenueCounter.connect(alice).addRevenue(ethers.parseUnits("100", 18)),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -377,8 +394,9 @@ describe("RevenueCounter", function () {
       // counter = $1250 ($1150 + $100 stable delta).
 
       // Truth check: stable contributed $950, non-stable $300 → expected $1250.
-      expect(await revenueCounter.recognizedRevenueUsd())
-        .to.equal(ethers.parseUnits("1250", 18));
+      expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
+        ethers.parseUnits("1250", 18),
+      );
       // Compare against the audit-80 PoC: under attestRevenue (SET), an
       // analogous interleave would have leaked the inter-attestation stable
       // accrual permanently. addRevenue does not.
@@ -392,7 +410,7 @@ describe("RevenueCounter", function () {
       await revenueCounter.connect(alice).freeze();
 
       await expect(
-        revenueCounter.addRevenue(ethers.parseUnits("100", 18))
+        revenueCounter.addRevenue(ethers.parseUnits("100", 18)),
       ).to.be.revertedWith("RevenueCounter: frozen");
     });
   });
@@ -408,7 +426,7 @@ describe("RevenueCounter", function () {
     // and wiring, bricking wind-down. It is now owner-gated (owner == timelock).
     it("reverts when called by a non-owner", async function () {
       await expect(
-        revenueCounter.connect(alice).setWindDownContract(bob.address)
+        revenueCounter.connect(alice).setWindDownContract(bob.address),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -417,7 +435,7 @@ describe("RevenueCounter", function () {
       expect(await revenueCounter.windDownContract()).to.equal(bob.address);
       // one-shot: a second call reverts even from the owner
       await expect(
-        revenueCounter.setWindDownContract(alice.address)
+        revenueCounter.setWindDownContract(alice.address),
       ).to.be.revertedWith("RevenueCounter: wind-down already set");
     });
   });
@@ -428,12 +446,16 @@ describe("RevenueCounter", function () {
   describe("setFeeCollector", function () {
     it("should allow owner to set fee collector", async function () {
       await revenueCounter.setFeeCollector(await mockFeeCollector.getAddress());
-      expect(await revenueCounter.feeCollector()).to.equal(await mockFeeCollector.getAddress());
+      expect(await revenueCounter.feeCollector()).to.equal(
+        await mockFeeCollector.getAddress(),
+      );
     });
 
     it("should reject setFeeCollector from non-owner", async function () {
       await expect(
-        revenueCounter.connect(alice).setFeeCollector(await mockFeeCollector.getAddress())
+        revenueCounter
+          .connect(alice)
+          .setFeeCollector(await mockFeeCollector.getAddress()),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -441,12 +463,15 @@ describe("RevenueCounter", function () {
       await revenueCounter.setFeeCollector(await mockFeeCollector.getAddress());
 
       // Deploy second fee collector
-      const MockFeeCollector = await ethers.getContractFactory("MockFeeCollector");
+      const MockFeeCollector =
+        await ethers.getContractFactory("MockFeeCollector");
       const secondCollector = await MockFeeCollector.deploy();
       await secondCollector.waitForDeployment();
 
       await revenueCounter.setFeeCollector(await secondCollector.getAddress());
-      expect(await revenueCounter.feeCollector()).to.equal(await secondCollector.getAddress());
+      expect(await revenueCounter.feeCollector()).to.equal(
+        await secondCollector.getAddress(),
+      );
     });
 
     // WHY: audit-18 — setFeeCollector exists specifically to recover from a
@@ -466,22 +491,25 @@ describe("RevenueCounter", function () {
       await mockFeeCollector.setCumulativeFees(ethers.parseUnits("60000", 6));
 
       // Deploy fresh replacement collector at 0.
-      const MockFeeCollector = await ethers.getContractFactory("MockFeeCollector");
+      const MockFeeCollector =
+        await ethers.getContractFactory("MockFeeCollector");
       const replacement = await MockFeeCollector.deploy();
       await replacement.waitForDeployment();
 
       // Rotation must succeed despite the old collector's regression.
       await expect(
-        revenueCounter.setFeeCollector(await replacement.getAddress())
+        revenueCounter.setFeeCollector(await replacement.getAddress()),
       ).to.not.be.reverted;
 
       // recognizedRevenueUsd is preserved (monotonic).
       expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
-        ethers.parseUnits("100000", 18)
+        ethers.parseUnits("100000", 18),
       );
       // Baseline is set from the new collector's current value (0).
       expect(await revenueCounter.lastSyncedCumulative()).to.equal(0);
-      expect(await revenueCounter.feeCollector()).to.equal(await replacement.getAddress());
+      expect(await revenueCounter.feeCollector()).to.equal(
+        await replacement.getAddress(),
+      );
     });
   });
 
@@ -500,7 +528,8 @@ describe("RevenueCounter", function () {
       expect(revenueBefore).to.equal(ethers.parseUnits("75000", 18));
 
       // Deploy new implementation
-      const RevenueCounterV2 = await ethers.getContractFactory("RevenueCounter");
+      const RevenueCounterV2 =
+        await ethers.getContractFactory("RevenueCounter");
       const newImpl = await RevenueCounterV2.deploy();
       await newImpl.waitForDeployment();
 
@@ -508,17 +537,22 @@ describe("RevenueCounter", function () {
       await revenueCounter.upgradeTo(await newImpl.getAddress());
 
       // State should be preserved
-      expect(await revenueCounter.recognizedRevenueUsd()).to.equal(revenueBefore);
-      expect(await revenueCounter.feeCollector()).to.equal(await mockFeeCollector.getAddress());
+      expect(await revenueCounter.recognizedRevenueUsd()).to.equal(
+        revenueBefore,
+      );
+      expect(await revenueCounter.feeCollector()).to.equal(
+        await mockFeeCollector.getAddress(),
+      );
     });
 
     it("should reject upgrade from non-owner", async function () {
-      const RevenueCounterV2 = await ethers.getContractFactory("RevenueCounter");
+      const RevenueCounterV2 =
+        await ethers.getContractFactory("RevenueCounter");
       const newImpl = await RevenueCounterV2.deploy();
       await newImpl.waitForDeployment();
 
       await expect(
-        revenueCounter.connect(alice).upgradeTo(await newImpl.getAddress())
+        revenueCounter.connect(alice).upgradeTo(await newImpl.getAddress()),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });

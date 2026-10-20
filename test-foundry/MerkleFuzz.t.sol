@@ -56,10 +56,7 @@ contract MerkleFuzzTest is Test {
 
             if (levelInsertionIndex % 2 == 1) {
                 nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
-                _leafHashes[nextLevelHashIndex] = _hashLeftRight(
-                    filledSubTrees[level],
-                    _leafHashes[insertionElement]
-                );
+                _leafHashes[nextLevelHashIndex] = _hashLeftRight(filledSubTrees[level], _leafHashes[insertionElement]);
                 insertionElement += 1;
                 levelInsertionIndex += 1;
             }

@@ -41,17 +41,30 @@ export class CursorStore {
     return this.inner.read(chainName);
   }
 
-  async write(chainName: string, data: Omit<CursorData, "version">): Promise<void> {
+  async write(
+    chainName: string,
+    data: Omit<CursorData, "version">,
+  ): Promise<void> {
     // Inner store stamps version automatically — caller supplies just the payload fields.
-    return this.inner.write(chainName, { ...data, version: CURSOR_SCHEMA_VERSION });
+    return this.inner.write(chainName, {
+      ...data,
+      version: CURSOR_SCHEMA_VERSION,
+    });
   }
 }
 
 // JsonStateStore's validator signature uses `key`; we name it `chainName` here because the
 // cursor-store's only consumers are per-chain — the semantic name reads better in error
 // messages. Same position, same type — just contextual naming.
-function validate(parsed: unknown, chainName: string, path: string): CursorData {
-  const candidate = parsed as { lastProcessedBlock?: unknown; updatedAt?: unknown };
+function validate(
+  parsed: unknown,
+  chainName: string,
+  path: string,
+): CursorData {
+  const candidate = parsed as {
+    lastProcessedBlock?: unknown;
+    updatedAt?: unknown;
+  };
   if (typeof candidate.lastProcessedBlock !== "number") {
     throw new Error(
       `cursor-store: malformed cursor file for chain '${chainName}' at ${path}. Missing or non-numeric lastProcessedBlock. Delete it to reset to lookback boot.`,
@@ -65,7 +78,10 @@ function validate(parsed: unknown, chainName: string, path: string): CursorData 
   // Range checks. The typeof guard above accepts -Infinity, NaN, Infinity, fractional numbers —
   // none of which are valid block numbers or timestamps. Catch them here so they don't reach
   // the scanner's `Number(...)` casts and turn into silent NaN propagations downstream.
-  if (!Number.isInteger(candidate.lastProcessedBlock) || candidate.lastProcessedBlock < 0) {
+  if (
+    !Number.isInteger(candidate.lastProcessedBlock) ||
+    candidate.lastProcessedBlock < 0
+  ) {
     throw new Error(
       `cursor-store: invalid lastProcessedBlock (${candidate.lastProcessedBlock}) for chain '${chainName}' at ${path}. Expected a non-negative integer. Delete to reset.`,
     );

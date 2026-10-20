@@ -3,25 +3,25 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { createElement, type ReactNode } from 'react'
-import { renderHook, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useAllocations } from './useAllocations.js'
-import type { AddressSummary } from '../lib/graph.js'
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { createElement, type ReactNode } from "react";
+import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useAllocations } from "./useAllocations.js";
+import type { AddressSummary } from "../lib/graph.js";
 
 // Mock ethers Contract — must return a proper constructor
-const mockComputeAllocation = vi.fn()
+const mockComputeAllocation = vi.fn();
 
-vi.mock('ethers', async () => {
-  const actual = await vi.importActual('ethers')
+vi.mock("ethers", async () => {
+  const actual = await vi.importActual("ethers");
   return {
     ...actual,
     Contract: class MockContract {
-      computeAllocation = mockComputeAllocation
+      computeAllocation = mockComputeAllocation;
     },
-  }
-})
+  };
+});
 
 function makeSummary(
   address: string,
@@ -32,8 +32,8 @@ function makeSummary(
     hops: [0],
     totalCommitted: 1000_000000n,
     perHop: new Map([[0, 1000_000000n]]),
-    displayInviter: 'armada',
-    allInviters: ['armada'],
+    displayInviter: "armada",
+    allInviters: ["armada"],
     allocatedArm: null,
     refundUsdc: null,
     allocatedPerHop: new Map(),
@@ -41,99 +41,102 @@ function makeSummary(
     refundClaimed: false,
     delegate: null,
     ...overrides,
-  }
+  };
 }
 
 function wrapper() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  })
+  });
   return ({ children }: { children: ReactNode }) =>
-    createElement(QueryClientProvider, { client }, children)
+    createElement(QueryClientProvider, { client }, children);
 }
 
-describe('useAllocations', () => {
+describe("useAllocations", () => {
   afterEach(() => {
-    vi.restoreAllMocks()
-    mockComputeAllocation.mockReset()
-  })
+    vi.restoreAllMocks();
+    mockComputeAllocation.mockReset();
+  });
 
-  it('returns empty map when phase !== 1', () => {
-    const summaries = new Map([['0xabc', makeSummary('0xabc')]])
+  it("returns empty map when phase !== 1", () => {
+    const summaries = new Map([["0xabc", makeSummary("0xabc")]]);
     const { result } = renderHook(
       () =>
         useAllocations({
           provider: {} as any,
-          contractAddress: '0xcontract',
+          contractAddress: "0xcontract",
           phase: 0,
           refundMode: false,
           summaries,
         }),
       { wrapper: wrapper() },
-    )
-    expect(result.current.size).toBe(0)
-  })
+    );
+    expect(result.current.size).toBe(0);
+  });
 
-  it('returns empty map in refund mode', () => {
-    const summaries = new Map([['0xabc', makeSummary('0xabc')]])
+  it("returns empty map in refund mode", () => {
+    const summaries = new Map([["0xabc", makeSummary("0xabc")]]);
     const { result } = renderHook(
       () =>
         useAllocations({
           provider: {} as any,
-          contractAddress: '0xcontract',
+          contractAddress: "0xcontract",
           phase: 1,
           refundMode: true,
           summaries,
         }),
       { wrapper: wrapper() },
-    )
-    expect(result.current.size).toBe(0)
-  })
+    );
+    expect(result.current.size).toBe(0);
+  });
 
-  it('skips addresses that already have allocation from events', async () => {
+  it("skips addresses that already have allocation from events", async () => {
     const summaries = new Map([
-      ['0xclaimed', makeSummary('0xclaimed', { allocatedArm: 500n })],
-      ['0xunclaimed', makeSummary('0xunclaimed')],
-    ])
+      ["0xclaimed", makeSummary("0xclaimed", { allocatedArm: 500n })],
+      ["0xunclaimed", makeSummary("0xunclaimed")],
+    ]);
 
-    mockComputeAllocation.mockResolvedValue([1000_000000000000000000n, 100_000000n])
+    mockComputeAllocation.mockResolvedValue([
+      1000_000000000000000000n,
+      100_000000n,
+    ]);
 
     const { result } = renderHook(
       () =>
         useAllocations({
           provider: { _isProvider: true } as any,
-          contractAddress: '0xcontract',
+          contractAddress: "0xcontract",
           phase: 1,
           refundMode: false,
           summaries,
         }),
       { wrapper: wrapper() },
-    )
+    );
 
     await waitFor(() => {
-      expect(result.current.size).toBe(1)
-    })
+      expect(result.current.size).toBe(1);
+    });
 
     // Only the unclaimed address should have been queried
-    expect(mockComputeAllocation).toHaveBeenCalledTimes(1)
-    expect(mockComputeAllocation).toHaveBeenCalledWith('0xunclaimed')
-    expect(result.current.has('0xunclaimed')).toBe(true)
-    expect(result.current.has('0xclaimed')).toBe(false)
-  })
+    expect(mockComputeAllocation).toHaveBeenCalledTimes(1);
+    expect(mockComputeAllocation).toHaveBeenCalledWith("0xunclaimed");
+    expect(result.current.has("0xunclaimed")).toBe(true);
+    expect(result.current.has("0xclaimed")).toBe(false);
+  });
 
-  it('returns empty map when provider is null', () => {
-    const summaries = new Map([['0xabc', makeSummary('0xabc')]])
+  it("returns empty map when provider is null", () => {
+    const summaries = new Map([["0xabc", makeSummary("0xabc")]]);
     const { result } = renderHook(
       () =>
         useAllocations({
           provider: null,
-          contractAddress: '0xcontract',
+          contractAddress: "0xcontract",
           phase: 1,
           refundMode: false,
           summaries,
         }),
       { wrapper: wrapper() },
-    )
-    expect(result.current.size).toBe(0)
-  })
-})
+    );
+    expect(result.current.size).toBe(0);
+  });
+});

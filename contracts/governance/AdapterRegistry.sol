@@ -12,7 +12,6 @@ import "./IArmadaGovernance.sol";
 ///         All state changes require the timelock (governance) as caller.
 ///         Implements IAdapterRegistry so that ArmadaYieldAdapter can query authorization.
 contract AdapterRegistry is IAdapterRegistry {
-
     // ============ State ============
 
     /// @notice The timelock controller that owns this registry (set once, immutable).

@@ -45,7 +45,10 @@ import {
   type ChainRole,
 } from "../config/networks";
 import { loadDeployment } from "./deploy-utils";
-import { assertRevenueLockSchedule, type RevenueLockConstructorArgs } from "./revenue-reserve";
+import {
+  assertRevenueLockSchedule,
+  type RevenueLockConstructorArgs,
+} from "./revenue-reserve";
 
 interface VerifyTask {
   name: string;
@@ -57,38 +60,80 @@ interface VerifyTask {
 /** Read immutable reserve arguments from the deployed instance, not a later env file.
  * RevenueLock arguments come from the manifest's recorded constructor input, checked
  * against the deployed lock; the current beneficiary file is not consulted. */
-export async function buildRevenueLockVerificationTasks(c: {
-  armToken: string; revenueCounter: string; revenueLock: string; revenueReserveDistributor?: string;
-}, originalArgs?: RevenueLockConstructorArgs): Promise<VerifyTask[]> {
+export async function buildRevenueLockVerificationTasks(
+  c: {
+    armToken: string;
+    revenueCounter: string;
+    revenueLock: string;
+    revenueReserveDistributor?: string;
+  },
+  originalArgs?: RevenueLockConstructorArgs,
+): Promise<VerifyTask[]> {
   const tasks: VerifyTask[] = [];
   let reserve: { address: string; cap: bigint } | undefined;
   if (c.revenueReserveDistributor) {
-    const distributor = await ethers.getContractAt("RevenueReserveDistributor", c.revenueReserveDistributor);
-    reserve = { address: c.revenueReserveDistributor, cap: await distributor.reserveCap() };
-    tasks.push({ name: "RevenueReserveDistributor", address: reserve.address,
-      constructorArguments: [await distributor.armToken(), await distributor.allocator(), reserve.cap] });
+    const distributor = await ethers.getContractAt(
+      "RevenueReserveDistributor",
+      c.revenueReserveDistributor,
+    );
+    reserve = {
+      address: c.revenueReserveDistributor,
+      cap: await distributor.reserveCap(),
+    };
+    tasks.push({
+      name: "RevenueReserveDistributor",
+      address: reserve.address,
+      constructorArguments: [
+        await distributor.armToken(),
+        await distributor.allocator(),
+        reserve.cap,
+      ],
+    });
   }
   if (!originalArgs) {
-    throw new Error("Original RevenueLock constructor arguments missing; recover deployment transaction input into governance manifest revenueLockConstructorArgs");
+    throw new Error(
+      "Original RevenueLock constructor arguments missing; recover deployment transaction input into governance manifest revenueLockConstructorArgs",
+    );
   }
   const [token, counter, rate, addresses, amounts] = originalArgs;
   const lock = await ethers.getContractAt("RevenueLock", c.revenueLock);
-  if (ethers.getAddress(token) !== ethers.getAddress(c.armToken) ||
-      ethers.getAddress(token) !== ethers.getAddress(await lock.armToken()) ||
-      ethers.getAddress(counter) !== ethers.getAddress(c.revenueCounter) ||
-      ethers.getAddress(counter) !== ethers.getAddress(await lock.revenueCounter()) ||
-      BigInt(rate) !== await lock.MAX_REVENUE_INCREASE_PER_DAY() || addresses.length !== amounts.length) {
-    throw new Error("Original RevenueLock constructor arguments do not match deployed lock");
+  if (
+    ethers.getAddress(token) !== ethers.getAddress(c.armToken) ||
+    ethers.getAddress(token) !== ethers.getAddress(await lock.armToken()) ||
+    ethers.getAddress(counter) !== ethers.getAddress(c.revenueCounter) ||
+    ethers.getAddress(counter) !==
+      ethers.getAddress(await lock.revenueCounter()) ||
+    BigInt(rate) !== (await lock.MAX_REVENUE_INCREASE_PER_DAY()) ||
+    addresses.length !== amounts.length
+  ) {
+    throw new Error(
+      "Original RevenueLock constructor arguments do not match deployed lock",
+    );
   }
   if (reserve) {
-    const index = addresses.findIndex(address => ethers.getAddress(address) === ethers.getAddress(reserve!.address));
+    const index = addresses.findIndex(
+      (address) =>
+        ethers.getAddress(address) === ethers.getAddress(reserve!.address),
+    );
     if (index < 0 || BigInt(amounts[index]) !== reserve.cap) {
-      throw new Error("Original RevenueLock constructor arguments do not fund the reserve distributor at its cap");
+      throw new Error(
+        "Original RevenueLock constructor arguments do not fund the reserve distributor at its cap",
+      );
     }
   }
-  await assertRevenueLockSchedule(c.revenueLock, addresses.map((address, i) =>
-    ({ address, amount: ethers.formatUnits(amounts[i], 18), label: "original constructor" })));
-  tasks.push({ name: "RevenueLock", address: c.revenueLock, constructorArguments: originalArgs });
+  await assertRevenueLockSchedule(
+    c.revenueLock,
+    addresses.map((address, i) => ({
+      address,
+      amount: ethers.formatUnits(amounts[i], 18),
+      label: "original constructor",
+    })),
+  );
+  tasks.push({
+    name: "RevenueLock",
+    address: c.revenueLock,
+    constructorArguments: originalArgs,
+  });
   return tasks;
 }
 
@@ -98,11 +143,23 @@ export async function buildRevenueLockVerificationTasks(c: {
  * timelockMinDelay hold the final value, not the constructor argument. The constructor emits
  * MinDelayChange(0, minDelay) in the timelock's creation block (the governance deployBlock).
  */
-export async function timelockConstructorDelay(timelockAddr: string, deployBlock: number): Promise<bigint> {
-  const timelock = await ethers.getContractAt("TimelockController", timelockAddr);
-  const events = await timelock.queryFilter(timelock.filters.MinDelayChange(), deployBlock, deployBlock);
+export async function timelockConstructorDelay(
+  timelockAddr: string,
+  deployBlock: number,
+): Promise<bigint> {
+  const timelock = await ethers.getContractAt(
+    "TimelockController",
+    timelockAddr,
+  );
+  const events = await timelock.queryFilter(
+    timelock.filters.MinDelayChange(),
+    deployBlock,
+    deployBlock,
+  );
   if (events.length === 0) {
-    throw new Error(`No MinDelayChange event from timelock ${timelockAddr} in its deploy block ${deployBlock}`);
+    throw new Error(
+      `No MinDelayChange event from timelock ${timelockAddr} in its deploy block ${deployBlock}`,
+    );
   }
   const first = events.reduce((a, b) => (b.index < a.index ? b : a));
   return first.args.newDuration;
@@ -112,8 +169,13 @@ export async function timelockConstructorDelay(timelockAddr: string, deployBlock
  * The crowdfund's constructor arguments, read from its immutables. The launch team is not
  * the deployer on mainnet, so none of them can be assumed from the governance manifest.
  */
-export async function crowdfundConstructorArgs(crowdfundAddr: string): Promise<unknown[]> {
-  const crowdfund = await ethers.getContractAt("ArmadaCrowdfund", crowdfundAddr);
+export async function crowdfundConstructorArgs(
+  crowdfundAddr: string,
+): Promise<unknown[]> {
+  const crowdfund = await ethers.getContractAt(
+    "ArmadaCrowdfund",
+    crowdfundAddr,
+  );
   return [
     await crowdfund.usdc(),
     await crowdfund.armToken(),
@@ -135,7 +197,10 @@ async function verify(task: VerifyTask): Promise<boolean> {
     console.log(`  ✓ ${task.name} verified`);
     return true;
   } catch (e: any) {
-    if (e.message?.includes("Already Verified") || e.message?.includes("already verified")) {
+    if (
+      e.message?.includes("Already Verified") ||
+      e.message?.includes("already verified")
+    ) {
       console.log(`  ✓ ${task.name} already verified`);
       return true;
     }
@@ -150,13 +215,22 @@ async function verify(task: VerifyTask): Promise<boolean> {
 async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
   const gov = loadDeployment(getGovernanceDeploymentFile());
   const cf = loadDeployment(getCrowdfundDeploymentFile());
-  if (!gov) throw new Error(`Governance manifest not found: ${getGovernanceDeploymentFile()}`);
-  if (!cf) throw new Error(`Crowdfund manifest not found: ${getCrowdfundDeploymentFile()}`);
+  if (!gov)
+    throw new Error(
+      `Governance manifest not found: ${getGovernanceDeploymentFile()}`,
+    );
+  if (!cf)
+    throw new Error(
+      `Crowdfund manifest not found: ${getCrowdfundDeploymentFile()}`,
+    );
 
   const c = gov.contracts;
 
   // Read values from on-chain that weren't stored in manifests
-  const timelockDelay = await timelockConstructorDelay(c.timelockController, gov.deployBlock);
+  const timelockDelay = await timelockConstructorDelay(
+    c.timelockController,
+    gov.deployBlock,
+  );
   const crowdfundArgs = await crowdfundConstructorArgs(cf.contracts.crowdfund);
 
   const windDown = await ethers.getContractAt("ArmadaWindDown", c.windDown);
@@ -165,7 +239,10 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
 
   // Verify the lock's recorded constructor schedule rather than whichever beneficiary
   // file the current env selects.
-  const revenueLockTasks = await buildRevenueLockVerificationTasks(c, gov.revenueLockConstructorArgs);
+  const revenueLockTasks = await buildRevenueLockVerificationTasks(
+    c,
+    gov.revenueLockConstructorArgs,
+  );
 
   return [
     // --- Governance contracts ---
@@ -173,7 +250,8 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
       name: "TimelockController",
       address: c.timelockController,
       constructorArguments: [timelockDelay, [], [], gov.deployer],
-      contract: "@openzeppelin/contracts/governance/TimelockController.sol:TimelockController",
+      contract:
+        "@openzeppelin/contracts/governance/TimelockController.sol:TimelockController",
     },
     {
       name: "ArmadaToken",
@@ -197,9 +275,14 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
         c.governorImpl,
         new ethers.Interface([
           "function initialize(address,address payable,address)",
-        ]).encodeFunctionData("initialize", [c.armToken, c.timelockController, c.treasury]),
+        ]).encodeFunctionData("initialize", [
+          c.armToken,
+          c.timelockController,
+          c.treasury,
+        ]),
       ],
-      contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+      contract:
+        "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
     },
     {
       name: "TreasurySteward",
@@ -225,7 +308,8 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
           "function initialize(address)",
         ]).encodeFunctionData("initialize", [c.timelockController]),
       ],
-      contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+      contract:
+        "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
     },
     ...revenueLockTasks,
     {
@@ -243,7 +327,12 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
     {
       name: "ArmadaRedemption",
       address: c.redemption,
-      constructorArguments: [c.armToken, c.treasury, c.revenueLock, cf.contracts.crowdfund],
+      constructorArguments: [
+        c.armToken,
+        c.treasury,
+        c.revenueLock,
+        cf.contracts.crowdfund,
+      ],
     },
     {
       name: "ArmadaWindDown",
@@ -257,8 +346,8 @@ async function buildGovernanceCrowdfundTasks(): Promise<VerifyTask[]> {
         c.revenueCounter,
         c.revenueLock,
         c.timelockController,
-        revenueThreshold,    // read from on-chain
-        windDownDeadline,    // read from on-chain
+        revenueThreshold, // read from on-chain
+        windDownDeadline, // read from on-chain
       ],
     },
   ];
@@ -283,10 +372,25 @@ async function buildHubProtocolTasks(): Promise<VerifyTask[]> {
   if (pool?.contracts) {
     const pc = pool.contracts;
     tasks.push(
-      { name: "PrivacyPool (hub router)", address: pc.privacyPool, constructorArguments: [] },
-      { name: "VerifierModule", address: pc.verifierModule, constructorArguments: [] },
+      {
+        name: "PrivacyPool (hub router)",
+        address: pc.privacyPool,
+        constructorArguments: [],
+      },
+      {
+        name: "VerifierModule",
+        address: pc.verifierModule,
+        constructorArguments: [],
+      },
       // hookRouter constructor: (messageTransmitter, tokenMessenger)
-      { name: "CCTPHookRouter (hub)", address: pc.hookRouter, constructorArguments: [pool.cctp.messageTransmitter, pool.cctp.tokenMessenger] },
+      {
+        name: "CCTPHookRouter (hub)",
+        address: pc.hookRouter,
+        constructorArguments: [
+          pool.cctp.messageTransmitter,
+          pool.cctp.tokenMessenger,
+        ],
+      },
     );
     // GaslessShieldWrapper constructor: (usdc, pool). Unlike the Poseidon-linked modules it has no
     // library linking, so it verifies cleanly. Guarded because older manifests predate the wrapper.
@@ -299,7 +403,12 @@ async function buildHubProtocolTasks(): Promise<VerifyTask[]> {
     }
   }
 
-  if (yieldD?.contracts && aave?.contracts && gov?.contracts && cctp?.contracts) {
+  if (
+    yieldD?.contracts &&
+    aave?.contracts &&
+    gov?.contracts &&
+    cctp?.contracts
+  ) {
     const yc = yieldD.contracts;
     const cfg = yieldD.config;
     tasks.push(
@@ -329,26 +438,43 @@ async function buildHubProtocolTasks(): Promise<VerifyTask[]> {
   }
 
   if (aave?.contracts) {
-    tasks.push({ name: "MockAaveSpoke", address: aave.contracts.mockAaveSpoke, constructorArguments: [] });
+    tasks.push({
+      name: "MockAaveSpoke",
+      address: aave.contracts.mockAaveSpoke,
+      constructorArguments: [],
+    });
   }
 
-  if (feeMod?.contracts && gov?.contracts && pool?.contracts && yieldD?.contracts) {
+  if (
+    feeMod?.contracts &&
+    gov?.contracts &&
+    pool?.contracts &&
+    yieldD?.contracts
+  ) {
     const ArmadaFeeModule = await ethers.getContractFactory("ArmadaFeeModule");
-    const initData = ArmadaFeeModule.interface.encodeFunctionData("initialize", [
-      gov.contracts.timelockController, // owner on non-local
-      gov.contracts.treasury,
-      pool.contracts.privacyPool,
-      yieldD.contracts.armadaYieldVault,
-      pool.cctp.usdc,
-    ]);
+    const initData = ArmadaFeeModule.interface.encodeFunctionData(
+      "initialize",
+      [
+        gov.contracts.timelockController, // owner on non-local
+        gov.contracts.treasury,
+        pool.contracts.privacyPool,
+        yieldD.contracts.armadaYieldVault,
+        pool.cctp.usdc,
+      ],
+    );
     tasks.push(
-      { name: "ArmadaFeeModule (implementation)", address: feeMod.contracts.feeModuleImpl, constructorArguments: [] },
+      {
+        name: "ArmadaFeeModule (implementation)",
+        address: feeMod.contracts.feeModuleImpl,
+        constructorArguments: [],
+      },
       // ERC1967Proxy(implementation, data)
       {
         name: "ArmadaFeeModule (proxy)",
         address: feeMod.contracts.feeModuleProxy,
         constructorArguments: [feeMod.contracts.feeModuleImpl, initData],
-        contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+        contract:
+          "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
       },
     );
   }
@@ -367,9 +493,20 @@ async function buildClientChainTasks(role: ChainRole): Promise<VerifyTask[]> {
   }
   const cc = client.contracts;
   const tasks: VerifyTask[] = [
-    { name: "PrivacyPoolClient", address: cc.privacyPoolClient, constructorArguments: [] },
+    {
+      name: "PrivacyPoolClient",
+      address: cc.privacyPoolClient,
+      constructorArguments: [],
+    },
     // hookRouter constructor: (messageTransmitter, tokenMessenger)
-    { name: "CCTPHookRouter (client)", address: cc.hookRouter, constructorArguments: [client.cctp.messageTransmitter, client.cctp.tokenMessenger] },
+    {
+      name: "CCTPHookRouter (client)",
+      address: cc.hookRouter,
+      constructorArguments: [
+        client.cctp.messageTransmitter,
+        client.cctp.tokenMessenger,
+      ],
+    },
   ];
   // GaslessShieldWrapperClient constructor: (usdc, pool) — mirrors the hub wrapper. Guarded because
   // older client manifests predate the permit-gasless wrapper.
@@ -385,7 +522,9 @@ async function buildClientChainTasks(role: ChainRole): Promise<VerifyTask[]> {
 
 async function main() {
   if (!process.env.ETHERSCAN_API_KEY) {
-    throw new Error("ETHERSCAN_API_KEY is required. Get one from https://etherscan.io/apis");
+    throw new Error(
+      "ETHERSCAN_API_KEY is required. Get one from https://etherscan.io/apis",
+    );
   }
 
   const network = await ethers.provider.getNetwork();
@@ -402,8 +541,8 @@ async function main() {
     tasks.push(...(await buildHubProtocolTasks()));
     console.log(
       "\nNote: MerkleModule, ShieldModule, TransactModule are skipped — they link to Poseidon\n" +
-      "libraries whose addresses aren't in the deployment manifest. The PrivacyPool router itself\n" +
-      "is verified, which is the user-facing explorer surface.",
+        "libraries whose addresses aren't in the deployment manifest. The PrivacyPool router itself\n" +
+        "is verified, which is the user-facing explorer surface.",
     );
   } else if (role) {
     const chain = getChainByRole(role);
@@ -415,7 +554,9 @@ async function main() {
     );
   }
 
-  console.log(`\n=== Verifying ${tasks.length} contracts on ${label} Etherscan ===\n`);
+  console.log(
+    `\n=== Verifying ${tasks.length} contracts on ${label} Etherscan ===\n`,
+  );
 
   let passed = 0;
   let failed = 0;
@@ -425,7 +566,9 @@ async function main() {
     else failed++;
   }
 
-  console.log(`\n=== Verification complete: ${passed} passed, ${failed} failed ===`);
+  console.log(
+    `\n=== Verification complete: ${passed} passed, ${failed} failed ===`,
+  );
   if (failed > 0) {
     process.exitCode = 1;
   }

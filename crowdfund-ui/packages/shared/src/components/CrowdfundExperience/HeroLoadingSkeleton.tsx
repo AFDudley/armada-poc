@@ -1,19 +1,24 @@
 // ABOUTME: Loading skeleton for the CrowdfundExperience left-stack while live crowdfund data is being fetched.
 // ABOUTME: Co-located with the hero — promoted to a shared primitive only if/when the designer ships a skeleton in the mockup.
 
-import styles from './HeroLoadingSkeleton.module.css'
+import styles from "./HeroLoadingSkeleton.module.css";
 
 interface BlockProps {
-  className?: string
+  className?: string;
 }
 
 function Block({ className }: BlockProps) {
-  return <div className={[styles.block, className].filter(Boolean).join(' ')} aria-hidden />
+  return (
+    <div
+      className={[styles.block, className].filter(Boolean).join(" ")}
+      aria-hidden
+    />
+  );
 }
 
 export function HeroLoadingSkeleton() {
   return (
-    <div aria-busy="true" aria-live="polite" style={{ display: 'contents' }}>
+    <div aria-busy="true" aria-live="polite" style={{ display: "contents" }}>
       <div className={styles.progressCard}>
         <div className={styles.progressHeader}>
           <Block className={styles.progressNumber} />
@@ -41,5 +46,5 @@ export function HeroLoadingSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }

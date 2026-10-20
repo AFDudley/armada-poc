@@ -30,10 +30,7 @@ contract MockUSDCV2 is ERC20, ERC20Permit {
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
 
-    constructor(string memory name_, string memory symbol_)
-        ERC20(name_, symbol_)
-        ERC20Permit(name_)
-    {
+    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) ERC20Permit(name_) {
         owner = msg.sender;
         minters[msg.sender] = true; // Deployer can mint for initial funding
     }

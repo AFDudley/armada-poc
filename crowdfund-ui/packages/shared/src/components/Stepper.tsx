@@ -1,23 +1,23 @@
 // ABOUTME: Visual chrome for multi-step "checkout" flows with numbered progress dots.
 // ABOUTME: Steps own their own back/next chrome via the StepFooter helper exported below.
 
-import type { ReactNode } from 'react'
-import { Loader2 } from 'lucide-react'
-import { cn } from '../lib/utils.js'
-import { Button } from './ui/button.js'
+import type { ReactNode } from "react";
+import { Loader2 } from "lucide-react";
+import { cn } from "../lib/utils.js";
+import { Button } from "./ui/button.js";
 
 export interface StepperStep {
-  id: string
+  id: string;
   /** Label used for accessible progress state and compact step labels. */
-  label: string
+  label: string;
 }
 
 export interface StepperProps {
-  steps: ReadonlyArray<StepperStep>
+  steps: ReadonlyArray<StepperStep>;
   /** Zero-based index of the active step. */
-  current: number
-  children: ReactNode
-  className?: string
+  current: number;
+  children: ReactNode;
+  className?: string;
 }
 
 /**
@@ -27,12 +27,12 @@ export interface StepperProps {
  * `StepFooter`).
  */
 export function Stepper({ steps, current, children, className }: StepperProps) {
-  const safeCurrent = Math.max(0, Math.min(current, steps.length - 1))
+  const safeCurrent = Math.max(0, Math.min(current, steps.length - 1));
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-elevated backdrop-blur-sm',
-        'ring-1 ring-white/[0.03]',
+        "overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-elevated backdrop-blur-sm",
+        "ring-1 ring-white/[0.03]",
         className,
       )}
     >
@@ -44,29 +44,38 @@ export function Stepper({ steps, current, children, className }: StepperProps) {
         >
           {steps.map((step, i) => {
             const status =
-              i < safeCurrent ? 'done' : i === safeCurrent ? 'active' : 'pending'
+              i < safeCurrent
+                ? "done"
+                : i === safeCurrent
+                  ? "active"
+                  : "pending";
             return (
-              <li key={step.id} className="flex min-w-0 flex-1 items-start last:flex-none">
+              <li
+                key={step.id}
+                className="flex min-w-0 flex-1 items-start last:flex-none"
+              >
                 <div className="flex min-w-10 flex-col items-center gap-1.5">
                   <span
                     className={cn(
-                      'flex size-5 items-center justify-center rounded-full border transition-all',
-                      status === 'done' &&
-                        'border-primary/70 bg-primary/20 text-primary shadow-[0_0_16px_rgba(83,224,224,0.12)]',
-                      status === 'active' &&
-                        'border-hop-0 bg-hop-0/90 text-white shadow-[0_0_0_4px] shadow-hop-0/20',
-                      status === 'pending' &&
-                        'border-border/80 bg-background/50 text-muted-foreground',
+                      "flex size-5 items-center justify-center rounded-full border transition-all",
+                      status === "done" &&
+                        "border-primary/70 bg-primary/20 text-primary shadow-[0_0_16px_rgba(83,224,224,0.12)]",
+                      status === "active" &&
+                        "border-hop-0 bg-hop-0/90 text-white shadow-[0_0_0_4px] shadow-hop-0/20",
+                      status === "pending" &&
+                        "border-border/80 bg-background/50 text-muted-foreground",
                     )}
-                    aria-current={status === 'active' ? 'step' : undefined}
+                    aria-current={status === "active" ? "step" : undefined}
                     aria-label={step.label}
                   >
                     {i + 1}
                   </span>
                   <span
                     className={cn(
-                      'hidden max-w-20 truncate text-center sm:block',
-                      status === 'active' ? 'text-foreground' : 'text-muted-foreground/70',
+                      "hidden max-w-20 truncate text-center sm:block",
+                      status === "active"
+                        ? "text-foreground"
+                        : "text-muted-foreground/70",
                     )}
                   >
                     {step.label}
@@ -76,38 +85,38 @@ export function Stepper({ steps, current, children, className }: StepperProps) {
                   <span
                     aria-hidden="true"
                     className={cn(
-                      'mt-2.5 h-px flex-1',
-                      i < safeCurrent ? 'bg-primary/60' : 'bg-border/80',
+                      "mt-2.5 h-px flex-1",
+                      i < safeCurrent ? "bg-primary/60" : "bg-border/80",
                     )}
                   />
                 )}
               </li>
-            )
+            );
           })}
         </ol>
       </div>
       <div className="px-6 py-6">{children}</div>
     </div>
-  )
+  );
 }
 
 export interface StepFooterProps {
   /** Called when the Back button is clicked. Omitting hides the button. */
-  onBack?: () => void
+  onBack?: () => void;
   /** Called when the primary (Next/Confirm) button is clicked. */
-  onNext?: () => void
-  backLabel?: string
-  nextLabel?: string
-  nextDisabled?: boolean
+  onNext?: () => void;
+  backLabel?: string;
+  nextLabel?: string;
+  nextDisabled?: boolean;
   /** When true the primary button shows a spinner and disables. */
-  nextLoading?: boolean
+  nextLoading?: boolean;
   /** Use the destructive primary variant (red). For "Confirm cancel" cases. */
-  destructive?: boolean
+  destructive?: boolean;
   /** Variant of the primary button. Defaults to filled `default`. */
-  nextVariant?: 'default' | 'outline' | 'secondary'
+  nextVariant?: "default" | "outline" | "secondary";
   /** Optionally hide the primary button entirely (e.g. terminal-error step). */
-  hideNext?: boolean
-  className?: string
+  hideNext?: boolean;
+  className?: string;
 }
 
 /**
@@ -118,17 +127,22 @@ export interface StepFooterProps {
 export function StepFooter({
   onBack,
   onNext,
-  backLabel = 'Back',
-  nextLabel = 'Continue',
+  backLabel = "Back",
+  nextLabel = "Continue",
   nextDisabled,
   nextLoading,
   destructive,
-  nextVariant = 'default',
+  nextVariant = "default",
   hideNext,
   className,
 }: StepFooterProps) {
   return (
-    <div className={cn('mt-6 flex items-center gap-3 border-t border-border/50 pt-4', className)}>
+    <div
+      className={cn(
+        "mt-6 flex items-center gap-3 border-t border-border/50 pt-4",
+        className,
+      )}
+    >
       {onBack && (
         <Button
           type="button"
@@ -143,12 +157,12 @@ export function StepFooter({
       {!hideNext && (
         <Button
           type="button"
-          variant={destructive ? 'destructive' : nextVariant}
+          variant={destructive ? "destructive" : nextVariant}
           className={cn(
-            'ml-auto h-9 rounded-[4px] px-6',
+            "ml-auto h-9 rounded-[4px] px-6",
             !destructive &&
-              nextVariant === 'default' &&
-              'bg-hop-0/75 text-white shadow-[0_0_18px_rgba(132,80,210,0.14)] hover:bg-hop-0/85',
+              nextVariant === "default" &&
+              "bg-hop-0/75 text-white shadow-[0_0_18px_rgba(132,80,210,0.14)] hover:bg-hop-0/85",
           )}
           onClick={() => onNext?.()}
           disabled={nextDisabled || nextLoading}
@@ -158,5 +172,5 @@ export function StepFooter({
         </Button>
       )}
     </div>
-  )
+  );
 }

@@ -1,78 +1,82 @@
 // ABOUTME: Operator command helpers for indexer status and repair workflows.
 // ABOUTME: Keeps CLI output deterministic and testable separately from process I/O.
 
-import { buildHealth } from '../api/health.js'
-import { getRepairRanges } from '../ingest/ranges.js'
-import type { IndexerMeta } from '../db/store.js'
-import type { BlockRange, IndexerHealth } from '../types.js'
+import { buildHealth } from "../api/health.js";
+import { getRepairRanges } from "../ingest/ranges.js";
+import type { IndexerMeta } from "../db/store.js";
+import type { BlockRange, IndexerHealth } from "../types.js";
 
 export type CliCommand =
-  | 'status'
-  | 'verify'
-  | 'repair'
-  | 'backfill'
-  | 'rebuild-snapshot'
-  | 'publish-snapshot'
-  | 'evaluate-alerts'
+  | "status"
+  | "verify"
+  | "repair"
+  | "backfill"
+  | "rebuild-snapshot"
+  | "publish-snapshot"
+  | "evaluate-alerts";
 
 export interface ParsedCliArgs {
-  command: CliCommand
-  fromBlock: number | null
-  toBlock: number | 'latest' | null
+  command: CliCommand;
+  fromBlock: number | null;
+  toBlock: number | "latest" | null;
 }
 
 export interface CliCommandResult {
-  exitCode: number
-  output: string
+  exitCode: number;
+  output: string;
 }
 
 const COMMANDS = new Set<CliCommand>([
-  'status',
-  'verify',
-  'repair',
-  'backfill',
-  'rebuild-snapshot',
-  'publish-snapshot',
-  'evaluate-alerts',
-])
+  "status",
+  "verify",
+  "repair",
+  "backfill",
+  "rebuild-snapshot",
+  "publish-snapshot",
+  "evaluate-alerts",
+]);
 
-function parseBlockValue(raw: string, name: string): number | 'latest' {
-  if (raw === 'latest' && name === '--to') return 'latest'
-  const parsed = Number(raw)
+function parseBlockValue(raw: string, name: string): number | "latest" {
+  if (raw === "latest" && name === "--to") return "latest";
+  const parsed = Number(raw);
   if (!Number.isSafeInteger(parsed) || parsed < 0) {
-    throw new Error(`Invalid ${name} block: ${raw}`)
+    throw new Error(`Invalid ${name} block: ${raw}`);
   }
-  return parsed
+  return parsed;
 }
 
 export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
-  const [commandRaw = 'status', ...rest] = args
+  const [commandRaw = "status", ...rest] = args;
   if (!COMMANDS.has(commandRaw as CliCommand)) {
-    throw new Error(`Unknown command: ${commandRaw}`)
+    throw new Error(`Unknown command: ${commandRaw}`);
   }
 
-  let fromBlock: number | null = null
-  let toBlock: number | 'latest' | null = null
-  if (commandRaw === 'backfill' && rest.length === 1 && !rest[0].startsWith('--')) {
+  let fromBlock: number | null = null;
+  let toBlock: number | "latest" | null = null;
+  if (
+    commandRaw === "backfill" &&
+    rest.length === 1 &&
+    !rest[0].startsWith("--")
+  ) {
     return {
-      command: 'backfill',
+      command: "backfill",
       fromBlock,
-      toBlock: parseBlockValue(rest[0], '--to'),
-    }
+      toBlock: parseBlockValue(rest[0], "--to"),
+    };
   }
 
   for (let i = 0; i < rest.length; i += 2) {
-    const flag = rest[i]
-    const value = rest[i + 1]
-    if (!value) throw new Error(`Missing value for ${flag}`)
-    if (flag === '--from') {
-      const parsed = parseBlockValue(value, flag)
-      if (parsed === 'latest') throw new Error('--from cannot be latest')
-      fromBlock = parsed
-    } else if (flag === '--to') {
-      toBlock = parseBlockValue(value, flag)
+    const flag = rest[i];
+    const value = rest[i + 1];
+    if (!value) throw new Error(`Missing value for ${flag}`);
+    if (flag === "--from") {
+      const parsed = parseBlockValue(value, flag);
+      if (parsed === "latest") throw new Error("--from cannot be latest");
+      fromBlock = parsed;
+    } else if (flag === "--to") {
+      toBlock = parseBlockValue(value, flag);
     } else {
-      throw new Error(`Unknown option: ${flag}`)
+      throw new Error(`Unknown option: ${flag}`);
     }
   }
 
@@ -80,10 +84,13 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
     command: commandRaw as CliCommand,
     fromBlock,
     toBlock,
-  }
+  };
 }
 
-export function getStatusHealth(data: IndexerMeta, staleAfterMs?: number): IndexerHealth {
+export function getStatusHealth(
+  data: IndexerMeta,
+  staleAfterMs?: number,
+): IndexerHealth {
   return buildHealth({
     cursor: data.cursor,
     gapRanges: getRepairRanges(data.ranges),
@@ -94,18 +101,19 @@ export function getStatusHealth(data: IndexerMeta, staleAfterMs?: number): Index
     latestSnapshotHash: data.latestSnapshotHash,
     latestStaticSnapshotUrl: data.latestStaticSnapshotUrl,
     staleAfterMs,
-  })
+  });
 }
 
 export function formatRange(range: BlockRange): string {
-  return `${range.fromBlock}-${range.toBlock}`
+  return `${range.fromBlock}-${range.toBlock}`;
 }
 
 export function formatStatus(data: IndexerMeta, staleAfterMs?: number): string {
-  const health = getStatusHealth(data, staleAfterMs)
-  const gaps = health.gapRanges.length > 0
-    ? health.gapRanges.map(formatRange).join(', ')
-    : 'none'
+  const health = getStatusHealth(data, staleAfterMs);
+  const gaps =
+    health.gapRanges.length > 0
+      ? health.gapRanges.map(formatRange).join(", ")
+      : "none";
 
   return [
     `status: ${health.status}`,
@@ -115,18 +123,24 @@ export function formatStatus(data: IndexerMeta, staleAfterMs?: number): string {
     `verifiedCursor: ${health.verifiedCursor}`,
     `lagBlocks: ${health.lagBlocks}`,
     `gaps: ${gaps}`,
-    `lastError: ${health.lastError ?? 'none'}`,
-    `latestSnapshotHash: ${health.latestSnapshotHash ?? 'none'}`,
-    `latestStaticSnapshotUrl: ${health.latestStaticSnapshotUrl ?? 'none'}`,
-  ].join('\n')
+    `lastError: ${health.lastError ?? "none"}`,
+    `latestSnapshotHash: ${health.latestSnapshotHash ?? "none"}`,
+    `latestStaticSnapshotUrl: ${health.latestStaticSnapshotUrl ?? "none"}`,
+  ].join("\n");
 }
 
 // Handles the read-only `status` command. RPC-backed commands (verify/repair/backfill,
 // rebuild-snapshot, publish-snapshot) are dispatched in cli/index.ts before reaching here,
 // so this function intentionally accepts only `status`.
-export function runReadOnlyCommand(args: ParsedCliArgs, data: IndexerMeta, staleAfterMs?: number): CliCommandResult {
-  if (args.command !== 'status') {
-    throw new Error(`runReadOnlyCommand received non-status command: ${args.command}`)
+export function runReadOnlyCommand(
+  args: ParsedCliArgs,
+  data: IndexerMeta,
+  staleAfterMs?: number,
+): CliCommandResult {
+  if (args.command !== "status") {
+    throw new Error(
+      `runReadOnlyCommand received non-status command: ${args.command}`,
+    );
   }
-  return { exitCode: 0, output: formatStatus(data, staleAfterMs) }
+  return { exitCode: 0, output: formatStatus(data, staleAfterMs) };
 }

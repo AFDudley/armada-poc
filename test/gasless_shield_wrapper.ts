@@ -68,12 +68,18 @@ describe("GaslessShieldWrapper — ethers permit + intent integration", function
     usdc = await MockUSDCV2.deploy("USD Coin", "USDC");
     await usdc.waitForDeployment();
 
-    const MockShieldRecorder = await ethers.getContractFactory("MockShieldRecorder");
+    const MockShieldRecorder =
+      await ethers.getContractFactory("MockShieldRecorder");
     pool = await MockShieldRecorder.deploy(await usdc.getAddress());
     await pool.waitForDeployment();
 
-    const GaslessShieldWrapper = await ethers.getContractFactory("GaslessShieldWrapper");
-    wrapper = await GaslessShieldWrapper.deploy(await usdc.getAddress(), await pool.getAddress());
+    const GaslessShieldWrapper = await ethers.getContractFactory(
+      "GaslessShieldWrapper",
+    );
+    wrapper = await GaslessShieldWrapper.deploy(
+      await usdc.getAddress(),
+      await pool.getAddress(),
+    );
     await wrapper.waitForDeployment();
 
     await usdc.mint(user.address, 100n * ONE_USDC);
@@ -100,13 +106,21 @@ describe("GaslessShieldWrapper — ethers permit + intent integration", function
 
   function requestsHashOf(requests: any[]) {
     return ethers.keccak256(
-      ethers.AbiCoder.defaultAbiCoder().encode([SHIELD_REQUEST_ARRAY_TYPE], [requests]),
+      ethers.AbiCoder.defaultAbiCoder().encode(
+        [SHIELD_REQUEST_ARRAY_TYPE],
+        [requests],
+      ),
     );
   }
 
   async function signPermit(spender: string, value: bigint, deadline: bigint) {
     const { chainId } = await ethers.provider.getNetwork();
-    const domain = { name: await usdc.name(), version: "1", chainId, verifyingContract: await usdc.getAddress() };
+    const domain = {
+      name: await usdc.name(),
+      version: "1",
+      chainId,
+      verifyingContract: await usdc.getAddress(),
+    };
     const nonce = await usdc.nonces(user.address);
     const sig = await user.signTypedData(domain, PERMIT_TYPES, {
       owner: user.address,
@@ -118,7 +132,12 @@ describe("GaslessShieldWrapper — ethers permit + intent integration", function
     return ethers.Signature.from(sig);
   }
 
-  async function signIntent(requestsHash: string, integratorAddr: string, deadline: bigint, nonce: bigint) {
+  async function signIntent(
+    requestsHash: string,
+    integratorAddr: string,
+    deadline: bigint,
+    nonce: bigint,
+  ) {
     const { chainId } = await ethers.provider.getNetwork();
     const domain = {
       name: "ArmadaGaslessShield",
@@ -135,7 +154,12 @@ describe("GaslessShieldWrapper — ethers permit + intent integration", function
     });
   }
 
-  function params(deadline: bigint, nonce: bigint, integratorAddr: string, sig: ethers.Signature) {
+  function params(
+    deadline: bigint,
+    nonce: bigint,
+    integratorAddr: string,
+    sig: ethers.Signature,
+  ) {
     return {
       user: user.address,
       deadline,
@@ -157,7 +181,11 @@ describe("GaslessShieldWrapper — ethers permit + intent integration", function
     const reqs = twoNotes(SHIELD_AMOUNT, FEE);
     const rHash = requestsHashOf(reqs);
 
-    const permitSig = await signPermit(await wrapper.getAddress(), TOTAL_AMOUNT, deadline);
+    const permitSig = await signPermit(
+      await wrapper.getAddress(),
+      TOTAL_AMOUNT,
+      deadline,
+    );
     const intentSig = await signIntent(rHash, integrator.address, deadline, 0n);
 
     const userBefore = await usdc.balanceOf(user.address);
@@ -165,10 +193,18 @@ describe("GaslessShieldWrapper — ethers permit + intent integration", function
     // Submitted by an arbitrary account (not a privileged relayer) — permissionless.
     await wrapper
       .connect(submitter)
-      .gaslessShield(params(deadline, 0n, integrator.address, permitSig), intentSig, reqs);
+      .gaslessShield(
+        params(deadline, 0n, integrator.address, permitSig),
+        intentSig,
+        reqs,
+      );
 
-    expect(await usdc.balanceOf(await pool.getAddress())).to.equal(TOTAL_AMOUNT);
-    expect(await usdc.balanceOf(user.address)).to.equal(userBefore - TOTAL_AMOUNT);
+    expect(await usdc.balanceOf(await pool.getAddress())).to.equal(
+      TOTAL_AMOUNT,
+    );
+    expect(await usdc.balanceOf(user.address)).to.equal(
+      userBefore - TOTAL_AMOUNT,
+    );
     expect(await usdc.balanceOf(await wrapper.getAddress())).to.equal(0n);
     expect(await pool.shieldCallCount()).to.equal(1n);
     expect(await pool.lastNoteCount()).to.equal(2n);
@@ -189,7 +225,11 @@ describe("GaslessShieldWrapper — ethers permit + intent integration", function
     const signedReqs = twoNotes(SHIELD_AMOUNT, FEE);
     const rHash = requestsHashOf(signedReqs);
 
-    const permitSig = await signPermit(await wrapper.getAddress(), TOTAL_AMOUNT, deadline);
+    const permitSig = await signPermit(
+      await wrapper.getAddress(),
+      TOTAL_AMOUNT,
+      deadline,
+    );
     const intentSig = await signIntent(rHash, integrator.address, deadline, 0n);
 
     // Attacker redirects the user note to their own npk while reusing the signatures.
@@ -199,7 +239,11 @@ describe("GaslessShieldWrapper — ethers permit + intent integration", function
     await expect(
       wrapper
         .connect(submitter)
-        .gaslessShield(params(deadline, 0n, integrator.address, permitSig), intentSig, tampered),
+        .gaslessShield(
+          params(deadline, 0n, integrator.address, permitSig),
+          intentSig,
+          tampered,
+        ),
     ).to.be.revertedWith("GaslessShieldWrapper: bad intent sig");
   });
 });

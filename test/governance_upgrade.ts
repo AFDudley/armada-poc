@@ -18,8 +18,14 @@ describe("Governance UUPS Upgrade", function () {
     [deployer, alice, bob, attacker] = await ethers.getSigners();
 
     // Deploy timelock
-    const TimelockController = await ethers.getContractFactory("TimelockController");
-    timelock = await TimelockController.deploy(TWO_DAYS, [], [], deployer.address);
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
+    timelock = await TimelockController.deploy(
+      TWO_DAYS,
+      [],
+      [],
+      deployer.address,
+    );
     await timelock.waitForDeployment();
     const timelockAddr = await timelock.getAddress();
 
@@ -30,14 +36,17 @@ describe("Governance UUPS Upgrade", function () {
     const armTokenAddr = await armToken.getAddress();
 
     // Deploy treasury
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
     await treasury.waitForDeployment();
     const treasuryAddr = await treasury.getAddress();
 
     // Deploy governor behind UUPS proxy
     governor = await deployGovernorProxy(
-      armTokenAddr, timelockAddr, treasuryAddr,
+      armTokenAddr,
+      timelockAddr,
+      treasuryAddr,
     );
 
     // Grant timelock roles
@@ -50,10 +59,15 @@ describe("Governance UUPS Upgrade", function () {
     await timelock.grantRole(await timelock.EXECUTOR_ROLE(), deployer.address);
 
     // Setup tokens
-    const whitelist = [deployer.address, alice.address, bob.address, treasuryAddr];
+    const whitelist = [
+      deployer.address,
+      alice.address,
+      bob.address,
+      treasuryAddr,
+    ];
     await armToken.initWhitelist(whitelist);
-    await armToken.transfer(alice.address, TOTAL_SUPPLY * 40n / 100n);
-    await armToken.transfer(bob.address, TOTAL_SUPPLY * 20n / 100n);
+    await armToken.transfer(alice.address, (TOTAL_SUPPLY * 40n) / 100n);
+    await armToken.transfer(bob.address, (TOTAL_SUPPLY * 20n) / 100n);
 
     // Delegate
     await armToken.connect(alice).delegate(alice.address);
@@ -70,21 +84,31 @@ describe("Governance UUPS Upgrade", function () {
 
       // Execute upgrade via timelock
       const upgradeCalldata = governor.interface.encodeFunctionData(
-        "upgradeTo", [await v2Impl.getAddress()]
+        "upgradeTo",
+        [await v2Impl.getAddress()],
       );
       const governorAddr = await governor.getAddress();
       await timelock.schedule(
-        governorAddr, 0, upgradeCalldata,
-        ethers.ZeroHash, ethers.id("upgrade-v2"), TWO_DAYS
+        governorAddr,
+        0,
+        upgradeCalldata,
+        ethers.ZeroHash,
+        ethers.id("upgrade-v2"),
+        TWO_DAYS,
       );
       await time.increase(TWO_DAYS + 1);
       await timelock.execute(
-        governorAddr, 0, upgradeCalldata,
-        ethers.ZeroHash, ethers.id("upgrade-v2")
+        governorAddr,
+        0,
+        upgradeCalldata,
+        ethers.ZeroHash,
+        ethers.id("upgrade-v2"),
       );
 
       // Governor still works — read state through proxy
-      expect(await governor.treasuryAddress()).to.equal(await treasury.getAddress());
+      expect(await governor.treasuryAddress()).to.equal(
+        await treasury.getAddress(),
+      );
     });
 
     it("upgrade from non-timelock reverts", async function () {
@@ -92,7 +116,7 @@ describe("Governance UUPS Upgrade", function () {
       await v2Impl.waitForDeployment();
 
       await expect(
-        governor.connect(attacker).upgradeTo(await v2Impl.getAddress())
+        governor.connect(attacker).upgradeTo(await v2Impl.getAddress()),
       ).to.be.revertedWithCustomError(governor, "Gov_NotTimelock");
     });
 
@@ -101,7 +125,7 @@ describe("Governance UUPS Upgrade", function () {
       await v2Impl.waitForDeployment();
 
       await expect(
-        governor.connect(deployer).upgradeTo(await v2Impl.getAddress())
+        governor.connect(deployer).upgradeTo(await v2Impl.getAddress()),
       ).to.be.revertedWithCustomError(governor, "Gov_NotTimelock");
     });
   });
@@ -119,17 +143,25 @@ describe("Governance UUPS Upgrade", function () {
       await v2Impl.waitForDeployment();
 
       const upgradeCalldata = governor.interface.encodeFunctionData(
-        "upgradeTo", [await v2Impl.getAddress()]
+        "upgradeTo",
+        [await v2Impl.getAddress()],
       );
       const governorAddr = await governor.getAddress();
       await timelock.schedule(
-        governorAddr, 0, upgradeCalldata,
-        ethers.ZeroHash, ethers.id("upgrade-state"), TWO_DAYS
+        governorAddr,
+        0,
+        upgradeCalldata,
+        ethers.ZeroHash,
+        ethers.id("upgrade-state"),
+        TWO_DAYS,
       );
       await time.increase(TWO_DAYS + 1);
       await timelock.execute(
-        governorAddr, 0, upgradeCalldata,
-        ethers.ZeroHash, ethers.id("upgrade-state")
+        governorAddr,
+        0,
+        upgradeCalldata,
+        ethers.ZeroHash,
+        ethers.id("upgrade-state"),
       );
 
       // Verify state persists
@@ -152,17 +184,25 @@ describe("Governance UUPS Upgrade", function () {
       await v2Impl.waitForDeployment();
 
       const upgradeCalldata = governor.interface.encodeFunctionData(
-        "upgradeTo", [await v2Impl.getAddress()]
+        "upgradeTo",
+        [await v2Impl.getAddress()],
       );
       const governorAddr = await governor.getAddress();
       await timelock.schedule(
-        governorAddr, 0, upgradeCalldata,
-        ethers.ZeroHash, ethers.id("upgrade-params"), TWO_DAYS
+        governorAddr,
+        0,
+        upgradeCalldata,
+        ethers.ZeroHash,
+        ethers.id("upgrade-params"),
+        TWO_DAYS,
       );
       await time.increase(TWO_DAYS + 1);
       await timelock.execute(
-        governorAddr, 0, upgradeCalldata,
-        ethers.ZeroHash, ethers.id("upgrade-params")
+        governorAddr,
+        0,
+        upgradeCalldata,
+        ethers.ZeroHash,
+        ethers.id("upgrade-params"),
       );
 
       // Verify params persist
@@ -181,7 +221,7 @@ describe("Governance UUPS Upgrade", function () {
           await armToken.getAddress(),
           await timelock.getAddress(),
           await treasury.getAddress(),
-        )
+        ),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
 
@@ -194,7 +234,7 @@ describe("Governance UUPS Upgrade", function () {
           await armToken.getAddress(),
           await timelock.getAddress(),
           await treasury.getAddress(),
-        )
+        ),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
   });
@@ -206,7 +246,9 @@ describe("Governance UUPS Upgrade", function () {
     });
 
     it("upgradeToAndCall selector is registered as extended", async function () {
-      const selector = ethers.id("upgradeToAndCall(address,bytes)").slice(0, 10);
+      const selector = ethers
+        .id("upgradeToAndCall(address,bytes)")
+        .slice(0, 10);
       expect(await governor.extendedSelectors(selector)).to.be.true;
     });
   });

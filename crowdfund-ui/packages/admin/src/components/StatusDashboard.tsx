@@ -1,7 +1,7 @@
 // ABOUTME: Full-width status dashboard showing phase, timeline, progress, and hop stats.
 // ABOUTME: Includes smooth countdown timer and LT budget tracker (launch team only).
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   formatUsdc,
   formatCountdown,
@@ -11,25 +11,31 @@ import {
   CROWDFUND_CONSTANTS,
   HOP_CONFIGS,
   estimateAllocation,
-} from '@armada/crowdfund-shared'
-import type { AdminState } from '@/hooks/useAdminState'
-import type { AdminRole } from '@/hooks/useRole'
+} from "@armada/crowdfund-shared";
+import type { AdminState } from "@/hooks/useAdminState";
+import type { AdminRole } from "@/hooks/useRole";
 
 export interface StatusDashboardProps {
-  state: AdminState
-  role: AdminRole
+  state: AdminState;
+  role: AdminRole;
 }
 
-function TimelineRow(props: { label: string; isOpen: boolean; isPending?: boolean; endTimestamp: number; now: number }) {
-  const { label, isOpen, isPending, endTimestamp, now } = props
-  const remaining = endTimestamp - now
+function TimelineRow(props: {
+  label: string;
+  isOpen: boolean;
+  isPending?: boolean;
+  endTimestamp: number;
+  now: number;
+}) {
+  const { label, isOpen, isPending, endTimestamp, now } = props;
+  const remaining = endTimestamp - now;
 
   const badgeClass = isOpen
-    ? 'bg-success/20 text-success'
+    ? "bg-success/20 text-success"
     : isPending
-      ? 'bg-amber-500/20 text-amber-500'
-      : 'bg-muted text-muted-foreground'
-  const badgeText = isOpen ? 'OPEN' : isPending ? 'PENDING' : 'CLOSED'
+      ? "bg-amber-500/20 text-amber-500"
+      : "bg-muted text-muted-foreground";
+  const badgeText = isOpen ? "OPEN" : isPending ? "PENDING" : "CLOSED";
 
   return (
     <div className="rounded border border-border p-2 space-y-1">
@@ -42,41 +48,53 @@ function TimelineRow(props: { label: string; isOpen: boolean; isPending?: boolea
         )}
       </div>
       <div className="text-muted-foreground">
-        {endTimestamp === 0
-          ? 'Not yet set'
-          : <>
-              {remaining > 0 ? formatCountdown(remaining) : 'ended'}
-              {' — '}
-              {new Date(endTimestamp * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </>
-        }
+        {endTimestamp === 0 ? (
+          "Not yet set"
+        ) : (
+          <>
+            {remaining > 0 ? formatCountdown(remaining) : "ended"}
+            {" — "}
+            {new Date(endTimestamp * 1000).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </>
+        )}
       </div>
     </div>
-  )
+  );
 }
 
 export function StatusDashboard({ state, role }: StatusDashboardProps) {
   // Smooth countdown: increment block timestamp locally every second
-  const [localTimestamp, setLocalTimestamp] = useState(state.blockTimestamp)
+  const [localTimestamp, setLocalTimestamp] = useState(state.blockTimestamp);
 
   useEffect(() => {
-    setLocalTimestamp(state.blockTimestamp)
-  }, [state.blockTimestamp])
+    setLocalTimestamp(state.blockTimestamp);
+  }, [state.blockTimestamp]);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setLocalTimestamp((prev) => prev + 1)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [])
+      setLocalTimestamp((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  const { MAX_SALE, MIN_SALE, ELASTIC_TRIGGER } = CROWDFUND_CONSTANTS
-  const estimate = estimateAllocation(state.hopStats, state.cappedDemand, state.saleSize)
-  const progressPct = MAX_SALE > 0n ? Number((state.totalCommitted * 100n) / MAX_SALE) : 0
-  const minPct = MAX_SALE > 0n ? Number((MIN_SALE * 100n) / MAX_SALE) : 0
-  const elasticPct = MAX_SALE > 0n ? Number((ELASTIC_TRIGGER * 100n) / MAX_SALE) : 0
+  const { MAX_SALE, MIN_SALE, ELASTIC_TRIGGER } = CROWDFUND_CONSTANTS;
+  const estimate = estimateAllocation(
+    state.hopStats,
+    state.cappedDemand,
+    state.saleSize,
+  );
+  const progressPct =
+    MAX_SALE > 0n ? Number((state.totalCommitted * 100n) / MAX_SALE) : 0;
+  const minPct = MAX_SALE > 0n ? Number((MIN_SALE * 100n) / MAX_SALE) : 0;
+  const elasticPct =
+    MAX_SALE > 0n ? Number((ELASTIC_TRIGGER * 100n) / MAX_SALE) : 0;
 
-  const saleLabel = state.saleSize > CROWDFUND_CONSTANTS.BASE_SALE ? 'EXPANDED' : 'BASE'
+  const saleLabel =
+    state.saleSize > CROWDFUND_CONSTANTS.BASE_SALE ? "EXPANDED" : "BASE";
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
@@ -99,14 +117,23 @@ export function StatusDashboard({ state, role }: StatusDashboardProps) {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <TimelineRow
           label="Days 1-14 (Seeds + LT Invites)"
-          isOpen={state.phase === 0 && localTimestamp >= state.windowStart && localTimestamp < state.launchTeamInviteEnd}
+          isOpen={
+            state.phase === 0 &&
+            localTimestamp >= state.windowStart &&
+            localTimestamp < state.launchTeamInviteEnd
+          }
           isPending={state.phase === 0 && localTimestamp < state.windowStart}
           endTimestamp={state.launchTeamInviteEnd}
           now={localTimestamp}
         />
         <TimelineRow
           label="Commitment Window"
-          isOpen={state.phase === 0 && state.armLoaded && localTimestamp >= state.windowStart && localTimestamp <= state.windowEnd}
+          isOpen={
+            state.phase === 0 &&
+            state.armLoaded &&
+            localTimestamp >= state.windowStart &&
+            localTimestamp <= state.windowEnd
+          }
           isPending={state.phase === 0 && localTimestamp < state.windowStart}
           endTimestamp={state.windowEnd}
           now={localTimestamp}
@@ -145,19 +172,23 @@ export function StatusDashboard({ state, role }: StatusDashboardProps) {
         </div>
         <div className="flex items-center gap-4 text-muted-foreground">
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-amber-500" /> Min ({formatUsdc(MIN_SALE)})
+            <span className="w-2 h-2 rounded-full bg-amber-500" /> Min (
+            {formatUsdc(MIN_SALE)})
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-info" /> Elastic ({formatUsdc(ELASTIC_TRIGGER)})
+            <span className="w-2 h-2 rounded-full bg-info" /> Elastic (
+            {formatUsdc(ELASTIC_TRIGGER)})
           </span>
         </div>
       </div>
 
       {/* Demand & allocation summary */}
       {(() => {
-        const committedDiffers = state.totalCommitted !== state.cappedDemand
-        const allocationDiffers = estimate.totalAllocUsdc < state.cappedDemand
-        const belowMin = estimate.totalAllocUsdc < CROWDFUND_CONSTANTS.MIN_SALE && state.cappedDemand > 0n
+        const committedDiffers = state.totalCommitted !== state.cappedDemand;
+        const allocationDiffers = estimate.totalAllocUsdc < state.cappedDemand;
+        const belowMin =
+          estimate.totalAllocUsdc < CROWDFUND_CONSTANTS.MIN_SALE &&
+          state.cappedDemand > 0n;
 
         return (
           <div className="rounded border border-border p-3 space-y-1">
@@ -172,24 +203,36 @@ export function StatusDashboard({ state, role }: StatusDashboardProps) {
               </div>
               <div>
                 <span className="text-muted-foreground">Est. allocation</span>
-                <div className={`${belowMin ? 'text-destructive' : ''}`}>{formatUsdc(estimate.totalAllocUsdc)}</div>
+                <div className={`${belowMin ? "text-destructive" : ""}`}>
+                  {formatUsdc(estimate.totalAllocUsdc)}
+                </div>
               </div>
             </div>
             {(committedDiffers || allocationDiffers) && (
               <div className="text-muted-foreground space-y-0.5 pt-1">
                 {committedDiffers && (
-                  <div>Effective demand differs from total committed — some participants committed above their per-slot cap.</div>
+                  <div>
+                    Effective demand differs from total committed — some
+                    participants committed above their per-slot cap.
+                  </div>
                 )}
                 {allocationDiffers && (
-                  <div>Est. allocation is lower than effective demand — hop ceilings limit how much each hop can absorb.</div>
+                  <div>
+                    Est. allocation is lower than effective demand — hop
+                    ceilings limit how much each hop can absorb.
+                  </div>
                 )}
                 {belowMin && (
-                  <div className="text-destructive">Estimated allocation is below the minimum fund ({formatUsdc(CROWDFUND_CONSTANTS.MIN_SALE)}). The sale would enter refund mode if finalized now.</div>
+                  <div className="text-destructive">
+                    Estimated allocation is below the minimum fund (
+                    {formatUsdc(CROWDFUND_CONSTANTS.MIN_SALE)}). The sale would
+                    enter refund mode if finalized now.
+                  </div>
                 )}
               </div>
             )}
           </div>
-        )
+        );
       })()}
 
       {/* Per-hop stats table */}
@@ -210,58 +253,83 @@ export function StatusDashboard({ state, role }: StatusDashboardProps) {
           </thead>
           <tbody>
             {state.hopStats.map((stats, hop) => {
-              const hopConfig = hop < HOP_CONFIGS.length ? HOP_CONFIGS[hop] : null
-              const isFloorHop = hop === 2
+              const hopConfig =
+                hop < HOP_CONFIGS.length ? HOP_CONFIGS[hop] : null;
+              const isFloorHop = hop === 2;
               // Effective ceiling from the waterfall (projected sale size until finalized),
               // matching the contract's finalCeilings — including hop-2's floor + rollover.
-              const effectiveCeiling = estimate.perHopCeiling[hop] ?? 0n
-              const overUnderPct = effectiveCeiling > 0n
-                ? Number(stats.cappedCommitted * 10000n / effectiveCeiling) / 100
-                : 0
-              const overUnderColor = overUnderPct <= 100
-                ? 'text-success'
-                : overUnderPct <= 120 ? 'text-amber-500' : 'text-destructive'
+              const effectiveCeiling = estimate.perHopCeiling[hop] ?? 0n;
+              const overUnderPct =
+                effectiveCeiling > 0n
+                  ? Number(
+                      (stats.cappedCommitted * 10000n) / effectiveCeiling,
+                    ) / 100
+                  : 0;
+              const overUnderColor =
+                overUnderPct <= 100
+                  ? "text-success"
+                  : overUnderPct <= 120
+                    ? "text-amber-500"
+                    : "text-destructive";
 
               return (
                 <tr key={hop} className="border-b border-border/50">
                   <td className="py-1 pr-4">{hopLabel(hop)}</td>
                   <td className="py-1 pr-4">
-                    {isFloorHop ? 'Floor' : `${(hopConfig?.ceilingBps ?? 0) / 100}%`}
+                    {isFloorHop
+                      ? "Floor"
+                      : `${(hopConfig?.ceilingBps ?? 0) / 100}%`}
                   </td>
-                  <td className="py-1 pr-4">{hopConfig ? formatUsdc(hopConfig.capUsdc) : '-'}</td>
                   <td className="py-1 pr-4">
-                    {hop === 0 ? `${stats.whitelistCount}/${CROWDFUND_CONSTANTS.MAX_SEEDS}` : stats.whitelistCount}
+                    {hopConfig ? formatUsdc(hopConfig.capUsdc) : "-"}
+                  </td>
+                  <td className="py-1 pr-4">
+                    {hop === 0
+                      ? `${stats.whitelistCount}/${CROWDFUND_CONSTANTS.MAX_SEEDS}`
+                      : stats.whitelistCount}
                   </td>
                   <td className="py-1 pr-4">{stats.uniqueCommitters}</td>
-                  <td className="py-1 pr-4">{formatUsdc(stats.totalCommitted)}</td>
-                  <td className="py-1 pr-4">{formatUsdc(stats.cappedCommitted)}</td>
-                  <td className="py-1 pr-4">{formatUsdc(estimate.perHopAlloc[hop])}</td>
+                  <td className="py-1 pr-4">
+                    {formatUsdc(stats.totalCommitted)}
+                  </td>
+                  <td className="py-1 pr-4">
+                    {formatUsdc(stats.cappedCommitted)}
+                  </td>
+                  <td className="py-1 pr-4">
+                    {formatUsdc(estimate.perHopAlloc[hop])}
+                  </td>
                   <td className={`py-1 pr-4 ${overUnderColor}`}>
                     {overUnderPct.toFixed(1)}%
                   </td>
                 </tr>
-              )
+              );
             })}
           </tbody>
         </table>
       </div>
 
       {/* LT budget tracker (launch team only) */}
-      {role === 'launch_team' && (
+      {role === "launch_team" && (
         <div className="rounded border border-border p-3 space-y-2">
           <div className="text-muted-foreground">Launch Team Budget</div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <span className="text-muted-foreground">Hop-1 remaining: </span>
-              <span className="">{state.ltBudgetHop1Remaining} / {CROWDFUND_CONSTANTS.LAUNCH_TEAM_HOP1_BUDGET}</span>
+              <span className="">
+                {state.ltBudgetHop1Remaining} /{" "}
+                {CROWDFUND_CONSTANTS.LAUNCH_TEAM_HOP1_BUDGET}
+              </span>
             </div>
             <div>
               <span className="text-muted-foreground">Hop-2 remaining: </span>
-              <span className="">{state.ltBudgetHop2Remaining} / {CROWDFUND_CONSTANTS.LAUNCH_TEAM_HOP2_BUDGET}</span>
+              <span className="">
+                {state.ltBudgetHop2Remaining} /{" "}
+                {CROWDFUND_CONSTANTS.LAUNCH_TEAM_HOP2_BUDGET}
+              </span>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

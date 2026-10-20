@@ -15,41 +15,88 @@
  * Output: ../../../armada-circuits/tests/fixtures/generated/
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { ethers } from 'hardhat';
+import * as fs from "fs";
+import * as path from "path";
+import { ethers } from "hardhat";
 
-import { initializeEngine, shutdownEngine, clearDatabase, getEngine } from '../../lib/sdk/init';
-import { createWallet, DEFAULT_ENCRYPTION_KEY } from '../../lib/sdk/wallet';
-import { initializeProver } from '../../lib/sdk/prover';
-import { createShieldRequest, generateShieldPrivateKey, calculateNpk } from '../../lib/sdk/shield';
-import { loadNetworkIntoEngine, scanWalletBalances, getMerkleRoot, getMerkleProof } from '../../lib/sdk/network';
-import { createPrivateTransfer, createUnshield } from '../../lib/sdk/transfer';
-import { getChainById, getRpcUrl } from '../../lib/sdk/chain-config';
-import { loadVerificationKeys, TESTING_ARTIFACT_CONFIGS } from '../../lib/artifacts';
+import {
+  initializeEngine,
+  shutdownEngine,
+  clearDatabase,
+  getEngine,
+} from "../../lib/sdk/init";
+import { createWallet, DEFAULT_ENCRYPTION_KEY } from "../../lib/sdk/wallet";
+import { initializeProver } from "../../lib/sdk/prover";
+import {
+  createShieldRequest,
+  generateShieldPrivateKey,
+  calculateNpk,
+} from "../../lib/sdk/shield";
+import {
+  loadNetworkIntoEngine,
+  scanWalletBalances,
+  getMerkleRoot,
+  getMerkleProof,
+} from "../../lib/sdk/network";
+import { createPrivateTransfer, createUnshield } from "../../lib/sdk/transfer";
+import { getChainById, getRpcUrl } from "../../lib/sdk/chain-config";
+import {
+  loadVerificationKeys,
+  TESTING_ARTIFACT_CONFIGS,
+} from "../../lib/artifacts";
 
-import { TXIDVersion, getTokenDataERC20, getTokenDataHash, POI, POINodeInterface } from '@railgun-community/engine';
+import {
+  TXIDVersion,
+  getTokenDataERC20,
+  getTokenDataHash,
+  POI,
+  POINodeInterface,
+} from "@railgun-community/engine";
 
 // ── POI Stub (same as original) ────────────────────────────
 class StubPOINodeInterface extends POINodeInterface {
-  isActive(): boolean { return false; }
-  async isRequired(): Promise<boolean> { return false; }
-  async getPOIsPerList(): Promise<Record<string, any>> { return {}; }
-  async getPOIMerkleProofs(): Promise<any[]> { return []; }
-  async validatePOIMerkleroots(): Promise<boolean> { return true; }
-  async submitPOI(): Promise<void> { /* no-op */ }
-  async submitLegacyTransactProofs(): Promise<void> { /* no-op */ }
+  isActive(): boolean {
+    return false;
+  }
+  async isRequired(): Promise<boolean> {
+    return false;
+  }
+  async getPOIsPerList(): Promise<Record<string, any>> {
+    return {};
+  }
+  async getPOIMerkleProofs(): Promise<any[]> {
+    return [];
+  }
+  async validatePOIMerkleroots(): Promise<boolean> {
+    return true;
+  }
+  async submitPOI(): Promise<void> {
+    /* no-op */
+  }
+  async submitLegacyTransactProofs(): Promise<void> {
+    /* no-op */
+  }
 }
 POI.init([], new StubPOINodeInterface());
 
 // ── Constants ──────────────────────────────────────────────
-const deployments = require('../../deployments/privacy-pool-hub.json');
-const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
-const FIXTURES_DIR = path.join(__dirname, '..', '..', '..', 'armada-circuits', 'tests', 'fixtures', 'generated');
+const deployments = require("../../deployments/privacy-pool-hub.json");
+const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const FIXTURES_DIR = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "armada-circuits",
+  "tests",
+  "fixtures",
+  "generated",
+);
 
 // ── Types ──────────────────────────────────────────────────
 interface TransferVector {
-  operation: 'transfer';
+  operation: "transfer";
   shape: { nullifiers: number; commitments: number };
   chainId: number;
   inputs: Array<{
@@ -61,10 +108,15 @@ interface TransferVector {
     treeNumber: number;
     leafIndex: number;
     nullifier: string;
-    merkleProof: { leaf: string; elements: string[]; indices: string; root: string; };
+    merkleProof: {
+      leaf: string;
+      elements: string[];
+      indices: string;
+      root: string;
+    };
   }>;
-  keys: { nullifyingKey: string; spendingPublicKey: [string, string]; };
-  eddsaSignature: { R8: [string, string]; S: string; };
+  keys: { nullifyingKey: string; spendingPublicKey: [string, string] };
+  eddsaSignature: { R8: [string, string]; S: string };
   outputs: Array<{
     notePublicKey: string;
     tokenAddress: string;
@@ -87,12 +139,12 @@ interface TransferVector {
 
 // ── Helpers ────────────────────────────────────────────────
 function toHex(n: bigint | string): string {
-  if (typeof n === 'string') return n;
-  return '0x' + n.toString(16).padStart(64, '0');
+  if (typeof n === "string") return n;
+  return "0x" + n.toString(16).padStart(64, "0");
 }
 
 function bigintReplacer(_key: string, value: any): any {
-  return typeof value === 'bigint' ? toHex(value) : value;
+  return typeof value === "bigint" ? toHex(value) : value;
 }
 
 function writeJSON(filePath: string, obj: any): void {
@@ -101,13 +153,28 @@ function writeJSON(filePath: string, obj: any): void {
 
 function computeBoundParamsHash(boundParams: any): string {
   const ccArray = boundParams.commitmentCiphertext.map((cc: any) => [
-    cc.ciphertext, cc.blindedSenderViewingKey, cc.blindedReceiverViewingKey, cc.annotationData, cc.memo,
+    cc.ciphertext,
+    cc.blindedSenderViewingKey,
+    cc.blindedReceiverViewingKey,
+    cc.annotationData,
+    cc.memo,
   ]);
   const abiCoder = ethers.AbiCoder.defaultAbiCoder();
   const encoded = abiCoder.encode(
-    ['tuple(uint16 treeNumber, uint72 minGasPrice, uint8 unshield, uint64 chainID, address adaptContract, bytes32 adaptParams, tuple(bytes32[4],bytes32,bytes32,bytes,bytes)[])'],
-    [[Number(boundParams.treeNumber), BigInt(boundParams.minGasPrice ?? 0), Number(boundParams.unshield ?? 0),
-      BigInt(boundParams.chainID), boundParams.adaptContract, boundParams.adaptParams, ccArray]]
+    [
+      "tuple(uint16 treeNumber, uint72 minGasPrice, uint8 unshield, uint64 chainID, address adaptContract, bytes32 adaptParams, tuple(bytes32[4],bytes32,bytes32,bytes,bytes)[])",
+    ],
+    [
+      [
+        Number(boundParams.treeNumber),
+        BigInt(boundParams.minGasPrice ?? 0),
+        Number(boundParams.unshield ?? 0),
+        BigInt(boundParams.chainID),
+        boundParams.adaptContract,
+        boundParams.adaptParams,
+        ccArray,
+      ],
+    ],
   );
   return toHex(BigInt(ethers.keccak256(encoded)) % SNARK_SCALAR_FIELD);
 }
@@ -122,7 +189,9 @@ function buildPublicInputs(tx: any): string[] {
 }
 
 function serializeProof(proof: any): any {
-  return JSON.parse(JSON.stringify(proof, (_, v) => typeof v === 'bigint' ? toHex(v) : v));
+  return JSON.parse(
+    JSON.stringify(proof, (_, v) => (typeof v === "bigint" ? toHex(v) : v)),
+  );
 }
 
 // ── Core: capture a single transfer vector ─────────────────
@@ -135,7 +204,7 @@ interface ShapeConfig {
   // Amount to transfer or unshield
   amount: bigint;
   // Operation type
-  operation: 'transfer' | 'unshield';
+  operation: "transfer" | "unshield";
 }
 
 async function captureShape(
@@ -149,15 +218,19 @@ async function captureShape(
 ): Promise<void> {
   const { name, description, shieldAmounts, amount, operation } = config;
 
-  console.log('\n' + '='.repeat(60));
+  console.log("\n" + "=".repeat(60));
   console.log(`  Capturing: ${name} — ${description}`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   // Re-init engine for clean state
-  console.log('Reinitializing engine...');
-  try { await shutdownEngine(); } catch { /* ignore */ }
+  console.log("Reinitializing engine...");
+  try {
+    await shutdownEngine();
+  } catch {
+    /* ignore */
+  }
   clearDatabase();
-  await initializeEngine('capture');
+  await initializeEngine("capture");
 
   await loadNetworkIntoEngine(
     chain,
@@ -178,8 +251,8 @@ async function captureShape(
   const aliceShieldedAddress = aliceWalletInfo.railgunAddress;
   const bobShieldedAddress = bobWalletInfo.railgunAddress;
 
-  console.log('Alice:', aliceShieldedAddress);
-  console.log('Bob:', bobShieldedAddress);
+  console.log("Alice:", aliceShieldedAddress);
+  console.log("Bob:", bobShieldedAddress);
 
   // ── Shield to create UTXOs ───────────────────────────────
   for (let i = 0; i < shieldAmounts.length; i++) {
@@ -188,30 +261,45 @@ async function captureShape(
 
     const shieldPrivateKey = generateShieldPrivateKey();
     const { shieldRequest } = await createShieldRequest(
-      { railgunAddress: aliceShieldedAddress, amount: amt, tokenAddress: usdcAddress },
+      {
+        railgunAddress: aliceShieldedAddress,
+        amount: amt,
+        tokenAddress: usdcAddress,
+      },
       shieldPrivateKey,
     );
 
     // Mint + approve + shield
     await (await usdc.mint(await aliceSigner.getAddress(), amt)).wait();
-    await (await usdc.connect(aliceSigner).approve(await privacyPool.getAddress(), amt)).wait();
-    const shieldTx = await privacyPool.connect(aliceSigner).shield([shieldRequest], ethers.ZeroAddress);
+    await (
+      await usdc
+        .connect(aliceSigner)
+        .approve(await privacyPool.getAddress(), amt)
+    ).wait();
+    const shieldTx = await privacyPool
+      .connect(aliceSigner)
+      .shield([shieldRequest], ethers.ZeroAddress);
     await shieldTx.wait();
 
     // Wait for engine sync
     await scanWalletBalances(aliceWalletInfo.id, chain);
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 2000));
   }
 
   // Verify UTXO count
-  const aliceTxos = await aliceWallet.TXOs(TXIDVersion.V2_PoseidonMerkle, chain);
+  const aliceTxos = await aliceWallet.TXOs(
+    TXIDVersion.V2_PoseidonMerkle,
+    chain,
+  );
   console.log(`\nAlice has ${aliceTxos.length} UTXO(s):`);
   for (const txo of aliceTxos) {
-    console.log(`  tree=${txo.tree} pos=${txo.position} value=${ethers.formatUnits(txo.note.value, 6)} USDC spent=${txo.spendtxid !== false}`);
+    console.log(
+      `  tree=${txo.tree} pos=${txo.position} value=${ethers.formatUnits(txo.note.value, 6)} USDC spent=${txo.spendtxid !== false}`,
+    );
   }
 
   // ── Extract input witnesses BEFORE transfer ──────────────
-  const inputWitnesses: TransferVector['inputs'] = [];
+  const inputWitnesses: TransferVector["inputs"] = [];
   for (const txo of aliceTxos) {
     if (txo.spendtxid !== false) continue; // skip spent
     const merkleProof = await getMerkleProof(chain, txo.tree, txo.position);
@@ -226,21 +314,30 @@ async function captureShape(
       treeNumber: txo.tree,
       leafIndex: txo.position,
       nullifier: txo.nullifier,
-      merkleProof: { leaf: merkleProof.leaf, elements: merkleProof.elements, indices: merkleProof.indices, root: merkleProof.root },
+      merkleProof: {
+        leaf: merkleProof.leaf,
+        elements: merkleProof.elements,
+        indices: merkleProof.indices,
+        root: merkleProof.root,
+      },
     });
   }
 
   // ── Capture spending keys ────────────────────────────────
-  const spendingKeyPair = await aliceWallet.getSpendingKeyPair(DEFAULT_ENCRYPTION_KEY);
+  const spendingKeyPair = await aliceWallet.getSpendingKeyPair(
+    DEFAULT_ENCRYPTION_KEY,
+  );
   const nullifyingKey = aliceWallet.nullifyingKey;
 
   let provedTx: any;
   let txHash: string;
 
   // ── Execute transfer or unshield ────────────────────
-  if (operation === 'unshield') {
+  if (operation === "unshield") {
     const bobAddress = await bobSigner.getAddress();
-    console.log(`\nUnshielding ${ethers.formatUnits(amount, 6)} USDC to ${bobAddress}...`);
+    console.log(
+      `\nUnshielding ${ethers.formatUnits(amount, 6)} USDC to ${bobAddress}...`,
+    );
 
     const unshieldResult = await createUnshield({
       wallet: aliceWallet,
@@ -249,7 +346,8 @@ async function captureShape(
       recipientAddress: bobAddress,
       amount,
       encryptionKey: DEFAULT_ENCRYPTION_KEY,
-      progressCallback: (p: any) => console.log(`  [${Math.round(p.progress)}%] ${p.status}`),
+      progressCallback: (p: any) =>
+        console.log(`  [${Math.round(p.progress)}%] ${p.status}`),
     });
 
     // Submit on-chain
@@ -259,11 +357,13 @@ async function captureShape(
     });
     const receipt = await tx.wait();
     txHash = receipt!.hash;
-    console.log('Unshield tx:', txHash);
+    console.log("Unshield tx:", txHash);
 
     provedTx = unshieldResult.transactions[0];
   } else {
-    console.log(`\nTransferring ${ethers.formatUnits(amount, 6)} USDC to Bob...`);
+    console.log(
+      `\nTransferring ${ethers.formatUnits(amount, 6)} USDC to Bob...`,
+    );
 
     const transferResult = await createPrivateTransfer({
       wallet: aliceWallet,
@@ -272,7 +372,8 @@ async function captureShape(
       recipientAddress: bobShieldedAddress,
       amount,
       encryptionKey: DEFAULT_ENCRYPTION_KEY,
-      progressCallback: (p: any) => console.log(`  [${Math.round(p.progress)}%] ${p.status}`),
+      progressCallback: (p: any) =>
+        console.log(`  [${Math.round(p.progress)}%] ${p.status}`),
     });
 
     // Submit on-chain
@@ -282,7 +383,7 @@ async function captureShape(
     });
     const receipt = await tx.wait();
     txHash = receipt!.hash;
-    console.log('Transfer tx:', txHash);
+    console.log("Transfer tx:", txHash);
 
     provedTx = transferResult.transactions[0];
   }
@@ -293,8 +394,10 @@ async function captureShape(
   // Verify shape matches expectation
   const expectedInputs = inputWitnesses.length;
   if (numNullifiers > expectedInputs) {
-    console.warn(`Warning: circuit has ${numNullifiers} nullifiers but we captured ${expectedInputs} witnesses. ` +
-      `The SDK may have padded inputs. Need to capture witnesses for all selected UTXOs.`);
+    console.warn(
+      `Warning: circuit has ${numNullifiers} nullifiers but we captured ${expectedInputs} witnesses. ` +
+        `The SDK may have padded inputs. Need to capture witnesses for all selected UTXOs.`,
+    );
   }
 
   // ── EdDSA signature ──────────────────────────────────────
@@ -304,18 +407,21 @@ async function captureShape(
     nullifiers: provedTx.nullifiers.map((n: any) => BigInt(n)),
     commitmentsOut: provedTx.commitments.map((c: any) => BigInt(c)),
   };
-  const eddsaSig = await aliceWallet.sign(publicInputsForSign, DEFAULT_ENCRYPTION_KEY);
+  const eddsaSig = await aliceWallet.sign(
+    publicInputsForSign,
+    DEFAULT_ENCRYPTION_KEY,
+  );
 
   // ── Public signals ───────────────────────────────────────
   const publicSignals = buildPublicInputs(provedTx);
   const boundParamsHash = computeBoundParamsHash(provedTx.boundParams);
 
   // ── Extract outputs ──────────────────────────────────────
-  const outputs: TransferVector['outputs'] = [];
+  const outputs: TransferVector["outputs"] = [];
 
   // Scan Bob's wallet for received note(s)
   await scanWalletBalances(bobWalletInfo.id, chain);
-  await new Promise(r => setTimeout(r, 2000));
+  await new Promise((r) => setTimeout(r, 2000));
 
   const bobTxos = await bobWallet.TXOs(TXIDVersion.V2_PoseidonMerkle, chain);
   console.log(`Bob has ${bobTxos.length} UTXO(s)`);
@@ -332,15 +438,22 @@ async function captureShape(
 
   // Scan Alice for change note
   await scanWalletBalances(aliceWalletInfo.id, chain);
-  await new Promise(r => setTimeout(r, 2000));
+  await new Promise((r) => setTimeout(r, 2000));
 
-  const aliceTxosAfter = await aliceWallet.TXOs(TXIDVersion.V2_PoseidonMerkle, chain);
-  const spentPositions = new Set(aliceTxos.filter(t => t.spendtxid !== false).map(t => t.position));
+  const aliceTxosAfter = await aliceWallet.TXOs(
+    TXIDVersion.V2_PoseidonMerkle,
+    chain,
+  );
+  const spentPositions = new Set(
+    aliceTxos.filter((t) => t.spendtxid !== false).map((t) => t.position),
+  );
   for (const txo of aliceTxosAfter) {
     if (txo.spendtxid !== false) continue;
     if (spentPositions.has(txo.position)) continue; // skip original notes
     // This is a new (change) note
-    console.log(`  Change note: tree=${txo.tree} pos=${txo.position} value=${ethers.formatUnits(txo.note.value, 6)}`);
+    console.log(
+      `  Change note: tree=${txo.tree} pos=${txo.position} value=${ethers.formatUnits(txo.note.value, 6)}`,
+    );
     outputs.push({
       notePublicKey: toHex(txo.note.notePublicKey),
       tokenAddress: txo.note.tokenData.tokenAddress,
@@ -351,35 +464,43 @@ async function captureShape(
     });
   }
 
-  console.log(`Total outputs captured: ${outputs.length} (expected ${numCommitments})`);
+  console.log(
+    `Total outputs captured: ${outputs.length} (expected ${numCommitments})`,
+  );
 
   // For unshield: if we're short an output, add the unshield preimage as a pseudo-output.
   // The SDK treats the unshield recipient address as npkOut, with value from unshieldPreimage.
-  if (outputs.length < numCommitments && operation === 'unshield') {
+  if (outputs.length < numCommitments && operation === "unshield") {
     const unshieldNpk = provedTx.unshieldPreimage.npk;
     const unshieldValue = BigInt(provedTx.unshieldPreimage.value);
     const recipientAddr = await bobSigner.getAddress();
-    console.log(`  Unshield output: npk=${toHex(BigInt(unshieldNpk)).slice(0, 20)}... value=${ethers.formatUnits(unshieldValue, 6)}`);
+    console.log(
+      `  Unshield output: npk=${toHex(BigInt(unshieldNpk)).slice(0, 20)}... value=${ethers.formatUnits(unshieldValue, 6)}`,
+    );
     outputs.push({
       notePublicKey: toHex(BigInt(unshieldNpk)),
       tokenAddress: usdcAddress,
       tokenHash: inputWitnesses[0].tokenHash,
       value: unshieldValue.toString(),
-      random: '0',  // unshield has no note randomness
+      random: "0", // unshield has no note randomness
       recipientAddress: recipientAddr,
     });
-    console.log(`  Added unshield output (${outputs.length}/${numCommitments})`);
+    console.log(
+      `  Added unshield output (${outputs.length}/${numCommitments})`,
+    );
   }
 
   // ── Build fixture ────────────────────────────────────────
   const vector: TransferVector = {
-    operation: 'transfer',
+    operation: "transfer",
     shape: { nullifiers: numNullifiers, commitments: numCommitments },
     chainId: deployments.chainId,
     inputs: inputWitnesses,
     keys: {
       nullifyingKey: toHex(nullifyingKey),
-      spendingPublicKey: spendingKeyPair.pubkey.map((p: bigint) => toHex(p)) as [string, string],
+      spendingPublicKey: spendingKeyPair.pubkey.map((p: bigint) =>
+        toHex(p),
+      ) as [string, string],
     },
     eddsaSignature: {
       R8: [toHex(eddsaSig.R8[0]), toHex(eddsaSig.R8[1])],
@@ -405,7 +526,7 @@ async function captureShape(
     },
   };
 
-  const filename = `${operation === 'unshield' ? 'unshield' : 'transfer'}-${numNullifiers}x${numCommitments}.json`;
+  const filename = `${operation === "unshield" ? "unshield" : "transfer"}-${numNullifiers}x${numCommitments}.json`;
   const fixturePath = path.join(FIXTURES_DIR, filename);
   writeJSON(fixturePath, vector);
   console.log(`\n✓ Written: ${fixturePath}`);
@@ -414,20 +535,23 @@ async function captureShape(
 // ── Main ───────────────────────────────────────────────────
 
 async function main() {
-  console.log('='.repeat(60));
-  console.log('  Multi-Shape Reference Vector Capture');
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
+  console.log("  Multi-Shape Reference Vector Capture");
+  console.log("=".repeat(60));
 
   fs.mkdirSync(FIXTURES_DIR, { recursive: true });
 
   const [deployer, aliceSigner, bobSigner] = await ethers.getSigners();
 
-  const privacyPool = await ethers.getContractAt('PrivacyPool', deployments.contracts.privacyPool);
-  const usdc = await ethers.getContractAt('MockUSDCV2', deployments.cctp.usdc);
+  const privacyPool = await ethers.getContractAt(
+    "PrivacyPool",
+    deployments.contracts.privacyPool,
+  );
+  const usdc = await ethers.getContractAt("MockUSDCV2", deployments.cctp.usdc);
   const usdcAddress = await usdc.getAddress();
 
   // Load verification keys (only needed once per contract deployment)
-  console.log('\nLoading verification keys...');
+  console.log("\nLoading verification keys...");
   await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, true);
 
   const chain = getChainById(deployments.chainId)!;
@@ -435,50 +559,69 @@ async function main() {
   // ── Shape configurations ─────────────────────────────────
   const shapes: ShapeConfig[] = [
     {
-      name: '2x2',
-      description: '2 inputs (50+50), transfer 80 → 2 outputs (80 + 20 change)',
-      shieldAmounts: [ethers.parseUnits('50', 6), ethers.parseUnits('50', 6)],
-      amount: ethers.parseUnits('80', 6),
-      operation: 'transfer',
+      name: "2x2",
+      description: "2 inputs (50+50), transfer 80 → 2 outputs (80 + 20 change)",
+      shieldAmounts: [ethers.parseUnits("50", 6), ethers.parseUnits("50", 6)],
+      amount: ethers.parseUnits("80", 6),
+      operation: "transfer",
     },
     {
-      name: '1x1',
-      description: '1 input (exact spend), transfer full 99.5 USDC UTXO → 1 output (no change)',
-      shieldAmounts: [ethers.parseUnits('100', 6)],
-      amount: ethers.parseUnits('99.5', 6),
-      operation: 'transfer',
+      name: "1x1",
+      description:
+        "1 input (exact spend), transfer full 99.5 USDC UTXO → 1 output (no change)",
+      shieldAmounts: [ethers.parseUnits("100", 6)],
+      amount: ethers.parseUnits("99.5", 6),
+      operation: "transfer",
     },
     {
-      name: '3x2',
-      description: '3 inputs (30+30+30), transfer 70 → 2 outputs (70 + 20 change)',
-      shieldAmounts: [ethers.parseUnits('30', 6), ethers.parseUnits('30', 6), ethers.parseUnits('30', 6)],
-      amount: ethers.parseUnits('70', 6),
-      operation: 'transfer',
+      name: "3x2",
+      description:
+        "3 inputs (30+30+30), transfer 70 → 2 outputs (70 + 20 change)",
+      shieldAmounts: [
+        ethers.parseUnits("30", 6),
+        ethers.parseUnits("30", 6),
+        ethers.parseUnits("30", 6),
+      ],
+      amount: ethers.parseUnits("70", 6),
+      operation: "transfer",
     },
     {
-      name: '2x1-unshield',
-      description: '2 inputs (50+50), unshield 80 to public address → 1 output (change)',
-      shieldAmounts: [ethers.parseUnits('50', 6), ethers.parseUnits('50', 6)],
-      amount: ethers.parseUnits('80', 6),
-      operation: 'unshield',
+      name: "2x1-unshield",
+      description:
+        "2 inputs (50+50), unshield 80 to public address → 1 output (change)",
+      shieldAmounts: [ethers.parseUnits("50", 6), ethers.parseUnits("50", 6)],
+      amount: ethers.parseUnits("80", 6),
+      operation: "unshield",
     },
   ];
 
   // ── Capture each shape ───────────────────────────────────
   for (const shape of shapes) {
-    await captureShape(shape, aliceSigner, bobSigner, privacyPool, usdc, usdcAddress, chain);
+    await captureShape(
+      shape,
+      aliceSigner,
+      bobSigner,
+      privacyPool,
+      usdc,
+      usdcAddress,
+      chain,
+    );
   }
 
-  console.log('\n' + '='.repeat(60));
-  console.log('  ALL SHAPES CAPTURED');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("  ALL SHAPES CAPTURED");
+  console.log("=".repeat(60));
   console.log(`  Fixtures: ${FIXTURES_DIR}`);
 
   await shutdownEngine();
 }
 
 main().catch(async (err) => {
-  console.error('Capture failed:', err);
-  try { await shutdownEngine(); } catch { /* ignore */ }
+  console.error("Capture failed:", err);
+  try {
+    await shutdownEngine();
+  } catch {
+    /* ignore */
+  }
   process.exit(1);
 });

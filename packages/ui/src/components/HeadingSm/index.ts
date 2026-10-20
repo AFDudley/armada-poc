@@ -1,2 +1,2 @@
-export { HeadingSm } from './HeadingSm'
-export type { HeadingSmProps } from './HeadingSm'
+export { HeadingSm } from "./HeadingSm";
+export type { HeadingSmProps } from "./HeadingSm";

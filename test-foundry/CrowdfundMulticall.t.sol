@@ -30,11 +30,11 @@ contract CrowdfundMulticallTest is Test {
     // Multi-seed setup (lazy-initialized via _setupForFinalization)
     address[] public manySeeds;
 
-    uint256 constant ARM_FUNDING   = 1_800_000 * 1e18;
-    uint256 constant HOP0_CAP      = 15_000 * 1e6;
-    uint256 constant HOP1_CAP      = 4_000 * 1e6;
-    uint256 constant HOP2_CAP      = 1_000 * 1e6;
-    uint256 constant MIN_COMMIT    = 10 * 1e6;
+    uint256 constant ARM_FUNDING = 1_800_000 * 1e18;
+    uint256 constant HOP0_CAP = 15_000 * 1e6;
+    uint256 constant HOP1_CAP = 4_000 * 1e6;
+    uint256 constant HOP2_CAP = 1_000 * 1e6;
+    uint256 constant MIN_COMMIT = 10 * 1e6;
     uint256 constant SELF_FILL_TOTAL = 33_000 * 1e6; // $15K + 3×$4K + 6×$1K
 
     function setUp() public {
@@ -45,8 +45,8 @@ contract CrowdfundMulticallTest is Test {
             address(usdc),
             address(armToken),
             treasury,
-            admin,          // launchTeam
-            admin,          // securityCouncil
+            admin, // launchTeam
+            admin, // securityCouncil
             block.timestamp // window opens immediately
         );
 
@@ -82,18 +82,23 @@ contract CrowdfundMulticallTest is Test {
     function _encInvite(address invitee, uint8 inviterHop) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(ArmadaCrowdfund.invite.selector, invitee, inviterHop);
     }
+
     function _encCommit(uint8 hop, uint256 amount) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(ArmadaCrowdfund.commit.selector, hop, amount);
     }
+
     function _encClaim(address d) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(ArmadaCrowdfund.claim.selector, d);
     }
+
     function _encClaimRefund() internal pure returns (bytes memory) {
         return abi.encodeWithSelector(ArmadaCrowdfund.claimRefund.selector);
     }
+
     function _encLaunchTeamInvite(address invitee, uint8 fromHop) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(ArmadaCrowdfund.launchTeamInvite.selector, invitee, fromHop);
     }
+
     function _encFinalize() internal pure returns (bytes memory) {
         return abi.encodeWithSelector(ArmadaCrowdfund.finalize.selector);
     }
@@ -110,11 +115,15 @@ contract CrowdfundMulticallTest is Test {
         // commit hop-0 ($15K), hop-1 ($12K), hop-2 ($6K)
         calls = new bytes[](12);
         uint256 i = 0;
-        for (uint256 k = 0; k < 3; k++) { calls[i++] = _encInvite(self, 0); }
-        for (uint256 k = 0; k < 6; k++) { calls[i++] = _encInvite(self, 1); }
-        calls[i++] = _encCommit(0, HOP0_CAP);              // $15K
-        calls[i++] = _encCommit(1, HOP1_CAP * 3);          // $12K (3× cap, all at once)
-        calls[i++] = _encCommit(2, HOP2_CAP * 6);          // $6K  (6× cap)
+        for (uint256 k = 0; k < 3; k++) {
+            calls[i++] = _encInvite(self, 0);
+        }
+        for (uint256 k = 0; k < 6; k++) {
+            calls[i++] = _encInvite(self, 1);
+        }
+        calls[i++] = _encCommit(0, HOP0_CAP); // $15K
+        calls[i++] = _encCommit(1, HOP1_CAP * 3); // $12K (3× cap, all at once)
+        calls[i++] = _encCommit(2, HOP2_CAP * 6); // $6K  (6× cap)
     }
 
     function _hop1SelfFillBundle(address self) internal pure returns (bytes[] memory calls) {
@@ -123,8 +132,8 @@ contract CrowdfundMulticallTest is Test {
         calls = new bytes[](4);
         calls[0] = _encInvite(self, 1);
         calls[1] = _encInvite(self, 1);
-        calls[2] = _encCommit(1, HOP1_CAP);          // $4K
-        calls[3] = _encCommit(2, HOP2_CAP * 2);      // $2K
+        calls[2] = _encCommit(1, HOP1_CAP); // $4K
+        calls[3] = _encCommit(2, HOP2_CAP * 2); // $2K
     }
 
     function _mintAndApprove(address who, uint256 amount) internal {
@@ -230,8 +239,8 @@ contract CrowdfundMulticallTest is Test {
         // BUT: msg.sender is fixed for the whole multicall, so seed0 must do
         // BOTH calls. We instead test: seed0 commits at hop-0 after an
         // (irrelevant) invite to itself. Pure ordering exercise.
-        calls[0] = _encInvite(hop1Wallet, 0);  // seed0 invites hop1Wallet to hop-1
-        calls[1] = _encCommit(0, HOP0_CAP);    // seed0 commits at hop-0
+        calls[0] = _encInvite(hop1Wallet, 0); // seed0 invites hop1Wallet to hop-1
+        calls[1] = _encCommit(0, HOP0_CAP); // seed0 commits at hop-0
 
         _mintAndApprove(seed0, HOP0_CAP);
         vm.prank(seed0);
@@ -354,7 +363,7 @@ contract CrowdfundMulticallTest is Test {
         assertFalse(crowdfund.isWhitelisted(address(0xB103), 1), "calls[2] rolled back");
         assertFalse(crowdfund.isWhitelisted(address(0xB104), 1), "calls[3] rolled back");
         // And the inviter's invitesSent counter is untouched.
-        (, , uint16 invitesSent,,) = crowdfund.participants(seed0, 0);
+        (,, uint16 invitesSent,,) = crowdfund.participants(seed0, 0);
         assertEq(invitesSent, 0, "invitesSent rolled back");
     }
 
@@ -424,8 +433,8 @@ contract CrowdfundMulticallTest is Test {
         _mintAndApprove(seed0, HOP0_CAP + HOP1_CAP);
 
         bytes[] memory calls = new bytes[](2);
-        calls[0] = _encCommit(0, HOP0_CAP);   // nonReentrant
-        calls[1] = _encCommit(1, HOP1_CAP);   // nonReentrant
+        calls[0] = _encCommit(0, HOP0_CAP); // nonReentrant
+        calls[1] = _encCommit(1, HOP1_CAP); // nonReentrant
 
         vm.prank(seed0);
         crowdfund.multicall(calls);
@@ -471,11 +480,10 @@ contract CrowdfundMulticallTest is Test {
         uint256 futureOpen = block.timestamp + 10 days;
         MockUSDCV2 usdc2 = new MockUSDCV2("U2", "U2");
         ArmadaToken arm2 = new ArmadaToken(admin, admin);
-        ArmadaCrowdfund c2 = new ArmadaCrowdfund(
-            address(usdc2), address(arm2), treasury, admin, admin, futureOpen
-        );
+        ArmadaCrowdfund c2 = new ArmadaCrowdfund(address(usdc2), address(arm2), treasury, admin, admin, futureOpen);
         address[] memory wl = new address[](2);
-        wl[0] = admin; wl[1] = address(c2);
+        wl[0] = admin;
+        wl[1] = address(c2);
         arm2.initWhitelist(wl);
         arm2.transfer(address(c2), ARM_FUNDING);
         c2.loadArm();
@@ -569,12 +577,12 @@ contract CrowdfundMulticallTest is Test {
         bytes[] memory calls = new bytes[](1);
         calls[0] = abi.encodeWithSelector(
             ArmadaCrowdfund.commitWithInvite.selector,
-            seed0,                       // inviter (claimed)
-            uint8(0),                    // fromHop
-            uint256(1),                  // nonce
-            block.timestamp + 1 hours,   // deadline
-            new bytes(65),               // bogus signature (zeros)
-            HOP1_CAP                     // amount
+            seed0, // inviter (claimed)
+            uint8(0), // fromHop
+            uint256(1), // nonce
+            block.timestamp + 1 hours, // deadline
+            new bytes(65), // bogus signature (zeros)
+            HOP1_CAP // amount
         );
 
         vm.prank(invitee);
@@ -672,7 +680,7 @@ contract CrowdfundMulticallTest is Test {
 
         // Path 1: direct external call
         vm.prank(caller);
-        (bool directOk, ) = address(crowdfund).call(callData);
+        (bool directOk,) = address(crowdfund).call(callData);
 
         require(vm.revertToState(snap), "snapshot revert failed");
 
@@ -683,9 +691,7 @@ contract CrowdfundMulticallTest is Test {
         // `multicall` is inherited from OZ — `.selector` on inherited
         // functions doesn't resolve, so use encodeWithSignature for the
         // same effective selector (0xac9650d8).
-        (bool bundleOk, ) = address(crowdfund).call(
-            abi.encodeWithSignature("multicall(bytes[])", bundle)
-        );
+        (bool bundleOk,) = address(crowdfund).call(abi.encodeWithSignature("multicall(bytes[])", bundle));
 
         assertEq(directOk, bundleOk, "single-call vs multicall-of-one outcome diverged");
     }
@@ -695,12 +701,11 @@ contract CrowdfundMulticallTest is Test {
     /// nested structs (commitWithInvite — signature-bearing) or system-
     /// gated ones we exercise directly (addSeeds, cancel, launchTeamInvite,
     /// loadArm, revokeInviteNonce — out of fuzz scope to keep signal high).
-    function _buildFuzzedCall(
-        uint8 selectorIdx,
-        address addr,
-        uint8 hop,
-        uint256 amount
-    ) internal pure returns (bytes memory) {
+    function _buildFuzzedCall(uint8 selectorIdx, address addr, uint8 hop, uint256 amount)
+        internal
+        pure
+        returns (bytes memory)
+    {
         uint8 choice = selectorIdx % 5;
         if (choice == 0) return abi.encodeWithSelector(ArmadaCrowdfund.invite.selector, addr, hop);
         if (choice == 1) return abi.encodeWithSelector(ArmadaCrowdfund.commit.selector, hop, amount);

@@ -28,11 +28,7 @@ contract MaliciousERC20 is ERC20 {
 
     uint8 private _decimals;
 
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_
-    ) ERC20(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) {
         _decimals = decimals_;
     }
 
@@ -50,7 +46,13 @@ contract MaliciousERC20 is ERC20 {
     /// @notice Stub for IArmadaTokenCrowdfund.transferAndDelegate — combined entry point
     ///         that claim() now uses (audit-93). Routes the transfer through _transfer so
     ///         the attack callback still fires; ignores the delegatee arg (mock).
-    function transferAndDelegate(address to, uint256 amount, address /*delegatee*/) external {
+    function transferAndDelegate(
+        address to,
+        uint256 amount,
+        address /*delegatee*/
+    )
+        external
+    {
         _transfer(msg.sender, to, amount);
     }
 
@@ -93,11 +95,7 @@ contract MaliciousERC20Propagating is ERC20 {
 
     uint8 private _decimals;
 
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_
-    ) ERC20(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) {
         _decimals = decimals_;
     }
 
@@ -113,7 +111,13 @@ contract MaliciousERC20Propagating is ERC20 {
     function delegateOnBehalf(address, address) external {}
 
     /// @notice Stub for IArmadaTokenCrowdfund.transferAndDelegate (audit-93).
-    function transferAndDelegate(address to, uint256 amount, address /*delegatee*/) external {
+    function transferAndDelegate(
+        address to,
+        uint256 amount,
+        address /*delegatee*/
+    )
+        external
+    {
         _transfer(msg.sender, to, amount);
     }
 
@@ -180,9 +184,7 @@ contract CrowdfundReentrancyTest is Test {
 
     /// @notice Build address arrays for a crowdfund with multi-hop demand.
     ///         Does NOT add seeds — caller must loadArm() first, then addSeeds().
-    function _buildAddresses()
-        internal pure returns (address[] memory seeds, address[] memory hop1)
-    {
+    function _buildAddresses() internal pure returns (address[] memory seeds, address[] memory hop1) {
         seeds = new address[](53);
         for (uint256 i = 0; i < 53; i++) {
             seeds[i] = address(uint160(0xA000 + i));
@@ -201,9 +203,8 @@ contract CrowdfundReentrancyTest is Test {
     function test_reentrancy_claim_reentryBlocked() public {
         MaliciousERC20 maliciousArm = new MaliciousERC20("Bad ARM", "BARM", 18);
 
-        ArmadaCrowdfund cf = new ArmadaCrowdfund(
-            address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp
-        );
+        ArmadaCrowdfund cf =
+            new ArmadaCrowdfund(address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp);
         maliciousArm.mint(address(cf), ARM_FUNDING);
         cf.loadArm();
 
@@ -236,10 +237,7 @@ contract CrowdfundReentrancyTest is Test {
         assertFalse(cf.refundMode());
 
         // Arm: on ARM transfer, try to call claim() again
-        maliciousArm.setAttack(
-            address(cf),
-            abi.encodeWithSelector(ArmadaCrowdfund.claim.selector, seeds[0])
-        );
+        maliciousArm.setAttack(address(cf), abi.encodeWithSelector(ArmadaCrowdfund.claim.selector, seeds[0]));
 
         uint256 armBefore = maliciousArm.balanceOf(seeds[0]);
         vm.prank(seeds[0]);
@@ -256,7 +254,7 @@ contract CrowdfundReentrancyTest is Test {
 
         // Verify only one claim went through (no double ARM)
         uint256 armReceived = maliciousArm.balanceOf(seeds[0]) - armBefore;
-        (uint256 expectedArm, ) = cf.computeAllocation(seeds[0]);
+        (uint256 expectedArm,) = cf.computeAllocation(seeds[0]);
         assertEq(armReceived, expectedArm, "Must receive exactly one allocation, not double");
 
         // Second claim must revert (already claimed)
@@ -270,12 +268,10 @@ contract CrowdfundReentrancyTest is Test {
     /// @notice Same attack but the malicious token propagates the revert.
     ///         The entire claim() reverts. Attacker gets nothing.
     function test_reentrancy_claim_propagatingRevert() public {
-        MaliciousERC20Propagating maliciousArm =
-            new MaliciousERC20Propagating("Bad ARM", "BARM", 18);
+        MaliciousERC20Propagating maliciousArm = new MaliciousERC20Propagating("Bad ARM", "BARM", 18);
 
-        ArmadaCrowdfund cf = new ArmadaCrowdfund(
-            address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp
-        );
+        ArmadaCrowdfund cf =
+            new ArmadaCrowdfund(address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp);
         maliciousArm.mint(address(cf), ARM_FUNDING);
         cf.loadArm();
 
@@ -304,10 +300,7 @@ contract CrowdfundReentrancyTest is Test {
         vm.warp(cf.windowEnd() + 1);
         cf.finalize();
 
-        maliciousArm.setAttack(
-            address(cf),
-            abi.encodeWithSelector(ArmadaCrowdfund.claim.selector, seeds[0])
-        );
+        maliciousArm.setAttack(address(cf), abi.encodeWithSelector(ArmadaCrowdfund.claim.selector, seeds[0]));
 
         // Outer call reverts because reentry revert propagates through the token transfer.
         // The propagated revert reason must be the nonReentrant guard.
@@ -332,14 +325,8 @@ contract CrowdfundReentrancyTest is Test {
     function test_reentrancy_claimRefund_reentryBlocked() public {
         MaliciousERC20 maliciousUsdc = new MaliciousERC20("Bad USDC", "BUSDC", 6);
 
-        ArmadaCrowdfund cf = new ArmadaCrowdfund(
-            address(maliciousUsdc),
-            address(armToken),
-            treasury,
-            admin,
-            admin,
-            block.timestamp
-        );
+        ArmadaCrowdfund cf =
+            new ArmadaCrowdfund(address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp);
 
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
@@ -364,10 +351,7 @@ contract CrowdfundReentrancyTest is Test {
         assertTrue(cf.refundMode());
 
         // Arm: on USDC transfer, try to call claimRefund() again
-        maliciousUsdc.setAttack(
-            address(cf),
-            abi.encodeWithSelector(ArmadaCrowdfund.claimRefund.selector)
-        );
+        maliciousUsdc.setAttack(address(cf), abi.encodeWithSelector(ArmadaCrowdfund.claimRefund.selector));
 
         uint256 balBefore = maliciousUsdc.balanceOf(seeds[0]);
         vm.prank(seeds[0]);
@@ -400,14 +384,8 @@ contract CrowdfundReentrancyTest is Test {
     function test_reentrancy_commit_reentryBlocked() public {
         MaliciousERC20 maliciousUsdc = new MaliciousERC20("Bad USDC", "BUSDC", 6);
 
-        ArmadaCrowdfund cf = new ArmadaCrowdfund(
-            address(maliciousUsdc),
-            address(armToken),
-            treasury,
-            admin,
-            admin,
-            block.timestamp
-        );
+        ArmadaCrowdfund cf =
+            new ArmadaCrowdfund(address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp);
 
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
@@ -424,8 +402,7 @@ contract CrowdfundReentrancyTest is Test {
 
         // Arm: during transferFrom, try to call commit() again
         maliciousUsdc.setAttack(
-            address(cf),
-            abi.encodeWithSelector(ArmadaCrowdfund.commit.selector, uint8(0), commitAmt)
+            address(cf), abi.encodeWithSelector(ArmadaCrowdfund.commit.selector, uint8(0), commitAmt)
         );
 
         vm.prank(seed);

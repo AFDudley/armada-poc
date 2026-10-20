@@ -1,21 +1,24 @@
 // ABOUTME: Pre-launch committer — the crowdfund hero's pre-open state driven by a fixed opening time.
 // ABOUTME: Published before the contracts exist: no wallet, manifest, RPC or indexer; reloads once the opening passes.
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from "react";
 import {
   AppShell,
   CrowdfundExperience,
   formatOpensAtDetail,
   type CrowdfundExperienceLiveData,
-} from '@armada/crowdfund-shared'
-import { getNetworkMode } from '@/config/network'
-import { PRELAUNCH_RELOAD_CHECK_MS, prelaunchShouldReload } from '@/config/prelaunch'
-import { formatSaleStatusLabel } from '@/lib/saleStatus'
-import { PageNav } from '@/appNav'
-import { PROJECT_URL } from '@/config/socials'
+} from "@armada/crowdfund-shared";
+import { getNetworkMode } from "@/config/network";
+import {
+  PRELAUNCH_RELOAD_CHECK_MS,
+  prelaunchShouldReload,
+} from "@/config/prelaunch";
+import { formatSaleStatusLabel } from "@/lib/saleStatus";
+import { PageNav } from "@/appNav";
+import { PROJECT_URL } from "@/config/socials";
 
 function reloadPage() {
-  window.location.reload()
+  window.location.reload();
 }
 
 /**
@@ -35,38 +38,42 @@ export function PreLaunchApp({
   onReload = reloadPage,
 }: {
   /** Announced commit-window opening (unix seconds, UTC). */
-  opensAtUnix: number
+  opensAtUnix: number;
   /** Injected in tests; defaults to a full page reload. */
-  onReload?: () => void
+  onReload?: () => void;
 }) {
   useEffect(() => {
     const id = window.setInterval(() => {
-      if (prelaunchShouldReload(opensAtUnix, Date.now())) onReload()
-    }, PRELAUNCH_RELOAD_CHECK_MS)
-    return () => window.clearInterval(id)
-  }, [opensAtUnix, onReload])
+      if (prelaunchShouldReload(opensAtUnix, Date.now())) onReload();
+    }, PRELAUNCH_RELOAD_CHECK_MS);
+    return () => window.clearInterval(id);
+  }, [opensAtUnix, onReload]);
 
   // Same shape the live App builds pre-open, with no participants and nothing
   // committed. Phase 0 (active) + pre-open gives the live OPENS SOON pill.
   const liveData = useMemo<CrowdfundExperienceLiveData>(() => {
-    const saleStatus = formatSaleStatusLabel(0, false, true)
+    const saleStatus = formatSaleStatusLabel(0, false, true);
     return {
-      status: 'ready',
+      status: "ready",
       dashRows: [],
       totalCommitted: 0,
       opensAtUnix,
       daysLeftTooltip: formatOpensAtDetail(opensAtUnix) || undefined,
       saleStatusLabel: saleStatus.label,
       saleStatusDot: saleStatus.dot,
-    }
-  }, [opensAtUnix])
+    };
+  }, [opensAtUnix]);
 
   return (
     <AppShell
       appName="Committer"
       network={getNetworkMode()}
       headerNav={
-        <PageNav current="network" onChange={() => {}} myPositionEnabled={false} />
+        <PageNav
+          current="network"
+          onChange={() => {}}
+          myPositionEnabled={false}
+        />
       }
       logoHref={PROJECT_URL}
       bare
@@ -78,9 +85,9 @@ export function PreLaunchApp({
         // demo wallet.
         inviteSlotSections={[]}
         liveData={liveData}
-        myPositionData={{ status: 'disconnected' }}
+        myPositionData={{ status: "disconnected" }}
         participationEnabled={false}
       />
     </AppShell>
-  )
+  );
 }

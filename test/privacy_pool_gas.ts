@@ -19,7 +19,10 @@ import * as path from "path";
 import { buildPoseidon } from "circomlibjs";
 
 const poseidonBytecode = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "lib", "poseidon_bytecode.json"), "utf-8")
+  fs.readFileSync(
+    path.join(__dirname, "..", "lib", "poseidon_bytecode.json"),
+    "utf-8",
+  ),
 );
 
 import {
@@ -29,17 +32,24 @@ import {
 
 const DOMAINS = { hub: 100, client: 101 };
 
-const CCTP_BINDING_DOMAIN_TAG = ethers.keccak256(ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"));
+const CCTP_BINDING_DOMAIN_TAG = ethers.keccak256(
+  ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"),
+);
 // CCTPBindingLib.encode(recipient, domain, maxFee) — adaptParams binding for xchain unshield (#364/#378).
-function encodeCctpBinding(recipient: string, domain: number, maxFee: bigint): string {
+function encodeCctpBinding(
+  recipient: string,
+  domain: number,
+  maxFee: bigint,
+): string {
   return ethers.keccak256(
     ethers.AbiCoder.defaultAbiCoder().encode(
       ["bytes32", "address", "uint32", "uint256"],
-      [CCTP_BINDING_DOMAIN_TAG, recipient, domain, maxFee]
-    )
+      [CCTP_BINDING_DOMAIN_TAG, recipient, domain, maxFee],
+    ),
   );
 }
-const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 describe("Privacy Pool Gas Profiling", function () {
   let hubUsdc: Contract;
@@ -90,29 +100,56 @@ describe("Privacy Pool Gas Profiling", function () {
     const MockUSDCV2 = await ethers.getContractFactory("MockUSDCV2");
     hubUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
 
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.hub, relayerAddress);
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
+    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.hub,
+      relayerAddress,
+    );
 
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     hubTokenMessenger = await MockTokenMessengerV2.deploy(
       await hubMessageTransmitter.getAddress(),
       await hubUsdc.getAddress(),
-      DOMAINS.hub
+      DOMAINS.hub,
     );
-    await hubMessageTransmitter.setTokenMessenger(await hubTokenMessenger.getAddress());
+    await hubMessageTransmitter.setTokenMessenger(
+      await hubTokenMessenger.getAddress(),
+    );
     await hubUsdc.addMinter(await hubTokenMessenger.getAddress());
 
     // Deploy Poseidon libraries
-    const poseidonT3Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT3.bytecode });
+    const poseidonT3Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT3.bytecode,
+    });
     const poseidonT3Address = (await poseidonT3Tx.wait())!.contractAddress!;
-    const poseidonT4Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT4.bytecode });
+    const poseidonT4Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT4.bytecode,
+    });
     const poseidonT4Address = (await poseidonT4Tx.wait())!.contractAddress!;
 
     // Deploy modules
-    merkleModule = await (await ethers.getContractFactory("MerkleModule", { libraries: { PoseidonT3: poseidonT3Address } })).deploy();
-    verifierModule = await (await ethers.getContractFactory("VerifierModule")).deploy();
-    shieldModule = await (await ethers.getContractFactory("ShieldModule", { libraries: { PoseidonT4: poseidonT4Address } })).deploy();
-    transactModule = await (await ethers.getContractFactory("TransactModule", { libraries: { PoseidonT4: poseidonT4Address } })).deploy();
+    merkleModule = await (
+      await ethers.getContractFactory("MerkleModule", {
+        libraries: { PoseidonT3: poseidonT3Address },
+      })
+    ).deploy();
+    verifierModule = await (
+      await ethers.getContractFactory("VerifierModule")
+    ).deploy();
+    shieldModule = await (
+      await ethers.getContractFactory("ShieldModule", {
+        libraries: { PoseidonT4: poseidonT4Address },
+      })
+    ).deploy();
+    transactModule = await (
+      await ethers.getContractFactory("TransactModule", {
+        libraries: { PoseidonT4: poseidonT4Address },
+      })
+    ).deploy();
 
     // Deploy PrivacyPool router
     const PrivacyPool = await ethers.getContractFactory("PrivacyPool");
@@ -129,7 +166,7 @@ describe("Privacy Pool Gas Profiling", function () {
       await hubUsdc.getAddress(),
       DOMAINS.hub,
       deployerAddress,
-      deployerAddress
+      deployerAddress,
     );
 
     await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, false);
@@ -138,16 +175,22 @@ describe("Privacy Pool Gas Profiling", function () {
 
     // ──── Deploy Client Chain ────
     clientUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
-    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.client, relayerAddress);
+    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.client,
+      relayerAddress,
+    );
     clientTokenMessenger = await MockTokenMessengerV2.deploy(
       await clientMessageTransmitter.getAddress(),
       await clientUsdc.getAddress(),
-      DOMAINS.client
+      DOMAINS.client,
     );
-    await clientMessageTransmitter.setTokenMessenger(await clientTokenMessenger.getAddress());
+    await clientMessageTransmitter.setTokenMessenger(
+      await clientTokenMessenger.getAddress(),
+    );
     await clientUsdc.addMinter(await clientTokenMessenger.getAddress());
 
-    const PrivacyPoolClient = await ethers.getContractFactory("PrivacyPoolClient");
+    const PrivacyPoolClient =
+      await ethers.getContractFactory("PrivacyPoolClient");
     privacyPoolClient = await PrivacyPoolClient.deploy();
     clientAddress = await privacyPoolClient.getAddress();
 
@@ -158,19 +201,33 @@ describe("Privacy Pool Gas Profiling", function () {
       DOMAINS.client,
       DOMAINS.hub,
       ethers.zeroPadValue(privacyPoolAddress, 32),
-      deployerAddress
+      deployerAddress,
     );
 
     // Link deployments
-    await privacyPool.setRemotePool(DOMAINS.client, ethers.zeroPadValue(clientAddress, 32));
-    await hubTokenMessenger.setRemoteTokenMessenger(DOMAINS.client, ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32));
-    await clientTokenMessenger.setRemoteTokenMessenger(DOMAINS.hub, ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32));
+    await privacyPool.setRemotePool(
+      DOMAINS.client,
+      ethers.zeroPadValue(clientAddress, 32),
+    );
+    await hubTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.client,
+      ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32),
+    );
+    await clientTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.hub,
+      ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32),
+    );
 
     // Pin the CCTP destinationCaller (issue #64). This gas benchmark relays by calling
     // receiveMessage directly from `relayer` (no CCTPHookRouter), so the pinned destinationCaller
     // must equal the relayer for the mock's `destinationCaller == msg.sender` check to pass.
-    await privacyPoolClient.setHubHookRouter(ethers.zeroPadValue(relayerAddress, 32));
-    await privacyPool.setRemoteHookRouter(DOMAINS.client, ethers.zeroPadValue(relayerAddress, 32));
+    await privacyPoolClient.setHubHookRouter(
+      ethers.zeroPadValue(relayerAddress, 32),
+    );
+    await privacyPool.setRemoteHookRouter(
+      DOMAINS.client,
+      ethers.zeroPadValue(relayerAddress, 32),
+    );
   });
 
   // ═══════════════════════════════════════════════════════════════════
@@ -200,7 +257,11 @@ describe("Privacy Pool Gas Profiling", function () {
     };
   }
 
-  function computeCommitmentHash(npkBigInt: bigint, tokenId: bigint, value: bigint): string {
+  function computeCommitmentHash(
+    npkBigInt: bigint,
+    tokenId: bigint,
+    value: bigint,
+  ): string {
     const hash = poseidon([F.e(npkBigInt), F.e(tokenId), F.e(value)]);
     return ethers.zeroPadValue(ethers.toBeHex(BigInt(F.toString(hash))), 32);
   }
@@ -215,11 +276,19 @@ describe("Privacy Pool Gas Profiling", function () {
     adaptParams?: string;
   }) {
     const unshieldType = opts.unshield ?? 0;
-    const ciphertextCount = opts.ciphertextCount ??
-      (unshieldType !== 0 ? opts.commitments.length - 1 : opts.commitments.length);
+    const ciphertextCount =
+      opts.ciphertextCount ??
+      (unshieldType !== 0
+        ? opts.commitments.length - 1
+        : opts.commitments.length);
 
     const ciphertext = Array.from({ length: ciphertextCount }, () => ({
-      ciphertext: [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash],
+      ciphertext: [
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+      ],
       blindedSenderViewingKey: ethers.ZeroHash,
       blindedReceiverViewingKey: ethers.ZeroHash,
       annotationData: "0x",
@@ -227,7 +296,11 @@ describe("Privacy Pool Gas Profiling", function () {
     }));
 
     return {
-      proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+      proof: {
+        a: { x: 0, y: 0 },
+        b: { x: [0, 0], y: [0, 0] },
+        c: { x: 0, y: 0 },
+      },
       merkleRoot: opts.merkleRoot,
       nullifiers: opts.nullifiers,
       commitments: opts.commitments,
@@ -242,17 +315,29 @@ describe("Privacy Pool Gas Profiling", function () {
       },
       unshieldPreimage: opts.unshieldPreimage ?? {
         npk: ethers.ZeroHash,
-        token: { tokenType: 0, tokenAddress: ethers.ZeroAddress, tokenSubID: 0 },
+        token: {
+          tokenType: 0,
+          tokenAddress: ethers.ZeroAddress,
+          tokenSubID: 0,
+        },
         value: 0,
       },
     };
   }
 
-  async function shieldAndGetRoot(amount: bigint, npkSeed?: string): Promise<string> {
+  async function shieldAndGetRoot(
+    amount: bigint,
+    npkSeed?: string,
+  ): Promise<string> {
     const usdcAddr = await hubUsdc.getAddress();
     await hubUsdc.mint(aliceAddress, amount);
     await hubUsdc.connect(alice).approve(privacyPoolAddress, amount);
-    await privacyPool.connect(alice).shield([makeShieldRequest(usdcAddr, amount, npkSeed)], ethers.ZeroAddress);
+    await privacyPool
+      .connect(alice)
+      .shield(
+        [makeShieldRequest(usdcAddr, amount, npkSeed)],
+        ethers.ZeroAddress,
+      );
     return await privacyPool.merkleRoot();
   }
 
@@ -272,14 +357,24 @@ describe("Privacy Pool Gas Profiling", function () {
         await hubUsdc.connect(alice).approve(privacyPoolAddress, totalAmount);
 
         const requests = Array.from({ length: count }, (_, i) =>
-          makeShieldRequest(usdcAddr, AMOUNT_PER_SHIELD, `shield-gas-${count}-${i}`)
+          makeShieldRequest(
+            usdcAddr,
+            AMOUNT_PER_SHIELD,
+            `shield-gas-${count}-${i}`,
+          ),
         );
 
-        const tx = await privacyPool.connect(alice).shield(requests, ethers.ZeroAddress);
+        const tx = await privacyPool
+          .connect(alice)
+          .shield(requests, ethers.ZeroAddress);
         const receipt = await tx.wait();
         const gasUsed = Number(receipt!.gasUsed);
 
-        recordGas(`shield x${count}`, gasUsed, `${Math.round(gasUsed / count)} gas/shield`);
+        recordGas(
+          `shield x${count}`,
+          gasUsed,
+          `${Math.round(gasUsed / count)} gas/shield`,
+        );
       });
     }
   });
@@ -290,11 +385,20 @@ describe("Privacy Pool Gas Profiling", function () {
 
   describe("Transact Gas", function () {
     it("single transact (1 nullifier, 2 commitments)", async function () {
-      const root = await shieldAndGetRoot(ethers.parseUnits("100", 6), "transact-gas-1");
+      const root = await shieldAndGetRoot(
+        ethers.parseUnits("100", 6),
+        "transact-gas-1",
+      );
 
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes("transact-gas-null-1"));
-      const commitment1 = ethers.keccak256(ethers.toUtf8Bytes("transact-gas-commit-1a"));
-      const commitment2 = ethers.keccak256(ethers.toUtf8Bytes("transact-gas-commit-1b"));
+      const nullifier = ethers.keccak256(
+        ethers.toUtf8Bytes("transact-gas-null-1"),
+      );
+      const commitment1 = ethers.keccak256(
+        ethers.toUtf8Bytes("transact-gas-commit-1a"),
+      );
+      const commitment2 = ethers.keccak256(
+        ethers.toUtf8Bytes("transact-gas-commit-1b"),
+      );
 
       const txData = makeTransaction({
         merkleRoot: root,
@@ -308,23 +412,40 @@ describe("Privacy Pool Gas Profiling", function () {
     });
 
     it("batched transact (3 transactions)", async function () {
-      const root = await shieldAndGetRoot(ethers.parseUnits("100", 6), "transact-gas-batch");
+      const root = await shieldAndGetRoot(
+        ethers.parseUnits("100", 6),
+        "transact-gas-batch",
+      );
 
       const txns = [];
       for (let i = 0; i < 3; i++) {
-        txns.push(makeTransaction({
-          merkleRoot: root,
-          nullifiers: [ethers.keccak256(ethers.toUtf8Bytes(`transact-gas-batch-null-${i}`))],
-          commitments: [
-            ethers.keccak256(ethers.toUtf8Bytes(`transact-gas-batch-commit-${i}a`)),
-            ethers.keccak256(ethers.toUtf8Bytes(`transact-gas-batch-commit-${i}b`)),
-          ],
-        }));
+        txns.push(
+          makeTransaction({
+            merkleRoot: root,
+            nullifiers: [
+              ethers.keccak256(
+                ethers.toUtf8Bytes(`transact-gas-batch-null-${i}`),
+              ),
+            ],
+            commitments: [
+              ethers.keccak256(
+                ethers.toUtf8Bytes(`transact-gas-batch-commit-${i}a`),
+              ),
+              ethers.keccak256(
+                ethers.toUtf8Bytes(`transact-gas-batch-commit-${i}b`),
+              ),
+            ],
+          }),
+        );
       }
 
       const tx = await privacyPool.transact(txns);
       const receipt = await tx.wait();
-      recordGas("transact x3 (batched)", Number(receipt!.gasUsed), `${Math.round(Number(receipt!.gasUsed) / 3)} gas/tx`);
+      recordGas(
+        "transact x3 (batched)",
+        Number(receipt!.gasUsed),
+        `${Math.round(Number(receipt!.gasUsed) / 3)} gas/tx`,
+      );
     });
   });
 
@@ -344,9 +465,15 @@ describe("Privacy Pool Gas Profiling", function () {
       const bobAddr = await bob.getAddress();
       const npkBigInt = BigInt(bobAddr);
       const tokenId = BigInt(usdcAddr);
-      const unshieldCommitHash = computeCommitmentHash(npkBigInt, tokenId, unshieldValue);
+      const unshieldCommitHash = computeCommitmentHash(
+        npkBigInt,
+        tokenId,
+        unshieldValue,
+      );
 
-      const changeCommit = ethers.keccak256(ethers.toUtf8Bytes("unshield-gas-change"));
+      const changeCommit = ethers.keccak256(
+        ethers.toUtf8Bytes("unshield-gas-change"),
+      );
 
       const txData = makeTransaction({
         merkleRoot: root,
@@ -384,8 +511,17 @@ describe("Privacy Pool Gas Profiling", function () {
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("cctp-key"));
 
-      const tx = await privacyPoolClient.connect(alice).crossChainShield(
-        amount, 0, 0, npk, encBundle, shieldKey, ethers.ZeroAddress);
+      const tx = await privacyPoolClient
+        .connect(alice)
+        .crossChainShield(
+          amount,
+          0,
+          0,
+          npk,
+          encBundle,
+          shieldKey,
+          ethers.ZeroAddress,
+        );
       const receipt = await tx.wait();
       recordGas("crossChainShield (client-side)", Number(receipt!.gasUsed));
 
@@ -399,12 +535,19 @@ describe("Privacy Pool Gas Profiling", function () {
             encodedMessage = parsed.args.message;
             break;
           }
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
 
-      const relayTx = await hubMessageTransmitter.connect(relayer).receiveMessage(encodedMessage!, "0x");
+      const relayTx = await hubMessageTransmitter
+        .connect(relayer)
+        .receiveMessage(encodedMessage!, "0x");
       const relayReceipt = await relayTx.wait();
-      recordGas("receiveMessage (hub-side shield)", Number(relayReceipt!.gasUsed));
+      recordGas(
+        "receiveMessage (hub-side shield)",
+        Number(relayReceipt!.gasUsed),
+      );
     });
   });
 
@@ -425,13 +568,21 @@ describe("Privacy Pool Gas Profiling", function () {
       // destination recipient, bound in adaptParams.
       const npkBigInt = BigInt(privacyPoolAddress);
       const tokenId = BigInt(usdcAddr);
-      const unshieldCommitHash = computeCommitmentHash(npkBigInt, tokenId, unshieldValue);
+      const unshieldCommitHash = computeCommitmentHash(
+        npkBigInt,
+        tokenId,
+        unshieldValue,
+      );
 
-      const changeCommit = ethers.keccak256(ethers.toUtf8Bytes("atomic-unshield-gas-change"));
+      const changeCommit = ethers.keccak256(
+        ethers.toUtf8Bytes("atomic-unshield-gas-change"),
+      );
 
       const txData = makeTransaction({
         merkleRoot: root,
-        nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("atomic-unshield-gas-null"))],
+        nullifiers: [
+          ethers.keccak256(ethers.toUtf8Bytes("atomic-unshield-gas-null")),
+        ],
         commitments: [changeCommit, unshieldCommitHash],
         unshield: 1,
         adaptParams: encodeCctpBinding(bobAddr, DOMAINS.client, 0n),
@@ -451,7 +602,7 @@ describe("Privacy Pool Gas Profiling", function () {
         DOMAINS.client,
         bobAddr,
         0, // maxFee
-        ethers.ZeroHash
+        ethers.ZeroHash,
       );
       const receipt = await tx.wait();
       recordGas("atomicCrossChainUnshield", Number(receipt!.gasUsed));
@@ -470,7 +621,12 @@ describe("Privacy Pool Gas Profiling", function () {
       await hubUsdc.mint(aliceAddress, amount);
       await hubUsdc.connect(alice).approve(privacyPoolAddress, amount);
 
-      const tx = await privacyPool.connect(alice).shield([makeShieldRequest(usdcAddr, amount, "merkle-near-empty")], ethers.ZeroAddress);
+      const tx = await privacyPool
+        .connect(alice)
+        .shield(
+          [makeShieldRequest(usdcAddr, amount, "merkle-near-empty")],
+          ethers.ZeroAddress,
+        );
       const receipt = await tx.wait();
       recordGas("shield (near-empty tree)", Number(receipt!.gasUsed));
     });
@@ -487,7 +643,7 @@ describe("Privacy Pool Gas Profiling", function () {
         await hubUsdc.connect(alice).approve(privacyPoolAddress, totalAmount);
 
         const requests = Array.from({ length: batchSize }, (_, j) =>
-          makeShieldRequest(usdcAddr, batchAmount, `fill-50-${i}-${j}`)
+          makeShieldRequest(usdcAddr, batchAmount, `fill-50-${i}-${j}`),
         );
         await privacyPool.connect(alice).shield(requests, ethers.ZeroAddress);
       }
@@ -497,7 +653,12 @@ describe("Privacy Pool Gas Profiling", function () {
       await hubUsdc.mint(aliceAddress, amount);
       await hubUsdc.connect(alice).approve(privacyPoolAddress, amount);
 
-      const tx = await privacyPool.connect(alice).shield([makeShieldRequest(usdcAddr, amount, "merkle-after-50")], ethers.ZeroAddress);
+      const tx = await privacyPool
+        .connect(alice)
+        .shield(
+          [makeShieldRequest(usdcAddr, amount, "merkle-after-50")],
+          ethers.ZeroAddress,
+        );
       const receipt = await tx.wait();
       recordGas("shield (after ~50 leaves)", Number(receipt!.gasUsed));
     });
@@ -515,8 +676,11 @@ describe("Privacy Pool Gas Profiling", function () {
     console.log("");
 
     // Format as table
-    const maxOpLen = Math.max(...gasResults.map(r => r.operation.length), 10);
-    const maxGasLen = Math.max(...gasResults.map(r => r.gas.toLocaleString().length), 7);
+    const maxOpLen = Math.max(...gasResults.map((r) => r.operation.length), 10);
+    const maxGasLen = Math.max(
+      ...gasResults.map((r) => r.gas.toLocaleString().length),
+      7,
+    );
 
     const header = `  ${"Operation".padEnd(maxOpLen)}  ${"Gas".padStart(maxGasLen)}  Notes`;
     const separator = `  ${"─".repeat(maxOpLen)}  ${"─".repeat(maxGasLen)}  ${"─".repeat(40)}`;
@@ -541,18 +705,30 @@ describe("Privacy Pool Gas Profiling", function () {
     console.log(`  L2 gas limit: ${L2_GAS_LIMIT.toLocaleString()}`);
     console.log("");
 
-    const singleShield = gasResults.find(r => r.operation === "shield x1");
+    const singleShield = gasResults.find((r) => r.operation === "shield x1");
     if (singleShield) {
-      console.log(`  Max shields per L1 block: ~${Math.floor(L1_GAS_LIMIT / singleShield.gas)}`);
-      console.log(`  Max shields per L2 block: ~${Math.floor(L2_GAS_LIMIT / singleShield.gas)}`);
+      console.log(
+        `  Max shields per L1 block: ~${Math.floor(L1_GAS_LIMIT / singleShield.gas)}`,
+      );
+      console.log(
+        `  Max shields per L2 block: ~${Math.floor(L2_GAS_LIMIT / singleShield.gas)}`,
+      );
     }
 
-    const singleTransact = gasResults.find(r => r.operation.includes("1 nullifier, 2 commits"));
+    const singleTransact = gasResults.find((r) =>
+      r.operation.includes("1 nullifier, 2 commits"),
+    );
     if (singleTransact) {
-      console.log(`  Max transacts per L1 block: ~${Math.floor(L1_GAS_LIMIT / singleTransact.gas)}`);
-      console.log(`  Max transacts per L2 block: ~${Math.floor(L2_GAS_LIMIT / singleTransact.gas)}`);
+      console.log(
+        `  Max transacts per L1 block: ~${Math.floor(L1_GAS_LIMIT / singleTransact.gas)}`,
+      );
+      console.log(
+        `  Max transacts per L2 block: ~${Math.floor(L2_GAS_LIMIT / singleTransact.gas)}`,
+      );
     }
 
-    console.log("\n═══════════════════════════════════════════════════════════\n");
+    console.log(
+      "\n═══════════════════════════════════════════════════════════\n",
+    );
   });
 });

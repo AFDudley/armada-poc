@@ -21,22 +21,22 @@ import { buildPoseidon } from "circomlibjs";
 
 export interface ShieldRequestData {
   // For CommitmentPreimage
-  npk: string;           // bytes32 - Poseidon hash
-  value: bigint;         // uint120 - Amount in token units
-  tokenAddress: string;  // Token contract address
+  npk: string; // bytes32 - Poseidon hash
+  value: bigint; // uint120 - Amount in token units
+  tokenAddress: string; // Token contract address
 
   // For ShieldCiphertext
-  encryptedBundle: [string, string, string];  // bytes32[3]
-  shieldKey: string;     // bytes32
+  encryptedBundle: [string, string, string]; // bytes32[3]
+  shieldKey: string; // bytes32
 
   // For encoding
-  encoded: string;       // ABI-encoded payload for CCTP
+  encoded: string; // ABI-encoded payload for CCTP
 }
 
 export interface ShieldNote {
   request: ShieldRequestData;
   // Secret data needed for spending
-  random: string;        // bytes32 - Random value used in npk
+  random: string; // bytes32 - Random value used in npk
   preimage: {
     recipient: string;
     amount: bigint;
@@ -78,7 +78,8 @@ export function poseidonHash(inputs: bigint[]): string {
  */
 export function generateRandom(): string {
   // SNARK_SCALAR_FIELD from Railgun
-  const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+  const SNARK_SCALAR_FIELD =
+    21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
   // Generate random bytes and mod by field
   const randomBytes = ethers.randomBytes(32);
@@ -99,9 +100,11 @@ export function generateRandom(): string {
 export function generateNpk(recipientAddress: string, random: string): string {
   // Create a deterministic "identity" from recipient address
   // This simulates the Poseidon(spendingPubKey, nullifyingKey) part
-  const recipientHash = BigInt(ethers.keccak256(
-    ethers.AbiCoder.defaultAbiCoder().encode(["address"], [recipientAddress])
-  ));
+  const recipientHash = BigInt(
+    ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(["address"], [recipientAddress]),
+    ),
+  );
 
   // Hash with random to get npk
   const randomBigInt = BigInt(random);
@@ -124,7 +127,7 @@ export function generateNpk(recipientAddress: string, random: string): string {
 export function generateShieldCiphertext(
   recipientAddress: string,
   amount: bigint,
-  random: string
+  random: string,
 ): { encryptedBundle: [string, string, string]; shieldKey: string } {
   // For POC, we encode the data in a way that's recoverable
   // but not actually encrypted
@@ -160,7 +163,7 @@ export function generateShieldCiphertext(
 export async function createShieldRequest(
   recipientAddress: string,
   amount: bigint,
-  tokenAddress: string
+  tokenAddress: string,
 ): Promise<ShieldNote> {
   // Ensure Poseidon is initialized
   await initPoseidon();
@@ -175,14 +178,14 @@ export async function createShieldRequest(
   const { encryptedBundle, shieldKey } = generateShieldCiphertext(
     recipientAddress,
     amount,
-    random
+    random,
   );
 
   // Encode for CCTP transport
   // This matches what HubCCTPReceiverV2 expects to decode
   const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
     ["bytes32", "uint120", "bytes32[3]", "bytes32"],
-    [npk, amount, encryptedBundle, shieldKey]
+    [npk, amount, encryptedBundle, shieldKey],
   );
 
   const request: ShieldRequestData = {
@@ -215,7 +218,7 @@ export function decodeShieldPayload(encoded: string): {
 } {
   const decoded = ethers.AbiCoder.defaultAbiCoder().decode(
     ["bytes32", "uint120", "bytes32[3]", "bytes32"],
-    encoded
+    encoded,
   );
 
   return {
@@ -231,7 +234,7 @@ export function decodeShieldPayload(encoded: string): {
  * Real Railgun would use ECIES decryption with viewing key
  */
 export function recoverNoteFromCiphertext(
-  encryptedBundle: [string, string, string]
+  encryptedBundle: [string, string, string],
 ): {
   recipient: string;
   amount: bigint;
@@ -239,7 +242,7 @@ export function recoverNoteFromCiphertext(
 } {
   // Decode from our POC format
   const recipient = ethers.getAddress(
-    ethers.dataSlice(encryptedBundle[0], 12) // Last 20 bytes of 32-byte padded address
+    ethers.dataSlice(encryptedBundle[0], 12), // Last 20 bytes of 32-byte padded address
   );
   const amount = BigInt(encryptedBundle[1]);
   const random = encryptedBundle[2];

@@ -1,68 +1,68 @@
 // ABOUTME: Polls all governance state on a 10-second interval and exposes it via React state.
 // ABOUTME: Reads proposals, token balances, treasury info, steward, veto, wind-down, and outflow data.
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { ethers } from 'ethers'
-import type { GovernanceContracts } from './useGovernanceContracts'
-import type { ProposalData, OutflowConfig } from '../governance-types'
-import { ProposalState, ProposalType } from '../governance-types'
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ethers } from "ethers";
+import type { GovernanceContracts } from "./useGovernanceContracts";
+import type { ProposalData, OutflowConfig } from "../governance-types";
+import { ProposalState, ProposalType } from "../governance-types";
 
-const POLL_INTERVAL_MS = 10_000
+const POLL_INTERVAL_MS = 10_000;
 
 export interface GovernanceData {
   // Token / delegation
-  armBalance: bigint
-  votingPower: bigint
-  delegatee: string
-  totalSupply: bigint
-  proposalThreshold: bigint
-  eligibleSupply: bigint
+  armBalance: bigint;
+  votingPower: bigint;
+  delegatee: string;
+  totalSupply: bigint;
+  proposalThreshold: bigint;
+  eligibleSupply: bigint;
 
   // Proposals
-  proposalCount: number
-  proposals: ProposalData[]
+  proposalCount: number;
+  proposals: ProposalData[];
 
   // Treasury
-  treasuryArmBalance: bigint
-  treasuryUsdcBalance: bigint
-  treasuryOwner: string
-  stewardBudget: { budget: bigint; spent: bigint; remaining: bigint } | null
+  treasuryArmBalance: bigint;
+  treasuryUsdcBalance: bigint;
+  treasuryOwner: string;
+  stewardBudget: { budget: bigint; spent: bigint; remaining: bigint } | null;
 
   // Outflow config
-  outflowConfigArm: OutflowConfig | null
-  outflowConfigUsdc: OutflowConfig | null
+  outflowConfigArm: OutflowConfig | null;
+  outflowConfigUsdc: OutflowConfig | null;
 
   // Steward
-  currentSteward: string
-  isStewardActive: boolean
-  termEnd: bigint
+  currentSteward: string;
+  isStewardActive: boolean;
+  termEnd: bigint;
 
   // Security Council
-  securityCouncil: string
-  isSecurityCouncilEjected: boolean
+  securityCouncil: string;
+  isSecurityCouncilEjected: boolean;
 
   // Wind-down
-  windDownTriggered: boolean
-  windDownDeadline: bigint
-  revenueThreshold: bigint
-  recognizedRevenue: bigint
-  windDownActive: boolean
-  circulatingSupply: bigint
+  windDownTriggered: boolean;
+  windDownDeadline: bigint;
+  revenueThreshold: bigint;
+  recognizedRevenue: bigint;
+  windDownActive: boolean;
+  circulatingSupply: bigint;
 
   // Block info
-  blockTimestamp: bigint
-  blockNumber: bigint
+  blockTimestamp: bigint;
+  blockNumber: bigint;
 
   // Meta
-  isLoading: boolean
-  error: string | null
-  refresh: () => Promise<void>
+  isLoading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
 }
 
 const EMPTY_DATA: GovernanceData = {
   armBalance: 0n,
   votingPower: 0n,
-  delegatee: '',
+  delegatee: "",
   totalSupply: 0n,
   proposalThreshold: 0n,
   eligibleSupply: 0n,
@@ -70,14 +70,14 @@ const EMPTY_DATA: GovernanceData = {
   proposals: [],
   treasuryArmBalance: 0n,
   treasuryUsdcBalance: 0n,
-  treasuryOwner: '',
+  treasuryOwner: "",
   stewardBudget: null,
   outflowConfigArm: null,
   outflowConfigUsdc: null,
-  currentSteward: '',
+  currentSteward: "",
   isStewardActive: false,
   termEnd: 0n,
-  securityCouncil: '',
+  securityCouncil: "",
   isSecurityCouncilEjected: false,
   windDownTriggered: false,
   windDownDeadline: 0n,
@@ -90,152 +90,191 @@ const EMPTY_DATA: GovernanceData = {
   isLoading: true,
   error: null,
   refresh: async () => {},
-}
+};
 
 export function useGovernanceData(
   contracts: GovernanceContracts,
   userAccount: string | null,
 ): GovernanceData {
-  const [data, setData] = useState<GovernanceData>(EMPTY_DATA)
-  const isFetchingRef = useRef(false)
+  const [data, setData] = useState<GovernanceData>(EMPTY_DATA);
+  const isFetchingRef = useRef(false);
 
   const fetchData = useCallback(async () => {
-    const { provider, armToken, governor, treasury, steward, usdc, deployment } = contracts
-    if (!provider || !armToken || !governor || !treasury || !steward || !deployment) {
-      return
+    const {
+      provider,
+      armToken,
+      governor,
+      treasury,
+      steward,
+      usdc,
+      deployment,
+    } = contracts;
+    if (
+      !provider ||
+      !armToken ||
+      !governor ||
+      !treasury ||
+      !steward ||
+      !deployment
+    ) {
+      return;
     }
-    if (isFetchingRef.current) return
-    isFetchingRef.current = true
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
     try {
-      const block = await provider.getBlock('latest')
-      const blockTimestamp = BigInt(block?.timestamp ?? 0)
-      const blockNumber = BigInt(block?.number ?? 0)
+      const block = await provider.getBlock("latest");
+      const blockTimestamp = BigInt(block?.timestamp ?? 0);
+      const blockNumber = BigInt(block?.number ?? 0);
 
       // Fetch basic token data
-      const [totalSupply, proposalThreshold, proposalCountRaw] = await Promise.all([
-        armToken.totalSupply(),
-        governor.proposalThreshold(),
-        governor.proposalCount(),
-      ])
-      const proposalCount = Number(proposalCountRaw)
+      const [totalSupply, proposalThreshold, proposalCountRaw] =
+        await Promise.all([
+          armToken.totalSupply(),
+          governor.proposalThreshold(),
+          governor.proposalCount(),
+        ]);
+      const proposalCount = Number(proposalCountRaw);
 
       // Compute eligible supply (totalSupply minus treasury and excluded addresses)
-      let eligibleSupply = totalSupply
+      let eligibleSupply = totalSupply;
       try {
-        const treasuryAddr = await governor.treasuryAddress()
-        const excludedResult = await governor.getExcludedFromQuorum()
+        const treasuryAddr = await governor.treasuryAddress();
+        const excludedResult = await governor.getExcludedFromQuorum();
         // ethers v6 returns a Result object; convert to plain array
-        const excludedAddrs = Array.from(excludedResult) as string[]
-        const allExcluded = [treasuryAddr as string, ...excludedAddrs]
+        const excludedAddrs = Array.from(excludedResult) as string[];
+        const allExcluded = [treasuryAddr as string, ...excludedAddrs];
         const excludedBalances = await Promise.all(
           allExcluded.map((addr) => armToken.balanceOf(addr)),
-        )
-        let totalExcluded = 0n
+        );
+        let totalExcluded = 0n;
         for (const bal of excludedBalances) {
-          totalExcluded += BigInt(bal)
+          totalExcluded += BigInt(bal);
         }
-        eligibleSupply = totalSupply - totalExcluded
+        eligibleSupply = totalSupply - totalExcluded;
       } catch (err) {
-        console.warn('[useGovernanceData] Failed to compute eligible supply:', err)
+        console.warn(
+          "[useGovernanceData] Failed to compute eligible supply:",
+          err,
+        );
       }
 
       // User-specific data
-      let armBalance = 0n
-      let votingPower = 0n
-      let delegatee = ''
+      let armBalance = 0n;
+      let votingPower = 0n;
+      let delegatee = "";
       if (userAccount) {
-        ;[armBalance, votingPower, delegatee] = await Promise.all([
+        [armBalance, votingPower, delegatee] = await Promise.all([
           armToken.balanceOf(userAccount),
           armToken.getVotes(userAccount),
           armToken.delegates(userAccount),
-        ])
+        ]);
       }
 
       // Fetch proposals (most recent first, limit to last 20 for performance)
-      const startId = Math.max(1, proposalCount - 19)
-      const proposalPromises: Promise<ProposalData>[] = []
+      const startId = Math.max(1, proposalCount - 19);
+      const proposalPromises: Promise<ProposalData>[] = [];
       for (let i = proposalCount; i >= startId; i--) {
-        proposalPromises.push(fetchProposal(governor, i, userAccount))
+        proposalPromises.push(fetchProposal(governor, i, userAccount));
       }
-      const proposals = await Promise.all(proposalPromises)
+      const proposals = await Promise.all(proposalPromises);
 
       // Fetch proposal descriptions from ProposalCreated events.
       // Cached in localStorage to avoid re-scanning the full block range on every poll.
       try {
         // Namespace cache by chainId + governor address to avoid cross-environment contamination
-        const govAddr = deployment.contracts.governor.toLowerCase()
-        const cacheKey = `gov-proposal-descriptions-${deployment.chainId}-${govAddr}`
-        const cached = JSON.parse(localStorage.getItem(cacheKey) || '{}') as {
-          lastBlock?: number
-          descriptions?: Record<string, string>
-        }
+        const govAddr = deployment.contracts.governor.toLowerCase();
+        const cacheKey = `gov-proposal-descriptions-${deployment.chainId}-${govAddr}`;
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || "{}") as {
+          lastBlock?: number;
+          descriptions?: Record<string, string>;
+        };
         const descriptionMap = new Map<number, string>(
-          Object.entries(cached.descriptions ?? {}).map(([k, v]) => [Number(k), v]),
-        )
-        const deployBlock = deployment.deployBlock ?? 0
-        const currentBlock = await provider.getBlockNumber()
+          Object.entries(cached.descriptions ?? {}).map(([k, v]) => [
+            Number(k),
+            v,
+          ]),
+        );
+        const deployBlock = deployment.deployBlock ?? 0;
+        const currentBlock = await provider.getBlockNumber();
         // If cached lastBlock is ahead of the current chain tip, invalidate the cache
-        const cachedLastBlock = cached.lastBlock ?? deployBlock - 1
-        const scanFrom = cachedLastBlock > currentBlock
-          ? deployBlock
-          : Math.max(deployBlock, cachedLastBlock + 1)
+        const cachedLastBlock = cached.lastBlock ?? deployBlock - 1;
+        const scanFrom =
+          cachedLastBlock > currentBlock
+            ? deployBlock
+            : Math.max(deployBlock, cachedLastBlock + 1);
 
         if (scanFrom <= currentBlock) {
-          const CHUNK = 10 // free-tier RPC limit
+          const CHUNK = 10; // free-tier RPC limit
           for (let from = scanFrom; from <= currentBlock; from += CHUNK) {
-            const to = Math.min(from + CHUNK - 1, currentBlock)
+            const to = Math.min(from + CHUNK - 1, currentBlock);
             const chunk = await governor.queryFilter(
-              governor.filters.ProposalCreated(), from, to,
-            )
+              governor.filters.ProposalCreated(),
+              from,
+              to,
+            );
             for (const event of chunk) {
               const parsed = governor.interface.parseLog({
                 topics: [...event.topics],
                 data: event.data,
-              })
+              });
               if (parsed) {
-                descriptionMap.set(Number(parsed.args[0]), parsed.args[5] as string)
+                descriptionMap.set(
+                  Number(parsed.args[0]),
+                  parsed.args[5] as string,
+                );
               }
             }
           }
           // Persist cache
-          const descObj: Record<string, string> = {}
-          for (const [k, v] of descriptionMap) descObj[String(k)] = v
-          localStorage.setItem(cacheKey, JSON.stringify({ lastBlock: currentBlock, descriptions: descObj }))
+          const descObj: Record<string, string> = {};
+          for (const [k, v] of descriptionMap) descObj[String(k)] = v;
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({ lastBlock: currentBlock, descriptions: descObj }),
+          );
         }
 
         for (const p of proposals) {
-          const desc = descriptionMap.get(p.id)
-          if (desc) p.description = desc
+          const desc = descriptionMap.get(p.id);
+          if (desc) p.description = desc;
         }
       } catch {
         // Event query may fail on some providers — descriptions will be empty
       }
 
       // Treasury data
-      let treasuryArmBalance = 0n
-      let treasuryUsdcBalance = 0n
-      let treasuryOwner = ''
-      let stewardBudget: { budget: bigint; spent: bigint; remaining: bigint } | null = null
+      let treasuryArmBalance = 0n;
+      let treasuryUsdcBalance = 0n;
+      let treasuryOwner = "";
+      let stewardBudget: {
+        budget: bigint;
+        spent: bigint;
+        remaining: bigint;
+      } | null = null;
 
       try {
-        ;[treasuryArmBalance, treasuryOwner] = await Promise.all([
+        [treasuryArmBalance, treasuryOwner] = await Promise.all([
           treasury.getBalance(deployment.contracts.armToken),
           treasury.owner(),
-        ])
+        ]);
 
         if (usdc) {
-          treasuryUsdcBalance = await treasury.getBalance(await usdc.getAddress())
+          treasuryUsdcBalance = await treasury.getBalance(
+            await usdc.getAddress(),
+          );
         }
 
         if (usdc && contracts.usdcAddress) {
           try {
-            const budgetResult = await treasury.getStewardBudget(contracts.usdcAddress)
+            const budgetResult = await treasury.getStewardBudget(
+              contracts.usdcAddress,
+            );
             stewardBudget = {
               budget: budgetResult[0] as bigint,
               spent: budgetResult[1] as bigint,
               remaining: budgetResult[2] as bigint,
-            }
+            };
           } catch {
             // May fail if no steward budget configured
           }
@@ -245,31 +284,35 @@ export function useGovernanceData(
       }
 
       // Outflow config
-      let outflowConfigArm: OutflowConfig | null = null
-      let outflowConfigUsdc: OutflowConfig | null = null
+      let outflowConfigArm: OutflowConfig | null = null;
+      let outflowConfigUsdc: OutflowConfig | null = null;
       try {
-        const armResult = await treasury.getOutflowConfig(deployment.contracts.armToken)
+        const armResult = await treasury.getOutflowConfig(
+          deployment.contracts.armToken,
+        );
         if (armResult[0] > 0n) {
           outflowConfigArm = {
             windowDuration: armResult[0] as bigint,
             limitBps: armResult[1] as bigint,
             limitAbsolute: armResult[2] as bigint,
             floorAbsolute: armResult[3] as bigint,
-          }
+          };
         }
       } catch {
         // Outflow config may not be initialized
       }
       if (contracts.usdcAddress) {
         try {
-          const usdcResult = await treasury.getOutflowConfig(contracts.usdcAddress)
+          const usdcResult = await treasury.getOutflowConfig(
+            contracts.usdcAddress,
+          );
           if (usdcResult[0] > 0n) {
             outflowConfigUsdc = {
               windowDuration: usdcResult[0] as bigint,
               limitBps: usdcResult[1] as bigint,
               limitAbsolute: usdcResult[2] as bigint,
               floorAbsolute: usdcResult[3] as bigint,
-            }
+            };
           }
         } catch {
           // Outflow config may not be initialized
@@ -277,59 +320,61 @@ export function useGovernanceData(
       }
 
       // Steward data (identity only — spending proposals flow through the governor)
-      let currentSteward = ''
-      let isStewardActive = false
-      let termEnd = 0n
+      let currentSteward = "";
+      let isStewardActive = false;
+      let termEnd = 0n;
 
       try {
-        ;[currentSteward, isStewardActive, termEnd] = await Promise.all([
+        [currentSteward, isStewardActive, termEnd] = await Promise.all([
           steward.currentSteward(),
           steward.isStewardActive().catch(() => false),
           steward.termEnd().catch(() => 0n),
-        ])
+        ]);
       } catch {
         // Steward queries may fail
       }
 
       // Security Council
-      let securityCouncil = ''
-      let isSecurityCouncilEjected = false
+      let securityCouncil = "";
+      let isSecurityCouncilEjected = false;
       try {
-        securityCouncil = await governor.securityCouncil()
-        isSecurityCouncilEjected = securityCouncil === ethers.ZeroAddress
+        securityCouncil = await governor.securityCouncil();
+        isSecurityCouncilEjected = securityCouncil === ethers.ZeroAddress;
       } catch {
         // SC query may fail
       }
 
       // Wind-down data (optional contracts — may not be deployed)
-      let windDownTriggered = false
-      let windDownDeadline = 0n
-      let revenueThreshold = 0n
-      let recognizedRevenue = 0n
-      let windDownActive = false
-      let circulatingSupply = 0n
+      let windDownTriggered = false;
+      let windDownDeadline = 0n;
+      let revenueThreshold = 0n;
+      let recognizedRevenue = 0n;
+      let windDownActive = false;
+      let circulatingSupply = 0n;
 
       try {
-        windDownActive = await governor.windDownActive()
+        windDownActive = await governor.windDownActive();
       } catch {}
 
       if (contracts.windDown) {
         try {
-          ;[windDownTriggered, windDownDeadline, revenueThreshold] = await Promise.all([
-            contracts.windDown.triggered(),
-            contracts.windDown.windDownDeadline(),
-            contracts.windDown.revenueThreshold(),
-          ])
+          [windDownTriggered, windDownDeadline, revenueThreshold] =
+            await Promise.all([
+              contracts.windDown.triggered(),
+              contracts.windDown.windDownDeadline(),
+              contracts.windDown.revenueThreshold(),
+            ]);
         } catch {}
       }
       if (contracts.revenueCounter) {
         try {
-          recognizedRevenue = await contracts.revenueCounter.recognizedRevenueUsd()
+          recognizedRevenue =
+            await contracts.revenueCounter.recognizedRevenueUsd();
         } catch {}
       }
       if (contracts.redemption) {
         try {
-          circulatingSupply = await contracts.redemption.circulatingSupply()
+          circulatingSupply = await contracts.redemption.circulatingSupply();
         } catch {}
       }
 
@@ -364,33 +409,36 @@ export function useGovernanceData(
         blockNumber,
         isLoading: false,
         error: null,
-      }))
+      }));
     } catch (err) {
       setData((prev) => ({
         ...prev,
         isLoading: false,
-        error: err instanceof Error ? err.message : 'Failed to fetch governance data',
-      }))
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch governance data",
+      }));
     } finally {
-      isFetchingRef.current = false
+      isFetchingRef.current = false;
     }
-  }, [contracts, userAccount])
+  }, [contracts, userAccount]);
 
   // Expose refresh and wire it into state
   useEffect(() => {
-    setData((prev) => ({ ...prev, refresh: fetchData }))
-  }, [fetchData])
+    setData((prev) => ({ ...prev, refresh: fetchData }));
+  }, [fetchData]);
 
   // Initial fetch + polling
   useEffect(() => {
-    if (contracts.isLoading || contracts.error) return
+    if (contracts.isLoading || contracts.error) return;
 
-    fetchData()
-    const interval = setInterval(fetchData, POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [contracts.isLoading, contracts.error, fetchData])
+    fetchData();
+    const interval = setInterval(fetchData, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [contracts.isLoading, contracts.error, fetchData]);
 
-  return data
+  return data;
 }
 
 async function fetchProposal(
@@ -402,35 +450,35 @@ async function fetchProposal(
     governor.getProposal(id),
     governor.state(id),
     governor.quorum(id),
-  ])
+  ]);
 
-  let hasVoted = false
-  let userVoteChoice: number | null = null
+  let hasVoted = false;
+  let userVoteChoice: number | null = null;
   if (userAccount) {
-    hasVoted = await governor.hasVoted(id, userAccount)
+    hasVoted = await governor.hasVoted(id, userAccount);
     if (hasVoted) {
-      const choice = await governor.voteChoice(id, userAccount)
-      userVoteChoice = Number(choice)
+      const choice = await governor.voteChoice(id, userAccount);
+      userVoteChoice = Number(choice);
     }
   }
 
-  const proposalType = Number(proposalData[1]) as ProposalType
-  const state = Number(stateRaw) as ProposalState
+  const proposalType = Number(proposalData[1]) as ProposalType;
+  const state = Number(stateRaw) as ProposalState;
 
   // Veto linkage: fetch bidirectional lookup for relevant proposal types
-  let vetoedProposalId: number | undefined
-  let ratificationId: number | undefined
+  let vetoedProposalId: number | undefined;
+  let ratificationId: number | undefined;
 
   if (proposalType === ProposalType.VetoRatification) {
     try {
-      const vetoedId = await governor.ratificationOf(id)
-      if (Number(vetoedId) > 0) vetoedProposalId = Number(vetoedId)
+      const vetoedId = await governor.ratificationOf(id);
+      if (Number(vetoedId) > 0) vetoedProposalId = Number(vetoedId);
     } catch {}
   }
   if (state === ProposalState.Canceled) {
     try {
-      const ratId = await governor.vetoRatificationId(id)
-      if (Number(ratId) > 0) ratificationId = Number(ratId)
+      const ratId = await governor.vetoRatificationId(id);
+      if (Number(ratId) > 0) ratificationId = Number(ratId);
     } catch {}
   }
 
@@ -447,10 +495,10 @@ async function fetchProposal(
     snapshotBlock: proposalData[7] as bigint,
     snapshotEligibleSupply: proposalData[8] as bigint,
     quorumRequired,
-    description: '', // Filled in via events
+    description: "", // Filled in via events
     hasVoted,
     userVoteChoice,
     vetoedProposalId,
     ratificationId,
-  }
+  };
 }

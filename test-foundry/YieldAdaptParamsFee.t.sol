@@ -63,8 +63,9 @@ contract YieldAdaptParamsFeeTest is Test {
         uint256 wrongAmount
     ) public {
         vm.assume(rightFeeNpk != wrongFeeNpk || rightAmount != wrongAmount);
-        bytes32 ap =
-            YieldAdaptParams.encode(NPK, _bundle(0), SHIELD_KEY, rightFeeNpk, _bundle(100), FEE_SHIELD_KEY, rightAmount);
+        bytes32 ap = YieldAdaptParams.encode(
+            NPK, _bundle(0), SHIELD_KEY, rightFeeNpk, _bundle(100), FEE_SHIELD_KEY, rightAmount
+        );
         assertFalse(
             YieldAdaptParams.verify(
                 ap, NPK, _bundle(0), SHIELD_KEY, wrongFeeNpk, _bundle(100), FEE_SHIELD_KEY, wrongAmount

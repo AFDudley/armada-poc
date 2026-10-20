@@ -273,7 +273,7 @@ Each phase lands as one or more commits directly on the umbrella branch (see §0
    - Add an `@` alias to `packages/shared/tsconfig.json` + `vite`/`tsup` resolvers — breaks the convention explicitly.
    - Configure `components.json` aliases as relative — shadcn's CLI may not honor this cleanly; test first.
    - Let shadcn generate with `@` and post-process imports to relative — ugly but convention-preserving.
-   
+
    Pick one and document in shared/CLAUDE.md before merging Phase 2.
 
 3. **Missing deps in `packages/shared/package.json`.** shadcn-generated components require `clsx`, `tailwind-merge`, `class-variance-authority`, and various `@radix-ui/*` packages. Shared currently declares none. Add to `dependencies` (treat shared's consumers as black-box) or `peerDependencies` (let the apps pin versions). Apps already have `tailwind-merge` in their own devDeps — whichever choice is made, avoid version drift between apps and shared.
@@ -558,7 +558,7 @@ Landed as four commits, one per sub-goal:
 4. **Amber/warning blocks — decision to lock (P6-D1):** 12 amber-color sites exist across CommitTab, InviteTab, InviteLinkSection, InviteLinkRedemption, ProRataEstimate, ClaimTab, and observer `App.tsx:277`. Some are block panels (`border-amber-500/50 bg-amber-500/10` — "Refund Mode", "Below Minimum Raise", "Crowdfund was canceled", "duplicate invite already issued") and some are inline `text-amber-500` warning lines. Two paths:
    - **P6-D1.a** Add a `warning` variant to `alertVariants` CVA and promote only the block panels (5 sites). Leave the inline amber text alone — those are sub-field warnings, not alert-worthy.
    - **P6-D1.b** Leave amber alone entirely this phase; do only the 6 destructive ones. Amber → Alert can come later.
-   
+
    Recommendation: **P6-D1.a.** Consistent treatment of "here is a block-level heads-up you need to read" is the whole point of ErrorAlert. Inline warnings stay inline.
 
 5. **Skeleton targets and hazards:**
@@ -575,7 +575,7 @@ Landed as four commits, one per sub-goal:
    - `ClaimTab.tsx:192–207` (already-claimed "All Claims Complete" panel) — debatable. My recommendation: **leave it alone.** It's a terminal-success screen, not an empty state; the plan says EmptyState is for "absence of data", not "workflow complete".
    - `CommitTab.tsx:232–238` — "Not Eligible" center block. Good EmptyState candidate.
    - `committer App.tsx:327–331` — "Connect your wallet to participate" with `<ConnectButton/>`. Good EmptyState candidate with a primary action slot.
-   
+
    StatsBar and TreeView do **not** need empty states — they handle zero-data gracefully (StatsBar shows empty tiles; TreeView shows a lonely ROOT node). Data-layer concerns, not empty-state concerns.
 
 7. **ErrorBoundary placement:**

@@ -49,11 +49,15 @@ export class IdempotencyStore {
   /** key → durable record (delivered submissions). */
   private records: Map<string, IdempotencyRecord> = new Map();
   /** key → in-flight submission promise (concurrent same-key POSTs await this, no re-broadcast). */
-  private inflight: Map<string, Promise<{ txHash: string; chainId: number }>> = new Map();
+  private inflight: Map<string, Promise<{ txHash: string; chainId: number }>> =
+    new Map();
   private readonly store: JsonStateStore<IdempotencyData>;
   private readonly ttlMs: number;
 
-  constructor(baseDir: string = RELAYER_STATE_DIR, ttlMs: number = DEFAULT_TTL_MS) {
+  constructor(
+    baseDir: string = RELAYER_STATE_DIR,
+    ttlMs: number = DEFAULT_TTL_MS,
+  ) {
     this.store = new JsonStateStore<IdempotencyData>({
       baseDir,
       filenamePrefix: "idempotency",
@@ -111,7 +115,12 @@ export class IdempotencyStore {
   async submitOnce(
     key: string,
     submit: () => Promise<{ txHash: string; chainId: number }>,
-  ): Promise<{ txHash: string; status: IdempotencyStatus; chainId: number; replayed: boolean }> {
+  ): Promise<{
+    txHash: string;
+    status: IdempotencyStatus;
+    chainId: number;
+    replayed: boolean;
+  }> {
     const existing = this.records.get(key);
     if (existing) {
       return {
@@ -124,7 +133,12 @@ export class IdempotencyStore {
     const pending = this.inflight.get(key);
     if (pending) {
       const r = await pending;
-      return { txHash: r.txHash, status: "pending", chainId: r.chainId, replayed: true };
+      return {
+        txHash: r.txHash,
+        status: "pending",
+        chainId: r.chainId,
+        replayed: true,
+      };
     }
 
     // Register the in-flight promise BEFORE awaiting — the synchronous check-then-set above means a
@@ -150,14 +164,22 @@ export class IdempotencyStore {
     this.inflight.delete(key);
     // Persist before returning so a crash immediately after broadcast still dedups the retry.
     await this.persist();
-    return { txHash: record.txHash, status: "pending", chainId: record.chainId, replayed: false };
+    return {
+      txHash: record.txHash,
+      status: "pending",
+      chainId: record.chainId,
+      replayed: false,
+    };
   }
 
   /**
    * Backfill a terminal status onto the record matching `txHash` (best-effort; called when /status
    * observes a confirmed/failed receipt) so a late repeat POST returns the accurate terminal status.
    */
-  async updateStatusByTxHash(txHash: string, status: IdempotencyStatus): Promise<void> {
+  async updateStatusByTxHash(
+    txHash: string,
+    status: IdempotencyStatus,
+  ): Promise<void> {
     const target = txHash.toLowerCase();
     let changed = false;
     for (const r of this.records.values()) {
@@ -217,31 +239,51 @@ function validate(parsed: unknown, key: string, path: string): IdempotencyData {
     !Number.isInteger(candidate.updatedAt) ||
     candidate.updatedAt < 0
   ) {
-    throw new Error(`idempotency-store: invalid 'updatedAt' at ${path}. Delete to reset.`);
+    throw new Error(
+      `idempotency-store: invalid 'updatedAt' at ${path}. Delete to reset.`,
+    );
   }
-  const records = candidate.records.map((raw, idx) => validateRecord(raw, path, idx));
+  const records = candidate.records.map((raw, idx) =>
+    validateRecord(raw, path, idx),
+  );
   return { records, updatedAt: candidate.updatedAt, version: SCHEMA_VERSION };
 }
 
-function validateRecord(raw: unknown, path: string, idx: number): IdempotencyRecord {
+function validateRecord(
+  raw: unknown,
+  path: string,
+  idx: number,
+): IdempotencyRecord {
   if (typeof raw !== "object" || raw === null) {
-    throw new Error(`idempotency-store: records[${idx}] at ${path} is not an object.`);
+    throw new Error(
+      `idempotency-store: records[${idx}] at ${path} is not an object.`,
+    );
   }
   const r = raw as Partial<IdempotencyRecord>;
   if (typeof r.idempotencyKey !== "string" || r.idempotencyKey.length === 0) {
-    throw new Error(`idempotency-store: records[${idx}].idempotencyKey at ${path} is not a non-empty string.`);
+    throw new Error(
+      `idempotency-store: records[${idx}].idempotencyKey at ${path} is not a non-empty string.`,
+    );
   }
   if (typeof r.txHash !== "string") {
-    throw new Error(`idempotency-store: records[${idx}].txHash at ${path} is not a string.`);
+    throw new Error(
+      `idempotency-store: records[${idx}].txHash at ${path} is not a string.`,
+    );
   }
   if (typeof r.chainId !== "number" || !Number.isFinite(r.chainId)) {
-    throw new Error(`idempotency-store: records[${idx}].chainId at ${path} is not a finite number.`);
+    throw new Error(
+      `idempotency-store: records[${idx}].chainId at ${path} is not a finite number.`,
+    );
   }
   if (!VALID_STATUSES.has(r.status as string)) {
-    throw new Error(`idempotency-store: records[${idx}].status '${r.status}' at ${path} is not valid.`);
+    throw new Error(
+      `idempotency-store: records[${idx}].status '${r.status}' at ${path} is not valid.`,
+    );
   }
   if (typeof r.createdAt !== "number" || !Number.isFinite(r.createdAt)) {
-    throw new Error(`idempotency-store: records[${idx}].createdAt at ${path} is not a finite number.`);
+    throw new Error(
+      `idempotency-store: records[${idx}].createdAt at ${path} is not a finite number.`,
+    );
   }
   return r as IdempotencyRecord;
 }

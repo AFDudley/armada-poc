@@ -44,7 +44,9 @@ export async function linkClient(
   const clientFilename = getPrivacyPoolDeploymentFile(client.role);
   const clientDeployment = loadDeployment(clientFilename);
   if (!clientDeployment) {
-    console.log(`  Warning: ${client.name} deployment not found (${clientFilename}), skipping`);
+    console.log(
+      `  Warning: ${client.name} deployment not found (${clientFilename}), skipping`,
+    );
     return;
   }
 
@@ -54,18 +56,31 @@ export async function linkClient(
 
   // Set remote pool on Hub
   console.log(`  Setting remote pool on Hub...`);
-  await (await privacyPool.setRemotePool(domain, clientBytes32, nm.override())).wait();
+  await (
+    await privacyPool.setRemotePool(domain, clientBytes32, nm.override())
+  ).wait();
   console.log(`  Remote pool set for domain ${domain}`);
 
   // Set the client's hook router on Hub — pinned as the CCTP destinationCaller for Hub->client
   // unshield burns, so a burn to this domain can only be delivered via the client's CCTPHookRouter.
   if (clientDeployment.contracts.hookRouter) {
-    const clientHookRouterBytes32 = ethers.zeroPadValue(clientDeployment.contracts.hookRouter, 32);
+    const clientHookRouterBytes32 = ethers.zeroPadValue(
+      clientDeployment.contracts.hookRouter,
+      32,
+    );
     console.log(`  Setting remote hook router on Hub...`);
-    await (await privacyPool.setRemoteHookRouter(domain, clientHookRouterBytes32, nm.override())).wait();
+    await (
+      await privacyPool.setRemoteHookRouter(
+        domain,
+        clientHookRouterBytes32,
+        nm.override(),
+      )
+    ).wait();
     console.log(`  Remote hook router set for domain ${domain}`);
   } else {
-    console.log(`  Warning: ${client.name} has no hookRouter — remoteHookRouter NOT set (unshields to this domain will revert)`);
+    console.log(
+      `  Warning: ${client.name} has no hookRouter — remoteHookRouter NOT set (unshields to this domain will revert)`,
+    );
   }
 
   // In mock mode, configure the Hub's TokenMessenger to know this client's TokenMessenger.
@@ -77,13 +92,18 @@ export async function linkClient(
         "MockTokenMessengerV2",
         hubCctp.contracts.tokenMessenger,
       );
-      const clientTokenMessengerBytes32 = ethers.zeroPadValue(clientCctp.contracts.tokenMessenger, 32);
+      const clientTokenMessengerBytes32 = ethers.zeroPadValue(
+        clientCctp.contracts.tokenMessenger,
+        32,
+      );
       console.log(`  Setting remote TokenMessenger on Hub...`);
-      await (await hubTokenMessenger.setRemoteTokenMessenger(
-        domain,
-        clientTokenMessengerBytes32,
-        nm.override(),
-      )).wait();
+      await (
+        await hubTokenMessenger.setRemoteTokenMessenger(
+          domain,
+          clientTokenMessengerBytes32,
+          nm.override(),
+        )
+      ).wait();
       console.log(`  Remote TokenMessenger set for domain ${domain}`);
     }
   }
@@ -95,7 +115,9 @@ export async function linkClient(
     // NonceManager tracks nonces locally. A bare Wallet re-reads the nonce from the provider before
     // each send, and ethers caches identical RPC results for ~250ms, so a transaction mined quickly
     // followed straight away by the next one can reuse a stale nonce ("nonce too low").
-    const clientSigner = new ethers.NonceManager(new ethers.Wallet(config.deployerPrivateKey, clientProvider));
+    const clientSigner = new ethers.NonceManager(
+      new ethers.Wallet(config.deployerPrivateKey, clientProvider),
+    );
 
     const clientPoolContract = new ethers.Contract(
       clientDeployment.contracts.privacyPoolClient,
@@ -107,18 +129,33 @@ export async function linkClient(
     );
 
     console.log(`  Setting hookRouter on ${client.name} PrivacyPoolClient...`);
-    await (await clientPoolContract.setHookRouter(clientDeployment.contracts.hookRouter)).wait();
-    console.log(`  hookRouter set to: ${clientDeployment.contracts.hookRouter}`);
+    await (
+      await clientPoolContract.setHookRouter(
+        clientDeployment.contracts.hookRouter,
+      )
+    ).wait();
+    console.log(
+      `  hookRouter set to: ${clientDeployment.contracts.hookRouter}`,
+    );
 
     // Pin the Hub's hook router as the CCTP destinationCaller for client->Hub shield burns, so a
     // shield can only be delivered via the Hub's CCTPHookRouter.
     if (hubHookRouterAddress) {
-      const hubHookRouterBytes32 = ethers.zeroPadValue(hubHookRouterAddress, 32);
-      console.log(`  Setting hubHookRouter on ${client.name} PrivacyPoolClient...`);
-      await (await clientPoolContract.setHubHookRouter(hubHookRouterBytes32)).wait();
+      const hubHookRouterBytes32 = ethers.zeroPadValue(
+        hubHookRouterAddress,
+        32,
+      );
+      console.log(
+        `  Setting hubHookRouter on ${client.name} PrivacyPoolClient...`,
+      );
+      await (
+        await clientPoolContract.setHubHookRouter(hubHookRouterBytes32)
+      ).wait();
       console.log(`  hubHookRouter set to: ${hubHookRouterAddress}`);
     } else {
-      console.log(`  Warning: Hub has no hookRouter — hubHookRouter NOT set (shields from ${client.name} will revert)`);
+      console.log(
+        `  Warning: Hub has no hookRouter — hubHookRouter NOT set (shields from ${client.name} will revert)`,
+      );
     }
 
     // In mock mode, the client's MessageTransmitter must let the hookRouter call receiveMessage,
@@ -131,19 +168,32 @@ export async function linkClient(
           ["function setRelayer(address _relayer) external"],
           clientSigner,
         );
-        await (await clientMessageTransmitter.setRelayer(clientDeployment.contracts.hookRouter)).wait();
-        console.log(`  ${client.name} MessageTransmitter relayer set to hookRouter`);
+        await (
+          await clientMessageTransmitter.setRelayer(
+            clientDeployment.contracts.hookRouter,
+          )
+        ).wait();
+        console.log(
+          `  ${client.name} MessageTransmitter relayer set to hookRouter`,
+        );
 
-        const hubTokenMessengerBytes32 = ethers.zeroPadValue(hubCctp.contracts.tokenMessenger, 32);
+        const hubTokenMessengerBytes32 = ethers.zeroPadValue(
+          hubCctp.contracts.tokenMessenger,
+          32,
+        );
         const clientTokenMessenger = new ethers.Contract(
           clientCctp.contracts.tokenMessenger,
-          ["function setRemoteTokenMessenger(uint32 domain, bytes32 tokenMessenger) external"],
+          [
+            "function setRemoteTokenMessenger(uint32 domain, bytes32 tokenMessenger) external",
+          ],
           clientSigner,
         );
-        await (await clientTokenMessenger.setRemoteTokenMessenger(
-          config.hub.cctpDomain,
-          hubTokenMessengerBytes32,
-        )).wait();
+        await (
+          await clientTokenMessenger.setRemoteTokenMessenger(
+            config.hub.cctpDomain,
+            hubTokenMessengerBytes32,
+          )
+        ).wait();
         console.log(`  Hub TokenMessenger set on ${client.name}`);
       }
     }

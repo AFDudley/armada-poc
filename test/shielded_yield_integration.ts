@@ -19,7 +19,10 @@ import * as path from "path";
 import { buildPoseidon } from "circomlibjs";
 
 const poseidonBytecode = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "lib", "poseidon_bytecode.json"), "utf-8")
+  fs.readFileSync(
+    path.join(__dirname, "..", "lib", "poseidon_bytecode.json"),
+    "utf-8",
+  ),
 );
 
 import {
@@ -28,7 +31,8 @@ import {
 } from "../lib/artifacts";
 
 const DOMAINS = { hub: 100 };
-const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 /**
  * Encode YieldAdaptParams - must match Solidity YieldAdaptParams.encode
@@ -36,11 +40,11 @@ const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034
 function encodeYieldAdaptParams(
   npk: string,
   encryptedBundle: [string, string, string],
-  shieldKey: string
+  shieldKey: string,
 ): string {
   const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
     ["bytes32", "bytes32[3]", "bytes32"],
-    [npk, encryptedBundle, shieldKey]
+    [npk, encryptedBundle, shieldKey],
   );
   return ethers.keccak256(encoded);
 }
@@ -58,16 +62,36 @@ function encodeYieldAdaptParamsWithFee(
   feeNpk: string,
   feeEncryptedBundle: [string, string, string],
   feeShieldKey: string,
-  feeAmount: bigint
+  feeAmount: bigint,
 ): string {
   const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
-    ["bytes32", "bytes32[3]", "bytes32", "bytes32", "bytes32[3]", "bytes32", "uint256"],
-    [npk, encryptedBundle, shieldKey, feeNpk, feeEncryptedBundle, feeShieldKey, feeAmount]
+    [
+      "bytes32",
+      "bytes32[3]",
+      "bytes32",
+      "bytes32",
+      "bytes32[3]",
+      "bytes32",
+      "uint256",
+    ],
+    [
+      npk,
+      encryptedBundle,
+      shieldKey,
+      feeNpk,
+      feeEncryptedBundle,
+      feeShieldKey,
+      feeAmount,
+    ],
   );
   return ethers.keccak256(encoded);
 }
 
-const ZERO_BUNDLE: [string, string, string] = [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash];
+const ZERO_BUNDLE: [string, string, string] = [
+  ethers.ZeroHash,
+  ethers.ZeroHash,
+  ethers.ZeroHash,
+];
 
 describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
   let hubUsdc: Contract;
@@ -109,19 +133,25 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
     const MockUSDCV2 = await ethers.getContractFactory("MockUSDCV2");
     hubUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
 
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
     hubMessageTransmitter = await MockMessageTransmitterV2.deploy(
       DOMAINS.hub,
-      await relayer.getAddress()
+      await relayer.getAddress(),
     );
 
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     hubTokenMessenger = await MockTokenMessengerV2.deploy(
       await hubMessageTransmitter.getAddress(),
       await hubUsdc.getAddress(),
-      DOMAINS.hub
+      DOMAINS.hub,
     );
-    await hubMessageTransmitter.setTokenMessenger(await hubTokenMessenger.getAddress());
+    await hubMessageTransmitter.setTokenMessenger(
+      await hubTokenMessenger.getAddress(),
+    );
     await hubUsdc.addMinter(await hubTokenMessenger.getAddress());
 
     const poseidonT3Tx = await deployer.sendTransaction({
@@ -138,7 +168,9 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         libraries: { PoseidonT3: poseidonT3Address },
       })
     ).deploy();
-    verifierModule = await (await ethers.getContractFactory("VerifierModule")).deploy();
+    verifierModule = await (
+      await ethers.getContractFactory("VerifierModule")
+    ).deploy();
     shieldModule = await (
       await ethers.getContractFactory("ShieldModule", {
         libraries: { PoseidonT4: poseidonT4Address },
@@ -164,7 +196,7 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
       await hubUsdc.getAddress(),
       DOMAINS.hub,
       deployerAddress,
-      deployerAddress
+      deployerAddress,
     );
 
     await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, false);
@@ -180,28 +212,33 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
     // ArmadaTreasuryGov is the unified treasury (#152/#154). Deployer acts as
     // timelock-owner for this integration test; the vault transfers yield fees
     // here via plain safeTransfer with no recordFee call.
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     armadaTreasury = await ArmadaTreasuryGov.deploy(deployerAddress);
 
-    const ArmadaYieldVault = await ethers.getContractFactory("ArmadaYieldVault");
+    const ArmadaYieldVault =
+      await ethers.getContractFactory("ArmadaYieldVault");
     armadaYieldVault = await ArmadaYieldVault.deploy(
       await mockAaveSpoke.getAddress(),
       0,
       await armadaTreasury.getAddress(),
       "Armada Yield USDC",
-      "ayUSDC"
+      "ayUSDC",
     );
     vaultAddress = await armadaYieldVault.getAddress();
 
-    const MockAdapterRegistry = await ethers.getContractFactory("MockAdapterRegistry");
+    const MockAdapterRegistry = await ethers.getContractFactory(
+      "MockAdapterRegistry",
+    );
     const mockRegistry = await MockAdapterRegistry.deploy();
     await mockRegistry.waitForDeployment();
 
-    const ArmadaYieldAdapter = await ethers.getContractFactory("ArmadaYieldAdapter");
+    const ArmadaYieldAdapter =
+      await ethers.getContractFactory("ArmadaYieldAdapter");
     armadaYieldAdapter = await ArmadaYieldAdapter.deploy(
       await hubUsdc.getAddress(),
       vaultAddress,
-      await mockRegistry.getAddress()
+      await mockRegistry.getAddress(),
     );
     adapterAddress = await armadaYieldAdapter.getAddress();
     await mockRegistry.setAuthorized(adapterAddress, true);
@@ -221,7 +258,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
     return ethers.zeroPadValue(ethers.toBeHex(raw % SNARK_SCALAR_FIELD), 32);
   }
 
-  function computeCommitmentHash(npkBigInt: bigint, tokenId: bigint, value: bigint): string {
+  function computeCommitmentHash(
+    npkBigInt: bigint,
+    tokenId: bigint,
+    value: bigint,
+  ): string {
     const hash = poseidon([F.e(npkBigInt), F.e(tokenId), F.e(value)]);
     return ethers.zeroPadValue(ethers.toBeHex(BigInt(F.toString(hash))), 32);
   }
@@ -258,10 +299,14 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
     const unshieldHash = computeCommitmentHash(
       BigInt(opts.unshieldPreimage.npk),
       BigInt(opts.unshieldPreimage.tokenAddress),
-      opts.unshieldPreimage.value
+      opts.unshieldPreimage.value,
     );
     return {
-      proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+      proof: {
+        a: { x: 0, y: 0 },
+        b: { x: [0, 0], y: [0, 0] },
+        c: { x: 0, y: 0 },
+      },
       merkleRoot: opts.merkleRoot,
       nullifiers: [opts.nullifier],
       commitments: [unshieldHash],
@@ -288,7 +333,9 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
 
   async function shieldAndGetRoot(amount: bigint): Promise<string> {
     await hubUsdc.connect(alice).approve(privacyPoolAddress, amount);
-    await privacyPool.connect(alice).shield([makeShieldRequest(usdcAddress, amount)], ethers.ZeroAddress);
+    await privacyPool
+      .connect(alice)
+      .shield([makeShieldRequest(usdcAddress, amount)], ethers.ZeroAddress);
     return await privacyPool.merkleRoot();
   }
 
@@ -304,7 +351,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         ethers.keccak256(ethers.toUtf8Bytes("enc3")),
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("key"));
-      const adaptParams = encodeYieldAdaptParams(npk, encryptedBundle, shieldKey);
+      const adaptParams = encodeYieldAdaptParams(
+        npk,
+        encryptedBundle,
+        shieldKey,
+      );
 
       const tx = await makeLendTransaction({
         merkleRoot: root,
@@ -322,7 +373,10 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
       });
 
       await expect(
-        armadaYieldAdapter.lendAndShield(tx, npk, { encryptedBundle, shieldKey })
+        armadaYieldAdapter.lendAndShield(tx, npk, {
+          encryptedBundle,
+          shieldKey,
+        }),
       ).to.be.revertedWith("ArmadaYieldAdapter: invalid adaptContract");
     });
 
@@ -338,7 +392,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         ethers.keccak256(ethers.toUtf8Bytes("enc3")),
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("key"));
-      const adaptParams = encodeYieldAdaptParams(wrongNpk, encryptedBundle, shieldKey);
+      const adaptParams = encodeYieldAdaptParams(
+        wrongNpk,
+        encryptedBundle,
+        shieldKey,
+      );
 
       const tx = await makeLendTransaction({
         merkleRoot: root,
@@ -356,7 +414,10 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
       });
 
       await expect(
-        armadaYieldAdapter.lendAndShield(tx, npk, { encryptedBundle, shieldKey })
+        armadaYieldAdapter.lendAndShield(tx, npk, {
+          encryptedBundle,
+          shieldKey,
+        }),
       ).to.be.revertedWith("ArmadaYieldAdapter: adaptParams mismatch");
     });
   });
@@ -378,7 +439,12 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
     // Recover any stray USDC so later tests see an empty adapter.
     afterEach(async function () {
       const stray = await hubUsdc.balanceOf(adapterAddress);
-      if (stray > 0n) await armadaYieldAdapter.rescueTokens(usdcAddress, await alice.getAddress(), stray);
+      if (stray > 0n)
+        await armadaYieldAdapter.rescueTokens(
+          usdcAddress,
+          await alice.getAddress(),
+          stray,
+        );
     });
 
     // WHY: with unshield type NONE the pool never hash-checks unshieldPreimage and pays nothing to the
@@ -390,19 +456,38 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
       const tx: any = await makeLendTransaction({
         merkleRoot: root,
         nullifier: ethers.keccak256(ethers.toUtf8Bytes("f6-none")),
-        unshieldPreimage: { npk: ethers.zeroPadValue(adapterAddress, 32), tokenAddress: usdcAddress, value: amount },
+        unshieldPreimage: {
+          npk: ethers.zeroPadValue(adapterAddress, 32),
+          tokenAddress: usdcAddress,
+          value: amount,
+        },
         adaptContract: adapterAddress,
         adaptParams: encodeYieldAdaptParams(npk, encryptedBundle, shieldKey),
-        npk, encryptedBundle, shieldKey,
+        npk,
+        encryptedBundle,
+        shieldKey,
       });
       tx.boundParams.unshield = 0; // NONE: every commitment then needs a ciphertext
-      tx.boundParams.commitmentCiphertext = [{
-        ciphertext: [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash],
-        blindedSenderViewingKey: ethers.ZeroHash, blindedReceiverViewingKey: ethers.ZeroHash,
-        annotationData: "0x", memo: "0x",
-      }];
-      await expect(armadaYieldAdapter.lendAndShield(tx, npk, { encryptedBundle, shieldKey }))
-        .to.be.revertedWith("ArmadaYieldAdapter: not a normal unshield");
+      tx.boundParams.commitmentCiphertext = [
+        {
+          ciphertext: [
+            ethers.ZeroHash,
+            ethers.ZeroHash,
+            ethers.ZeroHash,
+            ethers.ZeroHash,
+          ],
+          blindedSenderViewingKey: ethers.ZeroHash,
+          blindedReceiverViewingKey: ethers.ZeroHash,
+          annotationData: "0x",
+          memo: "0x",
+        },
+      ];
+      await expect(
+        armadaYieldAdapter.lendAndShield(tx, npk, {
+          encryptedBundle,
+          shieldKey,
+        }),
+      ).to.be.revertedWith("ArmadaYieldAdapter: not a normal unshield");
     });
 
     // WHY: the unshield must pay the adapter. If it paid someone else, the adapter would act on the
@@ -414,15 +499,24 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
       const tx = await makeLendTransaction({
         merkleRoot: root,
         nullifier: ethers.keccak256(ethers.toUtf8Bytes("f6-npk")),
-        unshieldPreimage: { npk: ethers.zeroPadValue(await alice.getAddress(), 32), tokenAddress: usdcAddress, value: amount },
+        unshieldPreimage: {
+          npk: ethers.zeroPadValue(await alice.getAddress(), 32),
+          tokenAddress: usdcAddress,
+          value: amount,
+        },
         adaptContract: adapterAddress,
         adaptParams: encodeYieldAdaptParams(npk, encryptedBundle, shieldKey),
-        npk, encryptedBundle, shieldKey,
+        npk,
+        encryptedBundle,
+        shieldKey,
       });
-      await expect(armadaYieldAdapter.lendAndShield(tx, npk, { encryptedBundle, shieldKey }))
-        .to.be.revertedWith("ArmadaYieldAdapter: unshield not to adapter");
+      await expect(
+        armadaYieldAdapter.lendAndShield(tx, npk, {
+          encryptedBundle,
+          shieldKey,
+        }),
+      ).to.be.revertedWith("ArmadaYieldAdapter: unshield not to adapter");
     });
-
   });
 
   describe("lendAndShield", function () {
@@ -437,7 +531,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         ethers.keccak256(ethers.toUtf8Bytes("enc3")),
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("key"));
-      const adaptParams = encodeYieldAdaptParams(npk, encryptedBundle, shieldKey);
+      const adaptParams = encodeYieldAdaptParams(
+        npk,
+        encryptedBundle,
+        shieldKey,
+      );
 
       const tx = await makeLendTransaction({
         merkleRoot: root,
@@ -460,9 +558,12 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
       const shares = await armadaYieldAdapter.lendAndShield.staticCall(
         tx,
         npk,
-        { encryptedBundle, shieldKey }
+        { encryptedBundle, shieldKey },
       );
-      await armadaYieldAdapter.lendAndShield(tx, npk, { encryptedBundle, shieldKey });
+      await armadaYieldAdapter.lendAndShield(tx, npk, {
+        encryptedBundle,
+        shieldKey,
+      });
 
       const poolUsdcAfter = await hubUsdc.balanceOf(privacyPoolAddress);
       const poolAyAfter = await armadaYieldVault.balanceOf(privacyPoolAddress);
@@ -485,7 +586,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         ethers.keccak256(ethers.toUtf8Bytes("enc3")),
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("key"));
-      const adaptParams = encodeYieldAdaptParams(npk, encryptedBundle, shieldKey);
+      const adaptParams = encodeYieldAdaptParams(
+        npk,
+        encryptedBundle,
+        shieldKey,
+      );
 
       const lendTx = await makeLendTransaction({
         merkleRoot: await privacyPool.merkleRoot(),
@@ -502,7 +607,10 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         shieldKey,
       });
 
-      await armadaYieldAdapter.lendAndShield(lendTx, npk, { encryptedBundle, shieldKey });
+      await armadaYieldAdapter.lendAndShield(lendTx, npk, {
+        encryptedBundle,
+        shieldKey,
+      });
 
       const shares = await armadaYieldVault.balanceOf(privacyPoolAddress);
       expect(shares).to.be.gt(0n);
@@ -519,16 +627,20 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         feeNpk,
         ZERO_BUNDLE,
         feeShieldKey,
-        feeAmount
+        feeAmount,
       );
       const unshieldHash = computeCommitmentHash(
         BigInt(ethers.zeroPadValue(adapterAddress, 32)),
         BigInt(vaultAddress),
-        shares
+        shares,
       );
 
       const redeemTx = {
-        proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+        proof: {
+          a: { x: 0, y: 0 },
+          b: { x: [0, 0], y: [0, 0] },
+          c: { x: 0, y: 0 },
+        },
         merkleRoot: await privacyPool.merkleRoot(),
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("null-redeem-1"))],
         commitments: [unshieldHash],
@@ -561,7 +673,7 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         { encryptedBundle, shieldKey },
         feeNpk,
         { encryptedBundle: ZERO_BUNDLE, shieldKey: feeShieldKey },
-        feeAmount
+        feeAmount,
       );
       await armadaYieldAdapter.redeemAndShield(
         redeemTx,
@@ -569,7 +681,7 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         { encryptedBundle, shieldKey },
         feeNpk,
         { encryptedBundle: ZERO_BUNDLE, shieldKey: feeShieldKey },
-        feeAmount
+        feeAmount,
       );
 
       const poolUsdcAfter = await hubUsdc.balanceOf(privacyPoolAddress);
@@ -595,7 +707,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         ethers.keccak256(ethers.toUtf8Bytes("enc3-fee")),
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("key-fee"));
-      const lendAdaptParams = encodeYieldAdaptParams(npk, encryptedBundle, shieldKey);
+      const lendAdaptParams = encodeYieldAdaptParams(
+        npk,
+        encryptedBundle,
+        shieldKey,
+      );
 
       const lendTx = await makeLendTransaction({
         merkleRoot: await privacyPool.merkleRoot(),
@@ -611,7 +727,10 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         encryptedBundle,
         shieldKey,
       });
-      await armadaYieldAdapter.lendAndShield(lendTx, npk, { encryptedBundle, shieldKey });
+      await armadaYieldAdapter.lendAndShield(lendTx, npk, {
+        encryptedBundle,
+        shieldKey,
+      });
 
       const shares = await armadaYieldVault.balanceOf(privacyPoolAddress);
       expect(shares).to.be.gt(0n);
@@ -619,8 +738,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
       // The relayer's OWN 0zk shield destination (distinct from the user's) + the fee amount — all
       // committed in adaptParams so the submitter can neither redirect nor inflate the fee.
       const feeNpk = ethers.zeroPadValue(
-        ethers.toBeHex(BigInt(ethers.keccak256(ethers.toUtf8Bytes("relayer-npk"))) % SNARK_SCALAR_FIELD),
-        32
+        ethers.toBeHex(
+          BigInt(ethers.keccak256(ethers.toUtf8Bytes("relayer-npk"))) %
+            SNARK_SCALAR_FIELD,
+        ),
+        32,
       );
       const feeBundle: [string, string, string] = [
         ethers.keccak256(ethers.toUtf8Bytes("relayer-enc1")),
@@ -636,16 +758,20 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         feeNpk,
         feeBundle,
         feeShieldKey,
-        feeAmount
+        feeAmount,
       );
 
       const unshieldHash = computeCommitmentHash(
         BigInt(ethers.zeroPadValue(adapterAddress, 32)),
         BigInt(vaultAddress),
-        shares
+        shares,
       );
       const redeemTx = {
-        proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+        proof: {
+          a: { x: 0, y: 0 },
+          b: { x: [0, 0], y: [0, 0] },
+          c: { x: 0, y: 0 },
+        },
         merkleRoot: await privacyPool.merkleRoot(),
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("null-redeem-fee-1"))],
         commitments: [unshieldHash],
@@ -665,17 +791,22 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         },
       };
 
-      const relayerEvmBefore = await hubUsdc.balanceOf(await relayer.getAddress());
+      const relayerEvmBefore = await hubUsdc.balanceOf(
+        await relayer.getAddress(),
+      );
       const poolUsdcBefore = await hubUsdc.balanceOf(privacyPoolAddress);
 
-      const feeCiphertext = { encryptedBundle: feeBundle, shieldKey: feeShieldKey };
+      const feeCiphertext = {
+        encryptedBundle: feeBundle,
+        shieldKey: feeShieldKey,
+      };
       const assets = await armadaYieldAdapter.redeemAndShield.staticCall(
         redeemTx,
         npk,
         { encryptedBundle, shieldKey },
         feeNpk,
         feeCiphertext,
-        feeAmount
+        feeAmount,
       );
       expect(assets).to.be.gt(feeAmount); // sanity: proceeds exceed the fee
 
@@ -685,12 +816,14 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         { encryptedBundle, shieldKey },
         feeNpk,
         feeCiphertext,
-        feeAmount
+        feeAmount,
       );
       const receipt = await tx.wait();
 
       const poolUsdcAfter = await hubUsdc.balanceOf(privacyPoolAddress);
-      const relayerEvmAfter = await hubUsdc.balanceOf(await relayer.getAddress());
+      const relayerEvmAfter = await hubUsdc.balanceOf(
+        await relayer.getAddress(),
+      );
 
       // The fee is SHIELDED, not transferred publicly: ALL proceeds stay in the pool and no EVM
       // address (here the relayer's) is credited.
@@ -726,7 +859,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         ethers.keccak256(ethers.toUtf8Bytes("enc3-mm")),
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("key-mm"));
-      const lendAdaptParams = encodeYieldAdaptParams(npk, encryptedBundle, shieldKey);
+      const lendAdaptParams = encodeYieldAdaptParams(
+        npk,
+        encryptedBundle,
+        shieldKey,
+      );
 
       const lendTx = await makeLendTransaction({
         merkleRoot: await privacyPool.merkleRoot(),
@@ -742,19 +879,27 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         encryptedBundle,
         shieldKey,
       });
-      await armadaYieldAdapter.lendAndShield(lendTx, npk, { encryptedBundle, shieldKey });
+      await armadaYieldAdapter.lendAndShield(lendTx, npk, {
+        encryptedBundle,
+        shieldKey,
+      });
       const shares = await armadaYieldVault.balanceOf(privacyPoolAddress);
 
       const feeNpk = ethers.zeroPadValue(
-        ethers.toBeHex(BigInt(ethers.keccak256(ethers.toUtf8Bytes("relayer-npk-mm"))) % SNARK_SCALAR_FIELD),
-        32
+        ethers.toBeHex(
+          BigInt(ethers.keccak256(ethers.toUtf8Bytes("relayer-npk-mm"))) %
+            SNARK_SCALAR_FIELD,
+        ),
+        32,
       );
       const feeBundle: [string, string, string] = [
         ethers.keccak256(ethers.toUtf8Bytes("relayer-enc1-mm")),
         ethers.keccak256(ethers.toUtf8Bytes("relayer-enc2-mm")),
         ethers.keccak256(ethers.toUtf8Bytes("relayer-enc3-mm")),
       ];
-      const feeShieldKey = ethers.keccak256(ethers.toUtf8Bytes("relayer-key-mm"));
+      const feeShieldKey = ethers.keccak256(
+        ethers.toUtf8Bytes("relayer-key-mm"),
+      );
       const committedFee = ethers.parseUnits("5", 6);
       const redeemAdaptParams = encodeYieldAdaptParamsWithFee(
         npk,
@@ -763,15 +908,19 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         feeNpk,
         feeBundle,
         feeShieldKey,
-        committedFee
+        committedFee,
       );
       const unshieldHash = computeCommitmentHash(
         BigInt(ethers.zeroPadValue(adapterAddress, 32)),
         BigInt(vaultAddress),
-        shares
+        shares,
       );
       const redeemTx = {
-        proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+        proof: {
+          a: { x: 0, y: 0 },
+          b: { x: [0, 0], y: [0, 0] },
+          c: { x: 0, y: 0 },
+        },
         merkleRoot: await privacyPool.merkleRoot(),
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("null-redeem-mm-1"))],
         commitments: [unshieldHash],
@@ -799,14 +948,18 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
           { encryptedBundle, shieldKey },
           feeNpk,
           { encryptedBundle: feeBundle, shieldKey: feeShieldKey },
-          committedFee * 2n
-        )
+          committedFee * 2n,
+        ),
       ).to.be.revertedWith("ArmadaYieldAdapter: adaptParams mismatch");
     });
 
     // Build a redeem Transaction after lending `lendAmount`, with the given fee shield destination
     // bound into adaptParams. Returns everything needed to call redeemAndShield.
-    async function lendThenRedeemInputs(seed: string, feeNpk: string, feeAmount: bigint) {
+    async function lendThenRedeemInputs(
+      seed: string,
+      feeNpk: string,
+      feeAmount: bigint,
+    ) {
       const lendAmount = ethers.parseUnits("1000", 6);
       await shieldAndGetRoot(lendAmount);
       const npk = validNpk();
@@ -830,7 +983,10 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         encryptedBundle,
         shieldKey,
       });
-      await armadaYieldAdapter.lendAndShield(lendTx, npk, { encryptedBundle, shieldKey });
+      await armadaYieldAdapter.lendAndShield(lendTx, npk, {
+        encryptedBundle,
+        shieldKey,
+      });
       const shares = await armadaYieldVault.balanceOf(privacyPoolAddress);
 
       const feeBundle: [string, string, string] = [
@@ -846,17 +1002,23 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         feeNpk,
         feeBundle,
         feeShieldKey,
-        feeAmount
+        feeAmount,
       );
       const unshieldHash = computeCommitmentHash(
         BigInt(ethers.zeroPadValue(adapterAddress, 32)),
         BigInt(vaultAddress),
-        shares
+        shares,
       );
       const redeemTx = {
-        proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+        proof: {
+          a: { x: 0, y: 0 },
+          b: { x: [0, 0], y: [0, 0] },
+          c: { x: 0, y: 0 },
+        },
         merkleRoot: await privacyPool.merkleRoot(),
-        nullifiers: [ethers.keccak256(ethers.toUtf8Bytes(`null-redeem-${seed}`))],
+        nullifiers: [
+          ethers.keccak256(ethers.toUtf8Bytes(`null-redeem-${seed}`)),
+        ],
         commitments: [unshieldHash],
         boundParams: {
           treeNumber: 0,
@@ -873,15 +1035,25 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
           value: shares,
         },
       };
-      return { redeemTx, npk, encryptedBundle, shieldKey, feeBundle, feeShieldKey };
+      return {
+        redeemTx,
+        npk,
+        encryptedBundle,
+        shieldKey,
+        feeBundle,
+        feeShieldKey,
+      };
     }
 
     // WHY: the fee is paid from the redeemed proceeds, so a fee that exceeds the redeemed assets must
     // revert (rather than underflow the user's shield or over-pay the relayer). Guards issue #312.
     it("reverts when the fee amount exceeds the redeemed proceeds", async function () {
       const feeNpk = ethers.zeroPadValue(
-        ethers.toBeHex(BigInt(ethers.keccak256(ethers.toUtf8Bytes("relayer-npk-fx"))) % SNARK_SCALAR_FIELD),
-        32
+        ethers.toBeHex(
+          BigInt(ethers.keccak256(ethers.toUtf8Bytes("relayer-npk-fx"))) %
+            SNARK_SCALAR_FIELD,
+        ),
+        32,
       );
       // Far larger than any assets the pool's cumulative shares can redeem to — guarantees the
       // fee-exceeds-proceeds guard trips. The revert rolls back the redeem, so no state leaks.
@@ -894,8 +1066,8 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
           { encryptedBundle: io.encryptedBundle, shieldKey: io.shieldKey },
           feeNpk,
           { encryptedBundle: io.feeBundle, shieldKey: io.feeShieldKey },
-          feeAmount
-        )
+          feeAmount,
+        ),
       ).to.be.revertedWith("ArmadaYieldAdapter: fee exceeds proceeds");
     });
 
@@ -905,12 +1077,22 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
       const io = await lendThenRedeemInputs("f6-redeem", ethers.ZeroHash, 0n);
       const alicePadded = ethers.zeroPadValue(await alice.getAddress(), 32);
       io.redeemTx.unshieldPreimage.npk = alicePadded;
-      io.redeemTx.commitments = [computeCommitmentHash(BigInt(alicePadded), BigInt(vaultAddress), io.redeemTx.unshieldPreimage.value)];
+      io.redeemTx.commitments = [
+        computeCommitmentHash(
+          BigInt(alicePadded),
+          BigInt(vaultAddress),
+          io.redeemTx.unshieldPreimage.value,
+        ),
+      ];
       await expect(
         armadaYieldAdapter.redeemAndShield(
-          io.redeemTx, io.npk, { encryptedBundle: io.encryptedBundle, shieldKey: io.shieldKey },
-          ethers.ZeroHash, { encryptedBundle: io.feeBundle, shieldKey: io.feeShieldKey }, 0n
-        )
+          io.redeemTx,
+          io.npk,
+          { encryptedBundle: io.encryptedBundle, shieldKey: io.shieldKey },
+          ethers.ZeroHash,
+          { encryptedBundle: io.feeBundle, shieldKey: io.feeShieldKey },
+          0n,
+        ),
       ).to.be.revertedWith("ArmadaYieldAdapter: unshield not to adapter");
     });
     // WHY: a fund-custody contract must not silently burn a fee to an unspendable note. A non-zero fee
@@ -925,8 +1107,8 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
           { encryptedBundle: io.encryptedBundle, shieldKey: io.shieldKey },
           ethers.ZeroHash,
           { encryptedBundle: io.feeBundle, shieldKey: io.feeShieldKey },
-          feeAmount
-        )
+          feeAmount,
+        ),
       ).to.be.revertedWith("ArmadaYieldAdapter: fee without destination");
     });
   });
@@ -943,7 +1125,11 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
         ethers.keccak256(ethers.toUtf8Bytes("enc-fee3")),
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("key-fee"));
-      const adaptParams = encodeYieldAdaptParams(npk, encryptedBundle, shieldKey);
+      const adaptParams = encodeYieldAdaptParams(
+        npk,
+        encryptedBundle,
+        shieldKey,
+      );
 
       const tx = await makeLendTransaction({
         merkleRoot: root,
@@ -962,7 +1148,10 @@ describe("Shielded Yield (lendAndShield / redeemAndShield)", function () {
 
       const treasuryBefore = await hubUsdc.balanceOf(deployerAddress);
 
-      await armadaYieldAdapter.lendAndShield(tx, npk, { encryptedBundle, shieldKey });
+      await armadaYieldAdapter.lendAndShield(tx, npk, {
+        encryptedBundle,
+        shieldKey,
+      });
 
       const treasuryAfter = await hubUsdc.balanceOf(deployerAddress);
       expect(treasuryAfter - treasuryBefore).to.equal(0n);

@@ -7,11 +7,19 @@ export {
   HOP_CONFIGS,
   CROWDFUND_ABI_FRAGMENTS,
   ERC20_ABI_FRAGMENTS,
-} from './lib/constants.js'
-export type { HopConfig, CrowdfundConstants, CrowdfundProfile } from './lib/constants.js'
+} from "./lib/constants.js";
+export type {
+  HopConfig,
+  CrowdfundConstants,
+  CrowdfundProfile,
+} from "./lib/constants.js";
 
-export type { CrowdfundEvent, CrowdfundEventType, RawLog } from './lib/events.js'
-export { parseCrowdfundEvent, parseCrowdfundEvents } from './lib/events.js'
+export type {
+  CrowdfundEvent,
+  CrowdfundEventType,
+  RawLog,
+} from "./lib/events.js";
+export { parseCrowdfundEvent, parseCrowdfundEvents } from "./lib/events.js";
 
 export {
   formatUsdc,
@@ -27,19 +35,19 @@ export {
   hopLabel,
   phaseName,
   phaseColor,
-} from './lib/format.js'
+} from "./lib/format.js";
 
 export {
   sanitizeAmountInput,
   hasActiveAmount,
   parseActiveAmount,
-} from './lib/amountInput.js'
+} from "./lib/amountInput.js";
 
 export {
   MOBILE_LAYOUT_MAX_WIDTH_PX,
   LAPTOP_LAYOUT_MAX_WIDTH_PX,
   SHORT_VIEWPORT_MAX_HEIGHT_PX,
-} from './lib/viewportBreakpoints.js'
+} from "./lib/viewportBreakpoints.js";
 
 export {
   ADDRESS_INPUT_MAX_LENGTH,
@@ -47,16 +55,24 @@ export {
   isHexAddressFormat,
   tryGetChecksumAddress,
   isValidEnsName,
-} from './lib/addressInput.js'
+} from "./lib/addressInput.js";
 
-export { estimateAllocation, estimateUserArmAllocation, projectsRefundMode } from './lib/allocation.js'
-export type { AllocationEstimate, HopAllocationStats, UserHopPosition } from './lib/allocation.js'
+export {
+  estimateAllocation,
+  estimateUserArmAllocation,
+  projectsRefundMode,
+} from "./lib/allocation.js";
+export type {
+  AllocationEstimate,
+  HopAllocationStats,
+  UserHopPosition,
+} from "./lib/allocation.js";
 
 export {
   computeSelfFillPlan,
   fetchSelfFillState,
   encodeSelfFillCalls,
-} from './lib/selfFillPlan.js'
+} from "./lib/selfFillPlan.js";
 export type {
   SelfFillHopState,
   SelfFillState,
@@ -64,7 +80,7 @@ export type {
   SelfFillCommit,
   SelfFillPlan,
   ComputeSelfFillOptions,
-} from './lib/selfFillPlan.js'
+} from "./lib/selfFillPlan.js";
 
 export {
   resolveNetworkMode,
@@ -93,49 +109,58 @@ export {
   getTxConfirmations,
   getExplorerUrl,
   getExpectedCrowdfundAddress,
-} from './lib/network.js'
-export type { NetworkMode, NetworkEnv } from './lib/network.js'
-export { DISCORD_URL, X_URL, PROJECT_URL, CROWDFUND_INFO_URL } from './lib/socials.js'
+} from "./lib/network.js";
+export type { NetworkMode, NetworkEnv } from "./lib/network.js";
+export {
+  DISCORD_URL,
+  X_URL,
+  PROJECT_URL,
+  CROWDFUND_INFO_URL,
+} from "./lib/socials.js";
 
-export { createProvider, fetchLogs, getBlockTimestamp } from './lib/rpc.js'
+export { createProvider, fetchLogs, getBlockTimestamp } from "./lib/rpc.js";
 export {
   aggregate3,
   getMulticall3Contract,
   MULTICALL3_ADDRESS,
   type AggregateCall,
   type AggregateResult,
-} from './lib/multicall3.js'
+} from "./lib/multicall3.js";
 
-export { fetchIndexedEventsSnapshot, fetchIndexerHealth, reviveIndexedEvent } from './lib/indexer.js'
+export {
+  fetchIndexedEventsSnapshot,
+  fetchIndexerHealth,
+  reviveIndexedEvent,
+} from "./lib/indexer.js";
 export type {
   IndexedEventsSnapshot,
   IndexedSnapshotMetadata,
   IndexerHealth,
   IndexerHealthStatus,
-} from './lib/indexer.js'
+} from "./lib/indexer.js";
 
 export type {
   GraphNode,
   GraphEdge,
   AddressSummary,
   CrowdfundGraph,
-} from './lib/graph.js'
-export { buildGraph, mergeEvents } from './lib/graph.js'
+} from "./lib/graph.js";
+export { buildGraph, mergeEvents } from "./lib/graph.js";
 
-export { generateMockGraph } from './lib/mockGraph.js'
-export type { MockGraphOptions } from './lib/mockGraph.js'
+export { generateMockGraph } from "./lib/mockGraph.js";
+export type { MockGraphOptions } from "./lib/mockGraph.js";
 
-export { IdenticonSvg } from './components/IdenticonSvg.js'
-export type { IdenticonSvgProps } from './components/IdenticonSvg.js'
+export { IdenticonSvg } from "./components/IdenticonSvg.js";
+export type { IdenticonSvgProps } from "./components/IdenticonSvg.js";
 
-export { GraphLegend } from './components/GraphLegend.js'
-export type { GraphLegendProps } from './components/GraphLegend.js'
+export { GraphLegend } from "./components/GraphLegend.js";
+export type { GraphLegendProps } from "./components/GraphLegend.js";
 
 export {
   HoverCard,
   HoverCardTrigger,
   HoverCardContent,
-} from './components/ui/hover-card.js'
+} from "./components/ui/hover-card.js";
 
 export {
   getCachedEvents,
@@ -144,7 +169,7 @@ export {
   cacheENS,
   batchGetCachedENS,
   clearCache,
-} from './lib/cache.js'
+} from "./lib/cache.js";
 
 // Hooks
 export {
@@ -153,113 +178,137 @@ export {
   eventsLoadingAtom,
   eventsErrorAtom,
   useContractEvents,
-} from './hooks/useContractEvents.js'
-export type { UseContractEventsConfig, UseContractEventsResult } from './hooks/useContractEvents.js'
-export type { ReceiptLogLike } from './hooks/useContractEvents.js'
+} from "./hooks/useContractEvents.js";
+export type {
+  UseContractEventsConfig,
+  UseContractEventsResult,
+} from "./hooks/useContractEvents.js";
+export type { ReceiptLogLike } from "./hooks/useContractEvents.js";
 
-export { crowdfundGraphAtom, useGraphState } from './hooks/useGraphState.js'
-export type { UseGraphStateResult } from './hooks/useGraphState.js'
+export { crowdfundGraphAtom, useGraphState } from "./hooks/useGraphState.js";
+export type { UseGraphStateResult } from "./hooks/useGraphState.js";
 
 export {
   selectedAddressAtom,
   searchQueryAtom,
   hoveredAddressAtom,
   useSelection,
-} from './hooks/useSelection.js'
-export type { UseSelectionResult } from './hooks/useSelection.js'
+} from "./hooks/useSelection.js";
+export type { UseSelectionResult } from "./hooks/useSelection.js";
 
-export { ensMapAtom, useENS } from './hooks/useENS.js'
-export type { UseENSConfig, UseENSResult } from './hooks/useENS.js'
+export { ensMapAtom, useENS } from "./hooks/useENS.js";
+export type { UseENSConfig, UseENSResult } from "./hooks/useENS.js";
 
-export { useAllocations } from './hooks/useAllocations.js'
-export type { PrefetchedAllocation, UseAllocationsConfig } from './hooks/useAllocations.js'
+export { useAllocations } from "./hooks/useAllocations.js";
+export type {
+  PrefetchedAllocation,
+  UseAllocationsConfig,
+} from "./hooks/useAllocations.js";
 
-export { useContractState } from './hooks/useContractState.js'
-export type { ContractState } from './hooks/useContractState.js'
+export { useContractState } from "./hooks/useContractState.js";
+export type { ContractState } from "./hooks/useContractState.js";
 
 export {
   useIsMobileLayout,
   visualViewportBottomInset,
-} from './hooks/useIsMobileLayout.js'
+} from "./hooks/useIsMobileLayout.js";
 
 // Components
-export { StatsBar } from './components/StatsBar.js'
-export type { StatsBarProps, HopStatsData, UserAllocation } from './components/StatsBar.js'
+export { StatsBar } from "./components/StatsBar.js";
+export type {
+  StatsBarProps,
+  HopStatsData,
+  UserAllocation,
+} from "./components/StatsBar.js";
 
-export { TableView } from './components/TableView.js'
-export type { TableViewProps } from './components/TableView.js'
+export { TableView } from "./components/TableView.js";
+export type { TableViewProps } from "./components/TableView.js";
 
-export { SearchBar } from './components/SearchBar.js'
-export type { SearchBarProps } from './components/SearchBar.js'
+export { SearchBar } from "./components/SearchBar.js";
+export type { SearchBarProps } from "./components/SearchBar.js";
 
-export { NodeDetail } from './components/NodeDetail.js'
-export type { NodeDetailProps } from './components/NodeDetail.js'
+export { NodeDetail } from "./components/NodeDetail.js";
+export type { NodeDetailProps } from "./components/NodeDetail.js";
 
-export { TreeView } from './components/TreeView.js'
-export type { TreeViewProps } from './components/TreeView.js'
+export { TreeView } from "./components/TreeView.js";
+export type { TreeViewProps } from "./components/TreeView.js";
 
-export type { RadialNode, RadialEdge, RadialGraph, AngleInfo } from './lib/radialLayout.js'
-export { buildRadialGraph, computeAngleMap } from './lib/radialLayout.js'
+export type {
+  RadialNode,
+  RadialEdge,
+  RadialGraph,
+  AngleInfo,
+} from "./lib/radialLayout.js";
+export { buildRadialGraph, computeAngleMap } from "./lib/radialLayout.js";
 
 export {
   GRAPH_HOP_NODE_COLORS,
   graphHopColorToCss,
   heroListHopColor,
   hopPillDotColor,
-} from './lib/graphHopColors.js'
-export type { GraphHopNodeKind } from './lib/graphHopColors.js'
+} from "./lib/graphHopColors.js";
+export type { GraphHopNodeKind } from "./lib/graphHopColors.js";
 
-export { AppShell } from './components/AppShell.js'
-export type { AppShellProps, AppShellNetwork } from './components/AppShell.js'
+export { AppShell } from "./components/AppShell.js";
+export type { AppShellProps, AppShellNetwork } from "./components/AppShell.js";
 
-export { SplashBackdrop } from './components/SplashBackdrop.js'
-export type { SplashBackdropProps } from './components/SplashBackdrop.js'
+export { SplashBackdrop } from "./components/SplashBackdrop.js";
+export type { SplashBackdropProps } from "./components/SplashBackdrop.js";
 
-export { AppHeader } from './components/AppHeader.js'
-export type { AppHeaderProps, AppHeaderNetwork } from './components/AppHeader.js'
+export { AppHeader } from "./components/AppHeader.js";
+export type {
+  AppHeaderProps,
+  AppHeaderNetwork,
+} from "./components/AppHeader.js";
 
-export { HopPill } from './components/HopPill/index.js'
-export type { HopPillProps, HopVariant } from './components/HopPill/index.js'
+export { HopPill } from "./components/HopPill/index.js";
+export type { HopPillProps, HopVariant } from "./components/HopPill/index.js";
 
-export { HopStatCard } from './components/HopStatCard/index.js'
-export type { HopStatCardProps, HopStatAccent } from './components/HopStatCard/index.js'
+export { HopStatCard } from "./components/HopStatCard/index.js";
+export type {
+  HopStatCardProps,
+  HopStatAccent,
+} from "./components/HopStatCard/index.js";
 
-export { JoinButton } from './components/JoinButton/index.js'
-export type { JoinButtonProps } from './components/JoinButton/index.js'
+export { JoinButton } from "./components/JoinButton/index.js";
+export type { JoinButtonProps } from "./components/JoinButton/index.js";
 
-export { ParticipantsTable } from './components/ParticipantsTable/index.js'
+export { ParticipantsTable } from "./components/ParticipantsTable/index.js";
 export type {
   ParticipantsTableProps,
   ParticipantsTableFilter,
   ParticipantRow,
-} from './components/ParticipantsTable/index.js'
+} from "./components/ParticipantsTable/index.js";
 
 export {
   HeroParticipantList,
   HeroParticipantControls,
   HeroParticipantsMobileStack,
-} from './components/HeroParticipantsPanel/index.js'
+} from "./components/HeroParticipantsPanel/index.js";
 export type {
   HeroParticipantListProps,
   HeroParticipantControlsProps,
   HeroParticipantsMobileStackProps,
   HeroHopFilter,
   HeroParticipant,
-} from './components/HeroParticipantsPanel/index.js'
+} from "./components/HeroParticipantsPanel/index.js";
 
 export {
   CrowdfundLeftColumn,
   useCrowdfundListAnimation,
-} from './components/CrowdfundLeftColumn/index.js'
+} from "./components/CrowdfundLeftColumn/index.js";
 export type {
   CrowdfundLeftColumnProps,
   CrowdfundListAnimationContextValue,
-} from './components/CrowdfundLeftColumn/index.js'
+} from "./components/CrowdfundLeftColumn/index.js";
 
-export { NodeSphere } from './components/NodeSphere/index.js'
-export type { NodeSphereProps, PinnedNode } from './components/NodeSphere/index.js'
+export { NodeSphere } from "./components/NodeSphere/index.js";
+export type {
+  NodeSphereProps,
+  PinnedNode,
+} from "./components/NodeSphere/index.js";
 
-export { CrowdfundExperience } from './components/CrowdfundExperience/index.js'
+export { CrowdfundExperience } from "./components/CrowdfundExperience/index.js";
 export type {
   CrowdfundExperienceProps,
   CrowdfundView,
@@ -268,17 +317,17 @@ export type {
   CrowdfundExperienceLiveData,
   CrowdfundExperienceMyPositionData,
   CrowdfundExperienceHopPosition,
-} from './components/CrowdfundExperience/index.js'
+} from "./components/CrowdfundExperience/index.js";
 
-export { Participate } from './components/Participate/index.js'
-export type { ParticipateProps } from './components/Participate/index.js'
-export { PreOpenCard } from './components/PreOpenCard/index.js'
-export type { PreOpenCardProps } from './components/PreOpenCard/index.js'
+export { Participate } from "./components/Participate/index.js";
+export type { ParticipateProps } from "./components/Participate/index.js";
+export { PreOpenCard } from "./components/PreOpenCard/index.js";
+export type { PreOpenCardProps } from "./components/PreOpenCard/index.js";
 
 // Hero media assets — re-exported as URL strings so consuming apps can pass
 // them to <Participate imageSrc=… videoSrc=… /> (e.g. the committer mobile menu).
-export { default as fleetPng } from './assets/fleet.png'
-export { default as fleetMp4 } from './assets/fleet.mp4'
+export { default as fleetPng } from "./assets/fleet.png";
+export { default as fleetMp4 } from "./assets/fleet.mp4";
 
 export {
   MyPosition,
@@ -298,7 +347,7 @@ export {
   DEMO_SLOTS as MY_POSITION_DEMO_SLOTS,
   DEMO_INVITE_ALLOWANCE as MY_POSITION_DEMO_INVITE_ALLOWANCE,
   buildInvitePinnedNodes,
-} from './components/MyPosition/index.js'
+} from "./components/MyPosition/index.js";
 export type {
   MyPositionProps,
   MyPositionSplitProps,
@@ -306,7 +355,7 @@ export type {
   InvitesCardVariant,
   InviteAllowance,
   InviteeHop,
-} from './components/MyPosition/index.js'
+} from "./components/MyPosition/index.js";
 
 export {
   generateCrowdfund,
@@ -314,7 +363,7 @@ export {
   toHeroParticipants,
   toDashboardParticipantsFromGraph,
   toParticipantsTableRows,
-} from './lib/mockParticipants.js'
+} from "./lib/mockParticipants.js";
 export type {
   ScenarioParticipants,
   Hop,
@@ -323,10 +372,10 @@ export type {
   ParticipantsTableRow,
   Participant,
   CrowdfundSnapshot,
-} from './lib/mockParticipants.js'
+} from "./lib/mockParticipants.js";
 
-export { UsefulLinks } from './components/UsefulLinks/UsefulLinks.js'
-export type { UsefulLinksProps } from './components/UsefulLinks/UsefulLinks.js'
+export { UsefulLinks } from "./components/UsefulLinks/UsefulLinks.js";
+export type { UsefulLinksProps } from "./components/UsefulLinks/UsefulLinks.js";
 
 export {
   Step0Invite,
@@ -347,7 +396,7 @@ export {
   MaxOutFlowStack,
   INVITE_LINK_STEPS,
   CROWDFUND_MODAL_STEPS,
-} from './components/ParticipateFlow/index.js'
+} from "./components/ParticipateFlow/index.js";
 export type {
   Step0InviteProps,
   Step2CommitHopRow,
@@ -362,16 +411,14 @@ export type {
   ParticipateFlowInviteSlotsProps,
   ParticipateStepsStatus,
   ParticipateStepBarProps,
-} from './components/ParticipateFlow/index.js'
+} from "./components/ParticipateFlow/index.js";
 
-export {
-  WalletConfirmStep,
-} from './components/WalletConfirm/index.js'
+export { WalletConfirmStep } from "./components/WalletConfirm/index.js";
 export type {
   WalletConfirmStepProps,
   WalletTransactionItem,
   WalletTransactionStatus,
-} from './components/WalletConfirm/index.js'
+} from "./components/WalletConfirm/index.js";
 
 export {
   InviteSlots,
@@ -387,7 +434,7 @@ export {
   INVITE_LIST_ENTER_MS,
   INVITE_COUNT_ROLL_DELAY_MS,
   INVITE_COUNT_ROLL_MS,
-} from './components/InviteFlow/index.js'
+} from "./components/InviteFlow/index.js";
 export type {
   SlotData,
   SlotStatus,
@@ -400,93 +447,96 @@ export type {
   InviteHopFocus,
   InviteHopFocusChromeProps,
   InviteFocusView,
-} from './components/InviteFlow/index.js'
+} from "./components/InviteFlow/index.js";
 
-export {
-  createDemoInviteLink,
-  demoInviteLink,
-} from './lib/demoInviteLink.js'
+export { createDemoInviteLink, demoInviteLink } from "./lib/demoInviteLink.js";
 
-export { CrowdfundToaster } from './components/CrowdfundToaster.js'
+export { CrowdfundToaster } from "./components/CrowdfundToaster.js";
 
-export { CopyToast } from './components/CopyToast.js'
+export { CopyToast } from "./components/CopyToast.js";
 
-export { LastTxChip } from './components/LastTxChip.js'
+export { LastTxChip } from "./components/LastTxChip.js";
 
-export { InfoTooltip } from './components/InfoTooltip.js'
-export type { InfoTooltipProps } from './components/InfoTooltip.js'
+export { InfoTooltip } from "./components/InfoTooltip.js";
+export type { InfoTooltipProps } from "./components/InfoTooltip.js";
 
-export { ErrorAlert } from './components/ErrorAlert.js'
-export type { ErrorAlertProps } from './components/ErrorAlert.js'
+export { ErrorAlert } from "./components/ErrorAlert.js";
+export type { ErrorAlertProps } from "./components/ErrorAlert.js";
 
-export { EmptyState } from './components/EmptyState.js'
-export type { EmptyStateProps } from './components/EmptyState.js'
+export { EmptyState } from "./components/EmptyState.js";
+export type { EmptyStateProps } from "./components/EmptyState.js";
 
-export { AmountInput } from './components/AmountInput.js'
-export type { AmountInputProps, AmountCeiling } from './components/AmountInput.js'
+export { AmountInput } from "./components/AmountInput.js";
+export type {
+  AmountInputProps,
+  AmountCeiling,
+} from "./components/AmountInput.js";
 
-export { Stepper, StepFooter } from './components/Stepper.js'
+export { Stepper, StepFooter } from "./components/Stepper.js";
 export type {
   StepperProps,
   StepperStep,
   StepFooterProps,
-} from './components/Stepper.js'
+} from "./components/Stepper.js";
 
-export { TxStatusPipeline } from './components/TxStatusPipeline.js'
+export { TxStatusPipeline } from "./components/TxStatusPipeline.js";
 export type {
   TxStatusPipelineProps,
   TxPipelineRow,
   TxPipelineStatus,
-} from './components/TxStatusPipeline.js'
+} from "./components/TxStatusPipeline.js";
 
-export { LifecycleBanner } from './components/LifecycleBanner.js'
+export { LifecycleBanner } from "./components/LifecycleBanner.js";
 export type {
   LifecycleBannerProps,
   LifecycleStage,
-} from './components/LifecycleBanner.js'
+} from "./components/LifecycleBanner.js";
 
-export { WhatsNextCard } from './components/WhatsNextCard.js'
+export { WhatsNextCard } from "./components/WhatsNextCard.js";
 export type {
   WhatsNextCardProps,
   WhatsNextStep,
   WhatsNextStepStatus,
-} from './components/WhatsNextCard.js'
+} from "./components/WhatsNextCard.js";
 
-export { StaleDataBanner } from './components/StaleDataBanner.js'
-export { useStaleDataBanner } from './hooks/useStaleDataBanner.js'
-export type { StaleDataSignal, StaleReason } from './hooks/useStaleDataBanner.js'
+export { StaleDataBanner } from "./components/StaleDataBanner.js";
+export { useStaleDataBanner } from "./hooks/useStaleDataBanner.js";
+export type {
+  StaleDataSignal,
+  StaleReason,
+} from "./hooks/useStaleDataBanner.js";
 
-export { ErrorBoundary, DefaultErrorFallback } from './components/ErrorBoundary.js'
+export {
+  ErrorBoundary,
+  DefaultErrorFallback,
+} from "./components/ErrorBoundary.js";
 export type {
   ErrorBoundaryProps,
   DefaultErrorFallbackProps,
-} from './components/ErrorBoundary.js'
+} from "./components/ErrorBoundary.js";
 
-export { TOOLTIPS } from './lib/tooltips.js'
-export type { TooltipKey } from './lib/tooltips.js'
+export { TOOLTIPS } from "./lib/tooltips.js";
+export type { TooltipKey } from "./lib/tooltips.js";
 
-export {
-  lastTxAtom,
-  useTxToast,
-} from './hooks/useTxToast.js'
+export { lastTxAtom, useTxToast } from "./hooks/useTxToast.js";
 export type {
   LastTx,
   LastTxStatus,
   UseTxToastOptions,
   UseTxToastResult,
   TxToastHandle,
-} from './hooks/useTxToast.js'
+} from "./hooks/useTxToast.js";
 
-export type { TreeNode } from './lib/treeLayout.js'
-export { graphToTree, filterTree } from './lib/treeLayout.js'
+export type { TreeNode } from "./lib/treeLayout.js";
+export { graphToTree, filterTree } from "./lib/treeLayout.js";
 
 // Shared class-name helper
-export { cn } from './lib/utils.js'
+export { cn } from "./lib/utils.js";
 
 // shadcn/ui primitives — generated files under components/ui, edited in place
-export { Alert, AlertTitle, AlertDescription } from './components/ui/alert.js'
-export { Badge, badgeVariants } from './components/ui/badge.js'
-export { Button, buttonVariants } from './components/ui/button.js'
+export { Alert, AlertTitle, AlertDescription } from "./components/ui/alert.js";
+export { Badge, badgeVariants } from "./components/ui/badge.js";
+export { Button, buttonVariants } from "./components/ui/button.js";
 export {
   Card,
   CardHeader,
@@ -495,7 +545,7 @@ export {
   CardAction,
   CardDescription,
   CardContent,
-} from './components/ui/card.js'
+} from "./components/ui/card.js";
 export {
   Dialog,
   DialogClose,
@@ -507,7 +557,7 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
-} from './components/ui/dialog.js'
+} from "./components/ui/dialog.js";
 export {
   Form,
   FormItem,
@@ -517,9 +567,9 @@ export {
   FormMessage,
   FormField,
   useFormField,
-} from './components/ui/form.js'
-export { Input } from './components/ui/input.js'
-export { Label } from './components/ui/label.js'
+} from "./components/ui/form.js";
+export { Input } from "./components/ui/input.js";
+export { Label } from "./components/ui/label.js";
 export {
   Popover,
   PopoverTrigger,
@@ -528,8 +578,8 @@ export {
   PopoverHeader,
   PopoverTitle,
   PopoverDescription,
-} from './components/ui/popover.js'
-export { ScrollArea, ScrollBar } from './components/ui/scroll-area.js'
+} from "./components/ui/popover.js";
+export { ScrollArea, ScrollBar } from "./components/ui/scroll-area.js";
 export {
   Select,
   SelectContent,
@@ -541,8 +591,8 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from './components/ui/select.js'
-export { Separator } from './components/ui/separator.js'
+} from "./components/ui/select.js";
+export { Separator } from "./components/ui/separator.js";
 export {
   Sheet,
   SheetTrigger,
@@ -552,20 +602,20 @@ export {
   SheetFooter,
   SheetTitle,
   SheetDescription,
-} from './components/ui/sheet.js'
-export { Skeleton } from './components/ui/skeleton.js'
+} from "./components/ui/sheet.js";
+export { Skeleton } from "./components/ui/skeleton.js";
 export {
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
   tabsListVariants,
-} from './components/ui/tabs.js'
-export { Toggle, toggleVariants } from './components/ui/toggle.js'
-export { ToggleGroup, ToggleGroupItem } from './components/ui/toggle-group.js'
+} from "./components/ui/tabs.js";
+export { Toggle, toggleVariants } from "./components/ui/toggle.js";
+export { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group.js";
 export {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
-} from './components/ui/tooltip.js'
+} from "./components/ui/tooltip.js";

@@ -30,7 +30,10 @@ import * as path from "path";
 import { CursorStore } from "../lib/cursor-store";
 import { createStaticProvider } from "../lib/static-provider";
 import { getLogsChunked } from "../lib/get-logs-chunked";
-import { PendingStateStore, type PersistedPendingMessage } from "../lib/pending-state-store";
+import {
+  PendingStateStore,
+  type PersistedPendingMessage,
+} from "../lib/pending-state-store";
 import { RpcTimeoutError, withTimeout } from "../lib/rpc-utils";
 import { classifyChainHealth, rollupStatus } from "../lib/health-classifier";
 import { NonceCoordinator } from "../lib/nonce-coordinator";
@@ -164,13 +167,12 @@ interface ChainState {
  *
  * This is different from our mock which has indexed fields.
  */
-const REAL_MESSAGE_SENT_ABI = [
-  "event MessageSent(bytes message)",
-];
+const REAL_MESSAGE_SENT_ABI = ["event MessageSent(bytes message)"];
 
 /** Hoisted once — building an Interface parses ABI fragments; doing it per chunk/per log is waste. */
 const REAL_MESSAGE_SENT_IFACE = new ethers.Interface(REAL_MESSAGE_SENT_ABI);
-const REAL_MESSAGE_SENT_TOPIC = REAL_MESSAGE_SENT_IFACE.getEvent("MessageSent")!.topicHash;
+const REAL_MESSAGE_SENT_TOPIC =
+  REAL_MESSAGE_SENT_IFACE.getEvent("MessageSent")!.topicHash;
 
 const REAL_MESSAGE_TRANSMITTER_ABI = [
   "function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool)",
@@ -238,7 +240,8 @@ const DEFAULT_IRIS_FETCH_TIMEOUT_MS = 10_000;
  */
 const MSG_BODY_OFFSET = 148;
 const BURN_MSG_MINT_RECIPIENT_OFFSET = 36;
-const MINT_RECIPIENT_ABSOLUTE_OFFSET = MSG_BODY_OFFSET + BURN_MSG_MINT_RECIPIENT_OFFSET;
+const MINT_RECIPIENT_ABSOLUTE_OFFSET =
+  MSG_BODY_OFFSET + BURN_MSG_MINT_RECIPIENT_OFFSET;
 const MINT_RECIPIENT_LENGTH = 32;
 
 /**
@@ -268,7 +271,9 @@ function parseBurnAmount(messageHex: string): string | undefined {
   const hex = messageHex.startsWith("0x") ? messageHex.slice(2) : messageHex;
   const end = (BURN_MSG_AMOUNT_ABSOLUTE_OFFSET + BURN_MSG_AMOUNT_LENGTH) * 2;
   if (hex.length < end) return undefined;
-  return BigInt("0x" + hex.slice(BURN_MSG_AMOUNT_ABSOLUTE_OFFSET * 2, end)).toString();
+  return BigInt(
+    "0x" + hex.slice(BURN_MSG_AMOUNT_ABSOLUTE_OFFSET * 2, end),
+  ).toString();
 }
 
 /**
@@ -310,22 +315,31 @@ export function classifyMessageForRelay(
       reason: `not a BurnMessageV2 — ${byteLen}B < ${MIN_BURN_MESSAGE_BYTES}B minimum`,
     };
   }
-  const envelopeWord = (offset: number) => "0x" + hex.slice(offset * 2, (offset + 32) * 2).toLowerCase();
+  const envelopeWord = (offset: number) =>
+    "0x" + hex.slice(offset * 2, (offset + 32) * 2).toLowerCase();
   const recipient = envelopeWord(MSG_RECIPIENT_OFFSET);
-  if (recipient !== ethers.zeroPadValue(tokenMessengers.destination, 32).toLowerCase()) {
+  if (
+    recipient !==
+    ethers.zeroPadValue(tokenMessengers.destination, 32).toLowerCase()
+  ) {
     return {
       relay: false,
       reason: `envelope recipient ${recipient.slice(0, 20)}... is not the destination TokenMessenger (not a burn)`,
     };
   }
   const sender = envelopeWord(MSG_SENDER_OFFSET);
-  if (sender !== ethers.zeroPadValue(tokenMessengers.source, 32).toLowerCase()) {
+  if (
+    sender !== ethers.zeroPadValue(tokenMessengers.source, 32).toLowerCase()
+  ) {
     return {
       relay: false,
       reason: `envelope sender ${sender.slice(0, 20)}... is not the source TokenMessenger (not a burn)`,
     };
   }
-  const bodyVersion = parseInt(hex.slice(MSG_BODY_OFFSET * 2, (MSG_BODY_OFFSET + 4) * 2), 16);
+  const bodyVersion = parseInt(
+    hex.slice(MSG_BODY_OFFSET * 2, (MSG_BODY_OFFSET + 4) * 2),
+    16,
+  );
   if (bodyVersion !== BURN_MESSAGE_VERSION) {
     return {
       relay: false,
@@ -335,7 +349,10 @@ export function classifyMessageForRelay(
   const mintRecipient =
     "0x" +
     hex
-      .slice(MINT_RECIPIENT_ABSOLUTE_OFFSET * 2, (MINT_RECIPIENT_ABSOLUTE_OFFSET + MINT_RECIPIENT_LENGTH) * 2)
+      .slice(
+        MINT_RECIPIENT_ABSOLUTE_OFFSET * 2,
+        (MINT_RECIPIENT_ABSOLUTE_OFFSET + MINT_RECIPIENT_LENGTH) * 2,
+      )
       .toLowerCase();
   if (knownRecipients.size === 0) {
     return {
@@ -344,15 +361,23 @@ export function classifyMessageForRelay(
     };
   }
   if (!knownRecipients.has(mintRecipient)) {
-    return { relay: false, reason: `mintRecipient ${mintRecipient} not in knownRecipients` };
+    return {
+      relay: false,
+      reason: `mintRecipient ${mintRecipient} not in knownRecipients`,
+    };
   }
   const destinationCaller =
     "0x" +
     hex
-      .slice(MSG_DEST_CALLER_OFFSET * 2, (MSG_DEST_CALLER_OFFSET + MSG_DEST_CALLER_LENGTH) * 2)
+      .slice(
+        MSG_DEST_CALLER_OFFSET * 2,
+        (MSG_DEST_CALLER_OFFSET + MSG_DEST_CALLER_LENGTH) * 2,
+      )
       .toLowerCase();
   if (destinationCaller !== ZERO_CALLER && hookRouter) {
-    const ourHookRouterBytes32 = ethers.zeroPadValue(hookRouter, 32).toLowerCase();
+    const ourHookRouterBytes32 = ethers
+      .zeroPadValue(hookRouter, 32)
+      .toLowerCase();
     if (destinationCaller !== ourHookRouterBytes32) {
       return {
         relay: false,
@@ -376,7 +401,11 @@ export function isPlausibleHexBytes(s: unknown, minBytes: number): boolean {
 }
 
 /** Zero a byte range in a (no-0x) hex string. */
-function zeroHexRange(hex: string, startByte: number, lenBytes: number): string {
+function zeroHexRange(
+  hex: string,
+  startByte: number,
+  lenBytes: number,
+): string {
   return (
     hex.slice(0, startByte * 2) +
     "0".repeat(lenBytes * 2) +
@@ -399,8 +428,12 @@ function zeroHexRange(hex: string, startByte: number, lenBytes: number): string 
  * MessageTransmitter still verifies Circle's signature over the complete message.
  */
 export function irisMessageMatches(localHex: string, irisHex: string): boolean {
-  const a = (localHex.startsWith("0x") ? localHex.slice(2) : localHex).toLowerCase();
-  const b = (irisHex.startsWith("0x") ? irisHex.slice(2) : irisHex).toLowerCase();
+  const a = (
+    localHex.startsWith("0x") ? localHex.slice(2) : localHex
+  ).toLowerCase();
+  const b = (
+    irisHex.startsWith("0x") ? irisHex.slice(2) : irisHex
+  ).toLowerCase();
   if (a.length !== b.length) return false;
   // Zero every field Iris populates after the burn before comparing. maxFee is intentionally left in.
   const zeroVolatile = (h: string): string =>
@@ -408,11 +441,14 @@ export function irisMessageMatches(localHex: string, irisHex: string): boolean {
       zeroHexRange(
         zeroHexRange(
           zeroHexRange(h, MSG_NONCE_OFFSET, MSG_NONCE_LENGTH),
-          MSG_FINALITY_EXECUTED_OFFSET, MSG_FINALITY_EXECUTED_LENGTH,
+          MSG_FINALITY_EXECUTED_OFFSET,
+          MSG_FINALITY_EXECUTED_LENGTH,
         ),
-        MSG_FEE_EXECUTED_OFFSET, MSG_FEE_EXECUTED_LENGTH,
+        MSG_FEE_EXECUTED_OFFSET,
+        MSG_FEE_EXECUTED_LENGTH,
       ),
-      MSG_EXPIRATION_BLOCK_OFFSET, MSG_EXPIRATION_BLOCK_LENGTH,
+      MSG_EXPIRATION_BLOCK_OFFSET,
+      MSG_EXPIRATION_BLOCK_LENGTH,
     );
   return zeroVolatile(a) === zeroVolatile(b);
 }
@@ -484,22 +520,48 @@ function parseMessageFields(messageHex: string): {
   // Remove 0x prefix
   const hex = messageHex.startsWith("0x") ? messageHex.slice(2) : messageHex;
 
-  const sourceDomain = parseInt(hex.slice(MSG_SOURCE_DOMAIN_OFFSET * 2, (MSG_SOURCE_DOMAIN_OFFSET + 4) * 2), 16);
-  const destinationDomain = parseInt(hex.slice(MSG_DEST_DOMAIN_OFFSET * 2, (MSG_DEST_DOMAIN_OFFSET + 4) * 2), 16);
+  const sourceDomain = parseInt(
+    hex.slice(MSG_SOURCE_DOMAIN_OFFSET * 2, (MSG_SOURCE_DOMAIN_OFFSET + 4) * 2),
+    16,
+  );
+  const destinationDomain = parseInt(
+    hex.slice(MSG_DEST_DOMAIN_OFFSET * 2, (MSG_DEST_DOMAIN_OFFSET + 4) * 2),
+    16,
+  );
   // In real CCTP V2, the nonce in the MessageSent event is a placeholder (zero).
   // Iris assigns the real nonce and returns it in the corrected message.
-  const nonce = "0x" + hex.slice(MSG_NONCE_OFFSET * 2, (MSG_NONCE_OFFSET + MSG_NONCE_LENGTH) * 2);
-  const destinationCaller = "0x" + hex.slice(MSG_DEST_CALLER_OFFSET * 2, (MSG_DEST_CALLER_OFFSET + MSG_DEST_CALLER_LENGTH) * 2).toLowerCase();
+  const nonce =
+    "0x" +
+    hex.slice(MSG_NONCE_OFFSET * 2, (MSG_NONCE_OFFSET + MSG_NONCE_LENGTH) * 2);
+  const destinationCaller =
+    "0x" +
+    hex
+      .slice(
+        MSG_DEST_CALLER_OFFSET * 2,
+        (MSG_DEST_CALLER_OFFSET + MSG_DEST_CALLER_LENGTH) * 2,
+      )
+      .toLowerCase();
 
   // Parse mintRecipient from BurnMessageV2 body (the actual destination contract).
   // MessageV2.recipient (offset 76) is always the dest TokenMessenger in real CCTP V2.
   let mintRecipient = "";
-  const mintRecipientEnd = (MINT_RECIPIENT_ABSOLUTE_OFFSET + MINT_RECIPIENT_LENGTH) * 2;
+  const mintRecipientEnd =
+    (MINT_RECIPIENT_ABSOLUTE_OFFSET + MINT_RECIPIENT_LENGTH) * 2;
   if (hex.length >= mintRecipientEnd) {
-    mintRecipient = "0x" + hex.slice(MINT_RECIPIENT_ABSOLUTE_OFFSET * 2, mintRecipientEnd).toLowerCase();
+    mintRecipient =
+      "0x" +
+      hex
+        .slice(MINT_RECIPIENT_ABSOLUTE_OFFSET * 2, mintRecipientEnd)
+        .toLowerCase();
   }
 
-  return { sourceDomain, destinationDomain, nonce, mintRecipient, destinationCaller };
+  return {
+    sourceDomain,
+    destinationDomain,
+    nonce,
+    mintRecipient,
+    destinationCaller,
+  };
 }
 
 /**
@@ -570,7 +632,9 @@ class IrisClient {
       }
 
       if (!response.ok) {
-        console.warn(`    [iris] API error ${response.status}: ${await response.text()}`);
+        console.warn(
+          `    [iris] API error ${response.status}: ${await response.text()}`,
+        );
         return null;
       }
 
@@ -588,7 +652,9 @@ class IrisClient {
         msg = data.messages[0];
       } else {
         msg = data.messages.find(
-          (m) => typeof m.message === "string" && irisMessageMatches(expectedMessageHex, m.message),
+          (m) =>
+            typeof m.message === "string" &&
+            irisMessageMatches(expectedMessageHex, m.message),
         );
         if (!msg) {
           console.warn(
@@ -623,7 +689,10 @@ class IrisClient {
       // Return status for logging (pending, pending_confirmations)
       return { attestation: "", message: "", status: msg.status };
     } catch (e: any) {
-      const reason = e?.name === "AbortError" ? `timeout after ${timeoutMs}ms` : e?.message ?? e;
+      const reason =
+        e?.name === "AbortError"
+          ? `timeout after ${timeoutMs}ms`
+          : (e?.message ?? e);
       console.warn(`    [iris] Poll error: ${reason}`);
       return null;
     } finally {
@@ -709,23 +778,27 @@ export class IrisRelayModule {
       if (state) {
         this.chains.set(state.domain, state);
         console.log(
-          `  [iris-relay] ${chainConfig.name} (Chain ${chainConfig.chainId}, Domain ${state.domain})`
+          `  [iris-relay] ${chainConfig.name} (Chain ${chainConfig.chainId}, Domain ${state.domain})`,
         );
         console.log(`    MessageTransmitter: ${state.messageTransmitter}`);
         console.log(`    HookRouter: ${state.hookRouter || "not configured"}`);
         if (state.knownRecipients.size > 0) {
-          console.log(`    Known recipients: ${Array.from(state.knownRecipients).map(r => r.slice(0, 20) + "...").join(", ")}`);
+          console.log(
+            `    Known recipients: ${Array.from(state.knownRecipients)
+              .map((r) => r.slice(0, 20) + "...")
+              .join(", ")}`,
+          );
         }
       } else {
         console.log(
-          `  [iris-relay] ${chainConfig.name} (${chainConfig.chainId}): Failed to initialize`
+          `  [iris-relay] ${chainConfig.name} (${chainConfig.chainId}): Failed to initialize`,
         );
         allInitialized = false;
       }
     }
 
     console.log(
-      `[iris-relay] Initialized ${this.chains.size}/${allChains.length} chains`
+      `[iris-relay] Initialized ${this.chains.size}/${allChains.length} chains`,
     );
 
     // Restore any persisted dead-letter records so getHealth reports an accurate count across
@@ -797,11 +870,15 @@ export class IrisRelayModule {
     await this.persistChain(sourceState);
   }
 
-  private async initChain(chainConfig: ChainConfig): Promise<ChainState | null> {
+  private async initChain(
+    chainConfig: ChainConfig,
+  ): Promise<ChainState | null> {
     try {
       const deployment = loadDeployment(chainConfig.deploymentFile);
       if (!deployment) {
-        console.error(`    Deployment file not found: ${chainConfig.deploymentFile}`);
+        console.error(
+          `    Deployment file not found: ${chainConfig.deploymentFile}`,
+        );
         return null;
       }
 
@@ -818,18 +895,25 @@ export class IrisRelayModule {
       // Load hookRouter and known recipient addresses from privacy pool deployment
       let hookRouter: string | null = null;
       const knownRecipients = new Set<string>();
-      const ppDeployment = loadDeployment(chainConfig.privacyPoolDeploymentFile);
+      const ppDeployment = loadDeployment(
+        chainConfig.privacyPoolDeploymentFile,
+      );
       if (ppDeployment?.contracts?.hookRouter) {
         hookRouter = ppDeployment.contracts.hookRouter;
       }
       // Collect known CCTP recipient addresses for this chain (used to filter foreign messages)
-      const poolAddr = ppDeployment?.contracts?.privacyPool || ppDeployment?.contracts?.privacyPoolClient;
+      const poolAddr =
+        ppDeployment?.contracts?.privacyPool ||
+        ppDeployment?.contracts?.privacyPoolClient;
       if (poolAddr) {
         knownRecipients.add(ethers.zeroPadValue(poolAddr, 32).toLowerCase());
       }
 
       // Pinned static provider (main's RPC-quota optimization) + our dedicated relayer key.
-      const provider = createStaticProvider(chainConfig.rpc, chainConfig.chainId);
+      const provider = createStaticProvider(
+        chainConfig.rpc,
+        chainConfig.chainId,
+      );
       const wallet = new ethers.Wallet(relayerPrivateKey, provider);
 
       // Verify connection up-front with the same timeout we'll use during polling.
@@ -844,7 +928,10 @@ export class IrisRelayModule {
       // Load persisted cursor or bootstrap from lookback. This is the fix for the cold-start
       // hole: the prior code set lastProcessedBlock = currentBlock and silently skipped any
       // MessageSent emitted before the relayer started OR during a restart window.
-      const lastProcessedBlock = await this.resolveBootCursor(chainConfig, currentBlock);
+      const lastProcessedBlock = await this.resolveBootCursor(
+        chainConfig,
+        currentBlock,
+      );
 
       // Load persisted pendingMessages + processedMessages — restart-safe. Without this, any
       // message that was mid-attestation when the relayer stopped would have to be
@@ -1105,9 +1192,10 @@ export class IrisRelayModule {
     } catch (err: any) {
       // NO LONGER SILENT. Structured error log + state.lastError so the future health endpoint
       // can surface a stuck scanner. Cursor stays put so the next tick retries the same window.
-      const message = err instanceof RpcTimeoutError
-        ? `RPC timeout: ${err.label}`
-        : err?.message ?? "unknown error";
+      const message =
+        err instanceof RpcTimeoutError
+          ? `RPC timeout: ${err.label}`
+          : (err?.message ?? "unknown error");
       state.lastError = { message, at: Date.now() };
       console.error(
         `[iris-relay] ${state.config.name}: Scan tick failed: ${message}. Cursor stays at ${state.lastProcessedBlock}; will retry next tick.`,
@@ -1124,7 +1212,10 @@ export class IrisRelayModule {
    * persist→cursor ordering so the on-disk cursor never leads un-persisted pending state.
    */
   private enqueueMessage(log: ethers.Log, sourceState: ChainState): boolean {
-    const parsed = REAL_MESSAGE_SENT_IFACE.parseLog({ topics: log.topics as string[], data: log.data });
+    const parsed = REAL_MESSAGE_SENT_IFACE.parseLog({
+      topics: log.topics as string[],
+      data: log.data,
+    });
     if (!parsed) {
       // Topic matched MessageSent but the ABI decoder couldn't parse the payload — almost
       // certainly an ABI mismatch (event signature drift on chain, or non-CCTP contract reusing
@@ -1165,11 +1256,14 @@ export class IrisRelayModule {
       return false;
     }
 
-    const { sourceDomain, destinationDomain, nonce } = parseMessageFields(messageBytes);
+    const { sourceDomain, destinationDomain, nonce } =
+      parseMessageFields(messageBytes);
 
     const destState = this.getChainByDomain(destinationDomain);
     if (!destState) {
-      console.log(`  [iris-relay] Unknown destination domain ${destinationDomain}, skipping`);
+      console.log(
+        `  [iris-relay] Unknown destination domain ${destinationDomain}, skipping`,
+      );
       return false;
     }
 
@@ -1181,7 +1275,10 @@ export class IrisRelayModule {
       messageBytes,
       destState.knownRecipients,
       destState.hookRouter,
-      { source: sourceState.tokenMessenger, destination: destState.tokenMessenger },
+      {
+        source: sourceState.tokenMessenger,
+        destination: destState.tokenMessenger,
+      },
     );
     if (!classification.relay) {
       // Count so a probe / deployment-drift is visible on /health, not just in logs.
@@ -1221,7 +1318,7 @@ export class IrisRelayModule {
 
     console.log(`\n${"=".repeat(60)}`);
     console.log(
-      `[iris-relay] QUEUED: ${sourceState.config.name} (Domain ${sourceDomain}) -> ${destState.config.name} (Domain ${destinationDomain})`
+      `[iris-relay] QUEUED: ${sourceState.config.name} (Domain ${sourceDomain}) -> ${destState.config.name} (Domain ${destinationDomain})`,
     );
     console.log(`${"=".repeat(60)}`);
     console.log(`  Msg Hash:    ${messageHash}`);
@@ -1232,7 +1329,9 @@ export class IrisRelayModule {
     console.log(`  Queued for attestation polling (non-blocking)`);
     // Surface "in flight" on /cctp-status (keyed by messageHash) so the frontend's delivery poll
     // gets a positive signal instead of a 404 while awaiting attestation. Best-effort.
-    this.deliveryStore.markPending(messageHash, { amount: parseBurnAmount(messageBytes) });
+    this.deliveryStore.markPending(messageHash, {
+      amount: parseBurnAmount(messageBytes),
+    });
     return true;
   }
 
@@ -1253,7 +1352,11 @@ export class IrisRelayModule {
     // ---- Phase 1: filter (serial — handles expiry, which mutates state) ----
     // Collect the messages that actually need an Iris check this tick. Skips: already-broadcast
     // (processInflightRelays owns them), expired (dead-lettered here), and backoff-windowed.
-    const toCheck: Array<{ hash: string; msg: PendingMessage; sourceState: ChainState | undefined }> = [];
+    const toCheck: Array<{
+      hash: string;
+      msg: PendingMessage;
+      sourceState: ChainState | undefined;
+    }> = [];
     for (const [hash, msg] of entries) {
       const sourceState = this.getChainByDomain(msg.sourceDomain);
 
@@ -1273,11 +1376,15 @@ export class IrisRelayModule {
         // EXPIRED have an actionable signal before the message is dropped from memory + disk.
         console.error(
           `\n[iris-relay] EXPIRED: message ${hash.slice(0, 18)}... after ${elapsed(msg.detectedAt)} ` +
-          `(${msg.pollAttempts} polls, ${msg.retryAttempts} relay retries, last status: ${msg.lastStatus})`
+            `(${msg.pollAttempts} polls, ${msg.retryAttempts} relay retries, last status: ${msg.lastStatus})`,
         );
         console.error(`  Source Tx: ${msg.sourceTxHash}`);
-        console.error(`  Iris URL:  ${this.irisClient.getUrl(msg.sourceDomain, msg.sourceTxHash)}`);
-        console.error(`  Manual recovery: fetch attestation from Iris + call hookRouter.relayWithHook on destination chain.`);
+        console.error(
+          `  Iris URL:  ${this.irisClient.getUrl(msg.sourceDomain, msg.sourceTxHash)}`,
+        );
+        console.error(
+          `  Manual recovery: fetch attestation from Iris + call hookRouter.relayWithHook on destination chain.`,
+        );
         this.pendingMessages.delete(hash);
         // Record durably (deadLetter persists the chain + adds to processedMessages itself).
         if (sourceState) await this.deadLetter(sourceState, msg, "expired");
@@ -1297,17 +1404,22 @@ export class IrisRelayModule {
     // ---- Phase 2: Iris attestation checks (parallel, bounded) ----
     // These are read-only network round-trips; fanning them out means one slow Iris response no
     // longer serially stalls every later message this tick. Submissions stay serial in Phase 3.
-    const checkResults = await mapWithConcurrency(toCheck, IRIS_CHECK_CONCURRENCY, ({ msg, sourceState }) => {
-      msg.pollAttempts++;
-      const irisTimeoutMs =
-        sourceState?.config.scanner.rpcTimeoutMs ?? DEFAULT_IRIS_FETCH_TIMEOUT_MS;
-      return this.irisClient.checkAttestation(
-        msg.sourceDomain,
-        msg.sourceTxHash,
-        msg.messageBytes,
-        irisTimeoutMs,
-      );
-    });
+    const checkResults = await mapWithConcurrency(
+      toCheck,
+      IRIS_CHECK_CONCURRENCY,
+      ({ msg, sourceState }) => {
+        msg.pollAttempts++;
+        const irisTimeoutMs =
+          sourceState?.config.scanner.rpcTimeoutMs ??
+          DEFAULT_IRIS_FETCH_TIMEOUT_MS;
+        return this.irisClient.checkAttestation(
+          msg.sourceDomain,
+          msg.sourceTxHash,
+          msg.messageBytes,
+          irisTimeoutMs,
+        );
+      },
+    );
 
     // ---- Phase 3: handle results + submit (serial — mutates pending/processed + nonce stream) ----
     for (let i = 0; i < toCheck.length; i++) {
@@ -1318,7 +1430,7 @@ export class IrisRelayModule {
         // Not indexed yet or error — log periodically
         if (msg.pollAttempts % 6 === 0) {
           console.log(
-            `  [iris-relay] ${hash.slice(0, 18)}... not yet indexed (${elapsed(msg.detectedAt)}, ${msg.pollAttempts} polls)`
+            `  [iris-relay] ${hash.slice(0, 18)}... not yet indexed (${elapsed(msg.detectedAt)}, ${msg.pollAttempts} polls)`,
           );
         }
         continue;
@@ -1329,7 +1441,7 @@ export class IrisRelayModule {
         msg.lastStatus = result.status;
         if (msg.pollAttempts % 6 === 0) {
           console.log(
-            `  [iris-relay] ${hash.slice(0, 18)}... status: ${result.status} (${elapsed(msg.detectedAt)}, ${msg.pollAttempts} polls)`
+            `  [iris-relay] ${hash.slice(0, 18)}... status: ${result.status} (${elapsed(msg.detectedAt)}, ${msg.pollAttempts} polls)`,
           );
         }
         continue;
@@ -1337,10 +1449,14 @@ export class IrisRelayModule {
 
       // Attestation ready — submit to destination chain (non-blocking — receipt polled later).
       console.log(
-        `\n[iris-relay] ATTESTATION READY for ${hash.slice(0, 18)}... after ${elapsed(msg.detectedAt)} (${msg.pollAttempts} polls)`
+        `\n[iris-relay] ATTESTATION READY for ${hash.slice(0, 18)}... after ${elapsed(msg.detectedAt)} (${msg.pollAttempts} polls)`,
       );
 
-      const outcome = await this.submitRelay(msg, result.attestation, result.message);
+      const outcome = await this.submitRelay(
+        msg,
+        result.attestation,
+        result.message,
+      );
       if (outcome === "submitted") {
         // submitRelay set msg.submittedTxHash + msg.submittedAt. Keep the message in pending —
         // processInflightRelays will pick it up next tick to confirm. Mark the source chain
@@ -1369,7 +1485,8 @@ export class IrisRelayModule {
           }
         } else {
           // Exponential backoff: 2s, 4s, 8s, 16s, 32s for attempts 1-5.
-          const backoffMs = RELAY_RETRY_BASE_DELAY_MS * Math.pow(2, msg.retryAttempts - 1);
+          const backoffMs =
+            RELAY_RETRY_BASE_DELAY_MS * Math.pow(2, msg.retryAttempts - 1);
           msg.nextRetryAt = Date.now() + backoffMs;
           console.log(
             `  [iris-relay] submitRelay retry ${msg.retryAttempts}/${MAX_RELAY_RETRIES} for ${hash.slice(0, 18)}... in ${backoffMs}ms`,
@@ -1437,7 +1554,10 @@ export class IrisRelayModule {
       if (result.status === "rejected") {
         // RPC error / timeout while checking. Don't mutate state — next tick retries the same
         // receipt lookup. Log once per N attempts to avoid spamming for persistent issues.
-        const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+        const reason =
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason);
         console.warn(
           `  [iris-relay] ${state.config.name}: getTransactionReceipt ${msg.submittedTxHash!.slice(0, 18)}... failed (${reason}). Will retry next tick.`,
         );
@@ -1510,9 +1630,13 @@ export class IrisRelayModule {
           `[iris-relay] ${state.config.name}: confirmed ${msg.submittedTxHash!.slice(0, 18)}... in block ${receipt.blockNumber} (${msg.retryAttempts} retries, ${Math.round((now - (msg.submittedAt ?? now)) / 1000)}s submit→confirm)`,
         );
         // Authoritative delivery signal for /cctp-status — the destination mint confirmed.
-        this.deliveryStore.markDelivered(msg.messageHash, msg.submittedTxHash!, {
-          amount: parseBurnAmount(msg.messageBytes),
-        });
+        this.deliveryStore.markDelivered(
+          msg.messageHash,
+          msg.submittedTxHash!,
+          {
+            amount: parseBurnAmount(msg.messageBytes),
+          },
+        );
         if (sourceState) dirtyChains.add(sourceState);
       } else {
         // Reverted on chain — re-submit through the retry/backoff path. The nonce was consumed
@@ -1544,7 +1668,10 @@ export class IrisRelayModule {
    *
    * Shared between revert + stuck-tx paths since both want the same outcome.
    */
-  private async scheduleResubmit(msg: PendingMessage, chainLabel: string): Promise<void> {
+  private async scheduleResubmit(
+    msg: PendingMessage,
+    chainLabel: string,
+  ): Promise<void> {
     msg.submittedTxHash = undefined;
     msg.submittedAt = undefined;
     msg.retryAttempts++;
@@ -1555,9 +1682,11 @@ export class IrisRelayModule {
       this.pendingMessages.delete(msg.dedupKey);
       // Record durably so the give-up is more than a log line (and won't be re-relayed on rescan).
       const sourceState = this.getChainByDomain(msg.sourceDomain);
-      if (sourceState) await this.deadLetter(sourceState, msg, "retries-exhausted");
+      if (sourceState)
+        await this.deadLetter(sourceState, msg, "retries-exhausted");
     } else {
-      const backoffMs = RELAY_RETRY_BASE_DELAY_MS * Math.pow(2, msg.retryAttempts - 1);
+      const backoffMs =
+        RELAY_RETRY_BASE_DELAY_MS * Math.pow(2, msg.retryAttempts - 1);
       msg.nextRetryAt = Date.now() + backoffMs;
       console.log(
         `  [iris-relay] ${chainLabel}: re-submit retry ${msg.retryAttempts}/${MAX_RELAY_RETRIES} for ${msg.messageHash.slice(0, 18)}... in ${backoffMs}ms`,
@@ -1594,7 +1723,9 @@ export class IrisRelayModule {
   ): Promise<"submitted" | "already-processed" | "failed"> {
     const destState = this.getChainByDomain(msg.destinationDomain);
     if (!destState) {
-      console.error(`  [iris-relay] No chain for destination domain ${msg.destinationDomain}`);
+      console.error(
+        `  [iris-relay] No chain for destination domain ${msg.destinationDomain}`,
+      );
       return "failed";
     }
 
@@ -1634,7 +1765,7 @@ export class IrisRelayModule {
             const hookRouter = new ethers.Contract(
               destState.hookRouter,
               HOOK_ROUTER_ABI,
-              destState.wallet
+              destState.wallet,
             );
             console.log(
               `  Sending relayWithHook to ${destState.config.name} via CCTPHookRouter (tx nonce: ${txNonce})...`,
@@ -1646,7 +1777,7 @@ export class IrisRelayModule {
           const messageTransmitter = new ethers.Contract(
             destState.messageTransmitter,
             REAL_MESSAGE_TRANSMITTER_ABI,
-            destState.wallet
+            destState.wallet,
           );
           console.log(
             `  Sending receiveMessage to ${destState.config.name} (tx nonce: ${txNonce})...`,
@@ -1661,7 +1792,9 @@ export class IrisRelayModule {
       msg.submittedTxHash = tx.hash;
       msg.submittedAt = Date.now();
 
-      console.log(`  Tx submitted: ${tx.hash} (awaiting confirmation, non-blocking)`);
+      console.log(
+        `  Tx submitted: ${tx.hash} (awaiting confirmation, non-blocking)`,
+      );
       return "submitted";
     } catch (e: any) {
       if (
@@ -1699,14 +1832,16 @@ export class IrisRelayModule {
     const chainsSummary = Array.from(this.chains.values())
       .map(
         (s) =>
-          `  ${s.config.name}: Domain ${s.domain} (Chain ${s.config.chainId})`
+          `  ${s.config.name}: Domain ${s.domain} (Chain ${s.config.chainId})`,
       )
       .join("\n");
 
     console.log(`[iris-relay] Started polling ${this.chains.size} chain(s):`);
     console.log(chainsSummary);
     console.log(`[iris-relay] Poll interval: ${this.pollIntervalMs}ms`);
-    console.log(`[iris-relay] Max attestation wait: ${MAX_ATTESTATION_AGE_MS / 60000} minutes`);
+    console.log(
+      `[iris-relay] Max attestation wait: ${MAX_ATTESTATION_AGE_MS / 60000} minutes`,
+    );
 
     this.isRunning = true;
     this.runPollLoop();
@@ -1787,7 +1922,9 @@ export class IrisRelayModule {
     const start = Date.now();
     const step = 100;
     while (this.isRunning && Date.now() - start < totalMs) {
-      await new Promise((resolve) => setTimeout(resolve, Math.min(step, totalMs - (Date.now() - start))));
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(step, totalMs - (Date.now() - start))),
+      );
     }
   }
 
@@ -1802,9 +1939,13 @@ export class IrisRelayModule {
    */
   async stop(): Promise<void> {
     if (!this.isRunning) return;
-    console.log("[iris-relay] Stopping — waiting for in-flight scan tick to complete...");
+    console.log(
+      "[iris-relay] Stopping — waiting for in-flight scan tick to complete...",
+    );
     if (this.pendingMessages.size > 0) {
-      console.log(`[iris-relay] ${this.pendingMessages.size} pending message(s) will be abandoned`);
+      console.log(
+        `[iris-relay] ${this.pendingMessages.size} pending message(s) will be abandoned`,
+      );
     }
     this.isRunning = false;
     if (this.loopExited) await this.loopExited;
@@ -1827,13 +1968,18 @@ export class IrisRelayModule {
     // Pre-bucket pending counts by source domain to avoid an O(chains × pending) loop below.
     const pendingBySource = new Map<number, number>();
     for (const msg of this.pendingMessages.values()) {
-      pendingBySource.set(msg.sourceDomain, (pendingBySource.get(msg.sourceDomain) ?? 0) + 1);
+      pendingBySource.set(
+        msg.sourceDomain,
+        (pendingBySource.get(msg.sourceDomain) ?? 0) + 1,
+      );
     }
 
     const chains: ChainHealth[] = [];
     for (const state of this.chains.values()) {
       const lagBlocks =
-        state.lastChainHead > 0 ? state.lastChainHead - state.lastProcessedBlock : 0;
+        state.lastChainHead > 0
+          ? state.lastChainHead - state.lastProcessedBlock
+          : 0;
       const status = classifyChainHealth({
         lastError: state.lastError,
         lastScanAt: state.lastScanAt,

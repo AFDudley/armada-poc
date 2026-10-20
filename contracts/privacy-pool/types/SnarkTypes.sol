@@ -4,7 +4,7 @@
 // ABOUTME: lineage (itself adapted from the MIT-licensed solcrypto altbn128 library).
 pragma solidity ^0.8.17;
 
-import { G1Point, G2Point, VerifyingKey, SnarkProof, SNARK_SCALAR_FIELD } from "./PoolTypes.sol";
+import {G1Point, G2Point, VerifyingKey, SnarkProof, SNARK_SCALAR_FIELD} from "./PoolTypes.sol";
 
 /// @title Snark
 /// @notice Groth16 verifier for the privacy pool circuits. The verifying key is passed
@@ -13,8 +13,7 @@ import { G1Point, G2Point, VerifyingKey, SnarkProof, SNARK_SCALAR_FIELD } from "
 library Snark {
     /// @notice Modulus of the BN254 base field F_q (the field the curve's coordinates
     ///         live in). Distinct from the scalar field order.
-    uint256 internal constant PRIME_Q =
-        21888242871839275222246405745257275088696311157297823662689037894645226208583;
+    uint256 internal constant PRIME_Q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
     /// @notice Verify a Groth16 proof against a verifying key and public inputs.
     /// @dev Computes vkX = ic[0] + sum(inputs[i] * ic[i+1]) and then checks the pairing
@@ -23,15 +22,12 @@ library Snark {
     /// @param proof The Groth16 proof
     /// @param inputs The public inputs; each must be a canonical scalar-field element
     /// @return True iff the pairing equation holds
-    function verify(
-        VerifyingKey memory verifyingKey,
-        SnarkProof memory proof,
-        uint256[] memory inputs
-    ) internal view returns (bool) {
-        require(
-            verifyingKey.ic.length == inputs.length + 1,
-            "Snark: IC length does not match input count"
-        );
+    function verify(VerifyingKey memory verifyingKey, SnarkProof memory proof, uint256[] memory inputs)
+        internal
+        view
+        returns (bool)
+    {
+        require(verifyingKey.ic.length == inputs.length + 1, "Snark: IC length does not match input count");
 
         G1Point memory vkX = verifyingKey.ic[0];
 
@@ -64,21 +60,14 @@ library Snark {
         require(point.x < PRIME_Q && point.y < PRIME_Q, "Snark: Point outside base field");
 
         uint256 ySquared = mulmod(point.y, point.y, PRIME_Q);
-        uint256 xCubedPlusB = addmod(
-            mulmod(mulmod(point.x, point.x, PRIME_Q), point.x, PRIME_Q),
-            3,
-            PRIME_Q
-        );
+        uint256 xCubedPlusB = addmod(mulmod(mulmod(point.x, point.x, PRIME_Q), point.x, PRIME_Q), 3, PRIME_Q);
         require(ySquared == xCubedPlusB, "Snark: Point not on curve");
 
         return G1Point(point.x, PRIME_Q - point.y);
     }
 
     /// @notice Multiply a G1 point by a scalar via the ecMul precompile (0x07).
-    function scalarMul(
-        G1Point memory point,
-        uint256 scalar
-    ) internal view returns (G1Point memory result) {
+    function scalarMul(G1Point memory point, uint256 scalar) internal view returns (G1Point memory result) {
         uint256[3] memory input;
         input[0] = point.x;
         input[1] = point.y;
@@ -92,10 +81,7 @@ library Snark {
     }
 
     /// @notice Add two G1 points via the ecAdd precompile (0x06).
-    function plus(
-        G1Point memory p1,
-        G1Point memory p2
-    ) internal view returns (G1Point memory result) {
+    function plus(G1Point memory p1, G1Point memory p2) internal view returns (G1Point memory result) {
         uint256[4] memory input;
         input[0] = p1.x;
         input[1] = p1.y;

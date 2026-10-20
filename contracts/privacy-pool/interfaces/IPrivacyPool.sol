@@ -138,11 +138,7 @@ interface IPrivacyPool is IMessageHandlerV2 {
      * @param commitments Number of commitments
      * @param key The verification key
      */
-    function setVerificationKey(
-        uint256 nullifiers,
-        uint256 commitments,
-        VerifyingKey calldata key
-    ) external;
+    function setVerificationKey(uint256 nullifiers, uint256 commitments, VerifyingKey calldata key) external;
 
     /**
      * @notice Set the shield fee in basis points

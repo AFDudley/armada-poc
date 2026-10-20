@@ -1,16 +1,16 @@
 // ABOUTME: Imperative signer resolution at transaction time via wagmi's getConnectorClient action.
 // ABOUTME: Bypasses useWalletClient's cached query, which can stay undefined for a whole session after a fresh connect (wagmi #2784 / #3825).
 
-import type { JsonRpcSigner } from 'ethers'
-import { getConnectorClient, switchChain } from 'wagmi/actions'
-import { getHubChainId, getHubNetworkLabel } from '@/config/network'
-import { walletClientToSigner } from './wagmiAdapter'
-import { isUserRejection } from './txWait'
+import type { JsonRpcSigner } from "ethers";
+import { getConnectorClient, switchChain } from "wagmi/actions";
+import { getHubChainId, getHubNetworkLabel } from "@/config/network";
+import { walletClientToSigner } from "./wagmiAdapter";
+import { isUserRejection } from "./txWait";
 
 /** wagmi error-class check by name — `instanceof` is brittle across the
  *  wagmi / @wagmi/core package boundary (duplicate class identities). */
 function errName(err: unknown): string | undefined {
-  return (err as { name?: string } | null)?.name
+  return (err as { name?: string } | null)?.name;
 }
 
 /**
@@ -32,28 +32,28 @@ export async function resolveSigner(): Promise<JsonRpcSigner> {
   // Dynamic import: config/wagmi executes RainbowKit's getDefaultConfig at
   // module load. Deferring it to call time keeps this module side-effect-free
   // for component tests that stub the flows' signers.
-  const { wagmiConfig } = await import('@/config/wagmi')
-  const chainId = getHubChainId()
+  const { wagmiConfig } = await import("@/config/wagmi");
+  const chainId = getHubChainId();
   try {
-    const client = await getConnectorClient(wagmiConfig, { chainId })
-    return walletClientToSigner(client)
+    const client = await getConnectorClient(wagmiConfig, { chainId });
+    return walletClientToSigner(client);
   } catch (err) {
-    if (errName(err) !== 'ConnectorChainMismatchError') throw err
-    await switchChain(wagmiConfig, { chainId })
-    const client = await getConnectorClient(wagmiConfig, { chainId })
-    return walletClientToSigner(client)
+    if (errName(err) !== "ConnectorChainMismatchError") throw err;
+    await switchChain(wagmiConfig, { chainId });
+    const client = await getConnectorClient(wagmiConfig, { chainId });
+    return walletClientToSigner(client);
   }
 }
 
 /** Map a resolveSigner failure to an actionable user-facing message. */
 export function describeSignerError(err: unknown): string {
   if (isUserRejection(err)) {
-    return `Network switch declined — switch to ${getHubNetworkLabel()} in your wallet and retry.`
+    return `Network switch declined — switch to ${getHubNetworkLabel()} in your wallet and retry.`;
   }
-  if (errName(err) === 'ConnectorNotConnectedError') {
-    return 'Wallet not connected — reconnect and retry.'
+  if (errName(err) === "ConnectorNotConnectedError") {
+    return "Wallet not connected — reconnect and retry.";
   }
-  const short = (err as { shortMessage?: string } | null)?.shortMessage
-  const message = short ?? (err instanceof Error ? err.message : String(err))
-  return `Wallet not ready — ${message}`
+  const short = (err as { shortMessage?: string } | null)?.shortMessage;
+  const message = short ?? (err instanceof Error ? err.message : String(err));
+  return `Wallet not ready — ${message}`;
 }

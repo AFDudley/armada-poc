@@ -56,7 +56,8 @@ describe("RetryQueueStore", function () {
     // as a decimal string. A nonce beyond Number.MAX_SAFE_INTEGER must survive the round-trip
     // byte-exact or the restored message would relay against the wrong on-chain nonce.
     const store = new RetryQueueStore(dir);
-    const bigNonce = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+    const bigNonce =
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935";
     await store.write([makeEntry(bigNonce), makeEntry("7")]);
 
     const data = await store.read();
@@ -84,7 +85,11 @@ describe("RetryQueueStore", function () {
     const path = join(dir, `cctp-retry-${RETRY_QUEUE_KEY}.json`);
     await writeFile(
       path,
-      JSON.stringify({ entries: [{ attempts: "two", nextRetryAt: 0, event: {} }], updatedAt: 0, version: 1 }),
+      JSON.stringify({
+        entries: [{ attempts: "two", nextRetryAt: 0, event: {} }],
+        updatedAt: 0,
+        version: 1,
+      }),
       "utf8",
     );
     let threw = false;

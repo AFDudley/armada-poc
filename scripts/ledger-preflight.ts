@@ -4,7 +4,10 @@
 import { getAddress, verifyMessage } from "ethers";
 
 /** The message the operator approves on the device. Signing it sends no transaction. */
-export function ledgerPreflightMessage(chainId: number, deployCommit: string | undefined): string {
+export function ledgerPreflightMessage(
+  chainId: number,
+  deployCommit: string | undefined,
+): string {
   return [
     "Armada deploy pre-flight",
     `Chain: ${chainId}`,
@@ -14,19 +17,28 @@ export function ledgerPreflightMessage(chainId: number, deployCommit: string | u
 }
 
 /** Hardhat lists local accounts before Ledger accounts, so signer[0] must be checked explicitly. */
-export function assertLedgerSigner(ledgerAddress: string, signerAddress: string): void {
+export function assertLedgerSigner(
+  ledgerAddress: string,
+  signerAddress: string,
+): void {
   if (getAddress(signerAddress) !== getAddress(ledgerAddress)) {
     throw new Error(
       `signer[0] is ${signerAddress}, not the Ledger ${ledgerAddress}. A local account is ` +
-      "configured for this network; remove DEPLOYER_PRIVATE_KEY before a Ledger deploy."
+        "configured for this network; remove DEPLOYER_PRIVATE_KEY before a Ledger deploy.",
     );
   }
 }
 
 /** The pre-flight signature must recover to the Ledger address. */
-export function assertSignedBy(message: string, signature: string, ledgerAddress: string): void {
+export function assertSignedBy(
+  message: string,
+  signature: string,
+  ledgerAddress: string,
+): void {
   const recovered = verifyMessage(message, signature);
   if (getAddress(recovered) !== getAddress(ledgerAddress)) {
-    throw new Error(`Pre-flight message was signed by ${recovered}, not the Ledger ${ledgerAddress}`);
+    throw new Error(
+      `Pre-flight message was signed by ${recovered}, not the Ledger ${ledgerAddress}`,
+    );
   }
 }

@@ -1,21 +1,21 @@
 // ABOUTME: Shared "no data" state — icon + title + optional description + optional action.
 // ABOUTME: Used for absence-of-data surfaces; terminal-success screens stay bespoke.
 
-import * as React from 'react'
-import { type LucideIcon } from 'lucide-react'
+import * as React from "react";
+import { type LucideIcon } from "lucide-react";
 
-import { cn } from '../lib/utils.js'
+import { cn } from "../lib/utils.js";
 
 export interface EmptyStateProps {
   /** Lucide icon component rendered inside a muted rounded tile at the top. */
-  icon: LucideIcon
+  icon: LucideIcon;
   /** Primary title. Rendered in foreground colour with medium weight. */
-  title: React.ReactNode
+  title: React.ReactNode;
   /** Optional body copy underneath the title. */
-  description?: React.ReactNode
+  description?: React.ReactNode;
   /** Optional primary action (button, link, etc.) rendered below the text. */
-  action?: React.ReactNode
-  className?: string
+  action?: React.ReactNode;
+  className?: string;
 }
 
 export function EmptyState({
@@ -28,7 +28,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-3 p-6 text-center',
+        "flex flex-col items-center justify-center gap-3 p-6 text-center",
         className,
       )}
     >
@@ -43,5 +43,5 @@ export function EmptyState({
       </div>
       {action ? <div>{action}</div> : null}
     </div>
-  )
+  );
 }

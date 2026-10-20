@@ -44,11 +44,7 @@ contract ShieldPauseControllerTest is Test, GovernorDeployHelper {
 
         armToken = new ArmadaToken(deployer, address(timelock));
         treasury = new ArmadaTreasuryGov(address(timelock));
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Set SC on governor
         vm.prank(address(timelock));

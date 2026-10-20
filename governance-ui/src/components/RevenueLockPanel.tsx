@@ -1,138 +1,151 @@
 // ABOUTME: RevenueLock status panel showing unlock milestones, beneficiary state, and release action.
 // ABOUTME: Supports multiple cohorts via a selector — primary lock + additional cohorts from manifests.
 
-import { useState, useEffect, useCallback } from 'react'
-import { ethers } from 'ethers'
-import type { GovernanceContracts } from '../hooks/useGovernanceContracts'
-import type { WalletState } from '../hooks/useWallet'
-import type { GovernanceData } from '../hooks/useGovernanceData'
-import { fetchRevenueLockCohorts, type RevenueLockCohort } from '../config'
+import { useState, useEffect, useCallback } from "react";
+import { ethers } from "ethers";
+import type { GovernanceContracts } from "../hooks/useGovernanceContracts";
+import type { WalletState } from "../hooks/useWallet";
+import type { GovernanceData } from "../hooks/useGovernanceData";
+import { fetchRevenueLockCohorts, type RevenueLockCohort } from "../config";
 
 const REVENUE_LOCK_ABI = [
-  'function allocation(address) view returns (uint256)',
-  'function released(address) view returns (uint256)',
-  'function releasable(address) view returns (uint256)',
-  'function unlockPercentage() view returns (uint256)',
-  'function totalAllocation() view returns (uint256)',
-  'function beneficiaryCount() view returns (uint256)',
-  'function release(address delegatee) external',
-]
+  "function allocation(address) view returns (uint256)",
+  "function released(address) view returns (uint256)",
+  "function releasable(address) view returns (uint256)",
+  "function unlockPercentage() view returns (uint256)",
+  "function totalAllocation() view returns (uint256)",
+  "function beneficiaryCount() view returns (uint256)",
+  "function release(address delegatee) external",
+];
 
 const MILESTONES = [
-  { revenue: 10_000, bps: 1000, label: '$10K → 10%' },
-  { revenue: 50_000, bps: 2500, label: '$50K → 25%' },
-  { revenue: 100_000, bps: 4000, label: '$100K → 40%' },
-  { revenue: 250_000, bps: 6000, label: '$250K → 60%' },
-  { revenue: 500_000, bps: 8000, label: '$500K → 80%' },
-  { revenue: 1_000_000, bps: 10000, label: '$1M → 100%' },
-]
+  { revenue: 10_000, bps: 1000, label: "$10K → 10%" },
+  { revenue: 50_000, bps: 2500, label: "$50K → 25%" },
+  { revenue: 100_000, bps: 4000, label: "$100K → 40%" },
+  { revenue: 250_000, bps: 6000, label: "$250K → 60%" },
+  { revenue: 500_000, bps: 8000, label: "$500K → 80%" },
+  { revenue: 1_000_000, bps: 10000, label: "$1M → 100%" },
+];
 
 interface RevenueLockPanelProps {
-  contracts: GovernanceContracts
-  wallet: WalletState
-  govData: GovernanceData
+  contracts: GovernanceContracts;
+  wallet: WalletState;
+  govData: GovernanceData;
 }
 
 interface BeneficiaryState {
-  allocation: bigint
-  released: bigint
-  releasable: bigint
+  allocation: bigint;
+  released: bigint;
+  releasable: bigint;
 }
 
-export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPanelProps) {
-  const [cohorts, setCohorts] = useState<RevenueLockCohort[]>([])
-  const [selectedCohortName, setSelectedCohortName] = useState<string | null>(null)
-  const [unlockBps, setUnlockBps] = useState(0n)
-  const [totalAllocation, setTotalAllocation] = useState(0n)
-  const [beneficiaryCount, setBeneficiaryCount] = useState(0n)
-  const [userState, setUserState] = useState<BeneficiaryState | null>(null)
-  const [delegatee, setDelegatee] = useState('')
-  const [txStatus, setTxStatus] = useState<string | null>(null)
-  const [txError, setTxError] = useState<string | null>(null)
+export function RevenueLockPanel({
+  contracts,
+  wallet,
+  govData,
+}: RevenueLockPanelProps) {
+  const [cohorts, setCohorts] = useState<RevenueLockCohort[]>([]);
+  const [selectedCohortName, setSelectedCohortName] = useState<string | null>(
+    null,
+  );
+  const [unlockBps, setUnlockBps] = useState(0n);
+  const [totalAllocation, setTotalAllocation] = useState(0n);
+  const [beneficiaryCount, setBeneficiaryCount] = useState(0n);
+  const [userState, setUserState] = useState<BeneficiaryState | null>(null);
+  const [delegatee, setDelegatee] = useState("");
+  const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
 
-  const deployment = contracts.deployment
-  const activeCohort = cohorts.find((c) => c.name === selectedCohortName) ?? null
-  const activeAddress = activeCohort?.address ?? null
+  const deployment = contracts.deployment;
+  const activeCohort =
+    cohorts.find((c) => c.name === selectedCohortName) ?? null;
+  const activeAddress = activeCohort?.address ?? null;
 
   // Load cohorts whenever the governance deployment becomes available
   useEffect(() => {
-    if (!deployment) return
-    let cancelled = false
+    if (!deployment) return;
+    let cancelled = false;
     fetchRevenueLockCohorts(deployment)
       .then((list) => {
-        if (cancelled) return
-        setCohorts(list)
+        if (cancelled) return;
+        setCohorts(list);
         if (list.length > 0 && !selectedCohortName) {
-          setSelectedCohortName(list[0].name)
+          setSelectedCohortName(list[0].name);
         }
       })
-      .catch((err) => console.warn('[RevenueLockPanel] cohort discovery failed:', err))
+      .catch((err) =>
+        console.warn("[RevenueLockPanel] cohort discovery failed:", err),
+      );
     return () => {
-      cancelled = true
-    }
-  }, [deployment, selectedCohortName])
+      cancelled = true;
+    };
+  }, [deployment, selectedCohortName]);
 
   const fetchState = useCallback(async () => {
-    if (!contracts.provider || !activeAddress) return
+    if (!contracts.provider || !activeAddress) return;
 
-    const rl = new ethers.Contract(activeAddress, REVENUE_LOCK_ABI, contracts.provider)
+    const rl = new ethers.Contract(
+      activeAddress,
+      REVENUE_LOCK_ABI,
+      contracts.provider,
+    );
 
     try {
       const [unlock, total, count] = await Promise.all([
         rl.unlockPercentage(),
         rl.totalAllocation(),
         rl.beneficiaryCount(),
-      ])
-      setUnlockBps(unlock)
-      setTotalAllocation(total)
-      setBeneficiaryCount(count)
+      ]);
+      setUnlockBps(unlock);
+      setTotalAllocation(total);
+      setBeneficiaryCount(count);
 
       if (wallet.account) {
         const [alloc, released, releasable] = await Promise.all([
           rl.allocation(wallet.account),
           rl.released(wallet.account),
           rl.releasable(wallet.account),
-        ])
-        setUserState({ allocation: alloc, released, releasable })
+        ]);
+        setUserState({ allocation: alloc, released, releasable });
       } else {
-        setUserState(null)
+        setUserState(null);
       }
     } catch (err) {
-      console.warn('[RevenueLockPanel] fetch error:', err)
+      console.warn("[RevenueLockPanel] fetch error:", err);
     }
-  }, [contracts.provider, activeAddress, wallet.account])
+  }, [contracts.provider, activeAddress, wallet.account]);
 
   useEffect(() => {
     // Reset per-cohort state when switching
-    setUnlockBps(0n)
-    setTotalAllocation(0n)
-    setBeneficiaryCount(0n)
-    setUserState(null)
-    fetchState()
-    const id = setInterval(fetchState, 15_000)
-    return () => clearInterval(id)
-  }, [fetchState])
+    setUnlockBps(0n);
+    setTotalAllocation(0n);
+    setBeneficiaryCount(0n);
+    setUserState(null);
+    fetchState();
+    const id = setInterval(fetchState, 15_000);
+    return () => clearInterval(id);
+  }, [fetchState]);
 
   const handleRelease = async () => {
-    if (!wallet.account || !activeAddress) return
-    const target = delegatee.trim() || wallet.account
+    if (!wallet.account || !activeAddress) return;
+    const target = delegatee.trim() || wallet.account;
 
-    setTxStatus('Releasing ARM...')
-    setTxError(null)
+    setTxStatus("Releasing ARM...");
+    setTxError(null);
     try {
-      const signer = await wallet.getSigner()
-      const rl = new ethers.Contract(activeAddress, REVENUE_LOCK_ABI, signer)
-      const tx = await rl.release(target)
-      setTxStatus('Waiting for confirmation...')
-      await tx.wait()
-      setTxStatus('ARM released!')
-      await fetchState()
-      setTimeout(() => setTxStatus(null), 3000)
+      const signer = await wallet.getSigner();
+      const rl = new ethers.Contract(activeAddress, REVENUE_LOCK_ABI, signer);
+      const tx = await rl.release(target);
+      setTxStatus("Waiting for confirmation...");
+      await tx.wait();
+      setTxStatus("ARM released!");
+      await fetchState();
+      setTimeout(() => setTxStatus(null), 3000);
     } catch (err) {
-      setTxError(err instanceof Error ? err.message : 'Release failed')
-      setTxStatus(null)
+      setTxError(err instanceof Error ? err.message : "Release failed");
+      setTxStatus(null);
     }
-  }
+  };
 
   if (cohorts.length === 0) {
     return (
@@ -142,13 +155,22 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
           No RevenueLock cohorts found for this network.
         </p>
       </div>
-    )
+    );
   }
 
-  const fmtArm = (v: bigint) => Number(ethers.formatUnits(v, 18)).toLocaleString('en-US', { maximumFractionDigits: 2 })
-  const fmtUsd = (v: bigint) => '$' + Number(ethers.formatUnits(v, 18)).toLocaleString('en-US', { maximumFractionDigits: 0 })
-  const unlockPct = Number(unlockBps) / 100
-  const currentRevenue = Number(ethers.formatUnits(govData.recognizedRevenue, 18))
+  const fmtArm = (v: bigint) =>
+    Number(ethers.formatUnits(v, 18)).toLocaleString("en-US", {
+      maximumFractionDigits: 2,
+    });
+  const fmtUsd = (v: bigint) =>
+    "$" +
+    Number(ethers.formatUnits(v, 18)).toLocaleString("en-US", {
+      maximumFractionDigits: 0,
+    });
+  const unlockPct = Number(unlockBps) / 100;
+  const currentRevenue = Number(
+    ethers.formatUnits(govData.recognizedRevenue, 18),
+  );
 
   return (
     <div className="space-y-4">
@@ -163,12 +185,14 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
                 onClick={() => setSelectedCohortName(c.name)}
                 className={`rounded px-3 py-1 text-xs ${
                   selectedCohortName === c.name
-                    ? 'bg-blue-700 text-white'
-                    : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                    ? "bg-blue-700 text-white"
+                    : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
                 }`}
               >
                 {c.name}
-                {c.isPrimary && <span className="ml-1 opacity-60">(primary)</span>}
+                {c.isPrimary && (
+                  <span className="ml-1 opacity-60">(primary)</span>
+                )}
               </button>
             ))}
           </div>
@@ -184,11 +208,12 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
       <div className="rounded border border-neutral-800 bg-neutral-900 p-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-neutral-300">
-            Revenue Lock Status{activeCohort ? ` — ${activeCohort.name}` : ''}
+            Revenue Lock Status{activeCohort ? ` — ${activeCohort.name}` : ""}
           </h3>
           {cohorts.length === 1 && activeCohort && (
             <span className="text-xs text-neutral-500 font-mono">
-              {activeCohort.address.slice(0, 6)}...{activeCohort.address.slice(-4)}
+              {activeCohort.address.slice(0, 6)}...
+              {activeCohort.address.slice(-4)}
             </span>
           )}
         </div>
@@ -196,7 +221,9 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
         <div className="mt-3 grid grid-cols-2 gap-4 text-xs">
           <div>
             <span className="text-neutral-500">Recognized Revenue</span>
-            <p className="text-lg font-medium text-neutral-200">{fmtUsd(govData.recognizedRevenue)}</p>
+            <p className="text-lg font-medium text-neutral-200">
+              {fmtUsd(govData.recognizedRevenue)}
+            </p>
           </div>
           <div>
             <span className="text-neutral-500">Unlock Percentage</span>
@@ -217,13 +244,24 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
           <p className="text-xs text-neutral-500 mb-2">Unlock Milestones</p>
           <div className="space-y-1">
             {MILESTONES.map((m) => {
-              const reached = currentRevenue >= m.revenue
+              const reached = currentRevenue >= m.revenue;
               return (
-                <div key={m.revenue} className="flex items-center gap-2 text-xs">
-                  <span className={`inline-block h-2 w-2 rounded-full ${reached ? 'bg-green-500' : 'bg-neutral-700'}`} />
-                  <span className={reached ? 'text-neutral-200' : 'text-neutral-500'}>{m.label}</span>
+                <div
+                  key={m.revenue}
+                  className="flex items-center gap-2 text-xs"
+                >
+                  <span
+                    className={`inline-block h-2 w-2 rounded-full ${reached ? "bg-green-500" : "bg-neutral-700"}`}
+                  />
+                  <span
+                    className={
+                      reached ? "text-neutral-200" : "text-neutral-500"
+                    }
+                  >
+                    {m.label}
+                  </span>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
@@ -232,20 +270,28 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
       {/* Beneficiary Actions */}
       {wallet.account && userState && userState.allocation > 0n && (
         <div className="rounded border border-neutral-800 bg-neutral-900 p-4">
-          <h3 className="text-sm font-medium text-neutral-300">Your Allocation</h3>
+          <h3 className="text-sm font-medium text-neutral-300">
+            Your Allocation
+          </h3>
 
           <div className="mt-3 grid grid-cols-3 gap-4 text-xs">
             <div>
               <span className="text-neutral-500">Total Allocation</span>
-              <p className="text-neutral-200">{fmtArm(userState.allocation)} ARM</p>
+              <p className="text-neutral-200">
+                {fmtArm(userState.allocation)} ARM
+              </p>
             </div>
             <div>
               <span className="text-neutral-500">Released</span>
-              <p className="text-neutral-200">{fmtArm(userState.released)} ARM</p>
+              <p className="text-neutral-200">
+                {fmtArm(userState.released)} ARM
+              </p>
             </div>
             <div>
               <span className="text-neutral-500">Releasable Now</span>
-              <p className="text-green-400 font-medium">{fmtArm(userState.releasable)} ARM</p>
+              <p className="text-green-400 font-medium">
+                {fmtArm(userState.releasable)} ARM
+              </p>
             </div>
           </div>
 
@@ -267,11 +313,13 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
             </div>
           )}
 
-          {userState.releasable === 0n && userState.released < userState.allocation && (
-            <p className="mt-3 text-xs text-neutral-500">
-              No ARM available to release. Waiting for the next revenue milestone.
-            </p>
-          )}
+          {userState.releasable === 0n &&
+            userState.released < userState.allocation && (
+              <p className="mt-3 text-xs text-neutral-500">
+                No ARM available to release. Waiting for the next revenue
+                milestone.
+              </p>
+            )}
 
           {userState.released >= userState.allocation && (
             <p className="mt-3 text-xs text-green-500">
@@ -280,7 +328,9 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
           )}
 
           {txStatus && <p className="mt-2 text-xs text-blue-400">{txStatus}</p>}
-          {txError && <p className="mt-2 text-xs text-red-400 break-all">{txError}</p>}
+          {txError && (
+            <p className="mt-2 text-xs text-red-400 break-all">{txError}</p>
+          )}
         </div>
       )}
 
@@ -300,5 +350,5 @@ export function RevenueLockPanel({ contracts, wallet, govData }: RevenueLockPane
         </div>
       )}
     </div>
-  )
+  );
 }

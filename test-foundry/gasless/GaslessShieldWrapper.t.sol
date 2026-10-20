@@ -41,13 +41,8 @@ contract MockPrivacyPool {
             lastNpks.push(r.preimage.npk);
         }
         // Pull the aggregate value via the wrapper's allowance — same as the real pool's path.
-        (bool ok, ) = usdc.call(
-            abi.encodeWithSignature(
-                "transferFrom(address,address,uint256)",
-                msg.sender,
-                address(this),
-                total
-            )
+        (bool ok,) = usdc.call(
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", msg.sender, address(this), total)
         );
         require(ok, "Mock: transferFrom failed");
         lastIntegrator = integrator;
@@ -59,12 +54,7 @@ contract MockPrivacyPool {
 contract GaslessShieldWrapperTest is Test {
     // Mirror of the wrapper's event so vm.expectEmit can match — Solidity 0.8.17 doesn't resolve
     // event references via ContractName.EventName, so the test contract redeclares it.
-    event GaslessShield(
-        address indexed user,
-        bytes32 requestsHash,
-        uint256 totalAmount,
-        uint256 nonce
-    );
+    event GaslessShield(address indexed user, bytes32 requestsHash, uint256 totalAmount, uint256 nonce);
 
     MockUSDCV2 internal usdc;
     MockPrivacyPool internal pool;
@@ -99,24 +89,15 @@ contract GaslessShieldWrapperTest is Test {
     // Signing helpers
     // ══════════════════════════════════════════════════════════════════════════
 
-    function _permitDigest(uint256 value, uint256 deadline, uint256 nonce)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _permitDigest(uint256 value, uint256 deadline, uint256 nonce) internal view returns (bytes32) {
         bytes32 domainSeparator = usdc.DOMAIN_SEPARATOR();
         bytes32 PERMIT_TYPEHASH =
             keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-        bytes32 structHash =
-            keccak256(abi.encode(PERMIT_TYPEHASH, user, address(wrapper), value, nonce, deadline));
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, user, address(wrapper), value, nonce, deadline));
         return keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
     }
 
-    function _signPermit(uint256 value, uint256 deadline)
-        internal
-        view
-        returns (uint8 v, bytes32 r, bytes32 s)
-    {
+    function _signPermit(uint256 value, uint256 deadline) internal view returns (uint8 v, bytes32 r, bytes32 s) {
         uint256 nonce = usdc.nonces(user);
         (v, r, s) = vm.sign(userPk, _permitDigest(value, deadline, nonce));
     }
@@ -134,45 +115,27 @@ contract GaslessShieldWrapperTest is Test {
         );
     }
 
-    function _signIntent(
-        ShieldRequest[] memory requests,
-        address integrator_,
-        uint256 deadline,
-        uint256 nonce
-    ) internal view returns (bytes memory) {
+    function _signIntent(ShieldRequest[] memory requests, address integrator_, uint256 deadline, uint256 nonce)
+        internal
+        view
+        returns (bytes memory)
+    {
         bytes32 requestsHash = keccak256(abi.encode(requests));
-        bytes32 structHash = keccak256(
-            abi.encode(
-                wrapper.SHIELD_INTENT_TYPEHASH(),
-                user,
-                requestsHash,
-                integrator_,
-                deadline,
-                nonce
-            )
-        );
+        bytes32 structHash =
+            keccak256(abi.encode(wrapper.SHIELD_INTENT_TYPEHASH(), user, requestsHash, integrator_, deadline, nonce));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", _wrapperDomainSeparator(), structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPk, digest);
         return abi.encodePacked(r, s, v);
     }
 
     /// @dev Build the wrapper's grouped scalar params for the given permit signature.
-    function _params(
-        uint256 deadline,
-        uint256 nonce,
-        address integrator_,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) internal view returns (GaslessShieldWrapper.ShieldIntentParams memory) {
+    function _params(uint256 deadline, uint256 nonce, address integrator_, uint8 v, bytes32 r, bytes32 s)
+        internal
+        view
+        returns (GaslessShieldWrapper.ShieldIntentParams memory)
+    {
         return GaslessShieldWrapper.ShieldIntentParams({
-            user: user,
-            deadline: deadline,
-            nonce: nonce,
-            integrator: integrator_,
-            permitV: v,
-            permitR: r,
-            permitS: s
+            user: user, deadline: deadline, nonce: nonce, integrator: integrator_, permitV: v, permitR: r, permitS: s
         });
     }
 
@@ -183,19 +146,12 @@ contract GaslessShieldWrapperTest is Test {
                 token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0}),
                 value: uint120(value)
             }),
-            ciphertext: ShieldCiphertext({
-                encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)],
-                shieldKey: bytes32(0)
-            })
+            ciphertext: ShieldCiphertext({encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)], shieldKey: bytes32(0)})
         });
     }
 
     /// @dev The canonical two-note array: user's own note + a fee note to the relayer's npk.
-    function _twoNotes(uint256 shieldAmount, uint256 fee)
-        internal
-        view
-        returns (ShieldRequest[] memory reqs)
-    {
+    function _twoNotes(uint256 shieldAmount, uint256 fee) internal view returns (ShieldRequest[] memory reqs) {
         reqs = new ShieldRequest[](2);
         reqs[0] = _note(USER_NPK, shieldAmount);
         reqs[1] = _note(RELAYER_NPK, fee);
@@ -352,9 +308,7 @@ contract GaslessShieldWrapperTest is Test {
 
         vm.prank(frontrunner);
         vm.expectRevert("GaslessShieldWrapper: bad intent sig");
-        wrapper.gaslessShield(
-            _params(deadline, 0, makeAddr("evilIntegrator"), v, r, s), intentSig, reqs
-        );
+        wrapper.gaslessShield(_params(deadline, 0, makeAddr("evilIntegrator"), v, r, s), intentSig, reqs);
     }
 
     function test_gaslessShield_permissionlessResubmitSucceeds() public {

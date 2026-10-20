@@ -138,13 +138,8 @@ contract RevenueLockInvariantTest is Test {
         delegatees.push(address(0xD003));
 
         // Deploy RevenueLock
-        revenueLock = new RevenueLock(
-            address(armToken),
-            address(revenueCounter),
-            MAX_INCREASE_PER_DAY,
-            beneficiaries,
-            amounts
-        );
+        revenueLock =
+            new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, beneficiaries, amounts);
 
         // Whitelist all relevant addresses
         address[] memory whitelist = new address[](7);
@@ -167,13 +162,7 @@ contract RevenueLockInvariantTest is Test {
         revenueLock.activate();
 
         // Deploy handler
-        handler = new RevenueLockHandler(
-            revenueLock,
-            armToken,
-            revenueCounter,
-            beneficiaries,
-            delegatees
-        );
+        handler = new RevenueLockHandler(revenueLock, armToken, revenueCounter, beneficiaries, delegatees);
 
         // Target only the handler
         targetContract(address(handler));
@@ -206,11 +195,7 @@ contract RevenueLockInvariantTest is Test {
 
     /// @notice INV-RL3: RevenueLock contract itself has no delegatee (vote-inert)
     function invariant_voteInertness() public {
-        assertEq(
-            armToken.delegates(address(revenueLock)),
-            address(0),
-            "INV-RL3: RevenueLock should never delegate"
-        );
+        assertEq(armToken.delegates(address(revenueLock)), address(0), "INV-RL3: RevenueLock should never delegate");
     }
 
     /// @notice INV-RL4: Any beneficiary that has released > 0 must have a delegatee set
@@ -218,8 +203,7 @@ contract RevenueLockInvariantTest is Test {
         for (uint256 i = 0; i < beneficiaries.length; i++) {
             if (revenueLock.released(beneficiaries[i]) > 0) {
                 assertTrue(
-                    armToken.delegates(beneficiaries[i]) != address(0),
-                    "INV-RL4: released ARM must be delegated"
+                    armToken.delegates(beneficiaries[i]) != address(0), "INV-RL4: released ARM must be delegated"
                 );
             }
         }

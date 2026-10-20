@@ -20,17 +20,22 @@ describe("ArmadaToken — ERC20Votes", function () {
   let windDownContract: SignerWithAddress;
 
   const TOTAL_SUPPLY = ethers.parseUnits("12000000", 18);
-  const ALICE_AMOUNT = ethers.parseUnits("2400000", 18);   // 20%
-  const BOB_AMOUNT = ethers.parseUnits("1800000", 18);     // 15%
+  const ALICE_AMOUNT = ethers.parseUnits("2400000", 18); // 20%
+  const BOB_AMOUNT = ethers.parseUnits("1800000", 18); // 15%
   const TREASURY_AMOUNT = ethers.parseUnits("7800000", 18); // 65%
 
   beforeEach(async function () {
-    [deployer, alice, bob, carol, treasuryWallet, windDownContract] = await ethers.getSigners();
+    [deployer, alice, bob, carol, treasuryWallet, windDownContract] =
+      await ethers.getSigners();
 
     // Deploy TimelockController (needed as timelock for addToWhitelist)
-    const TimelockController = await ethers.getContractFactory("TimelockController");
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
     timelockController = await TimelockController.deploy(
-      2 * ONE_DAY, [], [], deployer.address
+      2 * ONE_DAY,
+      [],
+      [],
+      deployer.address,
     );
     await timelockController.waitForDeployment();
     const timelockAddr = await timelockController.getAddress();
@@ -84,7 +89,9 @@ describe("ArmadaToken — ERC20Votes", function () {
     it("should combine delegated power from multiple delegators", async function () {
       await armToken.connect(alice).delegate(bob.address);
       await armToken.connect(bob).delegate(bob.address);
-      expect(await armToken.getVotes(bob.address)).to.equal(ALICE_AMOUNT + BOB_AMOUNT);
+      expect(await armToken.getVotes(bob.address)).to.equal(
+        ALICE_AMOUNT + BOB_AMOUNT,
+      );
     });
 
     it("should update checkpoints on transfer", async function () {
@@ -112,14 +119,18 @@ describe("ArmadaToken — ERC20Votes", function () {
       const blockBefore = await ethers.provider.getBlockNumber();
 
       // Transfer some away (reduces alice's voting power going forward)
-      await armToken.connect(alice).transfer(bob.address, ethers.parseUnits("100000", 18));
+      await armToken
+        .connect(alice)
+        .transfer(bob.address, ethers.parseUnits("100000", 18));
       await mine(1);
 
       // Historical query at blockBefore should still show full ALICE_AMOUNT
-      expect(await armToken.getPastVotes(alice.address, blockBefore)).to.equal(ALICE_AMOUNT);
+      expect(await armToken.getPastVotes(alice.address, blockBefore)).to.equal(
+        ALICE_AMOUNT,
+      );
       // Current voting power should be reduced
       expect(await armToken.getVotes(alice.address)).to.equal(
-        ALICE_AMOUNT - ethers.parseUnits("100000", 18)
+        ALICE_AMOUNT - ethers.parseUnits("100000", 18),
       );
     });
 
@@ -127,7 +138,9 @@ describe("ArmadaToken — ERC20Votes", function () {
       await mine(1);
       const blockNum = await ethers.provider.getBlockNumber();
       await mine(1);
-      expect(await armToken.getPastTotalSupply(blockNum)).to.equal(TOTAL_SUPPLY);
+      expect(await armToken.getPastTotalSupply(blockNum)).to.equal(
+        TOTAL_SUPPLY,
+      );
     });
 
     it("should deactivate voting power when delegating to address(0)", async function () {
@@ -157,7 +170,9 @@ describe("ArmadaToken — ERC20Votes", function () {
     });
 
     it("should track delegates() correctly", async function () {
-      expect(await armToken.delegates(alice.address)).to.equal(ethers.ZeroAddress);
+      expect(await armToken.delegates(alice.address)).to.equal(
+        ethers.ZeroAddress,
+      );
       await armToken.connect(alice).delegate(bob.address);
       expect(await armToken.delegates(alice.address)).to.equal(bob.address);
     });
@@ -176,24 +191,32 @@ describe("ArmadaToken — ERC20Votes", function () {
       // WHY: Only whitelisted senders may transfer during the restricted phase.
       // A non-whitelisted sender must be blocked regardless of receiver status.
       // First get some tokens to carol via whitelisted alice
-      await armToken.connect(alice).transfer(carol.address, ethers.parseUnits("1000", 18));
+      await armToken
+        .connect(alice)
+        .transfer(carol.address, ethers.parseUnits("1000", 18));
 
       // carol (non-whitelisted sender) → deployer (whitelisted) should fail
       await expect(
-        armToken.connect(carol).transfer(deployer.address, ethers.parseUnits("500", 18))
+        armToken
+          .connect(carol)
+          .transfer(deployer.address, ethers.parseUnits("500", 18)),
       ).to.be.revertedWith("ArmadaToken: transfers restricted");
 
       // carol (non-whitelisted sender) → someone else not whitelisted should also fail
       const [, , , , , , notWhitelisted] = await ethers.getSigners();
       await expect(
-        armToken.connect(carol).transfer(notWhitelisted.address, ethers.parseUnits("500", 18))
+        armToken
+          .connect(carol)
+          .transfer(notWhitelisted.address, ethers.parseUnits("500", 18)),
       ).to.be.revertedWith("ArmadaToken: transfers restricted");
     });
 
     it("should allow whitelisted sender to transfer to anyone", async function () {
       // Alice is whitelisted — can send to non-whitelisted carol
       await expect(
-        armToken.connect(alice).transfer(carol.address, ethers.parseUnits("1000", 18))
+        armToken
+          .connect(alice)
+          .transfer(carol.address, ethers.parseUnits("1000", 18)),
       ).to.not.be.reverted;
     });
 
@@ -201,11 +224,15 @@ describe("ArmadaToken — ERC20Votes", function () {
       // WHY: The whitelist check is sender-only. A whitelisted receiver does NOT
       // make the transfer valid — only the sender's whitelist status is checked.
       // Get tokens to carol (non-whitelisted) via whitelisted alice
-      await armToken.connect(alice).transfer(carol.address, ethers.parseUnits("1000", 18));
+      await armToken
+        .connect(alice)
+        .transfer(carol.address, ethers.parseUnits("1000", 18));
 
       // Carol (non-whitelisted) sending to alice (whitelisted) should still fail
       await expect(
-        armToken.connect(carol).transfer(alice.address, ethers.parseUnits("500", 18))
+        armToken
+          .connect(carol)
+          .transfer(alice.address, ethers.parseUnits("500", 18)),
       ).to.be.revertedWith("ArmadaToken: transfers restricted");
     });
 
@@ -223,7 +250,7 @@ describe("ArmadaToken — ERC20Votes", function () {
     it("should only allow timelock to call addToWhitelist", async function () {
       const [, , , , , , , newAddr] = await ethers.getSigners();
       await expect(
-        armToken.connect(alice).addToWhitelist(newAddr.address)
+        armToken.connect(alice).addToWhitelist(newAddr.address),
       ).to.be.revertedWith("ArmadaToken: not timelock");
     });
 
@@ -234,29 +261,33 @@ describe("ArmadaToken — ERC20Votes", function () {
 
     it("should allow initWhitelist only once (deployer-only)", async function () {
       // initWhitelist was already called in beforeEach — second call should revert
-      await expect(
-        armToken.initWhitelist([carol.address])
-      ).to.be.revertedWith("ArmadaToken: whitelist already initialized");
+      await expect(armToken.initWhitelist([carol.address])).to.be.revertedWith(
+        "ArmadaToken: whitelist already initialized",
+      );
     });
 
     it("should allow all transfers after setTransferable(true)", async function () {
       await armToken.connect(windDownContract).setTransferable(true);
 
       // Now carol (non-whitelisted) can transfer to anyone
-      await armToken.connect(alice).transfer(carol.address, ethers.parseUnits("1000", 18));
+      await armToken
+        .connect(alice)
+        .transfer(carol.address, ethers.parseUnits("1000", 18));
       const [, , , , , , , someone] = await ethers.getSigners();
       await expect(
-        armToken.connect(carol).transfer(someone.address, ethers.parseUnits("500", 18))
+        armToken
+          .connect(carol)
+          .transfer(someone.address, ethers.parseUnits("500", 18)),
       ).to.not.be.reverted;
     });
 
     it("should only allow wind-down contract or timelock to call setTransferable", async function () {
       await expect(
-        armToken.connect(alice).setTransferable(true)
+        armToken.connect(alice).setTransferable(true),
       ).to.be.revertedWith("ArmadaToken: not authorized");
 
       await expect(
-        armToken.connect(deployer).setTransferable(true)
+        armToken.connect(deployer).setTransferable(true),
       ).to.be.revertedWith("ArmadaToken: not authorized");
     });
 
@@ -266,36 +297,43 @@ describe("ArmadaToken — ERC20Votes", function () {
       const timelockSigner = await ethers.getImpersonatedSigner(timelockAddr);
 
       // Fund the timelock with ETH for gas
-      await deployer.sendTransaction({ to: timelockAddr, value: ethers.parseEther("1") });
+      await deployer.sendTransaction({
+        to: timelockAddr,
+        value: ethers.parseEther("1"),
+      });
 
       await armToken.connect(timelockSigner).setTransferable(true);
       expect(await armToken.transferable()).to.equal(true);
 
       // Verify non-whitelisted can now transfer
-      await armToken.connect(alice).transfer(carol.address, ethers.parseUnits("1000", 18));
+      await armToken
+        .connect(alice)
+        .transfer(carol.address, ethers.parseUnits("1000", 18));
       const [, , , , , , , someone] = await ethers.getSigners();
       await expect(
-        armToken.connect(carol).transfer(someone.address, ethers.parseUnits("500", 18))
+        armToken
+          .connect(carol)
+          .transfer(someone.address, ethers.parseUnits("500", 18)),
       ).to.not.be.reverted;
     });
 
     it("should reject setTransferable(false) — one-way only", async function () {
       await expect(
-        armToken.connect(windDownContract).setTransferable(false)
+        armToken.connect(windDownContract).setTransferable(false),
       ).to.be.revertedWith("ArmadaToken: can only enable transfers");
     });
 
     it("should reject setTransferable(true) when already enabled", async function () {
       await armToken.connect(windDownContract).setTransferable(true);
       await expect(
-        armToken.connect(windDownContract).setTransferable(true)
+        armToken.connect(windDownContract).setTransferable(true),
       ).to.be.revertedWith("ArmadaToken: transfers already enabled");
     });
 
     it("should allow setWindDownContract only once (deployer-only)", async function () {
       // Already called in beforeEach
       await expect(
-        armToken.setWindDownContract(carol.address)
+        armToken.setWindDownContract(carol.address),
       ).to.be.revertedWith("ArmadaToken: wind-down already set");
     });
   });
@@ -307,27 +345,26 @@ describe("ArmadaToken — ERC20Votes", function () {
   describe("Treasury noDelegation", function () {
     it("should block treasury from delegating", async function () {
       await expect(
-        armToken.connect(treasuryWallet).delegate(alice.address)
+        armToken.connect(treasuryWallet).delegate(alice.address),
       ).to.be.revertedWith("ArmadaToken: delegation blocked");
     });
 
     it("should block treasury self-delegation", async function () {
       await expect(
-        armToken.connect(treasuryWallet).delegate(treasuryWallet.address)
+        armToken.connect(treasuryWallet).delegate(treasuryWallet.address),
       ).to.be.revertedWith("ArmadaToken: delegation blocked");
     });
 
     it("should allow non-treasury addresses to delegate normally", async function () {
-      await expect(
-        armToken.connect(alice).delegate(alice.address)
-      ).to.not.be.reverted;
+      await expect(armToken.connect(alice).delegate(alice.address)).to.not.be
+        .reverted;
     });
 
     it("should allow initNoDelegation only once (deployer-only)", async function () {
       // WHY: One-shot setter must reject repeat calls to prevent re-initialization.
       // Already called in beforeEach
       await expect(
-        armToken.initNoDelegation([alice.address])
+        armToken.initNoDelegation([alice.address]),
       ).to.be.revertedWith("ArmadaToken: noDelegation already set");
     });
 
@@ -335,17 +372,22 @@ describe("ArmadaToken — ERC20Votes", function () {
       // WHY: Only the deployer can set the delegation blacklist — no other address should
       // be able to call this, even before initialization.
       const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-      const freshToken = await ArmadaToken.deploy(deployer.address, await timelockController.getAddress());
+      const freshToken = await ArmadaToken.deploy(
+        deployer.address,
+        await timelockController.getAddress(),
+      );
       await freshToken.waitForDeployment();
 
       await expect(
-        freshToken.connect(alice).initNoDelegation([treasuryWallet.address])
+        freshToken.connect(alice).initNoDelegation([treasuryWallet.address]),
       ).to.be.revertedWith("ArmadaToken: not deployer");
     });
 
     it("should ensure treasury ARM has zero voting power", async function () {
       // Treasury has tokens but cannot delegate, so voting power is 0
-      expect(await armToken.balanceOf(treasuryWallet.address)).to.equal(TREASURY_AMOUNT);
+      expect(await armToken.balanceOf(treasuryWallet.address)).to.equal(
+        TREASURY_AMOUNT,
+      );
       expect(await armToken.getVotes(treasuryWallet.address)).to.equal(0);
     });
   });

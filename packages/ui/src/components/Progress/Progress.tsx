@@ -9,83 +9,89 @@ import {
   useState,
   type ReactElement,
   type ReactNode,
-} from 'react'
-import { BarTrackTicks } from '../BarTrackTicks'
-import { Tag, type TagDot } from '../Tag'
-import { Tooltip } from '../Tooltip'
-import styles from './Progress.module.css'
+} from "react";
+import { BarTrackTicks } from "../BarTrackTicks";
+import { Tag, type TagDot } from "../Tag";
+import { Tooltip } from "../Tooltip";
+import styles from "./Progress.module.css";
 
-const TIME_LEFT_COUNTER_THRESHOLD_S = 48 * 60 * 60
+const TIME_LEFT_COUNTER_THRESHOLD_S = 48 * 60 * 60;
 
 function formatTimeLeftCounter(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return '00:00:00'
-  const total = Math.floor(seconds)
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  if (!Number.isFinite(seconds) || seconds <= 0) return "00:00:00";
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function formatTimeLeftTag(seconds: number, countdown: ProgressCountdown): string | null {
-  if (!Number.isFinite(seconds) || seconds <= 0) return null
+function formatTimeLeftTag(
+  seconds: number,
+  countdown: ProgressCountdown,
+): string | null {
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
   // 'opens' (pre-open) mode is a deviation from the mockup, which has no
   // pre-open state: the tag counts down to the window opening instead.
   if (seconds < TIME_LEFT_COUNTER_THRESHOLD_S) {
-    const counter = formatTimeLeftCounter(seconds)
-    return countdown === 'opens' ? `OPENS IN ${counter}` : counter
+    const counter = formatTimeLeftCounter(seconds);
+    return countdown === "opens" ? `OPENS IN ${counter}` : counter;
   }
-  const days = Math.floor(seconds / 86400)
-  const dayLabel = `${days} ${days === 1 ? 'DAY' : 'DAYS'}`
-  return countdown === 'opens' ? `OPENS IN ${dayLabel}` : `${dayLabel} LEFT`
+  const days = Math.floor(seconds / 86400);
+  const dayLabel = `${days} ${days === 1 ? "DAY" : "DAYS"}`;
+  return countdown === "opens" ? `OPENS IN ${dayLabel}` : `${dayLabel} LEFT`;
 }
 
-function endsAtToRemainingSeconds(endsAt: number | Date, nowMs = Date.now()): number {
-  const endMs = typeof endsAt === 'number' ? endsAt : endsAt.getTime()
-  return Math.max(0, Math.floor((endMs - nowMs) / 1000))
+function endsAtToRemainingSeconds(
+  endsAt: number | Date,
+  nowMs = Date.now(),
+): number {
+  const endMs = typeof endsAt === "number" ? endsAt : endsAt.getTime();
+  return Math.max(0, Math.floor((endMs - nowMs) / 1000));
 }
 
 /** What `endsAt` counts down to: the window closing ('ends', the default) or,
  *  before the sale starts, the window opening ('opens'). */
-export type ProgressCountdown = 'ends' | 'opens'
+export type ProgressCountdown = "ends" | "opens";
 
 export interface ProgressProps {
-  title?: string
-  totalCommitted?: string
-  committedAmount?: number // raw number e.g. 857000
-  minFundAmount?: number // e.g. 1200000
-  maxAmount?: number // full bar scale e.g. 1800000
+  title?: string;
+  totalCommitted?: string;
+  committedAmount?: number; // raw number e.g. 857000
+  minFundAmount?: number; // e.g. 1200000
+  maxAmount?: number; // full bar scale e.g. 1800000
   /** Countdown tag text (e.g. "3 DAYS LEFT"). Pass `null` to suppress.
    *  Ignored when `endsAt` is set. */
-  daysLeft?: string | null
+  daysLeft?: string | null;
   /** Optional exact-time detail shown in a hover tooltip on the countdown tag. */
-  daysLeftTooltip?: string
+  daysLeftTooltip?: string;
   /**
    * Absolute end of the commit window (unix ms or Date). Under 48h remaining
    * the tag becomes a live HH:MM:SS counter; at ≥ 48h it shows "N DAYS LEFT".
    */
-  endsAt?: number | Date | null
+  endsAt?: number | Date | null;
   /** Countdown wording for `endsAt` — "N DAYS LEFT" ('ends') or
    *  "OPENS IN N DAYS" ('opens'). Defaults to 'ends'. */
-  countdown?: ProgressCountdown
-  participants?: string
-  className?: string
-  animateOnMount?: boolean
-  hideStatus?: boolean
-  status?: string
-  statusDot?: TagDot
+  countdown?: ProgressCountdown;
+  participants?: string;
+  className?: string;
+  animateOnMount?: boolean;
+  hideStatus?: boolean;
+  status?: string;
+  statusDot?: TagDot;
   /** Optional action aligned with the title (e.g. Claim when finalized). */
-  headerAction?: ReactNode
+  headerAction?: ReactNode;
 }
 
 // Deviation from the mockup, which abbreviated to $Nk / $N.NM: the crowdfund
 // shows the exact committed amount, rounded to the nearest dollar.
 function formatCommitted(amount: number) {
-  if (!Number.isFinite(amount)) return '$0'
-  return `$${Math.round(amount).toLocaleString('en-US')}`
+  if (!Number.isFinite(amount)) return "$0";
+  return `$${Math.round(amount).toLocaleString("en-US")}`;
 }
 
 function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
+  return 1 - Math.pow(1 - t, 3);
 }
 
 function useEndsAtLabel(
@@ -93,113 +99,132 @@ function useEndsAtLabel(
   countdown: ProgressCountdown,
 ): string | null | undefined {
   const endMs =
-    endsAt == null ? null : typeof endsAt === 'number' ? endsAt : endsAt.getTime()
+    endsAt == null
+      ? null
+      : typeof endsAt === "number"
+        ? endsAt
+        : endsAt.getTime();
 
-  const [nowMs, setNowMs] = useState(() => Date.now())
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    if (endMs == null) return
-    if (endsAtToRemainingSeconds(endMs, Date.now()) <= 0) return
-    const id = window.setInterval(() => setNowMs(Date.now()), 1000)
-    return () => window.clearInterval(id)
-  }, [endMs])
+    if (endMs == null) return;
+    if (endsAtToRemainingSeconds(endMs, Date.now()) <= 0) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [endMs]);
 
-  if (endMs == null) return undefined
-  return formatTimeLeftTag(endsAtToRemainingSeconds(endMs, nowMs), countdown)
+  if (endMs == null) return undefined;
+  return formatTimeLeftTag(endsAtToRemainingSeconds(endMs, nowMs), countdown);
 }
 
 export function Progress({
-  title = 'Armada Crowdfund',
+  title = "Armada Crowdfund",
   totalCommitted,
   committedAmount = 857000,
   minFundAmount = 1200000,
   maxAmount = 1800000,
-  daysLeft = '3 DAYS LEFT',
+  daysLeft = "3 DAYS LEFT",
   daysLeftTooltip,
   endsAt = null,
-  countdown = 'ends',
-  participants = '85 PARTICIPANTS',
+  countdown = "ends",
+  participants = "85 PARTICIPANTS",
   className,
   animateOnMount = true,
   hideStatus = false,
-  status = 'ACTIVE',
-  statusDot = 'active',
+  status = "ACTIVE",
+  statusDot = "active",
   headerAction,
 }: ProgressProps) {
-  const endsAtLabel = useEndsAtLabel(endsAt, countdown)
-  const timeLeftLabel = endsAt != null ? (endsAtLabel ?? null) : daysLeft
+  const endsAtLabel = useEndsAtLabel(endsAt, countdown);
+  const timeLeftLabel = endsAt != null ? (endsAtLabel ?? null) : daysLeft;
 
   const endMsForMode =
-    endsAt == null ? null : typeof endsAt === 'number' ? endsAt : endsAt.getTime()
+    endsAt == null
+      ? null
+      : typeof endsAt === "number"
+        ? endsAt
+        : endsAt.getTime();
   const remainingForMode =
-    endMsForMode == null ? 0 : endsAtToRemainingSeconds(endMsForMode)
+    endMsForMode == null ? 0 : endsAtToRemainingSeconds(endMsForMode);
   const isLiveCounter =
     endMsForMode != null &&
     remainingForMode > 0 &&
-    remainingForMode < TIME_LEFT_COUNTER_THRESHOLD_S
+    remainingForMode < TIME_LEFT_COUNTER_THRESHOLD_S;
 
-  const filledPct = Math.max(0, Math.min(100, (committedAmount / maxAmount) * 100))
-  const minFundPct = (minFundAmount / maxAmount) * 100
+  const filledPct = Math.max(
+    0,
+    Math.min(100, (committedAmount / maxAmount) * 100),
+  );
+  const minFundPct = (minFundAmount / maxAmount) * 100;
 
   const fundedTowardMin = Math.max(
     0,
     Math.min(100, Math.round((committedAmount / minFundAmount) * 100)),
-  )
-  const leftToMinAmount = Math.max(0, minFundAmount - committedAmount)
-  const leftToMin = `$${Math.round(leftToMinAmount / 1000)}k`
+  );
+  const leftToMinAmount = Math.max(0, minFundAmount - committedAmount);
+  const leftToMin = `$${Math.round(leftToMinAmount / 1000)}k`;
 
   const finalCommittedLabel = useMemo(() => {
-    return totalCommitted ?? formatCommitted(committedAmount)
-  }, [totalCommitted, committedAmount])
+    return totalCommitted ?? formatCommitted(committedAmount);
+  }, [totalCommitted, committedAmount]);
 
-  const [animatedPct, setAnimatedPct] = useState(() => (animateOnMount ? 0 : filledPct))
+  const [animatedPct, setAnimatedPct] = useState(() =>
+    animateOnMount ? 0 : filledPct,
+  );
   const [animatedAmount, setAnimatedAmount] = useState(() =>
     animateOnMount ? 0 : committedAmount,
-  )
+  );
 
   useEffect(() => {
     if (!animateOnMount) {
-      setAnimatedPct(filledPct)
-      setAnimatedAmount(committedAmount)
-      return
+      setAnimatedPct(filledPct);
+      setAnimatedAmount(committedAmount);
+      return;
     }
 
-    let raf = 0
-    const start = performance.now()
-    const durationMs = 1100
+    let raf = 0;
+    const start = performance.now();
+    const durationMs = 1100;
 
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs)
-      const e = easeOutCubic(t)
-      setAnimatedPct(filledPct * e)
-      setAnimatedAmount(committedAmount * e)
-      if (t < 1) raf = requestAnimationFrame(tick)
-    }
+      const t = Math.min(1, (now - start) / durationMs);
+      const e = easeOutCubic(t);
+      setAnimatedPct(filledPct * e);
+      setAnimatedAmount(committedAmount * e);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
 
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [animateOnMount, filledPct, committedAmount])
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [animateOnMount, filledPct, committedAmount]);
 
-  const gradientFillPct = Math.min(animatedPct, minFundPct)
-  const overMinFillPct = Math.max(0, animatedPct - minFundPct)
+  const gradientFillPct = Math.min(animatedPct, minFundPct);
+  const overMinFillPct = Math.max(0, animatedPct - minFundPct);
 
   return (
     <div
       className={[styles.card, hideStatus && styles.cardSansStatus, className]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
     >
       {!hideStatus && (
         <div className={styles.status}>
           <div className={styles.titleRow}>
             <p className={styles.title}>{title}</p>
-            {headerAction ? <div className={styles.headerAction}>{headerAction}</div> : null}
+            {headerAction ? (
+              <div className={styles.headerAction}>{headerAction}</div>
+            ) : null}
           </div>
           <div className={styles.tags}>
             <Tag label={status} dot={statusDot} />
             {timeLeftLabel != null &&
               (daysLeftTooltip ? (
-                <Tooltip variant="centered" content={daysLeftTooltip} placement="bottom">
+                <Tooltip
+                  variant="centered"
+                  content={daysLeftTooltip}
+                  placement="bottom"
+                >
                   <Tag
                     label={timeLeftLabel}
                     className={isLiveCounter ? styles.timeCounter : undefined}
@@ -222,26 +247,34 @@ export function Progress({
           hideStatus && styles.progressSectionDashboard,
         ]
           .filter(Boolean)
-          .join(' ')}
+          .join(" ")}
       >
         <div className={styles.amountBlock}>
           <span className={styles.amountLabel}>Total Committed</span>
           <p className={styles.amount}>
-            {animateOnMount ? formatCommitted(animatedAmount) : finalCommittedLabel}
+            {animateOnMount
+              ? formatCommitted(animatedAmount)
+              : finalCommittedLabel}
           </p>
         </div>
 
         <div className={styles.barWrapper}>
           <div className={styles.barTrack}>
             <BarTrackTicks />
-            <div className={styles.barFillGradient} style={{ width: `${gradientFillPct}%` }} />
+            <div
+              className={styles.barFillGradient}
+              style={{ width: `${gradientFillPct}%` }}
+            />
             {overMinFillPct > 0 && (
               <div
                 className={styles.barFillOverMin}
                 style={{ left: `${minFundPct}%`, width: `${overMinFillPct}%` }}
               />
             )}
-            <div className={styles.threshold} style={{ left: `${minFundPct}%` }} />
+            <div
+              className={styles.threshold}
+              style={{ left: `${minFundPct}%` }}
+            />
           </div>
 
           <div className={styles.barLabels}>
@@ -256,9 +289,14 @@ export function Progress({
               </div>
             </div>
 
-            <div className={styles.labelMinFund} style={{ left: `${minFundPct}%` }}>
+            <div
+              className={styles.labelMinFund}
+              style={{ left: `${minFundPct}%` }}
+            >
               <div className={styles.stat}>
-                <span className={styles.statValue}>{formatCommitted(minFundAmount)}</span>
+                <span className={styles.statValue}>
+                  {formatCommitted(minFundAmount)}
+                </span>
                 <span className={styles.statKey}>MIN FUND</span>
               </div>
             </div>
@@ -272,5 +310,5 @@ export function Progress({
         ) : null}
       </div>
     </div>
-  )
+  );
 }

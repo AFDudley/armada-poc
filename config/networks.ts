@@ -54,8 +54,8 @@ export interface CCTPAddresses {
 
 export interface RevenueLockBeneficiary {
   address: string;
-  amount: string;  // whole-token count (no decimals)
-  label: string;   // human-readable label for deploy logs
+  amount: string; // whole-token count (no decimals)
+  label: string; // human-readable label for deploy logs
 }
 
 /** Treasury per-token outflow rate-limit parameters (ArmadaTreasuryGov.initOutflowConfig). */
@@ -181,7 +181,11 @@ export interface NetworkConfig {
    * initOutflowConfig so the treasury is protected from launch rather than via a
    * fragile first governance vote. Values follow GOVERNANCE.md (issue #348). Amounts are in each token's smallest unit (USDC 6dp, ARM/ETH 18dp).
    */
-  outflowConfig: { usdc: OutflowParams; arm: OutflowParams; eth: OutflowParams };
+  outflowConfig: {
+    usdc: OutflowParams;
+    arm: OutflowParams;
+    eth: OutflowParams;
+  };
   /**
    * Initial Treasury Steward elected at deploy, with its USDC steward budget (#221, #222).
    * deploy_crowdfund calls TreasurySteward.electSteward and treasury.addStewardBudgetToken
@@ -233,10 +237,13 @@ const REVENUE_LOCK_FULL_UNLOCK_USD = 1_000_000n;
  */
 function revenueLockMaxIncreaseEnv(key: string, defaultValue: string): string {
   const value = optionalEnv(key, defaultValue);
-  if (!/^[1-9]\d*$/.test(value) || BigInt(value) > REVENUE_LOCK_FULL_UNLOCK_USD) {
+  if (
+    !/^[1-9]\d*$/.test(value) ||
+    BigInt(value) > REVENUE_LOCK_FULL_UNLOCK_USD
+  ) {
     throw new Error(
       `${key} must be a whole-USD integer between 1 and ${REVENUE_LOCK_FULL_UNLOCK_USD} ` +
-      `(not 18-decimal scaled), got "${value}"`
+        `(not 18-decimal scaled), got "${value}"`,
     );
   }
   return value;
@@ -247,17 +254,22 @@ function revenueLockMaxIncreaseEnv(key: string, defaultValue: string): string {
  * launch path, mainnet and the hardened Sepolia rehearsal, because Launch 1 ships the reserve
  * distributor and both values are immutable once deployed (#582). Optional elsewhere.
  */
-function buildRevenueReserve(env: DeployEnv, hardenTimelock: boolean): NetworkConfig["revenueReserve"] {
+function buildRevenueReserve(
+  env: DeployEnv,
+  hardenTimelock: boolean,
+): NetworkConfig["revenueReserve"] {
   const allocator = process.env.REVENUE_RESERVE_ALLOCATOR?.trim();
   const amount = process.env.REVENUE_RESERVE_AMOUNT?.trim();
   if (Boolean(allocator) !== Boolean(amount)) {
-    throw new Error("Set both REVENUE_RESERVE_ALLOCATOR and REVENUE_RESERVE_AMOUNT, or neither");
+    throw new Error(
+      "Set both REVENUE_RESERVE_ALLOCATOR and REVENUE_RESERVE_AMOUNT, or neither",
+    );
   }
   if (!allocator || !amount) {
     if (env !== "local" && hardenTimelock) {
       throw new Error(
         "REVENUE_RESERVE_ALLOCATOR and REVENUE_RESERVE_AMOUNT are required on the launch path " +
-        "(mainnet, or HARDEN_TIMELOCK=true off-local): Launch 1 deploys the revenue reserve (#582)."
+          "(mainnet, or HARDEN_TIMELOCK=true off-local): Launch 1 deploys the revenue reserve (#582).",
       );
     }
     return undefined;
@@ -275,31 +287,41 @@ export const USDC_DECIMALS = 6;
  * budget is whole USD (default $60,000 per GOVERNANCE.md §Treasury Steward) and may not exceed
  * the USDC outflow absolute limit: a larger value is a units mistake, not a real budget.
  */
-function buildInitialSteward(env: DeployEnv, usdcOutflowAbsolute: string): InitialStewardConfig | undefined {
+function buildInitialSteward(
+  env: DeployEnv,
+  usdcOutflowAbsolute: string,
+): InitialStewardConfig | undefined {
   const address = process.env.INITIAL_STEWARD_ADDRESS?.trim();
   const budgetUsdc = process.env.STEWARD_BUDGET_USDC?.trim();
   const budgetWindow = process.env.STEWARD_BUDGET_WINDOW?.trim();
   if (!address) {
     if (env === "mainnet") requireEnv("INITIAL_STEWARD_ADDRESS");
     if (budgetUsdc || budgetWindow) {
-      throw new Error("STEWARD_BUDGET_* is set but INITIAL_STEWARD_ADDRESS is not; set the steward too, or neither");
+      throw new Error(
+        "STEWARD_BUDGET_* is set but INITIAL_STEWARD_ADDRESS is not; set the steward too, or neither",
+      );
     }
     return undefined;
   }
   if (!/^0x[0-9a-fA-F]{40}$/.test(address) || /^0x0{40}$/.test(address)) {
-    throw new Error(`INITIAL_STEWARD_ADDRESS must be a non-zero 20-byte hex address, got "${address}"`);
+    throw new Error(
+      `INITIAL_STEWARD_ADDRESS must be a non-zero 20-byte hex address, got "${address}"`,
+    );
   }
   const budget = budgetUsdc || "60000";
-  const maxBudgetUsd = BigInt(usdcOutflowAbsolute) / 10n ** BigInt(USDC_DECIMALS);
+  const maxBudgetUsd =
+    BigInt(usdcOutflowAbsolute) / 10n ** BigInt(USDC_DECIMALS);
   if (!/^[1-9]\d*$/.test(budget) || BigInt(budget) > maxBudgetUsd) {
     throw new Error(
       `STEWARD_BUDGET_USDC must be a whole-USD integer between 1 and ${maxBudgetUsd} ` +
-      `(the USDC outflow absolute limit; not 6-decimal scaled), got "${budget}"`
+        `(the USDC outflow absolute limit; not 6-decimal scaled), got "${budget}"`,
     );
   }
   const window = budgetWindow || "2592000";
   if (!/^\d+$/.test(window) || Number(window) < 86400) {
-    throw new Error(`STEWARD_BUDGET_WINDOW must be whole seconds >= 86400 (1 day), got "${window}"`);
+    throw new Error(
+      `STEWARD_BUDGET_WINDOW must be whole seconds >= 86400 (1 day), got "${window}"`,
+    );
   }
   return { address, budgetUsdc: budget, budgetWindow: Number(window) };
 }
@@ -324,7 +346,11 @@ function boolEnv(key: string, defaultValue: boolean): boolean {
  */
 function buildClients(env: DeployEnv): ChainConfig[] {
   // Local defaults for the first two Anvil client chains (ports 8546/8547).
-  const localDefaults: Array<{ rpc: string; chainId: number; cctpDomain: number }> = [
+  const localDefaults: Array<{
+    rpc: string;
+    chainId: number;
+    cctpDomain: number;
+  }> = [
     { rpc: "http://localhost:8546", chainId: 31338, cctpDomain: 101 },
     { rpc: "http://localhost:8547", chainId: 31339, cctpDomain: 102 },
   ];
@@ -332,22 +358,25 @@ function buildClients(env: DeployEnv): ChainConfig[] {
   const count = numEnv("CLIENT_COUNT", env === "local" ? 2 : 0);
   if (count < 1) {
     throw new Error(
-      `CLIENT_COUNT must be >= 1 (got ${count}). Configure at least one client chain.`
+      `CLIENT_COUNT must be >= 1 (got ${count}). Configure at least one client chain.`,
     );
   }
 
   const clients: ChainConfig[] = [];
   for (let i = 1; i <= count; i++) {
     const def = localDefaults[i - 1];
-    const rpc = env === "local" && def
-      ? optionalEnv(`CLIENT_${i}_RPC`, def.rpc)
-      : requireEnv(`CLIENT_${i}_RPC`);
-    const chainId = env === "local" && def
-      ? numEnv(`CLIENT_${i}_CHAIN_ID`, def.chainId)
-      : parseInt(requireEnv(`CLIENT_${i}_CHAIN_ID`), 10);
-    const cctpDomain = env === "local" && def
-      ? numEnv(`CLIENT_${i}_CCTP_DOMAIN`, def.cctpDomain)
-      : parseInt(requireEnv(`CLIENT_${i}_CCTP_DOMAIN`), 10);
+    const rpc =
+      env === "local" && def
+        ? optionalEnv(`CLIENT_${i}_RPC`, def.rpc)
+        : requireEnv(`CLIENT_${i}_RPC`);
+    const chainId =
+      env === "local" && def
+        ? numEnv(`CLIENT_${i}_CHAIN_ID`, def.chainId)
+        : parseInt(requireEnv(`CLIENT_${i}_CHAIN_ID`), 10);
+    const cctpDomain =
+      env === "local" && def
+        ? numEnv(`CLIENT_${i}_CCTP_DOMAIN`, def.cctpDomain)
+        : parseInt(requireEnv(`CLIENT_${i}_CCTP_DOMAIN`), 10);
 
     clients.push({
       rpc,
@@ -376,7 +405,9 @@ function buildClients(env: DeployEnv): ChainConfig[] {
  *
  * JSON format: [{"address":"0x...","amount":"1200000","label":"team member 1"}, ...]
  */
-function buildRevenueLockBeneficiaries(env: DeployEnv): RevenueLockBeneficiary[] {
+function buildRevenueLockBeneficiaries(
+  env: DeployEnv,
+): RevenueLockBeneficiary[] {
   const filePath = process.env.REVENUE_LOCK_BENEFICIARIES_FILE;
   const jsonStr = filePath
     ? require("fs").readFileSync(filePath, "utf-8")
@@ -386,12 +417,14 @@ function buildRevenueLockBeneficiaries(env: DeployEnv): RevenueLockBeneficiary[]
     // Explicit config provided — use it on any environment
     const parsed = JSON.parse(jsonStr) as RevenueLockBeneficiary[];
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      throw new Error("REVENUE_LOCK_BENEFICIARIES_JSON must be a non-empty array");
+      throw new Error(
+        "REVENUE_LOCK_BENEFICIARIES_JSON must be a non-empty array",
+      );
     }
     for (const b of parsed) {
       if (!b.address || !b.amount || !b.label) {
         throw new Error(
-          "Each beneficiary must have address, amount, and label fields"
+          "Each beneficiary must have address, amount, and label fields",
         );
       }
     }
@@ -401,16 +434,28 @@ function buildRevenueLockBeneficiaries(env: DeployEnv): RevenueLockBeneficiary[]
   if (env === "local") {
     // Anvil placeholder beneficiaries for local dev only
     return [
-      { address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", amount: "1200000", label: "team member 1 (Anvil #1)" },
-      { address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", amount: "800000", label: "team member 2 (Anvil #2)" },
-      { address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906", amount: "400000", label: "airdrop (Anvil #3)" },
+      {
+        address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        amount: "1200000",
+        label: "team member 1 (Anvil #1)",
+      },
+      {
+        address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        amount: "800000",
+        label: "team member 2 (Anvil #2)",
+      },
+      {
+        address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+        amount: "400000",
+        label: "airdrop (Anvil #3)",
+      },
     ];
   }
 
   // Non-local with no explicit config — fail loud
   throw new Error(
     "RevenueLock beneficiaries required for non-local environments. " +
-    "Set REVENUE_LOCK_BENEFICIARIES_FILE (path to JSON) or REVENUE_LOCK_BENEFICIARIES_JSON (inline)."
+      "Set REVENUE_LOCK_BENEFICIARIES_FILE (path to JSON) or REVENUE_LOCK_BENEFICIARIES_JSON (inline).",
   );
 }
 
@@ -423,20 +468,24 @@ let _cachedConfig: NetworkConfig | null = null;
 export function getNetworkConfig(): NetworkConfig {
   if (_cachedConfig) return _cachedConfig;
 
-  const env = (optionalEnv("DEPLOY_ENV", "local")) as DeployEnv;
-  const cctpMode = (optionalEnv("CCTP_MODE", "mock")) as CCTPMode;
+  const env = optionalEnv("DEPLOY_ENV", "local") as DeployEnv;
+  const cctpMode = optionalEnv("CCTP_MODE", "mock") as CCTPMode;
 
   // Reject a typo'd or unknown DEPLOY_ENV rather than letting it silently behave
   // like an unconfigured environment (e.g. a misspelled "mainnet" must not slip through).
   const VALID_ENVS: ReadonlyArray<DeployEnv> = ["local", "sepolia", "mainnet"];
   if (!VALID_ENVS.includes(env)) {
-    throw new Error(`Invalid DEPLOY_ENV "${env}". Must be one of: ${VALID_ENVS.join(", ")}`);
+    throw new Error(
+      `Invalid DEPLOY_ENV "${env}". Must be one of: ${VALID_ENVS.join(", ")}`,
+    );
   }
 
   // Mainnet must never run against mock CCTP — that would deploy a fake USDC and
   // mock bridge against a production deployment. Fail loud.
   if (env === "mainnet" && cctpMode !== "real") {
-    throw new Error('CCTP_MODE must be "real" on mainnet (refusing to deploy mock CCTP/USDC).');
+    throw new Error(
+      'CCTP_MODE must be "real" on mainnet (refusing to deploy mock CCTP/USDC).',
+    );
   }
 
   // The PrivacyPool fee recipient is fixed at initialize(). On mainnet it must be the
@@ -446,22 +495,29 @@ export function getNetworkConfig(): NetworkConfig {
   if (env === "mainnet" && treasuryAddress) {
     throw new Error(
       "TREASURY_ADDRESS must not be set on mainnet: the privacy pool fee recipient is the " +
-      "governance treasury (ArmadaTreasuryGov) from the governance manifest."
+        "governance treasury (ArmadaTreasuryGov) from the governance manifest.",
     );
   }
 
   // Deployer signer: a key or a Ledger address for real testnets/mainnet, default Anvil key for local
-  const defaultKey = env === "local"
-    ? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    : "";
+  const defaultKey =
+    env === "local"
+      ? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+      : "";
   const deployerSigner = resolveDeployerSigner(process.env);
-  const deployerLedgerAddress = deployerSigner.kind === "ledger" ? deployerSigner.address : undefined;
-  const deployerPrivateKey = deployerSigner.kind === "key"
-    ? deployerSigner.privateKey
-    : deployerLedgerAddress ? "" : defaultKey;
+  const deployerLedgerAddress =
+    deployerSigner.kind === "ledger" ? deployerSigner.address : undefined;
+  const deployerPrivateKey =
+    deployerSigner.kind === "key"
+      ? deployerSigner.privateKey
+      : deployerLedgerAddress
+        ? ""
+        : defaultKey;
 
   if (env !== "local" && !deployerPrivateKey && !deployerLedgerAddress) {
-    throw new Error("DEPLOYER_PRIVATE_KEY or DEPLOYER_LEDGER_ADDRESS is required for non-local environments");
+    throw new Error(
+      "DEPLOYER_PRIVATE_KEY or DEPLOYER_LEDGER_ADDRESS is required for non-local environments",
+    );
   }
 
   const hub: ChainConfig = {
@@ -496,7 +552,7 @@ export function getNetworkConfig(): NetworkConfig {
   if (env === "mainnet" && !hardenTimelock) {
     throw new Error(
       "HARDEN_TIMELOCK must not be disabled on mainnet: the crowdfund launch bootstraps " +
-      "timelock-only wiring through the harden profile (issue #347)."
+        "timelock-only wiring through the harden profile (issue #347).",
     );
   }
 
@@ -505,22 +561,28 @@ export function getNetworkConfig(): NetworkConfig {
   // absolute amount and the % of treasury balance, no floor (the floor is fixed at deploy).
   const outflowConfig: NetworkConfig["outflowConfig"] = {
     usdc: {
-      windowDuration: numEnv("OUTFLOW_USDC_WINDOW", 2592000),                         // 30 days
-      limitBps: numEnv("OUTFLOW_USDC_BPS", 1000),                                     // 10%
-      limitAbsolute: optionalEnv("OUTFLOW_USDC_ABSOLUTE", "100000000000"),            // 100,000 USDC (6dp)
-      floorAbsolute: optionalEnv("OUTFLOW_USDC_FLOOR", "0"),                          // none
+      windowDuration: numEnv("OUTFLOW_USDC_WINDOW", 2592000), // 30 days
+      limitBps: numEnv("OUTFLOW_USDC_BPS", 1000), // 10%
+      limitAbsolute: optionalEnv("OUTFLOW_USDC_ABSOLUTE", "100000000000"), // 100,000 USDC (6dp)
+      floorAbsolute: optionalEnv("OUTFLOW_USDC_FLOOR", "0"), // none
     },
     arm: {
-      windowDuration: numEnv("OUTFLOW_ARM_WINDOW", 2592000),                          // 30 days
-      limitBps: numEnv("OUTFLOW_ARM_BPS", 300),                                       // 3%
-      limitAbsolute: optionalEnv("OUTFLOW_ARM_ABSOLUTE", "250000000000000000000000"), // 250,000 ARM (18dp)
-      floorAbsolute: optionalEnv("OUTFLOW_ARM_FLOOR", "0"),                           // none
+      windowDuration: numEnv("OUTFLOW_ARM_WINDOW", 2592000), // 30 days
+      limitBps: numEnv("OUTFLOW_ARM_BPS", 300), // 3%
+      limitAbsolute: optionalEnv(
+        "OUTFLOW_ARM_ABSOLUTE",
+        "250000000000000000000000",
+      ), // 250,000 ARM (18dp)
+      floorAbsolute: optionalEnv("OUTFLOW_ARM_FLOOR", "0"), // none
     },
     eth: {
-      windowDuration: numEnv("OUTFLOW_ETH_WINDOW", 2592000),                          // 30 days
-      limitBps: numEnv("OUTFLOW_ETH_BPS", 1000),                                      // 10%
-      limitAbsolute: optionalEnv("OUTFLOW_ETH_ABSOLUTE", "25000000000000000000"),     // 25 ETH (18dp)
-      floorAbsolute: optionalEnv("OUTFLOW_ETH_FLOOR", "0"),                           // none
+      windowDuration: numEnv("OUTFLOW_ETH_WINDOW", 2592000), // 30 days
+      limitBps: numEnv("OUTFLOW_ETH_BPS", 1000), // 10%
+      limitAbsolute: optionalEnv(
+        "OUTFLOW_ETH_ABSOLUTE",
+        "25000000000000000000",
+      ), // 25 ETH (18dp)
+      floorAbsolute: optionalEnv("OUTFLOW_ETH_FLOOR", "0"), // none
     },
   };
 
@@ -533,7 +595,10 @@ export function getNetworkConfig(): NetworkConfig {
     clients,
     cctpShared,
     iris: {
-      apiUrl: optionalEnv("IRIS_API_URL", "https://iris-api-sandbox.circle.com"),
+      apiUrl: optionalEnv(
+        "IRIS_API_URL",
+        "https://iris-api-sandbox.circle.com",
+      ),
       pollIntervalMs: numEnv("IRIS_POLL_INTERVAL_MS", 10000),
       pollTimeoutMs: numEnv("IRIS_POLL_TIMEOUT_MS", 600000),
     },
@@ -556,22 +621,30 @@ export function getNetworkConfig(): NetworkConfig {
     crowdfundOpenDelay: numEnv("CROWDFUND_OPEN_DELAY", 600),
     // No mainnet default: windowStart is immutable, and a relative delay drifts with how long
     // the earlier deploy steps take, so the announced open time must be stated explicitly.
-    crowdfundOpenTime: env === "mainnet"
-      ? requireEnv("CROWDFUND_OPEN_TIME")
-      : process.env.CROWDFUND_OPEN_TIME || undefined,
-    crowdfundOpenMinLead: process.env.CROWDFUND_OPEN_MIN_LEAD_SECONDS || undefined,
+    crowdfundOpenTime:
+      env === "mainnet"
+        ? requireEnv("CROWDFUND_OPEN_TIME")
+        : process.env.CROWDFUND_OPEN_TIME || undefined,
+    crowdfundOpenMinLead:
+      process.env.CROWDFUND_OPEN_MIN_LEAD_SECONDS || undefined,
     // No mainnet default: the deadline arms the permissionless, terminal wind-down trigger
     // and is fixed at the crowdfund deploy, so it must be chosen deliberately (#381 C2).
-    windDownDeadline: env === "mainnet"
-      ? requireEnv("WINDDOWN_DEADLINE")
-      : optionalEnv("WINDDOWN_DEADLINE", "2027-12-31T00:00:00Z"),
+    windDownDeadline:
+      env === "mainnet"
+        ? requireEnv("WINDDOWN_DEADLINE")
+        : optionalEnv("WINDDOWN_DEADLINE", "2027-12-31T00:00:00Z"),
     // Paired with the deadline: below-threshold revenue after it arms the terminal trigger,
     // so mainnet takes no default either.
-    windDownRevenueThreshold: env === "mainnet"
-      ? requireEnv("WINDDOWN_REVENUE_THRESHOLD")
-      : optionalEnv("WINDDOWN_REVENUE_THRESHOLD", "10000"),
-    revenueLockMaxIncreasePerDayUsd: revenueLockMaxIncreaseEnv("REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD", "10000"),
-    cctpFinalityMode: optionalEnv("CCTP_FINALITY_MODE", "fast") as "fast" | "standard",
+    windDownRevenueThreshold:
+      env === "mainnet"
+        ? requireEnv("WINDDOWN_REVENUE_THRESHOLD")
+        : optionalEnv("WINDDOWN_REVENUE_THRESHOLD", "10000"),
+    revenueLockMaxIncreasePerDayUsd: revenueLockMaxIncreaseEnv(
+      "REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD",
+      "10000",
+    ),
+    cctpFinalityMode: optionalEnv("CCTP_FINALITY_MODE", "fast") as
+      "fast" | "standard",
     hardenTimelock,
     outflowConfig,
     initialSteward: buildInitialSteward(env, outflowConfig.usdc.limitAbsolute),
@@ -737,7 +810,8 @@ export function validateCCTPConfig(role: ChainRole): void {
 
   const addrs = getCCTPAddresses(role);
   if (!addrs.tokenMessenger) throw new Error(`CCTP_TOKEN_MESSENGER not set`);
-  if (!addrs.messageTransmitter) throw new Error(`CCTP_MESSAGE_TRANSMITTER not set`);
+  if (!addrs.messageTransmitter)
+    throw new Error(`CCTP_MESSAGE_TRANSMITTER not set`);
   if (!addrs.usdc) {
     const chain = getChainByRole(role);
     throw new Error(`USDC address not set for ${chain.name} (${role})`);

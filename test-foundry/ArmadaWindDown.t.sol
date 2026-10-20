@@ -62,7 +62,10 @@ contract MockRevenueLock {
 /// @dev Mock ERC20 for treasury balance tests
 contract MockUSDCWindDown is ERC20 {
     constructor() ERC20("Mock USDC", "USDC") {}
-    function mint(address to, uint256 amount) external { _mint(to, amount); }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
 }
 
 contract ArmadaWindDownTest is Test, GovernorDeployHelper {
@@ -106,11 +109,7 @@ contract ArmadaWindDownTest is Test, GovernorDeployHelper {
 
         armToken = new ArmadaToken(deployer, address(timelock));
         treasury = new ArmadaTreasuryGov(address(timelock));
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
         pauseController = new ShieldPauseController(address(governor), address(timelock));
         revenueCounter = new MockRevenueCounter();
         revenueLockMock = new MockRevenueLock();
@@ -118,12 +117,7 @@ contract ArmadaWindDownTest is Test, GovernorDeployHelper {
         usdc = new MockUSDCWindDown();
 
         // Deploy redemption (needs ARM token + excluded addresses)
-        redemption = new ArmadaRedemption(
-            address(armToken),
-            address(treasury),
-            revenueLock,
-            crowdfund
-        );
+        redemption = new ArmadaRedemption(address(armToken), address(treasury), revenueLock, crowdfund);
 
         // Deploy wind-down
         windDown = new ArmadaWindDown(
@@ -491,36 +485,64 @@ contract ArmadaWindDownTest is Test, GovernorDeployHelper {
     function test_constructorRejectsZeroAddresses() public {
         vm.expectRevert("ArmadaWindDown: zero armToken");
         new ArmadaWindDown(
-            address(0), address(treasury), address(governor), address(redemption),
-            address(pauseController), address(revenueCounter), revenueLock, address(timelock),
-            REVENUE_THRESHOLD, WIND_DOWN_DEADLINE
+            address(0),
+            address(treasury),
+            address(governor),
+            address(redemption),
+            address(pauseController),
+            address(revenueCounter),
+            revenueLock,
+            address(timelock),
+            REVENUE_THRESHOLD,
+            WIND_DOWN_DEADLINE
         );
     }
 
     function test_constructorRejectsZeroRevenueLock() public {
         vm.expectRevert("ArmadaWindDown: zero revenueLock");
         new ArmadaWindDown(
-            address(armToken), address(treasury), address(governor), address(redemption),
-            address(pauseController), address(revenueCounter), address(0), address(timelock),
-            REVENUE_THRESHOLD, WIND_DOWN_DEADLINE
+            address(armToken),
+            address(treasury),
+            address(governor),
+            address(redemption),
+            address(pauseController),
+            address(revenueCounter),
+            address(0),
+            address(timelock),
+            REVENUE_THRESHOLD,
+            WIND_DOWN_DEADLINE
         );
     }
 
     function test_constructorRejectsDeadlineInPast() public {
         vm.expectRevert("ArmadaWindDown: deadline in past");
         new ArmadaWindDown(
-            address(armToken), address(treasury), address(governor), address(redemption),
-            address(pauseController), address(revenueCounter), revenueLock, address(timelock),
-            REVENUE_THRESHOLD, block.timestamp - 1
+            address(armToken),
+            address(treasury),
+            address(governor),
+            address(redemption),
+            address(pauseController),
+            address(revenueCounter),
+            revenueLock,
+            address(timelock),
+            REVENUE_THRESHOLD,
+            block.timestamp - 1
         );
     }
 
     function test_constructorRejectsZeroThreshold() public {
         vm.expectRevert("ArmadaWindDown: zero threshold");
         new ArmadaWindDown(
-            address(armToken), address(treasury), address(governor), address(redemption),
-            address(pauseController), address(revenueCounter), revenueLock, address(timelock),
-            0, WIND_DOWN_DEADLINE
+            address(armToken),
+            address(treasury),
+            address(governor),
+            address(redemption),
+            address(pauseController),
+            address(revenueCounter),
+            revenueLock,
+            address(timelock),
+            0,
+            WIND_DOWN_DEADLINE
         );
     }
 

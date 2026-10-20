@@ -1,7 +1,7 @@
 // ABOUTME: Builds the approve + multicall TxStep pipeline for the self-fill ("max out") flow.
 // ABOUTME: One USDC approve (if needed) followed by a single atomic multicall bundling all self-invites + per-hop commits.
 
-import { Contract, type Signer } from 'ethers'
+import { Contract, type Signer } from "ethers";
 import {
   CROWDFUND_ABI_FRAGMENTS,
   ERC20_ABI_FRAGMENTS,
@@ -9,20 +9,20 @@ import {
   formatUsdc,
   type ReceiptLogLike,
   type SelfFillPlan,
-} from '@armada/crowdfund-shared'
-import { submitWrite } from '@/lib/submitWrite'
-import type { TxStep } from '@/hooks/useTxPipeline'
+} from "@armada/crowdfund-shared";
+import { submitWrite } from "@/lib/submitWrite";
+import type { TxStep } from "@/hooks/useTxPipeline";
 
 export interface BuildSelfFillStepsParams {
-  signer: Signer
+  signer: Signer;
   /** The participant's own address — the invitee of every self-invite. */
-  selfAddress: string
-  plan: SelfFillPlan
-  usdcAddress: string
-  crowdfundAddress: string
-  needsApproval: (amount: bigint) => boolean
-  refreshAllowance: () => Promise<void>
-  onReceiptLogs?: (logs: readonly ReceiptLogLike[]) => void
+  selfAddress: string;
+  plan: SelfFillPlan;
+  usdcAddress: string;
+  crowdfundAddress: string;
+  needsApproval: (amount: bigint) => boolean;
+  refreshAllowance: () => Promise<void>;
+  onReceiptLogs?: (logs: readonly ReceiptLogLike[]) => void;
 }
 
 /**
@@ -43,28 +43,37 @@ export function buildSelfFillSteps({
   refreshAllowance,
   onReceiptLogs,
 }: BuildSelfFillStepsParams): TxStep[] {
-  const steps: TxStep[] = []
+  const steps: TxStep[] = [];
 
   if (needsApproval(plan.newCommitUsdc)) {
     steps.push({
       label: `Approve ${formatUsdc(plan.newCommitUsdc)} USDC`,
       send: () => {
-        const usdc = new Contract(usdcAddress, ERC20_ABI_FRAGMENTS, signer)
-        return submitWrite(usdc, 'approve', [crowdfundAddress, plan.newCommitUsdc], signer)
+        const usdc = new Contract(usdcAddress, ERC20_ABI_FRAGMENTS, signer);
+        return submitWrite(
+          usdc,
+          "approve",
+          [crowdfundAddress, plan.newCommitUsdc],
+          signer,
+        );
       },
       // Re-read allowance so the multicall step's view of approval is real.
       after: refreshAllowance,
-    })
+    });
   }
 
-  const crowdfund = new Contract(crowdfundAddress, CROWDFUND_ABI_FRAGMENTS, signer)
-  const calls = encodeSelfFillCalls(crowdfund.interface, selfAddress, plan)
+  const crowdfund = new Contract(
+    crowdfundAddress,
+    CROWDFUND_ABI_FRAGMENTS,
+    signer,
+  );
+  const calls = encodeSelfFillCalls(crowdfund.interface, selfAddress, plan);
   steps.push({
     label: `Self-invite & commit · ${plan.totalInvites} invites + ${plan.commits.length} commits`,
-    send: () => submitWrite(crowdfund, 'multicall', [calls], signer),
+    send: () => submitWrite(crowdfund, "multicall", [calls], signer),
     onReceipt: (logs) => onReceiptLogs?.(logs),
     after: refreshAllowance,
-  })
+  });
 
-  return steps
+  return steps;
 }

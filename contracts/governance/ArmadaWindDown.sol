@@ -49,7 +49,6 @@ interface ITreasuryWindDown {
 ///         After trigger, anyone can sweep treasury assets to the redemption contract.
 ///         ARM cannot be swept — treasury ARM is locked permanently.
 contract ArmadaWindDown {
-
     // ============ Immutable References ============
 
     /// @notice ARM governance token
@@ -166,10 +165,7 @@ contract ArmadaWindDown {
         // whatever value the counter currently has.
         try revenueCounter.syncStablecoinRevenue() {} catch {}
 
-        require(
-            revenueCounter.recognizedRevenueUsd() < revenueThreshold,
-            "ArmadaWindDown: revenue meets threshold"
-        );
+        require(revenueCounter.recognizedRevenueUsd() < revenueThreshold, "ArmadaWindDown: revenue meets threshold");
         _executeWindDown(false);
     }
 

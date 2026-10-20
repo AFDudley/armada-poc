@@ -9,7 +9,6 @@ import "../governance/IFeeCollector.sol";
 /// @notice Calculates fee rates, tracks integrator volume/earnings, and exposes cumulative
 ///         protocol revenue via IFeeCollector for RevenueCounter integration.
 interface IArmadaFeeModule is IFeeCollector {
-
     // ══════════════════════════════════════════════════════════════════════════
     // STRUCTS
     // ══════════════════════════════════════════════════════════════════════════
@@ -79,10 +78,10 @@ interface IArmadaFeeModule is IFeeCollector {
     /// @return armadaTake Protocol fee portion
     /// @return integratorFee Integrator fee portion
     /// @return totalFee armadaTake + integratorFee
-    function calculateShieldFee(
-        address integrator,
-        uint256 amount
-    ) external view returns (uint256 armadaTake, uint256 integratorFee, uint256 totalFee);
+    function calculateShieldFee(address integrator, uint256 amount)
+        external
+        view
+        returns (uint256 armadaTake, uint256 integratorFee, uint256 totalFee);
 
     /// @notice Returns the current yield fee rate in basis points.
     function getYieldFeeBps() external view returns (uint256);

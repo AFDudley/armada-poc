@@ -25,14 +25,7 @@ contract CrowdfundRoundingBufferTest is Test {
 
         usdc = new MockUSDCV2("Mock USDC", "USDC");
         armToken = new ArmadaToken(admin, admin);
-        crowdfund = new ArmadaCrowdfund(
-            address(usdc),
-            address(armToken),
-            treasury,
-            admin,
-            admin,
-            block.timestamp
-        );
+        crowdfund = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp);
 
         address[] memory wl = new address[](2);
         wl[0] = admin;
@@ -69,7 +62,9 @@ contract CrowdfundRoundingBufferTest is Test {
         uint256 HOP1_COMMIT = 4_000 * 1e6;
 
         address[] memory seeds = new address[](SEED_COUNT);
-        for (uint256 i = 0; i < SEED_COUNT; i++) seeds[i] = _seed(i);
+        for (uint256 i = 0; i < SEED_COUNT; i++) {
+            seeds[i] = _seed(i);
+        }
         crowdfund.addSeeds(seeds);
 
         for (uint256 i = 0; i < SEED_COUNT; i++) {
@@ -99,7 +94,7 @@ contract CrowdfundRoundingBufferTest is Test {
         // Hop-1 demand receives its full $156K, so all allocations are exact.
         uint256 allocPerSeed = 8_460 * 1e6;
         uint256 totalAlloc = SEED_COUNT * allocPerSeed + HOP1_COUNT * HOP1_COMMIT;
-        uint256 buffer = SEED_COUNT + HOP1_COUNT;  // post-fix: participantNodes.length
+        uint256 buffer = SEED_COUNT + HOP1_COUNT; // post-fix: participantNodes.length
 
         assertEq(crowdfund.totalAllocatedUsdc(), totalAlloc, "alloc total");
         // Treasury receives totalAlloc - buffer.
@@ -140,7 +135,9 @@ contract CrowdfundRoundingBufferTest is Test {
         uint256 SEED_COMMIT = 15_000 * 1e6;
         uint256 HOP1_COMMIT = 4_000 * 1e6;
         address[] memory seeds = new address[](SEED_COUNT);
-        for (uint256 i = 0; i < SEED_COUNT; i++) seeds[i] = _seed(i);
+        for (uint256 i = 0; i < SEED_COUNT; i++) {
+            seeds[i] = _seed(i);
+        }
         crowdfund.addSeeds(seeds);
 
         uint256 totalCommitted = 0;
@@ -203,11 +200,7 @@ contract CrowdfundRoundingBufferTest is Test {
 
         // Settlement identity holds: treasuryReceived + contractDust + sumRefunds == totalCommitted
         uint256 contractDust = usdc.balanceOf(address(crowdfund));
-        assertEq(
-            treasuryReceived + contractDust + sumRefunds,
-            totalCommitted,
-            "settlement identity"
-        );
+        assertEq(treasuryReceived + contractDust + sumRefunds, totalCommitted, "settlement identity");
 
         // Bound check: contractDust ≤ participantNodes.length. The bound is tight —
         // dust < N strictly, so contractDust must be < SEED_COUNT (could equal

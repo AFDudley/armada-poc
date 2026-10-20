@@ -39,7 +39,11 @@
  */
 
 import { execSync } from "child_process";
-import { getNetworkConfig, getGovernanceDeploymentFile, getCrowdfundDeploymentFile } from "../config/networks";
+import {
+  getNetworkConfig,
+  getGovernanceDeploymentFile,
+  getCrowdfundDeploymentFile,
+} from "../config/networks";
 import {
   assertNoPriorLaunch,
   INTERRUPTED_LAUNCH_RUNBOOK,
@@ -77,7 +81,9 @@ function run(cmd: string, description: string): void {
   } catch (e) {
     console.error(`\nFailed: ${description}`);
     console.error(`Command: ${cmd}`);
-    console.error(`If any transaction was sent, this is an interrupted launch. On mainnet do NOT`);
+    console.error(
+      `If any transaction was sent, this is an interrupted launch. On mainnet do NOT`,
+    );
     console.error(`re-run — follow ${INTERRUPTED_LAUNCH_RUNBOOK}.`);
     process.exit(1);
   }
@@ -108,33 +114,48 @@ async function main() {
   // This orchestrator is for real-CCTP, non-local crowdfund launches (mainnet, or the
   // Sepolia dry-run). Local uses `npm run setup:crowdfund`.
   if (config.env === "local") {
-    console.error("Error: this orchestrator is for mainnet / Sepolia-dry-run. For local use: npm run setup:crowdfund");
+    console.error(
+      "Error: this orchestrator is for mainnet / Sepolia-dry-run. For local use: npm run setup:crowdfund",
+    );
     process.exit(1);
   }
   if (config.cctpMode !== "real") {
-    console.error("Error: CCTP_MODE must be 'real' for the crowdfund-launch orchestrator.");
+    console.error(
+      "Error: CCTP_MODE must be 'real' for the crowdfund-launch orchestrator.",
+    );
     process.exit(1);
   }
   if (!config.deployerPrivateKey && !config.deployerLedgerAddress) {
-    console.error("Error: DEPLOYER_PRIVATE_KEY or DEPLOYER_LEDGER_ADDRESS is required.");
+    console.error(
+      "Error: DEPLOYER_PRIVATE_KEY or DEPLOYER_LEDGER_ADDRESS is required.",
+    );
     process.exit(1);
   }
   if (!HUB_NETWORKS.includes(hubNet)) {
-    console.error(`Error: unexpected hub network "${hubNet}". Did you source config/mainnet.env or config/sepolia.env?`);
+    console.error(
+      `Error: unexpected hub network "${hubNet}". Did you source config/mainnet.env or config/sepolia.env?`,
+    );
     process.exit(1);
   }
   // Real-funds guard: a live mainnet deploy must be explicitly confirmed.
   if (config.env === "mainnet" && !DRY_RUN && !CONFIRM_MAINNET) {
-    console.error("Refusing to deploy to MAINNET without explicit confirmation.");
+    console.error(
+      "Refusing to deploy to MAINNET without explicit confirmation.",
+    );
     console.error("  Preview:  npm run setup:mainnet -- --dry-run");
-    console.error("  Deploy:   DEPLOY_COMMIT=<sha> npm run setup:mainnet -- --confirm-mainnet");
+    console.error(
+      "  Deploy:   DEPLOY_COMMIT=<sha> npm run setup:mainnet -- --confirm-mainnet",
+    );
     process.exit(1);
   }
   // Re-run guard: manifests from an earlier mainnet run mean transactions were already
   // sent. Sepolia dry-runs are disposable and may be re-run freely.
   if (config.env === "mainnet") {
     try {
-      assertNoPriorLaunch([getGovernanceDeploymentFile(), getCrowdfundDeploymentFile()]);
+      assertNoPriorLaunch([
+        getGovernanceDeploymentFile(),
+        getCrowdfundDeploymentFile(),
+      ]);
     } catch (e) {
       console.error(`Error: ${(e as Error).message}`);
       process.exit(1);
@@ -146,7 +167,9 @@ async function main() {
   // set (dry-run, Sepolia rehearsal).
   const deployCommit = process.env.DEPLOY_COMMIT?.trim() || undefined;
   if (config.env === "mainnet" && !DRY_RUN && !deployCommit) {
-    console.error("Error: a live mainnet deploy requires DEPLOY_COMMIT=<40-char SHA> (the commit to deploy).");
+    console.error(
+      "Error: a live mainnet deploy requires DEPLOY_COMMIT=<40-char SHA> (the commit to deploy).",
+    );
     process.exit(1);
   }
   if (deployCommit) {
@@ -157,7 +180,9 @@ async function main() {
       process.exit(1);
     }
   } else if (config.env === "mainnet") {
-    console.warn("WARNING: DEPLOY_COMMIT not set — the build is NOT pinned (required for the live run).\n");
+    console.warn(
+      "WARNING: DEPLOY_COMMIT not set — the build is NOT pinned (required for the live run).\n",
+    );
   }
 
   // Open-time pre-flight: windowStart is immutable and the crowdfund step runs after
@@ -167,8 +192,10 @@ async function main() {
   try {
     openMinLead = resolveCrowdfundOpenMinLead(config.crowdfundOpenMinLead);
     openTimestamp = resolveCrowdfundOpenTimestamp(
-      config.crowdfundOpenTime, config.crowdfundOpenDelay,
-      Math.floor(Date.now() / 1000), openMinLead
+      config.crowdfundOpenTime,
+      config.crowdfundOpenDelay,
+      Math.floor(Date.now() / 1000),
+      openMinLead,
     );
   } catch (e) {
     console.error(`Error: ${(e as Error).message}`);
@@ -180,33 +207,63 @@ async function main() {
   console.log("=".repeat(60));
   console.log();
   console.log(`  Env:           ${config.env}`);
-  console.log(`  Hub:           ${config.hub.name} (Chain ${config.hub.chainId}, network ${hubNet})`);
+  console.log(
+    `  Hub:           ${config.hub.name} (Chain ${config.hub.chainId}, network ${hubNet})`,
+  );
   console.log(`  CCTP Mode:     ${config.cctpMode}`);
-  console.log(`  Signer:        ${config.deployerLedgerAddress
-    ? `Ledger ${config.deployerLedgerAddress} (approve each transaction on the device)`
-    : "DEPLOYER_PRIVATE_KEY"}`);
+  console.log(
+    `  Signer:        ${
+      config.deployerLedgerAddress
+        ? `Ledger ${config.deployerLedgerAddress} (approve each transaction on the device)`
+        : "DEPLOYER_PRIVATE_KEY"
+    }`,
+  );
   console.log(`  Harden:        ${config.hardenTimelock}`);
-  console.log(`  Commit:        ${deployCommit ? `${deployCommit} (HEAD matches, tree clean)` : "NOT pinned (DEPLOY_COMMIT not set)"}`);
-  console.log(`  Timelock:      ${config.hardenTimelock ? `deploy at 0 → raise to ${config.timelockDelay}s → renounce` : `${config.timelockDelay}s (deployer keeps roles)`}`);
-  console.log(`  Sale opens:    ${config.crowdfundOpenTime
-    ? `${config.crowdfundOpenTime} (${openTimestamp})`
-    : `~${new Date(openTimestamp * 1000).toISOString()} (${config.crowdfundOpenDelay}s after the crowdfund step; set CROWDFUND_OPEN_TIME for an exact time)`}`);
-  console.log(`  Open lead:     ${config.crowdfundOpenMinLead === undefined
-    ? `${openMinLead}s (default)`
-    : `${openMinLead}s (OVERRIDE — default ${CROWDFUND_OPEN_MIN_LEAD_SECONDS}s)`}`);
+  console.log(
+    `  Commit:        ${deployCommit ? `${deployCommit} (HEAD matches, tree clean)` : "NOT pinned (DEPLOY_COMMIT not set)"}`,
+  );
+  console.log(
+    `  Timelock:      ${config.hardenTimelock ? `deploy at 0 → raise to ${config.timelockDelay}s → renounce` : `${config.timelockDelay}s (deployer keeps roles)`}`,
+  );
+  console.log(
+    `  Sale opens:    ${
+      config.crowdfundOpenTime
+        ? `${config.crowdfundOpenTime} (${openTimestamp})`
+        : `~${new Date(openTimestamp * 1000).toISOString()} (${config.crowdfundOpenDelay}s after the crowdfund step; set CROWDFUND_OPEN_TIME for an exact time)`
+    }`,
+  );
+  console.log(
+    `  Open lead:     ${
+      config.crowdfundOpenMinLead === undefined
+        ? `${openMinLead}s (default)`
+        : `${openMinLead}s (OVERRIDE — default ${CROWDFUND_OPEN_MIN_LEAD_SECONDS}s)`
+    }`,
+  );
   const steward = config.initialSteward;
-  console.log(`  Steward:       ${steward
-    ? `${steward.address} — elected at deploy, budget $${steward.budgetUsdc} USDC per ${steward.budgetWindow}s`
-    : "none at deploy (elected via governance)"}`);
+  console.log(
+    `  Steward:       ${
+      steward
+        ? `${steward.address} — elected at deploy, budget $${steward.budgetUsdc} USDC per ${steward.budgetWindow}s`
+        : "none at deploy (elected via governance)"
+    }`,
+  );
   const reserve = config.revenueReserve;
-  console.log(`  Reserve:       ${reserve
-    ? `${reserve.allocator} — ${reserve.amount} ARM cap (allocator and cap are immutable)`
-    : "none (RevenueLock holds direct beneficiaries only)"}`);
+  console.log(
+    `  Reserve:       ${
+      reserve
+        ? `${reserve.allocator} — ${reserve.amount} ARM cap (allocator and cap are immutable)`
+        : "none (RevenueLock holds direct beneficiaries only)"
+    }`,
+  );
   console.log();
 
   if (!config.hardenTimelock) {
-    console.warn("WARNING: HARDEN_TIMELOCK is off — the deployer will RETAIN timelock roles after deploy.");
-    console.warn("         For a production launch or the #319 dry-run, set HARDEN_TIMELOCK=true.\n");
+    console.warn(
+      "WARNING: HARDEN_TIMELOCK is off — the deployer will RETAIN timelock roles after deploy.",
+    );
+    console.warn(
+      "         For a production launch or the #319 dry-run, set HARDEN_TIMELOCK=true.\n",
+    );
   }
 
   run("npx hardhat compile", "Compiling contracts");
@@ -216,7 +273,7 @@ async function main() {
   if (config.deployerLedgerAddress) {
     run(
       `npx hardhat run scripts/ledger_preflight.ts --network ${hubNet} --no-compile`,
-      "Ledger pre-flight (approve the message on the device)"
+      "Ledger pre-flight (approve the message on the device)",
     );
   }
 
@@ -225,20 +282,20 @@ async function main() {
   //    the crowdfund reads for its USDC address.
   run(
     `npx hardhat run scripts/deploy_cctp_sepolia.ts --network ${hubNet}`,
-    "1/3 Recording real CCTP addresses (hub)"
+    "1/3 Recording real CCTP addresses (hub)",
   );
 
   // 2. Governance (timelock at minDelay 0 when hardening; deployer granted ops roles).
   run(
     `npx hardhat run scripts/deploy_governance.ts --network ${hubNet}`,
-    "2/3 Deploying governance"
+    "2/3 Deploying governance",
   );
 
   // 3. Crowdfund — LAST. Under harden this wires wind-down + outflow, raises the timelock
   //    delay, and renounces every deployer timelock role.
   run(
     `npx hardhat run scripts/deploy_crowdfund.ts --network ${hubNet}`,
-    "3/3 Deploying crowdfund (+ timelock harden)"
+    "3/3 Deploying crowdfund (+ timelock harden)",
   );
 
   // Verification — a check, not a deploy step. Every transaction has been sent by now, so a
@@ -246,14 +303,20 @@ async function main() {
   // skips the Launch 2 groups, whose manifests are absent (mainnet) or from an older stack (Sepolia).
   const verified = runCheck(
     `VERIFY_SCOPE=launch1 npx hardhat run scripts/verify_deployment.ts --network ${hubNet}`,
-    "Verifying deployment"
+    "Verifying deployment",
   );
   if (!verified) {
     console.error("\n" + "=".repeat(60));
-    console.error("  VERIFICATION FAILED — transactions were sent, but the deployment");
+    console.error(
+      "  VERIFICATION FAILED — transactions were sent, but the deployment",
+    );
     console.error("  does not match the expected configuration.");
-    console.error("  Do NOT announce the sale or pin the frontend. Review the FAIL rows above;");
-    console.error(`  do not re-run this script (see ${INTERRUPTED_LAUNCH_RUNBOOK}).`);
+    console.error(
+      "  Do NOT announce the sale or pin the frontend. Review the FAIL rows above;",
+    );
+    console.error(
+      `  do not re-run this script (see ${INTERRUPTED_LAUNCH_RUNBOOK}).`,
+    );
     console.error("=".repeat(60));
     process.exit(1);
   }
@@ -264,18 +327,32 @@ async function main() {
   console.log();
   if (config.hardenTimelock) {
     console.log("Post-deploy checks:");
-    console.log("  - Deployer holds NO timelock roles (admin/proposer/executor/canceller).");
-    console.log(`  - Timelock minDelay == ${config.timelockDelay}s (production value).`);
-    console.log("  - Wind-down wiring + treasury outflow limits set (see verify output).");
+    console.log(
+      "  - Deployer holds NO timelock roles (admin/proposer/executor/canceller).",
+    );
+    console.log(
+      `  - Timelock minDelay == ${config.timelockDelay}s (production value).`,
+    );
+    console.log(
+      "  - Wind-down wiring + treasury outflow limits set (see verify output).",
+    );
     if (config.initialSteward) {
-      console.log("  - Initial steward elected + USDC steward budget set (see verify output).");
+      console.log(
+        "  - Initial steward elected + USDC steward budget set (see verify output).",
+      );
     }
     if (config.revenueReserve) {
-      console.log("  - Reserve distributor bound to RevenueLock with the configured allocator and cap (see verify output).");
+      console.log(
+        "  - Reserve distributor bound to RevenueLock with the configured allocator and cap (see verify output).",
+      );
     }
   }
-  console.log("  - Two-person verify the on-chain treasury outflow limits against PARAMETER_MANIFEST.md §8.2.");
-  console.log("  - Shielded-pool phases (privacy pool, yield, fee module) are a SEPARATE later deploy.");
+  console.log(
+    "  - Two-person verify the on-chain treasury outflow limits against PARAMETER_MANIFEST.md §8.2.",
+  );
+  console.log(
+    "  - Shielded-pool phases (privacy pool, yield, fee module) are a SEPARATE later deploy.",
+  );
   console.log();
 }
 

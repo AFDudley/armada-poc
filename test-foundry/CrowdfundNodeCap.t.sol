@@ -38,9 +38,17 @@ contract CrowdfundNodeCapTest is Test {
         cf.loadArm();
     }
 
-    function _seedAddr(uint256 i) internal pure returns (address) { return address(uint160(0x10000000 + i)); }
-    function _hop1Addr(uint256 i) internal pure returns (address) { return address(uint160(0x20000000 + i)); }
-    function _hop2Addr(uint256 i) internal pure returns (address) { return address(uint160(0x30000000 + i)); }
+    function _seedAddr(uint256 i) internal pure returns (address) {
+        return address(uint160(0x10000000 + i));
+    }
+
+    function _hop1Addr(uint256 i) internal pure returns (address) {
+        return address(uint160(0x20000000 + i));
+    }
+
+    function _hop2Addr(uint256 i) internal pure returns (address) {
+        return address(uint160(0x30000000 + i));
+    }
 
     /// @dev Fill the tree to exactly `target` nodes via seeds + peer invites (launch-team budget
     ///      untouched, so LT paths stay available to probe the boundary). 180 seeds + 540 hop-1 +
@@ -49,7 +57,9 @@ contract CrowdfundNodeCapTest is Test {
         require(target <= 1800, "target too high");
         uint256 seedCount = target < 180 ? target : 180;
         address[] memory seeds = new address[](seedCount);
-        for (uint256 i = 0; i < seedCount; i++) seeds[i] = _seedAddr(i);
+        for (uint256 i = 0; i < seedCount; i++) {
+            seeds[i] = _seedAddr(i);
+        }
         cf.addSeeds(seeds);
         if (cf.getParticipantCount() >= target) return;
 

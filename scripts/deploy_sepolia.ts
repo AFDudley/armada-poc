@@ -70,14 +70,19 @@ async function main() {
   console.log("  SEPOLIA TESTNET DEPLOYMENT");
   console.log("=".repeat(60));
   console.log();
-  console.log(`  Hub:      ${config.hub.name} (Chain ${config.hub.chainId}, Domain ${config.hub.cctpDomain})`);
+  console.log(
+    `  Hub:      ${config.hub.name} (Chain ${config.hub.chainId}, Domain ${config.hub.cctpDomain})`,
+  );
   for (const client of config.clients) {
-    console.log(`  ${client.name}: (Chain ${client.chainId}, Domain ${client.cctpDomain})`);
+    console.log(
+      `  ${client.name}: (Chain ${client.chainId}, Domain ${client.cctpDomain})`,
+    );
   }
   console.log(`  CCTP Mode: ${config.cctpMode}`);
   console.log();
 
-  const shouldRun = (phase: number) => targetPhase === 0 || targetPhase === phase;
+  const shouldRun = (phase: number) =>
+    targetPhase === 0 || targetPhase === phase;
 
   // ========== Phase 1: CCTP Configuration ==========
   if (shouldRun(1)) {
@@ -91,14 +96,14 @@ async function main() {
     // Configure real CCTP addresses
     run(
       "npx hardhat run scripts/deploy_cctp_sepolia.ts --network sepoliaHub",
-      "Configuring CCTP for Hub (Ethereum Sepolia)"
+      "Configuring CCTP for Hub (Ethereum Sepolia)",
     );
 
     if (!hubOnly) {
       for (const client of config.clients) {
         run(
           `npx hardhat run scripts/deploy_cctp_sepolia.ts --network ${client.hardhatNetwork}`,
-          `Configuring CCTP for ${client.name}`
+          `Configuring CCTP for ${client.name}`,
         );
       }
     }
@@ -112,11 +117,11 @@ async function main() {
 
     run(
       "npx hardhat run scripts/deploy_governance.ts --network sepoliaHub",
-      "Deploying Governance Contracts"
+      "Deploying Governance Contracts",
     );
     run(
       "npx hardhat run scripts/deploy_crowdfund.ts --network sepoliaHub",
-      "Deploying Crowdfund Contracts"
+      "Deploying Crowdfund Contracts",
     );
   }
 
@@ -129,14 +134,14 @@ async function main() {
 
     run(
       "npx hardhat run scripts/deploy_privacy_pool.ts --network sepoliaHub",
-      "Deploying Privacy Pool to Hub"
+      "Deploying Privacy Pool to Hub",
     );
 
     if (!hubOnly) {
       for (const client of config.clients) {
         run(
           `npx hardhat run scripts/deploy_privacy_pool.ts --network ${client.hardhatNetwork}`,
-          `Deploying PrivacyPoolClient to ${client.name}`
+          `Deploying PrivacyPoolClient to ${client.name}`,
         );
       }
     }
@@ -154,11 +159,11 @@ async function main() {
 
     run(
       "npx hardhat run scripts/deploy_aave_mock.ts --network sepoliaHub",
-      "Deploying Mock Aave Spoke"
+      "Deploying Mock Aave Spoke",
     );
     run(
       "npx hardhat run scripts/deploy_yield.ts --network sepoliaHub",
-      "Deploying Yield Contracts"
+      "Deploying Yield Contracts",
     );
   }
 
@@ -171,7 +176,7 @@ async function main() {
 
     run(
       "npx hardhat run scripts/link_privacy_pool.ts --network sepoliaHub",
-      "Linking Privacy Pools across chains"
+      "Linking Privacy Pools across chains",
     );
   }
 
@@ -186,7 +191,7 @@ async function main() {
 
     run(
       "npx hardhat run scripts/deploy_fee_module.ts --network sepoliaHub",
-      "Deploying Fee Module"
+      "Deploying Fee Module",
     );
   }
 
@@ -201,14 +206,14 @@ async function main() {
 
     run(
       "npx hardhat run scripts/deploy_gasless_wrapper.ts --network sepoliaHub",
-      "Deploying GaslessShieldWrapper (Hub)"
+      "Deploying GaslessShieldWrapper (Hub)",
     );
 
     if (!hubOnly) {
       for (const client of config.clients) {
         run(
           `npx hardhat run scripts/deploy_gasless_wrapper.ts --network ${client.hardhatNetwork}`,
-          `Deploying GaslessShieldWrapperClient (${client.name})`
+          `Deploying GaslessShieldWrapperClient (${client.name})`,
         );
       }
     }
@@ -219,7 +224,9 @@ async function main() {
   console.log("=".repeat(60));
   console.log();
   console.log("Next steps:");
-  console.log("  1. Fund deployer with testnet USDC: https://faucet.circle.com/");
+  console.log(
+    "  1. Fund deployer with testnet USDC: https://faucet.circle.com/",
+  );
   console.log("  2. Start relayer: npm run relayer:sepolia");
   console.log("  3. Test cross-chain shield flow");
   console.log();

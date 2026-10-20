@@ -91,7 +91,9 @@ abstract contract YieldFeeSetup is Test {
         vault = new ArmadaYieldVault(address(spoke), 0, address(treasury), "Armada Yield USDC", "ayUSDC");
 
         address[] memory actors = new address[](4);
-        for (uint256 i = 0; i < actors.length; i++) actors[i] = address(uint160(0x7100 + i));
+        for (uint256 i = 0; i < actors.length; i++) {
+            actors[i] = address(uint160(0x7100 + i));
+        }
         handler = new YieldFeeHandler(vault, usdc, actors);
         usdc.addMinter(address(handler));
     }
@@ -135,10 +137,10 @@ contract YieldFeeAccountingInvariantTest is YieldFeeSetup {
     ///      redeems, a second holder deposits and earns yield. The fee on the second year's yield
     ///      must still be yieldFeeBps of it.
     function test_feeOnYieldEarnedAfterARedemption() public {
-        handler.deposit(0, 1_000_000e6);                    // holder 0
+        handler.deposit(0, 1_000_000e6); // holder 0
         vm.warp(block.timestamp + 365 days);
         handler.redeem(0, vault.balanceOf(handler.actors(0))); // holder 0 redeems everything
-        handler.deposit(1, 1_000_000e6);                    // holder 1
+        handler.deposit(1, 1_000_000e6); // holder 1
         vm.warp(block.timestamp + 365 days);
         _assertFeeMatchesYield();
     }

@@ -27,9 +27,9 @@ contract PrivacyPoolFullHandler is Test {
     address public treasury;
 
     // Ghost variables for invariant verification
-    uint256 public ghost_totalShieldedGross;   // Total USDC passed to shield() (before fee deduction)
-    uint256 public ghost_totalInsertions;       // Total merkle leaves inserted
-    uint256 public ghost_shieldCallCount;       // Number of successful shield() calls
+    uint256 public ghost_totalShieldedGross; // Total USDC passed to shield() (before fee deduction)
+    uint256 public ghost_totalInsertions; // Total merkle leaves inserted
+    uint256 public ghost_shieldCallCount; // Number of successful shield() calls
 
     // Nullifier tracking for INV-2
     struct NullifierRecord {
@@ -46,12 +46,7 @@ contract PrivacyPoolFullHandler is Test {
     address[] public shielders;
     uint256 constant USDC_PER_SHIELDER = 10_000_000 * 1e6; // 10M USDC each
 
-    constructor(
-        PrivacyPool _pool,
-        MockUSDCV2 _usdc,
-        address _treasury,
-        address[] memory _shielders
-    ) {
+    constructor(PrivacyPool _pool, MockUSDCV2 _usdc, address _treasury, address[] memory _shielders) {
         pool = _pool;
         usdc = _usdc;
         treasury = _treasury;
@@ -82,17 +77,10 @@ contract PrivacyPoolFullHandler is Test {
         requests[0] = ShieldRequest({
             preimage: CommitmentPreimage({
                 npk: npk,
-                token: TokenData({
-                    tokenType: TokenType.ERC20,
-                    tokenAddress: address(usdc),
-                    tokenSubID: 0
-                }),
+                token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0}),
                 value: uint120(amount)
             }),
-            ciphertext: ShieldCiphertext({
-                encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)],
-                shieldKey: bytes32(0)
-            })
+            ciphertext: ShieldCiphertext({encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)], shieldKey: bytes32(0)})
         });
 
         vm.startPrank(shielder);
@@ -128,16 +116,11 @@ contract PrivacyPoolFullHandler is Test {
             requests[i] = ShieldRequest({
                 preimage: CommitmentPreimage({
                     npk: npk,
-                    token: TokenData({
-                        tokenType: TokenType.ERC20,
-                        tokenAddress: address(usdc),
-                        tokenSubID: 0
-                    }),
+                    token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0}),
                     value: uint120(perAmount)
                 }),
                 ciphertext: ShieldCiphertext({
-                    encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)],
-                    shieldKey: bytes32(0)
+                    encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)], shieldKey: bytes32(0)
                 })
             });
         }
@@ -286,10 +269,7 @@ contract PrivacyPoolFullInvariantTest is Test, PoseidonLinker {
     function invariant_merkleRootInHistory() public view {
         bytes32 root = pool.merkleRoot();
         uint256 treeNum = pool.treeNumber();
-        assertTrue(
-            pool.rootHistory(treeNum, root),
-            "INV-3: Current merkle root not in rootHistory"
-        );
+        assertTrue(pool.rootHistory(treeNum, root), "INV-3: Current merkle root not in rootHistory");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -298,11 +278,7 @@ contract PrivacyPoolFullInvariantTest is Test, PoseidonLinker {
 
     /// @notice treeNumber never decreases
     function invariant_treeNumberMonotonic() public view {
-        assertGe(
-            pool.treeNumber(),
-            handler.ghost_lastTreeNumber(),
-            "INV-4: treeNumber decreased"
-        );
+        assertGe(pool.treeNumber(), handler.ghost_lastTreeNumber(), "INV-4: treeNumber decreased");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -311,11 +287,7 @@ contract PrivacyPoolFullInvariantTest is Test, PoseidonLinker {
 
     /// @notice nextLeafIndex never exceeds 2^16
     function invariant_nextLeafIndexBounded() public view {
-        assertLe(
-            pool.nextLeafIndex(),
-            2 ** 16,
-            "nextLeafIndex exceeds tree capacity"
-        );
+        assertLe(pool.nextLeafIndex(), 2 ** 16, "nextLeafIndex exceeds tree capacity");
     }
 
     /// @notice Insertion count consistency — ghost matches contract state

@@ -20,7 +20,10 @@ import * as path from "path";
 import { buildPoseidon } from "circomlibjs";
 
 const poseidonBytecode = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "lib", "poseidon_bytecode.json"), "utf-8")
+  fs.readFileSync(
+    path.join(__dirname, "..", "lib", "poseidon_bytecode.json"),
+    "utf-8",
+  ),
 );
 
 import {
@@ -29,7 +32,8 @@ import {
 } from "../lib/artifacts";
 
 const DOMAINS = { hub: 100, client: 101 };
-const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const BPS_DENOMINATOR = 10000n;
 
 describe("Fee Module Integration", function () {
@@ -92,40 +96,62 @@ describe("Fee Module Integration", function () {
     hubUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
     usdcAddress = await hubUsdc.getAddress();
 
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.hub, relayerAddress);
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
+    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.hub,
+      relayerAddress,
+    );
 
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     hubTokenMessenger = await MockTokenMessengerV2.deploy(
       await hubMessageTransmitter.getAddress(),
       usdcAddress,
-      DOMAINS.hub
+      DOMAINS.hub,
     );
-    await hubMessageTransmitter.setTokenMessenger(await hubTokenMessenger.getAddress());
+    await hubMessageTransmitter.setTokenMessenger(
+      await hubTokenMessenger.getAddress(),
+    );
     await hubUsdc.addMinter(await hubTokenMessenger.getAddress());
 
     // Poseidon libraries
-    const poseidonT3Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT3.bytecode });
+    const poseidonT3Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT3.bytecode,
+    });
     const poseidonT3Address = (await poseidonT3Tx.wait())!.contractAddress!;
-    const poseidonT4Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT4.bytecode });
+    const poseidonT4Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT4.bytecode,
+    });
     const poseidonT4Address = (await poseidonT4Tx.wait())!.contractAddress!;
 
     // Modules
     const merkleModule = await (
-      await ethers.getContractFactory("MerkleModule", { libraries: { PoseidonT3: poseidonT3Address } })
+      await ethers.getContractFactory("MerkleModule", {
+        libraries: { PoseidonT3: poseidonT3Address },
+      })
     ).deploy();
-    const verifierModule = await (await ethers.getContractFactory("VerifierModule")).deploy();
+    const verifierModule = await (
+      await ethers.getContractFactory("VerifierModule")
+    ).deploy();
     shieldModule = await (
-      await ethers.getContractFactory("ShieldModule", { libraries: { PoseidonT4: poseidonT4Address } })
+      await ethers.getContractFactory("ShieldModule", {
+        libraries: { PoseidonT4: poseidonT4Address },
+      })
     ).deploy();
     const transactModule = await (
-      await ethers.getContractFactory("TransactModule", { libraries: { PoseidonT4: poseidonT4Address } })
+      await ethers.getContractFactory("TransactModule", {
+        libraries: { PoseidonT4: poseidonT4Address },
+      })
     ).deploy();
 
     // Treasury (deployed before PrivacyPool so address is available for initialize).
     // ArmadaTreasuryGov is the unified treasury (#152/#154); deployer acts as
     // timelock-owner for this fee-module integration test.
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     armadaTreasury = await ArmadaTreasuryGov.deploy(deployerAddress);
     treasuryAddress = await armadaTreasury.getAddress();
 
@@ -144,7 +170,7 @@ describe("Fee Module Integration", function () {
       usdcAddress,
       DOMAINS.hub,
       deployerAddress,
-      treasuryAddress
+      treasuryAddress,
     );
 
     await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, false);
@@ -162,26 +188,33 @@ describe("Fee Module Integration", function () {
     await hubUsdc.addMinter(await mockAaveSpoke.getAddress());
     await mockAaveSpoke.addReserve(usdcAddress, 500, true);
 
-    const ArmadaYieldVault = await ethers.getContractFactory("ArmadaYieldVault");
+    const ArmadaYieldVault =
+      await ethers.getContractFactory("ArmadaYieldVault");
     armadaYieldVault = await ArmadaYieldVault.deploy(
       await mockAaveSpoke.getAddress(),
       0,
       treasuryAddress,
       "Armada Yield USDC",
-      "ayUSDC"
+      "ayUSDC",
     );
     vaultAddress = await armadaYieldVault.getAddress();
 
     // Deploy proxy
-    const initData = ArmadaFeeModule.interface.encodeFunctionData("initialize", [
-      deployerAddress,      // owner
-      treasuryAddress,      // treasury
-      privacyPoolAddress,   // privacyPool
-      vaultAddress,         // yieldVault
-      usdcAddress,          // usdc (only asset whose fees are recorded)
-    ]);
+    const initData = ArmadaFeeModule.interface.encodeFunctionData(
+      "initialize",
+      [
+        deployerAddress, // owner
+        treasuryAddress, // treasury
+        privacyPoolAddress, // privacyPool
+        vaultAddress, // yieldVault
+        usdcAddress, // usdc (only asset whose fees are recorded)
+      ],
+    );
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-    const feeModuleProxy = await ERC1967Proxy.deploy(await feeModuleImpl.getAddress(), initData);
+    const feeModuleProxy = await ERC1967Proxy.deploy(
+      await feeModuleImpl.getAddress(),
+      initData,
+    );
     await feeModuleProxy.waitForDeployment();
     feeModuleAddress = await feeModuleProxy.getAddress();
     feeModule = ArmadaFeeModule.attach(feeModuleAddress);
@@ -191,13 +224,16 @@ describe("Fee Module Integration", function () {
     await armadaYieldVault.setFeeModule(feeModuleAddress);
 
     // ── Deploy yield adapter ──
-    const MockAdapterRegistry = await ethers.getContractFactory("MockAdapterRegistry");
+    const MockAdapterRegistry = await ethers.getContractFactory(
+      "MockAdapterRegistry",
+    );
     const mockRegistry = await MockAdapterRegistry.deploy();
-    const ArmadaYieldAdapter = await ethers.getContractFactory("ArmadaYieldAdapter");
+    const ArmadaYieldAdapter =
+      await ethers.getContractFactory("ArmadaYieldAdapter");
     armadaYieldAdapter = await ArmadaYieldAdapter.deploy(
       usdcAddress,
       vaultAddress,
-      await mockRegistry.getAddress()
+      await mockRegistry.getAddress(),
     );
     adapterAddress = await armadaYieldAdapter.getAddress();
     await mockRegistry.setAuthorized(adapterAddress, true);
@@ -209,16 +245,22 @@ describe("Fee Module Integration", function () {
 
     // ── Deploy Client chain ──
     clientUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
-    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.client, relayerAddress);
+    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.client,
+      relayerAddress,
+    );
     clientTokenMessenger = await MockTokenMessengerV2.deploy(
       await clientMessageTransmitter.getAddress(),
       await clientUsdc.getAddress(),
-      DOMAINS.client
+      DOMAINS.client,
     );
-    await clientMessageTransmitter.setTokenMessenger(await clientTokenMessenger.getAddress());
+    await clientMessageTransmitter.setTokenMessenger(
+      await clientTokenMessenger.getAddress(),
+    );
     await clientUsdc.addMinter(await clientTokenMessenger.getAddress());
 
-    const PrivacyPoolClient = await ethers.getContractFactory("PrivacyPoolClient");
+    const PrivacyPoolClient =
+      await ethers.getContractFactory("PrivacyPoolClient");
     privacyPoolClient = await PrivacyPoolClient.deploy();
     clientAddress = await privacyPoolClient.getAddress();
 
@@ -229,13 +271,19 @@ describe("Fee Module Integration", function () {
       DOMAINS.client,
       DOMAINS.hub,
       ethers.ZeroHash,
-      deployerAddress
+      deployerAddress,
     );
 
     // Hook routers
     const CCTPHookRouter = await ethers.getContractFactory("CCTPHookRouter");
-    hubHookRouter = await CCTPHookRouter.deploy(await hubMessageTransmitter.getAddress(), await hubTokenMessenger.getAddress());
-    clientHookRouter = await CCTPHookRouter.deploy(await clientMessageTransmitter.getAddress(), await clientTokenMessenger.getAddress());
+    hubHookRouter = await CCTPHookRouter.deploy(
+      await hubMessageTransmitter.getAddress(),
+      await hubTokenMessenger.getAddress(),
+    );
+    clientHookRouter = await CCTPHookRouter.deploy(
+      await clientMessageTransmitter.getAddress(),
+      await clientTokenMessenger.getAddress(),
+    );
 
     // Link hub ↔ client
     const hubPoolBytes32 = ethers.zeroPadValue(privacyPoolAddress, 32);
@@ -243,17 +291,38 @@ describe("Fee Module Integration", function () {
     await privacyPool.setRemotePool(DOMAINS.client, clientBytes32);
     await privacyPoolClient.setHubPool(DOMAINS.hub, hubPoolBytes32);
 
-    const hubTmBytes32 = ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32);
-    const clientTmBytes32 = ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32);
-    await hubTokenMessenger.setRemoteTokenMessenger(DOMAINS.client, clientTmBytes32);
-    await clientTokenMessenger.setRemoteTokenMessenger(DOMAINS.hub, hubTmBytes32);
+    const hubTmBytes32 = ethers.zeroPadValue(
+      await hubTokenMessenger.getAddress(),
+      32,
+    );
+    const clientTmBytes32 = ethers.zeroPadValue(
+      await clientTokenMessenger.getAddress(),
+      32,
+    );
+    await hubTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.client,
+      clientTmBytes32,
+    );
+    await clientTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.hub,
+      hubTmBytes32,
+    );
 
     await privacyPool.setHookRouter(await hubHookRouter.getAddress());
     await privacyPoolClient.setHookRouter(await clientHookRouter.getAddress());
-    await privacyPoolClient.setHubHookRouter(ethers.zeroPadValue(await hubHookRouter.getAddress(), 32));
-    await privacyPool.setRemoteHookRouter(DOMAINS.client, ethers.zeroPadValue(await clientHookRouter.getAddress(), 32));
-    await hubMessageTransmitter.connect(relayer).setRelayer(await hubHookRouter.getAddress());
-    await clientMessageTransmitter.connect(relayer).setRelayer(await clientHookRouter.getAddress());
+    await privacyPoolClient.setHubHookRouter(
+      ethers.zeroPadValue(await hubHookRouter.getAddress(), 32),
+    );
+    await privacyPool.setRemoteHookRouter(
+      DOMAINS.client,
+      ethers.zeroPadValue(await clientHookRouter.getAddress(), 32),
+    );
+    await hubMessageTransmitter
+      .connect(relayer)
+      .setRelayer(await hubHookRouter.getAddress());
+    await clientMessageTransmitter
+      .connect(relayer)
+      .setRelayer(await clientHookRouter.getAddress());
 
     // Fund Alice
     await hubUsdc.mint(aliceAddress, ethers.parseUnits("100000", 6));
@@ -271,7 +340,11 @@ describe("Fee Module Integration", function () {
     return ethers.zeroPadValue(ethers.toBeHex(raw % SNARK_SCALAR_FIELD), 32);
   }
 
-  function makeShieldRequest(amount: bigint, npkSeed?: string, tokenAddress: string = usdcAddress) {
+  function makeShieldRequest(
+    amount: bigint,
+    npkSeed?: string,
+    tokenAddress: string = usdcAddress,
+  ) {
     return {
       preimage: {
         npk: validNpk(npkSeed ?? `shield-${Date.now()}-${Math.random()}`),
@@ -300,10 +373,12 @@ describe("Fee Module Integration", function () {
       const treasuryBefore = await hubUsdc.balanceOf(treasuryAddress);
       const poolBefore = await hubUsdc.balanceOf(privacyPoolAddress);
 
-      await privacyPool.connect(alice).shield([makeShieldRequest(SHIELD_AMOUNT)], ethers.ZeroAddress);
+      await privacyPool
+        .connect(alice)
+        .shield([makeShieldRequest(SHIELD_AMOUNT)], ethers.ZeroAddress);
 
       // Default baseArmadaTakeBps = 50 (0.50%)
-      const expectedArmadaTake = SHIELD_AMOUNT * 50n / BPS_DENOMINATOR;
+      const expectedArmadaTake = (SHIELD_AMOUNT * 50n) / BPS_DENOMINATOR;
       const expectedBase = SHIELD_AMOUNT - expectedArmadaTake;
 
       const treasuryAfter = await hubUsdc.balanceOf(treasuryAddress);
@@ -317,9 +392,11 @@ describe("Fee Module Integration", function () {
       const cumulativeBefore = await feeModule.cumulativeArmadaFees();
 
       await hubUsdc.connect(alice).approve(privacyPoolAddress, SHIELD_AMOUNT);
-      await privacyPool.connect(alice).shield([makeShieldRequest(SHIELD_AMOUNT)], ethers.ZeroAddress);
+      await privacyPool
+        .connect(alice)
+        .shield([makeShieldRequest(SHIELD_AMOUNT)], ethers.ZeroAddress);
 
-      const expectedArmadaTake = SHIELD_AMOUNT * 50n / BPS_DENOMINATOR;
+      const expectedArmadaTake = (SHIELD_AMOUNT * 50n) / BPS_DENOMINATOR;
       const cumulativeAfter = await feeModule.cumulativeArmadaFees();
 
       expect(cumulativeAfter - cumulativeBefore).to.equal(expectedArmadaTake);
@@ -348,20 +425,26 @@ describe("Fee Module Integration", function () {
       const integratorBefore = await hubUsdc.balanceOf(integratorAddress);
       const poolBefore = await hubUsdc.balanceOf(privacyPoolAddress);
 
-      await privacyPool.connect(alice).shield([makeShieldRequest(SHIELD_AMOUNT)], integratorAddress);
+      await privacyPool
+        .connect(alice)
+        .shield([makeShieldRequest(SHIELD_AMOUNT)], integratorAddress);
 
       // baseArmadaTakeBps = 50, integrator baseFee = 100
       // No tier discount yet (volume below $250k threshold) so bonus = 0
-      const expectedArmadaTake = SHIELD_AMOUNT * 50n / BPS_DENOMINATOR;
-      const expectedIntegratorFee = SHIELD_AMOUNT * INTEGRATOR_FEE_BPS / BPS_DENOMINATOR;
-      const expectedBase = SHIELD_AMOUNT - expectedArmadaTake - expectedIntegratorFee;
+      const expectedArmadaTake = (SHIELD_AMOUNT * 50n) / BPS_DENOMINATOR;
+      const expectedIntegratorFee =
+        (SHIELD_AMOUNT * INTEGRATOR_FEE_BPS) / BPS_DENOMINATOR;
+      const expectedBase =
+        SHIELD_AMOUNT - expectedArmadaTake - expectedIntegratorFee;
 
       const treasuryAfter = await hubUsdc.balanceOf(treasuryAddress);
       const integratorAfter = await hubUsdc.balanceOf(integratorAddress);
       const poolAfter = await hubUsdc.balanceOf(privacyPoolAddress);
 
       expect(treasuryAfter - treasuryBefore).to.equal(expectedArmadaTake);
-      expect(integratorAfter - integratorBefore).to.equal(expectedIntegratorFee);
+      expect(integratorAfter - integratorBefore).to.equal(
+        expectedIntegratorFee,
+      );
       expect(poolAfter - poolBefore).to.equal(expectedBase);
     });
 
@@ -369,12 +452,18 @@ describe("Fee Module Integration", function () {
       const infoBefore = await feeModule.getIntegratorInfo(integratorAddress);
 
       await hubUsdc.connect(alice).approve(privacyPoolAddress, SHIELD_AMOUNT);
-      await privacyPool.connect(alice).shield([makeShieldRequest(SHIELD_AMOUNT)], integratorAddress);
+      await privacyPool
+        .connect(alice)
+        .shield([makeShieldRequest(SHIELD_AMOUNT)], integratorAddress);
 
       const infoAfter = await feeModule.getIntegratorInfo(integratorAddress);
 
-      expect(infoAfter.cumulativeVolume - infoBefore.cumulativeVolume).to.equal(SHIELD_AMOUNT);
-      expect(infoAfter.cumulativeEarnings).to.be.gt(infoBefore.cumulativeEarnings);
+      expect(infoAfter.cumulativeVolume - infoBefore.cumulativeVolume).to.equal(
+        SHIELD_AMOUNT,
+      );
+      expect(infoAfter.cumulativeEarnings).to.be.gt(
+        infoBefore.cumulativeEarnings,
+      );
     });
   });
 
@@ -402,16 +491,29 @@ describe("Fee Module Integration", function () {
       const integratorBalBefore = await other.balanceOf(integratorAddress);
 
       await other.connect(alice).approve(privacyPoolAddress, AMOUNT);
-      await privacyPool.connect(alice).shield([makeShieldRequest(AMOUNT, "non-usdc", otherAddress)], integratorAddress);
+      await privacyPool
+        .connect(alice)
+        .shield(
+          [makeShieldRequest(AMOUNT, "non-usdc", otherAddress)],
+          integratorAddress,
+        );
 
-      expect((await other.balanceOf(treasuryAddress)) - treasuryBefore).to.equal(AMOUNT * 50n / BPS_DENOMINATOR);
-      expect(await other.balanceOf(integratorAddress)).to.be.gt(integratorBalBefore);
+      expect(
+        (await other.balanceOf(treasuryAddress)) - treasuryBefore,
+      ).to.equal((AMOUNT * 50n) / BPS_DENOMINATOR);
+      expect(await other.balanceOf(integratorAddress)).to.be.gt(
+        integratorBalBefore,
+      );
 
       expect(await feeModule.cumulativeFeesCollected()).to.equal(revenueBefore);
-      expect(await feeModule.cumulativeIntegratorFees()).to.equal(integratorFeesBefore);
+      expect(await feeModule.cumulativeIntegratorFees()).to.equal(
+        integratorFeesBefore,
+      );
       const infoAfter = await feeModule.getIntegratorInfo(integratorAddress);
       expect(infoAfter.cumulativeVolume).to.equal(infoBefore.cumulativeVolume);
-      expect(infoAfter.cumulativeEarnings).to.equal(infoBefore.cumulativeEarnings);
+      expect(infoAfter.cumulativeEarnings).to.equal(
+        infoBefore.cumulativeEarnings,
+      );
     });
   });
 
@@ -432,12 +534,12 @@ describe("Fee Module Integration", function () {
       // Initiate cross-chain shield (no CCTP fee for simplicity)
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
-        0,    // maxFee
-        0,    // minFinalityThreshold
+        0, // maxFee
+        0, // minFinalityThreshold
         npk,
         encryptedBundle,
         shieldKey,
-        ethers.ZeroAddress  // no integrator
+        ethers.ZeroAddress, // no integrator
       );
       const receipt = await tx.wait();
 
@@ -451,7 +553,9 @@ describe("Fee Module Integration", function () {
             encodedMessage = parsed.args.message;
             break;
           }
-        } catch { /* not from this contract */ }
+        } catch {
+          /* not from this contract */
+        }
       }
       expect(encodedMessage).to.not.be.undefined;
 
@@ -464,7 +568,7 @@ describe("Fee Module Integration", function () {
       await hubHookRouter.connect(relayer).relayWithHook(encodedMessage!, "0x");
 
       // Fee module applies 50 bps armada take to CCTP-minted amount
-      const expectedArmadaTake = SHIELD_AMOUNT * 50n / BPS_DENOMINATOR;
+      const expectedArmadaTake = (SHIELD_AMOUNT * 50n) / BPS_DENOMINATOR;
       const expectedBase = SHIELD_AMOUNT - expectedArmadaTake;
 
       const poolAfter = await hubUsdc.balanceOf(privacyPoolAddress);
@@ -489,10 +593,12 @@ describe("Fee Module Integration", function () {
       const treasuryBefore = await hubUsdc.balanceOf(treasuryAddress);
       const poolBefore = await hubUsdc.balanceOf(privacyPoolAddress);
 
-      await privacyPool.connect(alice).shield([makeShieldRequest(SHIELD_AMOUNT)], ethers.ZeroAddress);
+      await privacyPool
+        .connect(alice)
+        .shield([makeShieldRequest(SHIELD_AMOUNT)], ethers.ZeroAddress);
 
       // Flat fee: 50 bps
-      const expectedFee = SHIELD_AMOUNT * 50n / BPS_DENOMINATOR;
+      const expectedFee = (SHIELD_AMOUNT * 50n) / BPS_DENOMINATOR;
       const expectedBase = SHIELD_AMOUNT - expectedFee;
 
       const treasuryAfter = await hubUsdc.balanceOf(treasuryAddress);
@@ -514,9 +620,9 @@ describe("Fee Module Integration", function () {
     });
 
     it("should block setYieldFeeBps when fee module is set", async function () {
-      await expect(
-        armadaYieldVault.setYieldFeeBps(2000)
-      ).to.be.revertedWith("ArmadaYieldVault: use fee module");
+      await expect(armadaYieldVault.setYieldFeeBps(2000)).to.be.revertedWith(
+        "ArmadaYieldVault: use fee module",
+      );
     });
 
     it("should record yield fee via recordYieldFee on redeem", async function () {
@@ -549,7 +655,9 @@ describe("Fee Module Integration", function () {
       // Seed the pool with shielded USDC first
       const seedAmount = ethers.parseUnits("5000", 6);
       await hubUsdc.connect(alice).approve(privacyPoolAddress, seedAmount);
-      await privacyPool.connect(alice).shield([makeShieldRequest(seedAmount)], ethers.ZeroAddress);
+      await privacyPool
+        .connect(alice)
+        .shield([makeShieldRequest(seedAmount)], ethers.ZeroAddress);
 
       const merkleRoot = await privacyPool.merkleRoot();
       const amount = ethers.parseUnits("1000", 6);
@@ -565,21 +673,29 @@ describe("Fee Module Integration", function () {
 
       const adaptParamsEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
         ["bytes32", "bytes32[3]", "bytes32"],
-        [npk, encryptedBundle, shieldKey]
+        [npk, encryptedBundle, shieldKey],
       );
       const adaptParams = ethers.keccak256(adaptParamsEncoded);
 
       const unshieldNpk = ethers.zeroPadValue(adapterAddress, 32);
       const tokenId = BigInt(usdcAddress);
-      const commitmentHash = poseidon([F.e(BigInt(unshieldNpk)), F.e(tokenId), F.e(BigInt(amount))]);
+      const commitmentHash = poseidon([
+        F.e(BigInt(unshieldNpk)),
+        F.e(tokenId),
+        F.e(BigInt(amount)),
+      ]);
       const commitmentHashBytes32 = ethers.zeroPadValue(
         ethers.toBeHex(BigInt(F.toString(commitmentHash))),
-        32
+        32,
       );
 
       const chainId = (await ethers.provider.getNetwork()).chainId;
       const transaction = {
-        proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+        proof: {
+          a: { x: 0, y: 0 },
+          b: { x: [0, 0], y: [0, 0] },
+          c: { x: 0, y: 0 },
+        },
         merkleRoot,
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("null-adapter-fee"))],
         commitments: [commitmentHashBytes32],
@@ -602,7 +718,10 @@ describe("Fee Module Integration", function () {
       const treasuryBefore = await hubUsdc.balanceOf(treasuryAddress);
       const cumulativeBefore = await feeModule.cumulativeArmadaFees();
 
-      await armadaYieldAdapter.lendAndShield(transaction, npk, { encryptedBundle, shieldKey });
+      await armadaYieldAdapter.lendAndShield(transaction, npk, {
+        encryptedBundle,
+        shieldKey,
+      });
 
       const treasuryAfter = await hubUsdc.balanceOf(treasuryAddress);
       const cumulativeAfter = await feeModule.cumulativeArmadaFees();

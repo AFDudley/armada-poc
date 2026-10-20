@@ -1,15 +1,15 @@
 // ABOUTME: Chunked backfill orchestration for the crowdfund indexer.
 // ABOUTME: Verifies confirmed block ranges sequentially without advancing past failed or suspicious chunks.
 
-import type { IndexerStore } from '../db/store.js'
-import { verifyRange } from './rpc.js'
-import type { BlockRange, IngestRangeRecord } from '../types.js'
-import type { RangeLogProvider, RangePipelineConfig } from './rpc.js'
+import type { IndexerStore } from "../db/store.js";
+import { verifyRange } from "./rpc.js";
+import type { BlockRange, IngestRangeRecord } from "../types.js";
+import type { RangeLogProvider, RangePipelineConfig } from "./rpc.js";
 
 export interface PlanBackfillRangesInput {
-  fromBlock: number
-  toBlock: number
-  maxBlockRange: number
+  fromBlock: number;
+  toBlock: number;
+  maxBlockRange: number;
 }
 
 // When set, backfill skips a chunk whose existing record is failed/suspicious and is
@@ -18,27 +18,27 @@ export interface PlanBackfillRangesInput {
 // backoff and double-incremented `attempts` alongside auto-reconcile). The operator CLI
 // passes no policy, so `repair`/`backfill` remain an explicit immediate retry.
 export interface BackfillRetryPolicy {
-  maxAttempts: number
+  maxAttempts: number;
   // Injectable clock for deterministic tests.
-  now?: () => Date
+  now?: () => Date;
 }
 
 export interface BackfillInput extends RangePipelineConfig {
-  store: IndexerStore
-  provider: RangeLogProvider
-  auditProvider?: RangeLogProvider
-  auditProviderName?: string
-  maxBlockRange: number
-  toBlock?: number
-  stopOnUnverified?: boolean
-  retryPolicy?: BackfillRetryPolicy
+  store: IndexerStore;
+  provider: RangeLogProvider;
+  auditProvider?: RangeLogProvider;
+  auditProviderName?: string;
+  maxBlockRange: number;
+  toBlock?: number;
+  stopOnUnverified?: boolean;
+  retryPolicy?: BackfillRetryPolicy;
 }
 
 export interface BackfillResult {
-  fromBlock: number
-  toBlock: number
-  ranges: readonly IngestRangeRecord[]
-  stoppedEarly: boolean
+  fromBlock: number;
+  toBlock: number;
+  ranges: readonly IngestRangeRecord[];
+  stoppedEarly: boolean;
 }
 
 // True when an existing record for this range should NOT be re-verified yet under the
@@ -49,39 +49,49 @@ function isDeferredByPolicy(
   record: IngestRangeRecord | undefined,
   policy: BackfillRetryPolicy,
 ): boolean {
-  if (!record) return false
-  if (record.status !== 'failed' && record.status !== 'suspicious') return false
-  if (policy.maxAttempts > 0 && record.attempts >= policy.maxAttempts) return true
-  if (record.nextRetryAt === null) return false
-  const now = (policy.now ?? (() => new Date()))()
-  return new Date(record.nextRetryAt).getTime() > now.getTime()
+  if (!record) return false;
+  if (record.status !== "failed" && record.status !== "suspicious")
+    return false;
+  if (policy.maxAttempts > 0 && record.attempts >= policy.maxAttempts)
+    return true;
+  if (record.nextRetryAt === null) return false;
+  const now = (policy.now ?? (() => new Date()))();
+  return new Date(record.nextRetryAt).getTime() > now.getTime();
 }
 
-export function planBackfillRanges(input: PlanBackfillRangesInput): BlockRange[] {
-  if (input.maxBlockRange <= 0) throw new Error('maxBlockRange must be greater than zero')
-  if (input.fromBlock > input.toBlock) return []
+export function planBackfillRanges(
+  input: PlanBackfillRangesInput,
+): BlockRange[] {
+  if (input.maxBlockRange <= 0)
+    throw new Error("maxBlockRange must be greater than zero");
+  if (input.fromBlock > input.toBlock) return [];
 
-  const ranges: BlockRange[] = []
-  let cursor = input.fromBlock
+  const ranges: BlockRange[] = [];
+  let cursor = input.fromBlock;
   while (cursor <= input.toBlock) {
-    const chunkEnd = Math.min(cursor + input.maxBlockRange - 1, input.toBlock)
-    ranges.push({ fromBlock: cursor, toBlock: chunkEnd })
-    cursor = chunkEnd + 1
+    const chunkEnd = Math.min(cursor + input.maxBlockRange - 1, input.toBlock);
+    ranges.push({ fromBlock: cursor, toBlock: chunkEnd });
+    cursor = chunkEnd + 1;
   }
-  return ranges
+  return ranges;
 }
 
-export async function backfillVerifiedRanges(input: BackfillInput): Promise<BackfillResult> {
-  const meta = await input.store.readMeta()
-  const chainHead = await input.provider.getBlockNumber()
-  const confirmedHead = Math.max(0, chainHead - meta.cursor.confirmationDepth)
-  const toBlock = input.toBlock === undefined ? confirmedHead : Math.min(input.toBlock, confirmedHead)
-  const fromBlock = meta.cursor.verifiedCursor + 1
+export async function backfillVerifiedRanges(
+  input: BackfillInput,
+): Promise<BackfillResult> {
+  const meta = await input.store.readMeta();
+  const chainHead = await input.provider.getBlockNumber();
+  const confirmedHead = Math.max(0, chainHead - meta.cursor.confirmationDepth);
+  const toBlock =
+    input.toBlock === undefined
+      ? confirmedHead
+      : Math.min(input.toBlock, confirmedHead);
+  const fromBlock = meta.cursor.verifiedCursor + 1;
   const ranges = planBackfillRanges({
     fromBlock,
     toBlock,
     maxBlockRange: input.maxBlockRange,
-  })
+  });
 
   await input.store.patchMeta({
     cursor: {
@@ -89,28 +99,30 @@ export async function backfillVerifiedRanges(input: BackfillInput): Promise<Back
       chainHead,
       confirmedHead,
     },
-  })
+  });
 
-  const records: IngestRangeRecord[] = []
-  let stoppedEarly = false
+  const records: IngestRangeRecord[] = [];
+  let stoppedEarly = false;
   for (const range of ranges) {
     // Respect the repair backoff/attempt limit before re-verifying a known-bad chunk.
     // Because the verified cursor never skips a gap, a deferred chunk also stops every
     // later chunk this cycle — they cannot be promoted past it anyway.
     if (input.retryPolicy) {
       const existing = meta.ranges.find(
-        (record) => record.fromBlock === range.fromBlock && record.toBlock === range.toBlock,
-      )
+        (record) =>
+          record.fromBlock === range.fromBlock &&
+          record.toBlock === range.toBlock,
+      );
       if (isDeferredByPolicy(existing, input.retryPolicy)) {
-        stoppedEarly = true
-        break
+        stoppedEarly = true;
+        break;
       }
     }
-    const record = await verifyRange({ ...input, range })
-    records.push(record)
-    if ((input.stopOnUnverified ?? true) && record.status !== 'verified') {
-      stoppedEarly = true
-      break
+    const record = await verifyRange({ ...input, range });
+    records.push(record);
+    if ((input.stopOnUnverified ?? true) && record.status !== "verified") {
+      stoppedEarly = true;
+      break;
     }
   }
 
@@ -119,5 +131,5 @@ export async function backfillVerifiedRanges(input: BackfillInput): Promise<Back
     toBlock,
     ranges: records,
     stoppedEarly,
-  }
+  };
 }

@@ -15,6 +15,9 @@ import { ethers } from "ethers";
  *
  * All relayer providers should be constructed through this helper.
  */
-export function createStaticProvider(rpc: string, chainId: number): ethers.JsonRpcProvider {
+export function createStaticProvider(
+  rpc: string,
+  chainId: number,
+): ethers.JsonRpcProvider {
   return new ethers.JsonRpcProvider(rpc, chainId, { staticNetwork: true });
 }

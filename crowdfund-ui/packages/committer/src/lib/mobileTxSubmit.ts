@@ -1,16 +1,16 @@
 // ABOUTME: Mobile-only contract-write submit via wagmi's sendTransaction so MetaMask Mobile surfaces the request.
 // ABOUTME: Returns an ethers-TransactionResponse-shaped object so the shared send/wait engine is unchanged.
 
-import { sendTransaction, waitForTransactionReceipt } from 'wagmi/actions'
-import type { Contract, TransactionResponse } from 'ethers'
-import type { ReceiptLogLike } from '@armada/crowdfund-shared'
-import { getHubChainId, getTxConfirmations } from '@/config/network'
-import { TX_WAIT_TIMEOUT_MS } from './txWait'
+import { sendTransaction, waitForTransactionReceipt } from "wagmi/actions";
+import type { Contract, TransactionResponse } from "ethers";
+import type { ReceiptLogLike } from "@armada/crowdfund-shared";
+import { getHubChainId, getTxConfirmations } from "@/config/network";
+import { TX_WAIT_TIMEOUT_MS } from "./txWait";
 
 /** viem raises a named `WaitForTransactionReceiptTimeoutError` on receipt timeout. */
 function isReceiptTimeout(err: unknown): boolean {
-  const name = (err as { name?: unknown } | null)?.name
-  return typeof name === 'string' && /timeout/i.test(name)
+  const name = (err as { name?: unknown } | null)?.name;
+  return typeof name === "string" && /timeout/i.test(name);
 }
 
 /**
@@ -34,43 +34,56 @@ export async function submitTxViaWagmi(
   // Dynamic import: config/wagmi runs RainbowKit's getDefaultConfig at module
   // load (already evaluated by the app); deferring keeps this module importable
   // in unit tests without that side effect.
-  const { wagmiConfig } = await import('@/config/wagmi')
+  const { wagmiConfig } = await import("@/config/wagmi");
 
-  const to = contract.target as unknown as `0x${string}`
-  const data = contract.interface.encodeFunctionData(method, args as unknown[]) as `0x${string}`
+  const to = contract.target as unknown as `0x${string}`;
+  const data = contract.interface.encodeFunctionData(
+    method,
+    args as unknown[],
+  ) as `0x${string}`;
 
-  const hash = await sendTransaction(wagmiConfig, { to, data, chainId: getHubChainId() })
+  const hash = await sendTransaction(wagmiConfig, {
+    to,
+    data,
+    chainId: getHubChainId(),
+  });
 
   const response = {
     hash,
-    wait: async (confirmations: number = getTxConfirmations(), timeoutMs: number = TX_WAIT_TIMEOUT_MS) => {
+    wait: async (
+      confirmations: number = getTxConfirmations(),
+      timeoutMs: number = TX_WAIT_TIMEOUT_MS,
+    ) => {
       try {
         const receipt = await waitForTransactionReceipt(wagmiConfig, {
           hash,
           confirmations,
           timeout: timeoutMs,
-        })
+        });
         return {
-          status: receipt.status === 'success' ? 1 : 0,
+          status: receipt.status === "success" ? 1 : 0,
           logs: receipt.logs.map((log) => ({
             topics: log.topics,
             data: log.data,
-            blockNumber: log.blockNumber != null ? Number(log.blockNumber) : undefined,
+            blockNumber:
+              log.blockNumber != null ? Number(log.blockNumber) : undefined,
             transactionHash: log.transactionHash ?? undefined,
             logIndex: log.logIndex ?? undefined,
           })) as readonly ReceiptLogLike[],
-        }
+        };
       } catch (err) {
         // Normalize viem's receipt-wait timeout to the ethers timeout shape
         // (code: 'TIMEOUT') so a stalled mobile tx surfaces as "pending" via
         // sendAndWaitTx, never as success or failure.
         if (isReceiptTimeout(err)) {
-          throw Object.assign(new Error('Transaction receipt timeout'), { code: 'TIMEOUT' })
+          throw Object.assign(new Error("Transaction receipt timeout"), {
+            code: "TIMEOUT",
+          });
         }
-        throw err
+        throw err;
       }
     },
-  }
+  };
 
-  return response as unknown as TransactionResponse
+  return response as unknown as TransactionResponse;
 }

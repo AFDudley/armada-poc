@@ -30,7 +30,7 @@ contract ArmadaCrowdfundArmRecoveryTest is Test {
             address(armToken),
             treasury,
             admin,
-            admin,  // securityCouncil
+            admin, // securityCouncil
             block.timestamp
         );
 
@@ -100,7 +100,7 @@ contract ArmadaCrowdfundArmRecoveryTest is Test {
             address(armToken),
             treasury,
             admin,
-            admin,  // securityCouncil
+            admin, // securityCouncil
             block.timestamp
         );
 
@@ -138,7 +138,7 @@ contract ArmadaCrowdfundArmRecoveryTest is Test {
             address(armToken),
             treasury,
             admin,
-            admin,  // securityCouncil
+            admin, // securityCouncil
             block.timestamp
         );
         armToken.addToWhitelist(address(fuzzCrowdfund));

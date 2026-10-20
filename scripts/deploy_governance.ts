@@ -37,8 +37,21 @@ import {
   getGovernanceDeploymentFile,
   isLocal,
 } from "../config/networks";
-import { createNonceManager, rejectAnvilAddresses, retryReadOnLag, saveDeployment, saveDeploymentInProgress } from "./deploy-utils";
-import { assertAllocatorDistinct, assertAllocatorMultisig, assertLaunchRoleMultisigs, revenueLockSchedule, validateReservePlan, type RevenueLockConstructorArgs } from "./revenue-reserve";
+import {
+  createNonceManager,
+  rejectAnvilAddresses,
+  retryReadOnLag,
+  saveDeployment,
+  saveDeploymentInProgress,
+} from "./deploy-utils";
+import {
+  assertAllocatorDistinct,
+  assertAllocatorMultisig,
+  assertLaunchRoleMultisigs,
+  revenueLockSchedule,
+  validateReservePlan,
+  type RevenueLockConstructorArgs,
+} from "./revenue-reserve";
 import { assertInitialStewardPreflight } from "./initial-steward";
 
 interface GovernanceDeployment {
@@ -81,10 +94,16 @@ async function main() {
   const config = getNetworkConfig();
   const nm = await createNonceManager(deployer);
   // Fail before any deployment transactions if reserve + direct grants exceed the 20% budget.
-  const reserveCap = validateReservePlan(config.revenueLockBeneficiaries,
-    ethers.parseUnits(config.armDistribution.revenueLock, 18), config.revenueReserve);
+  const reserveCap = validateReservePlan(
+    config.revenueLockBeneficiaries,
+    ethers.parseUnits(config.armDistribution.revenueLock, 18),
+    config.revenueReserve,
+  );
   if (config.revenueReserve) {
-    rejectAnvilAddresses([config.revenueReserve.allocator], "Reserve allocator");
+    rejectAnvilAddresses(
+      [config.revenueReserve.allocator],
+      "Reserve allocator",
+    );
     await assertAllocatorMultisig(config.revenueReserve.allocator);
     assertAllocatorDistinct(config.revenueReserve.allocator, [
       { label: "deployer", address: deployer.address },
@@ -95,18 +114,28 @@ async function main() {
   // The initial steward is elected at the end of deploy_crowdfund, after one-shot setters are
   // spent; refuse a bad steward address now, before this stage's first transaction (#221).
   if (config.initialSteward) {
-    await assertInitialStewardPreflight(config.initialSteward, [
-      { label: "deployer", address: deployer.address },
-      { label: "security council", address: config.securityCouncilAddress },
-      { label: "launch team", address: config.launchTeamAddress },
-      { label: "reserve allocator", address: config.revenueReserve?.allocator ?? "" },
-    ], !isLocal());
+    await assertInitialStewardPreflight(
+      config.initialSteward,
+      [
+        { label: "deployer", address: deployer.address },
+        { label: "security council", address: config.securityCouncilAddress },
+        { label: "launch team", address: config.launchTeamAddress },
+        {
+          label: "reserve allocator",
+          address: config.revenueReserve?.allocator ?? "",
+        },
+      ],
+      !isLocal(),
+    );
   }
   // The security council and launch team are fixed in the crowdfund this launch deploys; on
   // mainnet refuse anything but a 2-of-3 council and a 1-of-3 or 2-of-3 launch team Safe before
   // this stage's first transaction.
   if (config.env === "mainnet") {
-    await assertLaunchRoleMultisigs(config.securityCouncilAddress, config.launchTeamAddress);
+    await assertLaunchRoleMultisigs(
+      config.securityCouncilAddress,
+      config.launchTeamAddress,
+    );
   }
 
   const role = getChainRole(chainId);
@@ -128,9 +157,14 @@ async function main() {
   // that stops part-way leaves the addresses it created and the mainnet re-run guard
   // refuses to deploy a second stack. The complete manifest replaces it at the end.
   const outputFile = getGovernanceDeploymentFile();
-  const progress: { contracts: Record<string, string>; [field: string]: unknown } =
-    { chainId, deployer: deployer.address, contracts: {} };
-  const recordProgress = (contracts: Record<string, string>, extra: object = {}) => {
+  const progress: {
+    contracts: Record<string, string>;
+    [field: string]: unknown;
+  } = { chainId, deployer: deployer.address, contracts: {} };
+  const recordProgress = (
+    contracts: Record<string, string>,
+    extra: object = {},
+  ) => {
     Object.assign(progress.contracts, contracts);
     Object.assign(progress, extra);
     saveDeploymentInProgress(outputFile, progress);
@@ -143,10 +177,17 @@ async function main() {
   // delay to timelockDelay as the final op before renouncing (issue #347).
   const constructorDelay = config.hardenTimelock ? 0 : timelockDelay;
   console.log("1. Deploying TimelockController...");
-  console.log(`   Initial minDelay: ${constructorDelay}s${config.hardenTimelock ? ` (harden — raised to ${timelockDelay}s post-bootstrap)` : ""}`);
-  const TimelockController = await ethers.getContractFactory("TimelockController");
+  console.log(
+    `   Initial minDelay: ${constructorDelay}s${config.hardenTimelock ? ` (harden — raised to ${timelockDelay}s post-bootstrap)` : ""}`,
+  );
+  const TimelockController =
+    await ethers.getContractFactory("TimelockController");
   const timelock = await TimelockController.deploy(
-    constructorDelay, [], [], deployer.address, nm.override()
+    constructorDelay,
+    [],
+    [],
+    deployer.address,
+    nm.override(),
   );
   const timelockReceipt = await timelock.deploymentTransaction()!.wait();
   // Record the creation block of the first contract deployed in this script. The
@@ -156,13 +197,22 @@ async function main() {
   // number tens of blocks past contract creation (issue #324).
   const governanceDeployBlock = timelockReceipt!.blockNumber;
   const timelockAddress = await timelock.getAddress();
-  recordProgress({ timelockController: timelockAddress }, { deployBlock: governanceDeployBlock });
-  console.log(`   TimelockController: ${timelockAddress} (block ${governanceDeployBlock})`);
+  recordProgress(
+    { timelockController: timelockAddress },
+    { deployBlock: governanceDeployBlock },
+  );
+  console.log(
+    `   TimelockController: ${timelockAddress} (block ${governanceDeployBlock})`,
+  );
 
   // 2. Deploy ArmadaToken (needs timelock address for addToWhitelist gating)
   console.log("2. Deploying ArmadaToken...");
   const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-  const armToken = await ArmadaToken.deploy(deployer.address, timelockAddress, nm.override());
+  const armToken = await ArmadaToken.deploy(
+    deployer.address,
+    timelockAddress,
+    nm.override(),
+  );
   await armToken.deploymentTransaction()!.wait();
   const armTokenAddress = await armToken.getAddress();
   recordProgress({ armToken: armTokenAddress });
@@ -170,9 +220,11 @@ async function main() {
 
   // 3. Deploy ArmadaTreasuryGov
   console.log("3. Deploying ArmadaTreasuryGov...");
-  const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+  const ArmadaTreasuryGov =
+    await ethers.getContractFactory("ArmadaTreasuryGov");
   const treasury = await ArmadaTreasuryGov.deploy(
-    timelockAddress, nm.override()
+    timelockAddress,
+    nm.override(),
   );
   await treasury.deploymentTransaction()!.wait();
   const treasuryAddress = await treasury.getAddress();
@@ -188,17 +240,22 @@ async function main() {
   recordProgress({ governorImpl: governorImplAddress });
   console.log(`   ArmadaGovernor (impl): ${governorImplAddress}`);
 
-  const governorInitData = ArmadaGovernor.interface.encodeFunctionData("initialize", [
-    armTokenAddress, timelockAddress, treasuryAddress,
-  ]);
+  const governorInitData = ArmadaGovernor.interface.encodeFunctionData(
+    "initialize",
+    [armTokenAddress, timelockAddress, treasuryAddress],
+  );
   const GovernorProxy = await ethers.getContractFactory("ERC1967Proxy");
   const governorProxy = await GovernorProxy.deploy(
-    governorImplAddress, governorInitData, nm.override()
+    governorImplAddress,
+    governorInitData,
+    nm.override(),
   );
   await governorProxy.deploymentTransaction()!.wait();
   const governorAddress = await governorProxy.getAddress();
   recordProgress({ governor: governorAddress });
-  const governor = ArmadaGovernor.attach(governorAddress) as typeof governorImpl;
+  const governor = ArmadaGovernor.attach(
+    governorAddress,
+  ) as typeof governorImpl;
   console.log(`   ArmadaGovernor (proxy): ${governorAddress}`);
 
   // Extended selectors are hardcoded in initialize() — no deployment step needed.
@@ -206,22 +263,25 @@ async function main() {
   // 5. Deploy TreasurySteward (identity management only — proposals flow through governor)
   console.log("5. Deploying TreasurySteward...");
   const TreasurySteward = await ethers.getContractFactory("TreasurySteward");
-  const steward = await TreasurySteward.deploy(
-    timelockAddress, nm.override()
-  );
+  const steward = await TreasurySteward.deploy(timelockAddress, nm.override());
   await steward.deploymentTransaction()!.wait();
   const stewardAddress = await steward.getAddress();
   recordProgress({ steward: stewardAddress });
   console.log(`   TreasurySteward: ${stewardAddress}`);
 
   // 5b. Register steward contract on governor (one-time setter)
-  await (await governor.setStewardContract(stewardAddress, nm.override())).wait();
+  await (
+    await governor.setStewardContract(stewardAddress, nm.override())
+  ).wait();
   console.log(`   Governor: setStewardContract(${stewardAddress})`);
 
   // 5c. Deploy AdapterRegistry (standalone, owned by timelock)
   console.log("   Deploying AdapterRegistry...");
   const AdapterRegistry = await ethers.getContractFactory("AdapterRegistry");
-  const adapterRegistry = await AdapterRegistry.deploy(timelockAddress, nm.override());
+  const adapterRegistry = await AdapterRegistry.deploy(
+    timelockAddress,
+    nm.override(),
+  );
   await adapterRegistry.deploymentTransaction()!.wait();
   const adapterRegistryAddress = await adapterRegistry.getAddress();
   recordProgress({ adapterRegistry: adapterRegistryAddress });
@@ -236,10 +296,14 @@ async function main() {
   recordProgress({ revenueCounterImpl: revenueCounterImplAddress });
   console.log(`   RevenueCounter (impl): ${revenueCounterImplAddress}`);
 
-  const initData = RevenueCounter.interface.encodeFunctionData("initialize", [timelockAddress]);
+  const initData = RevenueCounter.interface.encodeFunctionData("initialize", [
+    timelockAddress,
+  ]);
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
   const revenueCounterProxy = await ERC1967Proxy.deploy(
-    revenueCounterImplAddress, initData, nm.override()
+    revenueCounterImplAddress,
+    initData,
+    nm.override(),
   );
   await revenueCounterProxy.deploymentTransaction()!.wait();
   const revenueCounterAddress = await revenueCounterProxy.getAddress();
@@ -248,7 +312,10 @@ async function main() {
 
   // 7. Deploy RevenueLock (immutable — holds team + airdrop ARM)
   console.log("7. Deploying RevenueLock...");
-  const revenueLockAllocation = ethers.parseUnits(config.armDistribution.revenueLock, 18);
+  const revenueLockAllocation = ethers.parseUnits(
+    config.armDistribution.revenueLock,
+    18,
+  );
 
   // TODO: Set REVENUE_LOCK_BENEFICIARIES_JSON with finalized mainnet list (see issue #144)
   // Beneficiaries come from network config (Anvil placeholders for local, env var for non-local)
@@ -258,26 +325,50 @@ async function main() {
   let revenueReserveDistributor: string | undefined;
   let reserveDeploymentTransaction: string | undefined;
   if (config.revenueReserve) {
-    const Distributor = await ethers.getContractFactory("RevenueReserveDistributor");
-    const reserve = await Distributor.deploy(armTokenAddress, config.revenueReserve.allocator, reserveCap, nm.override());
+    const Distributor = await ethers.getContractFactory(
+      "RevenueReserveDistributor",
+    );
+    const reserve = await Distributor.deploy(
+      armTokenAddress,
+      config.revenueReserve.allocator,
+      reserveCap,
+      nm.override(),
+    );
     await reserve.deploymentTransaction()!.wait();
     revenueReserveDistributor = await reserve.getAddress();
     reserveDeploymentTransaction = reserve.deploymentTransaction()!.hash;
-    recordProgress({ revenueReserveDistributor },
-      { revenueReserveDistributorDeploymentTransaction: reserveDeploymentTransaction });
-    console.log(`   Reserve distributor: ${revenueReserveDistributor} — ${config.revenueReserve.amount} ARM`);
+    recordProgress(
+      { revenueReserveDistributor },
+      {
+        revenueReserveDistributorDeploymentTransaction:
+          reserveDeploymentTransaction,
+      },
+    );
+    console.log(
+      `   Reserve distributor: ${revenueReserveDistributor} — ${config.revenueReserve.amount} ARM`,
+    );
   }
 
-  const { addresses: revenueLockBeneficiaries, amounts: revenueLockAmounts } = revenueLockSchedule(
-    beneficiaryConfig, revenueReserveDistributor ? { address: revenueReserveDistributor, cap: reserveCap } : undefined);
+  const { addresses: revenueLockBeneficiaries, amounts: revenueLockAmounts } =
+    revenueLockSchedule(
+      beneficiaryConfig,
+      revenueReserveDistributor
+        ? { address: revenueReserveDistributor, cap: reserveCap }
+        : undefined,
+    );
 
   // Max advance per elapsed day for the observed-revenue ratchet — 18-decimal USD.
   // $10k/day per PARAMETER_MANIFEST.md §8.2 and issue #225:
   // forces a malicious RevenueCounter upgrade to take ≥100 days to accelerate
   // $0 → $1M full-unlock, giving community + Security Council time to respond.
   // Configured in whole USD (config.revenueLockMaxIncreasePerDayUsd), scaled here.
-  const MAX_REVENUE_INCREASE_PER_DAY = ethers.parseUnits(config.revenueLockMaxIncreasePerDayUsd, 18);
-  console.log(`   RevenueLock MAX_REVENUE_INCREASE_PER_DAY: $${config.revenueLockMaxIncreasePerDayUsd}/day (${MAX_REVENUE_INCREASE_PER_DAY})`);
+  const MAX_REVENUE_INCREASE_PER_DAY = ethers.parseUnits(
+    config.revenueLockMaxIncreasePerDayUsd,
+    18,
+  );
+  console.log(
+    `   RevenueLock MAX_REVENUE_INCREASE_PER_DAY: $${config.revenueLockMaxIncreasePerDayUsd}/day (${MAX_REVENUE_INCREASE_PER_DAY})`,
+  );
 
   // Guard: reject Anvil default addresses on non-local environments
   rejectAnvilAddresses(revenueLockBeneficiaries, "RevenueLock beneficiaries");
@@ -291,25 +382,48 @@ async function main() {
 
   const RevenueLock = await ethers.getContractFactory("RevenueLock");
   const revenueLockContract = await RevenueLock.deploy(
-    armTokenAddress, revenueCounterAddress, MAX_REVENUE_INCREASE_PER_DAY,
-    revenueLockBeneficiaries, revenueLockAmounts, nm.override()
+    armTokenAddress,
+    revenueCounterAddress,
+    MAX_REVENUE_INCREASE_PER_DAY,
+    revenueLockBeneficiaries,
+    revenueLockAmounts,
+    nm.override(),
   );
   await revenueLockContract.deploymentTransaction()!.wait();
   const revenueLockAddress = await revenueLockContract.getAddress();
-  const revenueLockConstructorArgs: RevenueLockConstructorArgs = [armTokenAddress, revenueCounterAddress,
-    MAX_REVENUE_INCREASE_PER_DAY.toString(), revenueLockBeneficiaries, revenueLockAmounts.map(amount => amount.toString())];
-  recordProgress({ revenueLock: revenueLockAddress }, {
-    revenueLockConstructorArgs,
-    revenueLockDeploymentTransaction: revenueLockContract.deploymentTransaction()!.hash,
-  });
+  const revenueLockConstructorArgs: RevenueLockConstructorArgs = [
+    armTokenAddress,
+    revenueCounterAddress,
+    MAX_REVENUE_INCREASE_PER_DAY.toString(),
+    revenueLockBeneficiaries,
+    revenueLockAmounts.map((amount) => amount.toString()),
+  ];
+  recordProgress(
+    { revenueLock: revenueLockAddress },
+    {
+      revenueLockConstructorArgs,
+      revenueLockDeploymentTransaction:
+        revenueLockContract.deploymentTransaction()!.hash,
+    },
+  );
   console.log(`   RevenueLock: ${revenueLockAddress}`);
   if (revenueReserveDistributor) {
-    const reserve = await ethers.getContractAt("RevenueReserveDistributor", revenueReserveDistributor);
-    await (await reserve.bindRevenueLock(revenueLockAddress, nm.override())).wait();
+    const reserve = await ethers.getContractAt(
+      "RevenueReserveDistributor",
+      revenueReserveDistributor,
+    );
+    await (
+      await reserve.bindRevenueLock(revenueLockAddress, nm.override())
+    ).wait();
     await retryReadOnLag("Reserve binding read-back", async () => {
-      if (await reserve.revenueLock() !== revenueLockAddress ||
-          await revenueLockContract.allocation(revenueReserveDistributor) !== reserveCap) {
-        throw new Error("Reserve binding/allocation read-back mismatch; do not fund this lock");
+      if (
+        (await reserve.revenueLock()) !== revenueLockAddress ||
+        (await revenueLockContract.allocation(revenueReserveDistributor)) !==
+          reserveCap
+      ) {
+        throw new Error(
+          "Reserve binding/allocation read-back mismatch; do not fund this lock",
+        );
       }
     });
   }
@@ -319,33 +433,43 @@ async function main() {
   for (let i = 0; i < beneficiaryConfig.length; i++) {
     const expectedAddr = beneficiaryConfig[i].address;
     const expectedAmount = ethers.parseUnits(beneficiaryConfig[i].amount, 18);
-    const onChainAllocation = await revenueLockContract.allocation(expectedAddr);
+    const onChainAllocation =
+      await revenueLockContract.allocation(expectedAddr);
     if (onChainAllocation !== expectedAmount) {
       throw new Error(
         `RevenueLock read-back MISMATCH for ${expectedAddr} (${beneficiaryConfig[i].label}):\n` +
-        `  Expected: ${ethers.formatUnits(expectedAmount, 18)} ARM\n` +
-        `  On-chain: ${ethers.formatUnits(onChainAllocation, 18)} ARM\n` +
-        `  ABORTING — the deployed RevenueLock state does not match the intended config.`
+          `  Expected: ${ethers.formatUnits(expectedAmount, 18)} ARM\n` +
+          `  On-chain: ${ethers.formatUnits(onChainAllocation, 18)} ARM\n` +
+          `  ABORTING — the deployed RevenueLock state does not match the intended config.`,
       );
     }
   }
   const onChainTotal = await revenueLockContract.totalAllocation();
   const expectedTotal = revenueLockAmounts.reduce((sum, a) => sum + a, 0n);
-  if (onChainTotal !== expectedTotal || onChainTotal !== revenueLockAllocation) {
+  if (
+    onChainTotal !== expectedTotal ||
+    onChainTotal !== revenueLockAllocation
+  ) {
     throw new Error(
       `RevenueLock total allocation MISMATCH:\n` +
-      `  Expected: ${ethers.formatUnits(expectedTotal, 18)} ARM\n` +
-      `  On-chain: ${ethers.formatUnits(onChainTotal, 18)} ARM\n` +
-      `  ABORTING — possible extra beneficiaries or amount corruption.`
+        `  Expected: ${ethers.formatUnits(expectedTotal, 18)} ARM\n` +
+        `  On-chain: ${ethers.formatUnits(onChainTotal, 18)} ARM\n` +
+        `  ABORTING — possible extra beneficiaries or amount corruption.`,
     );
   }
-  console.log(`   ✓ All ${beneficiaryConfig.length} beneficiaries verified, total: ${ethers.formatUnits(onChainTotal, 18)} ARM`);
+  console.log(
+    `   ✓ All ${beneficiaryConfig.length} beneficiaries verified, total: ${ethers.formatUnits(onChainTotal, 18)} ARM`,
+  );
 
   // 8. Deploy ShieldPauseController
   console.log("8. Deploying ShieldPauseController...");
-  const ShieldPauseController = await ethers.getContractFactory("ShieldPauseController");
+  const ShieldPauseController = await ethers.getContractFactory(
+    "ShieldPauseController",
+  );
   const shieldPause = await ShieldPauseController.deploy(
-    governorAddress, timelockAddress, nm.override()
+    governorAddress,
+    timelockAddress,
+    nm.override(),
   );
   await shieldPause.deploymentTransaction()!.wait();
   const shieldPauseAddress = await shieldPause.getAddress();
@@ -357,7 +481,9 @@ async function main() {
   // which is not available until after crowdfund deployment.
   const redemptionAddress = ethers.ZeroAddress;
   const windDownAddress = ethers.ZeroAddress;
-  console.log("9-10. ArmadaRedemption + ArmadaWindDown: DEFERRED (deployed by deploy_crowdfund.ts)");
+  console.log(
+    "9-10. ArmadaRedemption + ArmadaWindDown: DEFERRED (deployed by deploy_crowdfund.ts)",
+  );
 
   // ============ Post-deploy configuration ============
 
@@ -367,12 +493,18 @@ async function main() {
   const EXECUTOR_ROLE = await timelock.EXECUTOR_ROLE();
   const ADMIN_ROLE = await timelock.TIMELOCK_ADMIN_ROLE();
 
-  await (await timelock.grantRole(PROPOSER_ROLE, governorAddress, nm.override())).wait();
+  await (
+    await timelock.grantRole(PROPOSER_ROLE, governorAddress, nm.override())
+  ).wait();
   console.log("   Granted PROPOSER_ROLE to governor");
-  await (await timelock.grantRole(EXECUTOR_ROLE, governorAddress, nm.override())).wait();
+  await (
+    await timelock.grantRole(EXECUTOR_ROLE, governorAddress, nm.override())
+  ).wait();
   console.log("   Granted EXECUTOR_ROLE to governor");
   const CANCELLER_ROLE = await timelock.CANCELLER_ROLE();
-  await (await timelock.grantRole(CANCELLER_ROLE, governorAddress, nm.override())).wait();
+  await (
+    await timelock.grantRole(CANCELLER_ROLE, governorAddress, nm.override())
+  ).wait();
   console.log("   Granted CANCELLER_ROLE to governor (for SC veto)");
 
   // Grant the deployer the operational roles (PROPOSER/EXECUTOR/CANCELLER) so the
@@ -386,58 +518,99 @@ async function main() {
   // A mainnet value in DeployEnv does NOT by itself take this branch — only the
   // explicit hardenTimelock profile (or the testnet allowlist) does.
   const TESTNET_OPS_ENVS: ReadonlyArray<string> = ["sepolia"];
-  const grantDeployerOps = TESTNET_OPS_ENVS.includes(config.env) || config.hardenTimelock;
+  const grantDeployerOps =
+    TESTNET_OPS_ENVS.includes(config.env) || config.hardenTimelock;
   if (grantDeployerOps) {
     const [deployerSigner] = await ethers.getSigners();
-    await (await timelock.grantRole(PROPOSER_ROLE, deployerSigner.address, nm.override())).wait();
+    await (
+      await timelock.grantRole(
+        PROPOSER_ROLE,
+        deployerSigner.address,
+        nm.override(),
+      )
+    ).wait();
     console.log(`   Granted PROPOSER_ROLE to deployer (${config.env} ops)`);
-    await (await timelock.grantRole(EXECUTOR_ROLE, deployerSigner.address, nm.override())).wait();
+    await (
+      await timelock.grantRole(
+        EXECUTOR_ROLE,
+        deployerSigner.address,
+        nm.override(),
+      )
+    ).wait();
     console.log(`   Granted EXECUTOR_ROLE to deployer (${config.env} ops)`);
-    await (await timelock.grantRole(CANCELLER_ROLE, deployerSigner.address, nm.override())).wait();
+    await (
+      await timelock.grantRole(
+        CANCELLER_ROLE,
+        deployerSigner.address,
+        nm.override(),
+      )
+    ).wait();
     console.log(`   Granted CANCELLER_ROLE to deployer (${config.env} ops)`);
   }
 
   // 12. Configure ARM token (one-time setters)
   console.log("12. Configuring ARM token...");
-  await (await armToken.initNoDelegation([treasuryAddress], nm.override())).wait();
+  await (
+    await armToken.initNoDelegation([treasuryAddress], nm.override())
+  ).wait();
   console.log(`   initNoDelegation: [${treasuryAddress}] (treasury)`);
 
   // initWhitelist is one-shot and must include the crowdfund address (per ARM token spec §5).
   // Deferred to deploy_crowdfund.ts which runs after governance and has the crowdfund address.
-  console.log("   initWhitelist: DEFERRED (called by deploy_crowdfund with crowdfund address)");
+  console.log(
+    "   initWhitelist: DEFERRED (called by deploy_crowdfund with crowdfund address)",
+  );
 
   // initAuthorizedDelegators is one-shot and must include all delegators (RevenueLock + Crowdfund).
   // Deferred to deploy_crowdfund.ts which runs after governance and has both addresses available.
-  console.log("   initAuthorizedDelegators: DEFERRED (called by deploy_crowdfund with all delegators)");
+  console.log(
+    "   initAuthorizedDelegators: DEFERRED (called by deploy_crowdfund with all delegators)",
+  );
 
   // setWindDownContract: deferred to deploy_crowdfund.ts (wind-down deployed there)
-  console.log("   setWindDownContract: DEFERRED (deployed by deploy_crowdfund.ts)");
+  console.log(
+    "   setWindDownContract: DEFERRED (deployed by deploy_crowdfund.ts)",
+  );
 
   // 13. ARM distribution
   // All ARM transfers are deferred to deploy_crowdfund.ts which calls initWhitelist first.
   // The whitelist must be set before any transfer (including to treasury/revenueLock).
-  console.log("13. ARM distribution: DEFERRED (called by deploy_crowdfund after initWhitelist)");
+  console.log(
+    "13. ARM distribution: DEFERRED (called by deploy_crowdfund after initWhitelist)",
+  );
 
   // 14. Treasury outflow limits
   // initOutflowConfig is timelock-only (the treasury's owner is the timelock), so
   // deploy_crowdfund.ts calls it via timelockCall with config.outflowConfig, using the
   // deployer's bootstrap PROPOSER/EXECUTOR roles granted above (Anvil impersonation locally).
-  console.log("14. Treasury outflow limits: DEFERRED (initialized by deploy_crowdfund.ts)");
+  console.log(
+    "14. Treasury outflow limits: DEFERRED (initialized by deploy_crowdfund.ts)",
+  );
 
   // 15-16. Wind-down wiring + timelock admin renounce
   // Both deferred to deploy_crowdfund.ts. The deployer retains timelock admin until
   // all deployment wiring is complete (Redemption, WindDown, wind-down wiring),
   // then renounces as the final action in deploy_crowdfund.ts.
-  console.log("15-16. Wind-down wiring + admin renounce: DEFERRED (completed by deploy_crowdfund.ts)");
+  console.log(
+    "15-16. Wind-down wiring + admin renounce: DEFERRED (completed by deploy_crowdfund.ts)",
+  );
 
   // Save deployment
   const deployment: GovernanceDeployment = {
     revenueLockConstructorArgs,
-    revenueLockDeploymentTransaction: revenueLockContract.deploymentTransaction()!.hash,
-    ...(reserveDeploymentTransaction ? { revenueReserveDistributorDeploymentTransaction: reserveDeploymentTransaction } : {}),
+    revenueLockDeploymentTransaction:
+      revenueLockContract.deploymentTransaction()!.hash,
+    ...(reserveDeploymentTransaction
+      ? {
+          revenueReserveDistributorDeploymentTransaction:
+            reserveDeploymentTransaction,
+        }
+      : {}),
     chainId,
     deployer: deployer.address,
-    ...(nm.nextNonce() !== undefined ? { deployerNonceAfterGovernance: nm.nextNonce() } : {}),
+    ...(nm.nextNonce() !== undefined
+      ? { deployerNonceAfterGovernance: nm.nextNonce() }
+      : {}),
     deployBlock: governanceDeployBlock,
     contracts: {
       timelockController: timelockAddress,
@@ -467,11 +640,17 @@ async function main() {
   console.log(`\nDeployment saved to: deployments/${outputFile}`);
   console.log("\n=== Governance deployment complete ===");
   console.log("\nPost-launch TODO:");
-  console.log("  1. Set shieldPauseContract on PrivacyPool (owner calls setShieldPauseContract)");
-  console.log("\nNext deployment step: run deploy_crowdfund.ts to complete:")
+  console.log(
+    "  1. Set shieldPauseContract on PrivacyPool (owner calls setShieldPauseContract)",
+  );
+  console.log("\nNext deployment step: run deploy_crowdfund.ts to complete:");
   console.log("  - Crowdfund deployment + ARM distribution");
-  console.log("  - Treasury outflow limits for USDC, ARM, and ETH (address(0))");
-  console.log("  - Initial steward election + USDC steward budget (when INITIAL_STEWARD_ADDRESS is set)");
+  console.log(
+    "  - Treasury outflow limits for USDC, ARM, and ETH (address(0))",
+  );
+  console.log(
+    "  - Initial steward election + USDC steward budget (when INITIAL_STEWARD_ADDRESS is set)",
+  );
   console.log("  - ArmadaRedemption + ArmadaWindDown deployment");
   console.log("  - Wind-down wiring to governor/treasury/shieldPause");
   console.log("  - Timelock admin renounce (final action)");

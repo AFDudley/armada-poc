@@ -69,8 +69,8 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
         }
 
         // Read the insertion position before inserting (router view is pre-insertion)
-        (uint256 insertionTreeNumber, uint256 insertionStartIndex) = IMerkleModule(address(this))
-            .getInsertionTreeNumberAndStartingIndex(numRequests);
+        (uint256 insertionTreeNumber, uint256 insertionStartIndex) =
+            IMerkleModule(address(this)).getInsertionTreeNumberAndStartingIndex(numRequests);
 
         // Announce the new notes for wallet sync
         emit Shield(insertionTreeNumber, insertionStartIndex, commitments, shieldCiphertext, fees);
@@ -154,10 +154,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
                 token: TokenData({tokenType: TokenType.ERC20, tokenAddress: usdc, tokenSubID: 0}),
                 value: uint120(value)
             }),
-            ciphertext: ShieldCiphertext({
-                encryptedBundle: data.encryptedBundle,
-                shieldKey: data.shieldKey
-            })
+            ciphertext: ShieldCiphertext({encryptedBundle: data.encryptedBundle, shieldKey: data.shieldKey})
         });
     }
 
@@ -197,13 +194,8 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
                 }
 
                 // Record the fee in the fee module
-                IArmadaFeeModule(feeModule).recordShieldFee(
-                    preimage.token.tokenAddress,
-                    integrator,
-                    amount,
-                    armadaTake,
-                    integratorFee
-                );
+                IArmadaFeeModule(feeModule)
+                    .recordShieldFee(preimage.token.tokenAddress, integrator, amount, armadaTake, integratorFee);
             } else if (shieldFee > 0) {
                 // Flat fee fallback path (used when feeModule == address(0))
                 (uint120 base, uint120 feeAmount) = _getFee(preimage.value, true, shieldFee);
@@ -231,8 +223,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
     function _isPrivilegedShieldCaller(address caller) internal view returns (bool) {
         address reg = adapterRegistry;
         if (reg == address(0)) return false;
-        return IAdapterRegistry(reg).authorizedAdapters(caller)
-            || IAdapterRegistry(reg).withdrawOnlyAdapters(caller);
+        return IAdapterRegistry(reg).authorizedAdapters(caller) || IAdapterRegistry(reg).withdrawOnlyAdapters(caller);
     }
 
     /// @notice Enforces the per-note shield constraints (spec section 7.1 step a).
@@ -273,21 +264,17 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
     /// @param integrator Integrator credited for the fee split (zero address for none).
     /// @return adjustedNote The note with its value reduced by the fee taken.
     /// @return fee The total fee charged.
-    function _transferTokenIn(
-        CommitmentPreimage calldata _note,
-        address integrator
-    ) internal returns (CommitmentPreimage memory adjustedNote, uint256 fee) {
+    function _transferTokenIn(CommitmentPreimage calldata _note, address integrator)
+        internal
+        returns (CommitmentPreimage memory adjustedNote, uint256 fee)
+    {
         require(_note.token.tokenType == TokenType.ERC20, "ShieldModule: Only ERC20 supported");
 
         IERC20 token = IERC20(_note.token.tokenAddress);
 
         if (_isPrivilegedShieldCaller(msg.sender)) {
             // Privileged callers (e.g. the yield adapter) bypass all fees
-            adjustedNote = CommitmentPreimage({
-                npk: _note.npk,
-                token: _note.token,
-                value: _note.value
-            });
+            adjustedNote = CommitmentPreimage({npk: _note.npk, token: _note.token, value: _note.value});
             fee = 0;
 
             // Pull the full amount into the pool
@@ -302,11 +289,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
                 IArmadaFeeModule(feeModule).calculateShieldFee(integrator, amount);
 
             uint120 base = uint120(amount - totalFee);
-            adjustedNote = CommitmentPreimage({
-                npk: _note.npk,
-                token: _note.token,
-                value: base
-            });
+            adjustedNote = CommitmentPreimage({npk: _note.npk, token: _note.token, value: base});
             fee = totalFee;
 
             // Pull the net amount into the pool
@@ -326,21 +309,12 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
             }
 
             // Record the fee in the fee module
-            IArmadaFeeModule(feeModule).recordShieldFee(
-                _note.token.tokenAddress,
-                integrator,
-                amount,
-                armadaTake,
-                integratorFee
-            );
+            IArmadaFeeModule(feeModule)
+                .recordShieldFee(_note.token.tokenAddress, integrator, amount, armadaTake, integratorFee);
         } else {
             // Flat fee fallback path (used when feeModule == address(0))
             (uint120 base, uint120 feeAmount) = _getFee(_note.value, true, shieldFee);
-            adjustedNote = CommitmentPreimage({
-                npk: _note.npk,
-                token: _note.token,
-                value: base
-            });
+            adjustedNote = CommitmentPreimage({npk: _note.npk, token: _note.token, value: base});
             fee = feeAmount;
 
             // Pull the net amount into the pool
@@ -366,11 +340,11 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
     /// @param _feeBP Fee rate in basis points.
     /// @return base The amount net of the fee.
     /// @return fee The fee amount.
-    function _getFee(
-        uint136 _amount,
-        bool _isInclusive,
-        uint120 _feeBP
-    ) internal pure returns (uint120 base, uint120 fee) {
+    function _getFee(uint136 _amount, bool _isInclusive, uint120 _feeBP)
+        internal
+        pure
+        returns (uint120 base, uint120 fee)
+    {
         if (_feeBP == 0) {
             return (uint120(_amount), 0);
         }
@@ -390,11 +364,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
     /// @param _note The commitment preimage.
     /// @return Poseidon digest of (npk, tokenID, value).
     function _hashCommitment(CommitmentPreimage memory _note) internal pure returns (bytes32) {
-        return PoseidonT4.poseidon([
-            _note.npk,
-            _getTokenID(_note.token),
-            bytes32(uint256(_note.value))
-        ]);
+        return PoseidonT4.poseidon([_note.npk, _getTokenID(_note.token), bytes32(uint256(_note.value))]);
     }
 
     /// @notice Derives the field-element token identifier (spec section 2.2).
@@ -413,10 +383,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
     /// @notice Reverts if shields are currently paused. No-op if no pause contract is set.
     function _requireShieldsNotPaused() internal view {
         if (shieldPauseContract != address(0)) {
-            require(
-                !IShieldPauseController(shieldPauseContract).shieldsPaused(),
-                "ShieldModule: shields paused"
-            );
+            require(!IShieldPauseController(shieldPauseContract).shieldsPaused(), "ShieldModule: shields paused");
         }
     }
 }

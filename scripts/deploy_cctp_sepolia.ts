@@ -68,19 +68,27 @@ async function configureCCTP(role: ChainRole): Promise<DeploymentInfo> {
 
   const usdcCode = await ethers.provider.getCode(cctp.usdc);
   if (usdcCode === "0x") {
-    throw new Error(`USDC contract not found at ${cctp.usdc} on chain ${chainId}`);
+    throw new Error(
+      `USDC contract not found at ${cctp.usdc} on chain ${chainId}`,
+    );
   }
   console.log("  USDC: verified");
 
   const messengerCode = await ethers.provider.getCode(cctp.tokenMessenger);
   if (messengerCode === "0x") {
-    throw new Error(`TokenMessengerV2 not found at ${cctp.tokenMessenger} on chain ${chainId}`);
+    throw new Error(
+      `TokenMessengerV2 not found at ${cctp.tokenMessenger} on chain ${chainId}`,
+    );
   }
   console.log("  TokenMessengerV2: verified");
 
-  const transmitterCode = await ethers.provider.getCode(cctp.messageTransmitter);
+  const transmitterCode = await ethers.provider.getCode(
+    cctp.messageTransmitter,
+  );
   if (transmitterCode === "0x") {
-    throw new Error(`MessageTransmitterV2 not found at ${cctp.messageTransmitter} on chain ${chainId}`);
+    throw new Error(
+      `MessageTransmitterV2 not found at ${cctp.messageTransmitter} on chain ${chainId}`,
+    );
   }
   console.log("  MessageTransmitterV2: verified");
 
@@ -94,14 +102,18 @@ async function configureCCTP(role: ChainRole): Promise<DeploymentInfo> {
 
   // Check deployer USDC balance
   const usdcBalance = await usdc.balanceOf(deployer.address);
-  console.log(`  Deployer USDC balance: ${ethers.formatUnits(usdcBalance, 6)} USDC`);
+  console.log(
+    `  Deployer USDC balance: ${ethers.formatUnits(usdcBalance, 6)} USDC`,
+  );
 
   // Check deployer ETH balance
   const ethBalance = await ethers.provider.getBalance(deployer.address);
   console.log(`  Deployer ETH balance: ${ethers.formatEther(ethBalance)} ETH`);
 
   if (ethBalance < ethers.parseEther("0.01")) {
-    console.warn("\n  WARNING: Low ETH balance. Fund deployer before deploying contracts.");
+    console.warn(
+      "\n  WARNING: Low ETH balance. Fund deployer before deploying contracts.",
+    );
   }
 
   console.log("");
@@ -136,7 +148,11 @@ async function main() {
   const role = getChainRole(chainId);
   if (!role) {
     console.error(`Unknown chain ID: ${chainId}`);
-    console.error(`Expected one of: ${getAllChains().map((c) => `${c.chainId} (${c.role})`).join(", ")}`);
+    console.error(
+      `Expected one of: ${getAllChains()
+        .map((c) => `${c.chainId} (${c.role})`)
+        .join(", ")}`,
+    );
     process.exit(1);
   }
 
@@ -148,7 +164,9 @@ async function main() {
   console.log(`Saved to: deployments/${filename}`);
   console.log("");
   console.log("Next step: deploy privacy pool contracts");
-  console.log(`  npx hardhat run scripts/deploy_privacy_pool.ts --network ${getChainByRole(role).hardhatNetwork}`);
+  console.log(
+    `  npx hardhat run scripts/deploy_privacy_pool.ts --network ${getChainByRole(role).hardhatNetwork}`,
+  );
 }
 
 main()

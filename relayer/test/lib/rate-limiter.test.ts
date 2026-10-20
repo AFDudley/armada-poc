@@ -4,14 +4,22 @@
 // isolation, idle pruning, and the opt-in X-Forwarded-For trust (spoofable unless RELAYER_TRUST_PROXY).
 
 import { expect } from "chai";
-import { RateLimiter, clientKey, type RateLimitedRequest } from "../../lib/rate-limiter";
+import {
+  RateLimiter,
+  clientKey,
+  type RateLimitedRequest,
+} from "../../lib/rate-limiter";
 
 describe("RateLimiter", function () {
   it("allows up to capacity then blocks until refill", function () {
     // WHY: the burst allowance is `capacity`; the (capacity+1)th request in the same instant must
     // be rejected, and a later request must be allowed once enough time has refilled a token.
     let t = 1_000_000;
-    const limiter = new RateLimiter({ capacity: 3, refillPerSec: 1, now: () => t });
+    const limiter = new RateLimiter({
+      capacity: 3,
+      refillPerSec: 1,
+      now: () => t,
+    });
 
     expect(limiter.allow("ip1")).to.equal(true);
     expect(limiter.allow("ip1")).to.equal(true);
@@ -25,8 +33,12 @@ describe("RateLimiter", function () {
 
   it("isolates buckets per key", function () {
     // WHY: one abusive client must not consume another client's budget.
-    let t = 0;
-    const limiter = new RateLimiter({ capacity: 1, refillPerSec: 1, now: () => t });
+    const t = 0;
+    const limiter = new RateLimiter({
+      capacity: 1,
+      refillPerSec: 1,
+      now: () => t,
+    });
     expect(limiter.allow("a")).to.equal(true);
     expect(limiter.allow("a")).to.equal(false);
     expect(limiter.allow("b")).to.equal(true); // b has its own full bucket
@@ -34,7 +46,11 @@ describe("RateLimiter", function () {
 
   it("caps refill at capacity (no unbounded accumulation while idle)", function () {
     let t = 0;
-    const limiter = new RateLimiter({ capacity: 2, refillPerSec: 1, now: () => t });
+    const limiter = new RateLimiter({
+      capacity: 2,
+      refillPerSec: 1,
+      now: () => t,
+    });
     limiter.allow("a"); // consume 1 → 1 left
     t += 100_000; // long idle — would over-refill if uncapped
     expect(limiter.allow("a")).to.equal(true);
@@ -62,7 +78,9 @@ describe("RateLimiter", function () {
 });
 
 describe("clientKey", function () {
-  const base = (overrides: Partial<RateLimitedRequest>): RateLimitedRequest => ({
+  const base = (
+    overrides: Partial<RateLimitedRequest>,
+  ): RateLimitedRequest => ({
     ip: "10.0.0.1",
     socket: { remoteAddress: "10.0.0.9" },
     headers: {},

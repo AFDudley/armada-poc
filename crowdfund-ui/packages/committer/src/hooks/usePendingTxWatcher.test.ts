@@ -1,85 +1,104 @@
 // ABOUTME: Tests for usePendingTxWatcher — resumes watching persisted txs via the fallback provider after reload.
 // ABOUTME: Confirms a surviving tx resolves to confirmed/failed, is cleared from storage, and fires onResolved.
 
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { JsonRpcProvider } from 'ethers'
-import { usePendingTxWatcher } from './usePendingTxWatcher'
-import { savePendingTx, loadPendingTxs, clearPendingTxs, type PendingTx } from '@/lib/pendingTx'
+import { renderHook, waitFor } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import type { JsonRpcProvider } from "ethers";
+import { usePendingTxWatcher } from "./usePendingTxWatcher";
+import {
+  savePendingTx,
+  loadPendingTxs,
+  clearPendingTxs,
+  type PendingTx,
+} from "@/lib/pendingTx";
 
-const CHAIN = 31337
-const HASH = '0x' + '1'.repeat(64)
+const CHAIN = 31337;
+const HASH = "0x" + "1".repeat(64);
 
 function seed(over: Partial<PendingTx> = {}) {
   savePendingTx({
     chainId: CHAIN,
-    address: '0x' + 'a'.repeat(40),
+    address: "0x" + "a".repeat(40),
     txHash: HASH,
-    label: 'Commit participation',
+    label: "Commit participation",
     sentAt: 1,
     ...over,
-  })
+  });
 }
 
-function makeProvider(waitForTransaction: ReturnType<typeof vi.fn>): JsonRpcProvider {
-  return { waitForTransaction } as unknown as JsonRpcProvider
+function makeProvider(
+  waitForTransaction: ReturnType<typeof vi.fn>,
+): JsonRpcProvider {
+  return { waitForTransaction } as unknown as JsonRpcProvider;
 }
 
 beforeEach(() => {
-  clearPendingTxs()
-})
+  clearPendingTxs();
+});
 
-describe('usePendingTxWatcher', () => {
-  it('resolves a surviving tx to confirmed, clears it, and fires onResolved', async () => {
-    seed()
-    const onResolved = vi.fn()
-    const provider = makeProvider(vi.fn().mockResolvedValue({ status: 1 }))
+describe("usePendingTxWatcher", () => {
+  it("resolves a surviving tx to confirmed, clears it, and fires onResolved", async () => {
+    seed();
+    const onResolved = vi.fn();
+    const provider = makeProvider(vi.fn().mockResolvedValue({ status: 1 }));
 
-    const { result } = renderHook(() => usePendingTxWatcher(provider, CHAIN, onResolved))
+    const { result } = renderHook(() =>
+      usePendingTxWatcher(provider, CHAIN, onResolved),
+    );
 
-    await waitFor(() => expect(result.current[0]?.status).toBe('confirmed'))
-    expect(loadPendingTxs()).toEqual([])
-    expect(onResolved).toHaveBeenCalledWith(HASH, 'confirmed', 'Commit participation')
-  })
+    await waitFor(() => expect(result.current[0]?.status).toBe("confirmed"));
+    expect(loadPendingTxs()).toEqual([]);
+    expect(onResolved).toHaveBeenCalledWith(
+      HASH,
+      "confirmed",
+      "Commit participation",
+    );
+  });
 
-  it('waits with the configured confirmation count (reorg safety)', async () => {
-    seed()
-    const waitForTransaction = vi.fn().mockResolvedValue({ status: 1 })
-    const provider = makeProvider(waitForTransaction)
+  it("waits with the configured confirmation count (reorg safety)", async () => {
+    seed();
+    const waitForTransaction = vi.fn().mockResolvedValue({ status: 1 });
+    const provider = makeProvider(waitForTransaction);
 
-    const { result } = renderHook(() => usePendingTxWatcher(provider, CHAIN, undefined))
+    const { result } = renderHook(() =>
+      usePendingTxWatcher(provider, CHAIN, undefined),
+    );
 
-    await waitFor(() => expect(result.current[0]?.status).toBe('confirmed'))
+    await waitFor(() => expect(result.current[0]?.status).toBe("confirmed"));
     // Confirmations are threaded through (not left to ethers' default of 1) so a
     // mainnet build can require >1 confirmation before treating a tx as landed.
-    expect(waitForTransaction).toHaveBeenCalledWith(HASH, expect.any(Number))
-  })
+    expect(waitForTransaction).toHaveBeenCalledWith(HASH, expect.any(Number));
+  });
 
-  it('marks a reverted tx as failed and clears it', async () => {
-    seed()
-    const provider = makeProvider(vi.fn().mockResolvedValue({ status: 0 }))
+  it("marks a reverted tx as failed and clears it", async () => {
+    seed();
+    const provider = makeProvider(vi.fn().mockResolvedValue({ status: 0 }));
 
-    const { result } = renderHook(() => usePendingTxWatcher(provider, CHAIN, undefined))
+    const { result } = renderHook(() =>
+      usePendingTxWatcher(provider, CHAIN, undefined),
+    );
 
-    await waitFor(() => expect(result.current[0]?.status).toBe('failed'))
-    expect(loadPendingTxs()).toEqual([])
-  })
+    await waitFor(() => expect(result.current[0]?.status).toBe("failed"));
+    expect(loadPendingTxs()).toEqual([]);
+  });
 
-  it('ignores txs for a different chain', async () => {
-    seed({ chainId: 1 })
-    const waitForTransaction = vi.fn().mockResolvedValue({ status: 1 })
-    const provider = makeProvider(waitForTransaction)
+  it("ignores txs for a different chain", async () => {
+    seed({ chainId: 1 });
+    const waitForTransaction = vi.fn().mockResolvedValue({ status: 1 });
+    const provider = makeProvider(waitForTransaction);
 
-    renderHook(() => usePendingTxWatcher(provider, CHAIN, undefined))
+    renderHook(() => usePendingTxWatcher(provider, CHAIN, undefined));
 
     // Give any scan a tick; the other-chain tx must not be watched.
-    await new Promise((r) => setTimeout(r, 0))
-    expect(waitForTransaction).not.toHaveBeenCalled()
-  })
+    await new Promise((r) => setTimeout(r, 0));
+    expect(waitForTransaction).not.toHaveBeenCalled();
+  });
 
-  it('does nothing without a provider', () => {
-    seed()
-    const { result } = renderHook(() => usePendingTxWatcher(null, CHAIN, undefined))
-    expect(result.current).toEqual([])
-  })
-})
+  it("does nothing without a provider", () => {
+    seed();
+    const { result } = renderHook(() =>
+      usePendingTxWatcher(null, CHAIN, undefined),
+    );
+    expect(result.current).toEqual([]);
+  });
+});

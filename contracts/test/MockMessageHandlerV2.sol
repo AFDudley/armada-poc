@@ -6,11 +6,21 @@ pragma solidity ^0.8.17;
 import "../cctp/ICCTPV2.sol";
 
 contract MockMessageHandlerV2 is IMessageHandlerV2 {
-    function handleReceiveFinalizedMessage(uint32, bytes32, uint32, bytes calldata) external pure override returns (bool) {
+    function handleReceiveFinalizedMessage(uint32, bytes32, uint32, bytes calldata)
+        external
+        pure
+        override
+        returns (bool)
+    {
         return true;
     }
 
-    function handleReceiveUnfinalizedMessage(uint32, bytes32, uint32, bytes calldata) external pure override returns (bool) {
+    function handleReceiveUnfinalizedMessage(uint32, bytes32, uint32, bytes calldata)
+        external
+        pure
+        override
+        returns (bool)
+    {
         return true;
     }
 }

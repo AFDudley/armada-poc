@@ -23,7 +23,11 @@ import {
   isCCTPReal,
   type ChainRole,
 } from "../config/networks";
-import { createNonceManager, loadDeployment, saveDeployment } from "./deploy-utils";
+import {
+  createNonceManager,
+  loadDeployment,
+  saveDeployment,
+} from "./deploy-utils";
 
 interface AaveMockDeployment {
   chainId: number;
@@ -89,7 +93,9 @@ async function main() {
     await (await usdc.addMinter(mockAaveSpokeAddress, nm.override())).wait();
     console.log("   MockAaveSpoke added as USDC minter");
   } else {
-    console.log("\n2. Skipping minter setup (using real USDC - mock will use transfer-based yield)");
+    console.log(
+      "\n2. Skipping minter setup (using real USDC - mock will use transfer-based yield)",
+    );
   }
 
   // 3. Add USDC reserve
@@ -98,7 +104,7 @@ async function main() {
     usdcAddress,
     yieldBps,
     !isCCTPReal(), // mintableYield only works with mock USDC
-    nm.override()
+    nm.override(),
   );
   await tx.wait();
   console.log(`   USDC reserve added (reserveId: 0, APY: ${yieldBps / 100}%)`);

@@ -1,111 +1,129 @@
 // ABOUTME: Local-only time manipulation and USDC minting controls.
 // ABOUTME: Provides quick-skip buttons, custom time advance, and Anvil account switcher.
 
-import { useState, useCallback } from 'react'
-import type { UseTimeControlsResult } from '@/hooks/useTimeControls'
-import type { AdminState } from '@/hooks/useAdminState'
+import { useState, useCallback } from "react";
+import type { UseTimeControlsResult } from "@/hooks/useTimeControls";
+import type { AdminState } from "@/hooks/useAdminState";
 
 export interface TimeControlsProps {
-  timeControls: UseTimeControlsResult
-  state: AdminState
-  onMintUsdc?: (recipient: string, amount: string) => Promise<void>
+  timeControls: UseTimeControlsResult;
+  state: AdminState;
+  onMintUsdc?: (recipient: string, amount: string) => Promise<void>;
 }
 
 const ANVIL_ACCOUNTS = [
-  { label: 'Deployer / LT', address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' },
-  { label: 'Security Council', address: '0xBcd4042DE499D14e55001CcbB24a551F3b954096' },
-  { label: 'Treasury', address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC' },
-  { label: 'User 1', address: '0x90F79bf6EB2c4f870365E785982E1f101E93b906' },
-  { label: 'User 2', address: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65' },
-]
+  {
+    label: "Deployer / LT",
+    address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  },
+  {
+    label: "Security Council",
+    address: "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
+  },
+  { label: "Treasury", address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" },
+  { label: "User 1", address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906" },
+  { label: "User 2", address: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65" },
+];
 
-type ButtonStatus = 'idle' | 'busy' | 'done' | 'error'
+type ButtonStatus = "idle" | "busy" | "done" | "error";
 
 /** Wraps an async action with busy/done/error status transitions. */
 function useActionStatus() {
-  const [status, setStatus] = useState<ButtonStatus>('idle')
+  const [status, setStatus] = useState<ButtonStatus>("idle");
 
   const run = useCallback(async (action: () => Promise<void>) => {
-    setStatus('busy')
+    setStatus("busy");
     try {
-      await action()
-      setStatus('done')
-      setTimeout(() => setStatus('idle'), 1200)
+      await action();
+      setStatus("done");
+      setTimeout(() => setStatus("idle"), 1200);
     } catch {
-      setStatus('error')
-      setTimeout(() => setStatus('idle'), 2000)
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 2000);
     }
-  }, [])
+  }, []);
 
-  return { status, run }
+  return { status, run };
 }
 
 function statusLabel(status: ButtonStatus, idleLabel: string): string {
   switch (status) {
-    case 'busy': return 'Working...'
-    case 'done': return 'Done'
-    case 'error': return 'Failed'
-    default: return idleLabel
+    case "busy":
+      return "Working...";
+    case "done":
+      return "Done";
+    case "error":
+      return "Failed";
+    default:
+      return idleLabel;
   }
 }
 
 function statusClass(status: ButtonStatus): string {
   switch (status) {
-    case 'busy': return 'opacity-70 cursor-wait'
-    case 'done': return 'bg-green-600/30 text-green-400'
-    case 'error': return 'bg-red-600/30 text-red-400'
-    default: return ''
+    case "busy":
+      return "opacity-70 cursor-wait";
+    case "done":
+      return "bg-green-600/30 text-green-400";
+    case "error":
+      return "bg-red-600/30 text-red-400";
+    default:
+      return "";
   }
 }
 
-export function TimeControls({ timeControls, state, onMintUsdc }: TimeControlsProps) {
-  const [customSeconds, setCustomSeconds] = useState('')
-  const [mintRecipient, setMintRecipient] = useState(ANVIL_ACCOUNTS[3].address)
-  const [mintAmount, setMintAmount] = useState('100000')
-  const [ethRecipient, setEthRecipient] = useState(ANVIL_ACCOUNTS[1].address)
-  const [ethAmount, setEthAmount] = useState('100')
+export function TimeControls({
+  timeControls,
+  state,
+  onMintUsdc,
+}: TimeControlsProps) {
+  const [customSeconds, setCustomSeconds] = useState("");
+  const [mintRecipient, setMintRecipient] = useState(ANVIL_ACCOUNTS[3].address);
+  const [mintAmount, setMintAmount] = useState("100000");
+  const [ethRecipient, setEthRecipient] = useState(ANVIL_ACCOUNTS[1].address);
+  const [ethAmount, setEthAmount] = useState("100");
 
-  const week1 = useActionStatus()
-  const windowEnd = useActionStatus()
-  const claimDeadline = useActionStatus()
-  const customAdvance = useActionStatus()
-  const mint = useActionStatus()
-  const mintEth = useActionStatus()
+  const week1 = useActionStatus();
+  const windowEnd = useActionStatus();
+  const claimDeadline = useActionStatus();
+  const customAdvance = useActionStatus();
+  const mint = useActionStatus();
+  const mintEth = useActionStatus();
 
   const handleCustomAdvance = async () => {
-    const seconds = parseInt(customSeconds, 10)
+    const seconds = parseInt(customSeconds, 10);
     if (!isNaN(seconds) && seconds > 0) {
       await customAdvance.run(async () => {
-        await timeControls.advanceTime(seconds)
-        setCustomSeconds('')
-      })
+        await timeControls.advanceTime(seconds);
+        setCustomSeconds("");
+      });
     }
-  }
+  };
 
   const handleMint = async () => {
     if (onMintUsdc && mintRecipient && mintAmount) {
-      await mint.run(() => onMintUsdc(mintRecipient, mintAmount))
+      await mint.run(() => onMintUsdc(mintRecipient, mintAmount));
     }
-  }
+  };
 
   const handleMintEth = async () => {
     if (ethRecipient && ethAmount) {
-      await mintEth.run(() => timeControls.setBalance(ethRecipient, ethAmount))
+      await mintEth.run(() => timeControls.setBalance(ethRecipient, ethAmount));
     }
-  }
+  };
 
   const handleSwitchAccount = async () => {
-    const ethereum = (window as any).ethereum
-    if (!ethereum) return
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) return;
     try {
       await ethereum.request({
-        method: 'wallet_requestPermissions',
+        method: "wallet_requestPermissions",
         params: [{ eth_accounts: {} }],
-      })
+      });
     } catch {
       // User canceled or method not supported
     }
-  }
+  };
 
   return (
     <div className="rounded-lg border border-amber-500/50 bg-amber-500/5 p-4 space-y-3">
@@ -117,24 +135,55 @@ export function TimeControls({ timeControls, state, onMintUsdc }: TimeControlsPr
         <div className="flex flex-wrap gap-1">
           <button
             className={`px-2 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${statusClass(week1.status)}`}
-            onClick={() => week1.run(() => timeControls.skipToWeek1End(state.launchTeamInviteEnd, state.blockTimestamp))}
-            disabled={state.blockTimestamp >= state.launchTeamInviteEnd || week1.status === 'busy'}
+            onClick={() =>
+              week1.run(() =>
+                timeControls.skipToWeek1End(
+                  state.launchTeamInviteEnd,
+                  state.blockTimestamp,
+                ),
+              )
+            }
+            disabled={
+              state.blockTimestamp >= state.launchTeamInviteEnd ||
+              week1.status === "busy"
+            }
           >
-            {statusLabel(week1.status, 'Skip to Launch-Team Invite End')}
+            {statusLabel(week1.status, "Skip to Launch-Team Invite End")}
           </button>
           <button
             className={`px-2 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${statusClass(windowEnd.status)}`}
-            onClick={() => windowEnd.run(() => timeControls.skipToWindowEnd(state.windowEnd, state.blockTimestamp))}
-            disabled={state.blockTimestamp >= state.windowEnd || windowEnd.status === 'busy'}
+            onClick={() =>
+              windowEnd.run(() =>
+                timeControls.skipToWindowEnd(
+                  state.windowEnd,
+                  state.blockTimestamp,
+                ),
+              )
+            }
+            disabled={
+              state.blockTimestamp >= state.windowEnd ||
+              windowEnd.status === "busy"
+            }
           >
-            {statusLabel(windowEnd.status, 'Skip to Window End')}
+            {statusLabel(windowEnd.status, "Skip to Window End")}
           </button>
           <button
             className={`px-2 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${statusClass(claimDeadline.status)}`}
-            onClick={() => claimDeadline.run(() => timeControls.skipToClaimDeadline(state.claimDeadline, state.blockTimestamp))}
-            disabled={state.claimDeadline === 0 || state.blockTimestamp >= state.claimDeadline || claimDeadline.status === 'busy'}
+            onClick={() =>
+              claimDeadline.run(() =>
+                timeControls.skipToClaimDeadline(
+                  state.claimDeadline,
+                  state.blockTimestamp,
+                ),
+              )
+            }
+            disabled={
+              state.claimDeadline === 0 ||
+              state.blockTimestamp >= state.claimDeadline ||
+              claimDeadline.status === "busy"
+            }
           >
-            {statusLabel(claimDeadline.status, 'Skip to Claim Deadline')}
+            {statusLabel(claimDeadline.status, "Skip to Claim Deadline")}
           </button>
         </div>
       </div>
@@ -151,9 +200,9 @@ export function TimeControls({ timeControls, state, onMintUsdc }: TimeControlsPr
         <button
           className={`px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${statusClass(customAdvance.status)}`}
           onClick={handleCustomAdvance}
-          disabled={customAdvance.status === 'busy'}
+          disabled={customAdvance.status === "busy"}
         >
-          {statusLabel(customAdvance.status, 'Advance')}
+          {statusLabel(customAdvance.status, "Advance")}
         </button>
       </div>
 
@@ -165,10 +214,17 @@ export function TimeControls({ timeControls, state, onMintUsdc }: TimeControlsPr
             <div className="flex-1 flex gap-1">
               <select
                 className="rounded border border-input bg-background px-2 py-1"
-                value={ANVIL_ACCOUNTS.find((a) => a.address.toLowerCase() === mintRecipient.toLowerCase())?.address ?? ''}
+                value={
+                  ANVIL_ACCOUNTS.find(
+                    (a) =>
+                      a.address.toLowerCase() === mintRecipient.toLowerCase(),
+                  )?.address ?? ""
+                }
                 onChange={(e) => setMintRecipient(e.target.value)}
               >
-                <option value="" disabled>Presets...</option>
+                <option value="" disabled>
+                  Presets...
+                </option>
                 {ANVIL_ACCOUNTS.map((acc) => (
                   <option key={acc.address} value={acc.address}>
                     {acc.label}
@@ -193,9 +249,9 @@ export function TimeControls({ timeControls, state, onMintUsdc }: TimeControlsPr
             <button
               className={`px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${statusClass(mint.status)}`}
               onClick={handleMint}
-              disabled={mint.status === 'busy' || !mintRecipient}
+              disabled={mint.status === "busy" || !mintRecipient}
             >
-              {statusLabel(mint.status, 'Mint')}
+              {statusLabel(mint.status, "Mint")}
             </button>
           </div>
         </div>
@@ -208,10 +264,16 @@ export function TimeControls({ timeControls, state, onMintUsdc }: TimeControlsPr
           <div className="flex-1 flex gap-1">
             <select
               className="rounded border border-input bg-background px-2 py-1"
-              value={ANVIL_ACCOUNTS.find((a) => a.address.toLowerCase() === ethRecipient.toLowerCase())?.address ?? ''}
+              value={
+                ANVIL_ACCOUNTS.find(
+                  (a) => a.address.toLowerCase() === ethRecipient.toLowerCase(),
+                )?.address ?? ""
+              }
               onChange={(e) => setEthRecipient(e.target.value)}
             >
-              <option value="" disabled>Presets...</option>
+              <option value="" disabled>
+                Presets...
+              </option>
               {ANVIL_ACCOUNTS.map((acc) => (
                 <option key={acc.address} value={acc.address}>
                   {acc.label}
@@ -236,9 +298,9 @@ export function TimeControls({ timeControls, state, onMintUsdc }: TimeControlsPr
           <button
             className={`px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${statusClass(mintEth.status)}`}
             onClick={handleMintEth}
-            disabled={mintEth.status === 'busy' || !ethRecipient}
+            disabled={mintEth.status === "busy" || !ethRecipient}
           >
-            {statusLabel(mintEth.status, 'Set')}
+            {statusLabel(mintEth.status, "Set")}
           </button>
         </div>
       </div>
@@ -260,5 +322,5 @@ export function TimeControls({ timeControls, state, onMintUsdc }: TimeControlsPr
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,8 +1,8 @@
 // ABOUTME: Resets a finished/errored tx pipeline when its host flow unmounts (modal close / navigation).
 // ABOUTME: Phase + reset are read through refs so an address-less mount doesn't freeze a no-op reset.
 
-import { useEffect, useRef } from 'react'
-import type { UseTxPipelineResult } from './useTxPipeline'
+import { useEffect, useRef } from "react";
+import type { UseTxPipelineResult } from "./useTxPipeline";
 
 /**
  * Clear a terminal (success/error/aborted) pipeline when the flow closes, so
@@ -19,17 +19,17 @@ import type { UseTxPipelineResult } from './useTxPipeline'
  * reset for the live address.
  */
 export function useResetPipelineOnClose(pipeline: UseTxPipelineResult): void {
-  const phaseRef = useRef(pipeline.state.phase)
-  phaseRef.current = pipeline.state.phase
-  const resetRef = useRef(pipeline.reset)
-  resetRef.current = pipeline.reset
+  const phaseRef = useRef(pipeline.state.phase);
+  phaseRef.current = pipeline.state.phase;
+  const resetRef = useRef(pipeline.reset);
+  resetRef.current = pipeline.reset;
 
   useEffect(() => {
     return () => {
-      const phase = phaseRef.current
-      if (phase !== 'running' && phase !== 'paused') {
-        resetRef.current()
+      const phase = phaseRef.current;
+      if (phase !== "running" && phase !== "paused") {
+        resetRef.current();
       }
-    }
-  }, [])
+    };
+  }, []);
 }

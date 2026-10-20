@@ -150,12 +150,16 @@ describe("MCP Server — Unit Tests", function () {
 
     it("hub deployment has privacyPool key in contracts", function () {
       const deployments = loadAllDeployments("local");
-      expect(deployments.hub.privacyPool!.contracts.privacyPool).to.be.a("string");
+      expect(deployments.hub.privacyPool!.contracts.privacyPool).to.be.a(
+        "string",
+      );
     });
 
     it("client deployment has privacyPoolClient key in contracts", function () {
       const deployments = loadAllDeployments("local");
-      expect(deployments.clients[0].privacyPool!.contracts.privacyPoolClient).to.be.a("string");
+      expect(
+        deployments.clients[0].privacyPool!.contracts.privacyPoolClient,
+      ).to.be.a("string");
     });
 
     it("getPoolAddress works correctly for loaded hub deployment", function () {
@@ -206,7 +210,7 @@ describe("MCP Server — Unit Tests", function () {
     it("does not report USDC cross-reference errors for consistent deployments", function () {
       const report = getDeploymentState("local");
       const usdcErrors = report.issues.filter(
-        (i) => i.severity === "error" && i.message.includes("USDC")
+        (i) => i.severity === "error" && i.message.includes("USDC"),
       );
       expect(usdcErrors).to.have.length(0);
     });

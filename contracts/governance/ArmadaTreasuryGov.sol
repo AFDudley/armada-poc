@@ -26,11 +26,11 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     /// elapses. Changes that TIGHTEN take effect immediately and clear the matching
     /// pending slot. See _lazyActivate and the three setters for the activation rules.
     struct OutflowConfig {
-        uint256 windowDuration;   // rolling window in seconds (e.g. 30 days)
-        uint256 limitBps;         // percentage of current treasury balance (1000 = 10%)
-        uint256 limitAbsolute;    // absolute cap in token units
-        uint256 floorAbsolute;    // immutable minimum — governance can never reduce below this
-        bool initialized;         // whether config has been set for this token
+        uint256 windowDuration; // rolling window in seconds (e.g. 30 days)
+        uint256 limitBps; // percentage of current treasury balance (1000 = 10%)
+        uint256 limitAbsolute; // absolute cap in token units
+        uint256 floorAbsolute; // immutable minimum — governance can never reduce below this
+        bool initialized; // whether config has been set for this token
 
         // Pending-activation slots for loosening changes.
         // activation == 0 means no pending change. activation > 0 means the stored
@@ -76,9 +76,9 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     // Each authorized token has an absolute spending limit per rolling window.
     // Unused budget does not carry over between windows.
     struct StewardBudget {
-        uint256 limit;         // max spend per window in token units
-        uint256 window;        // window duration in seconds
-        bool authorized;       // whether steward can spend this token
+        uint256 limit; // max spend per window in token units
+        uint256 window; // window duration in seconds
+        bool authorized; // whether steward can spend this token
     }
 
     mapping(address => StewardBudget) public stewardBudgets;
@@ -106,22 +106,30 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     event StewardBudgetTokenAdded(address indexed token, uint256 limit, uint256 window);
     event StewardBudgetTokenUpdated(address indexed token, uint256 limit, uint256 window);
     event StewardBudgetTokenRemoved(address indexed token);
-    event OutflowConfigInitialized(address indexed token, uint256 windowDuration, uint256 limitBps, uint256 limitAbsolute, uint256 floorAbsolute);
+    event OutflowConfigInitialized(
+        address indexed token, uint256 windowDuration, uint256 limitBps, uint256 limitAbsolute, uint256 floorAbsolute
+    );
 
     // Absolute limit: loosening = increase. Scheduled → activates at activatesAt.
-    event OutflowLimitAbsoluteIncreaseScheduled(address indexed token, uint256 oldActive, uint256 pendingValue, uint256 activatesAt);
+    event OutflowLimitAbsoluteIncreaseScheduled(
+        address indexed token, uint256 oldActive, uint256 pendingValue, uint256 activatesAt
+    );
     event OutflowLimitAbsoluteActivated(address indexed token, uint256 oldActive, uint256 newActive);
     event OutflowLimitAbsoluteDecreased(address indexed token, uint256 oldActive, uint256 newActive);
 
     // Bps limit: loosening = increase.
-    event OutflowLimitBpsIncreaseScheduled(address indexed token, uint256 oldActive, uint256 pendingValue, uint256 activatesAt);
+    event OutflowLimitBpsIncreaseScheduled(
+        address indexed token, uint256 oldActive, uint256 pendingValue, uint256 activatesAt
+    );
     event OutflowLimitBpsActivated(address indexed token, uint256 oldActive, uint256 newActive);
     event OutflowLimitBpsDecreased(address indexed token, uint256 oldActive, uint256 newActive);
 
     // Window duration: loosening = decrease (shorter lookback drops older outflow records
     // from the rolling sum faster, freeing budget sooner). Semantics are inverted vs. the
     // limit parameters by design — this is not a bug. See _sumRecentRecords.
-    event OutflowWindowDurationDecreaseScheduled(address indexed token, uint256 oldActive, uint256 pendingValue, uint256 activatesAt);
+    event OutflowWindowDurationDecreaseScheduled(
+        address indexed token, uint256 oldActive, uint256 pendingValue, uint256 activatesAt
+    );
     event OutflowWindowDurationActivated(address indexed token, uint256 oldActive, uint256 newActive);
     event OutflowWindowDurationIncreased(address indexed token, uint256 oldActive, uint256 newActive);
     event WindDownContractSet(address indexed windDownContract);
@@ -188,17 +196,11 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
         uint256 budgetLimit = budget.limit;
         // Rolling window: sum all steward spends within the trailing window
         uint256 recentSpend = _sumRecentRecords(_stewardSpendHistory[token], budget.window);
-        require(
-            recentSpend + amount <= budgetLimit,
-            "ArmadaTreasuryGov: exceeds steward budget"
-        );
+        require(recentSpend + amount <= budgetLimit, "ArmadaTreasuryGov: exceeds steward budget");
 
         // Record this spend for rolling window tracking.
         // NOTE: Same append-only pattern as _outflowHistory — see design note on _checkAndRecordOutflow.
-        _stewardSpendHistory[token].push(OutflowRecord({
-            amount: amount,
-            timestamp: block.timestamp
-        }));
+        _stewardSpendHistory[token].push(OutflowRecord({amount: amount, timestamp: block.timestamp}));
 
         _checkAndRecordOutflow(token, amount);
         IERC20(token).safeTransfer(recipient, amount);
@@ -219,11 +221,7 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
         require(limit > 0, "ArmadaTreasuryGov: zero limit");
         require(window >= 1 days, "ArmadaTreasuryGov: window too short");
 
-        stewardBudgets[token] = StewardBudget({
-            limit: limit,
-            window: window,
-            authorized: true
-        });
+        stewardBudgets[token] = StewardBudget({limit: limit, window: window, authorized: true});
 
         emit StewardBudgetTokenAdded(token, limit, window);
     }
@@ -315,7 +313,7 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
         require(newWindow <= MAX_OUTFLOW_WINDOW, "ArmadaTreasuryGov: window too long");
 
         // _lazyActivate returns the post-activation values; we only need windowDuration here (audit-75).
-        (uint256 activeWindow, , ) = _lazyActivate(token);
+        (uint256 activeWindow,,) = _lazyActivate(token);
         OutflowConfig storage config = _outflowConfigs[token];
 
         if (newWindow < activeWindow) {
@@ -344,7 +342,7 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
         require(newBps <= 10000, "ArmadaTreasuryGov: bps out of range");
 
         // _lazyActivate returns the post-activation values; we only need limitBps here (audit-75).
-        ( , uint256 activeBps, ) = _lazyActivate(token);
+        (, uint256 activeBps,) = _lazyActivate(token);
         OutflowConfig storage config = _outflowConfigs[token];
 
         if (newBps > activeBps) {
@@ -370,7 +368,7 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
         require(newAbsolute >= _outflowConfigs[token].floorAbsolute, "ArmadaTreasuryGov: absolute below floor");
 
         // _lazyActivate returns the post-activation values; we only need limitAbsolute here (audit-75).
-        ( , , uint256 activeAbsolute) = _lazyActivate(token);
+        (,, uint256 activeAbsolute) = _lazyActivate(token);
         OutflowConfig storage config = _outflowConfigs[token];
 
         if (newAbsolute > activeAbsolute) {
@@ -410,11 +408,10 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     ///      right after activation (audit-75). For the no-op path (most common
     ///      in steady state) this trades 3 SLOADs here for 1 SLOAD avoided in
     ///      each caller; net savings depend on call mix.
-    function _lazyActivate(address token) internal returns (
-        uint256 windowDuration_,
-        uint256 limitBps_,
-        uint256 limitAbsolute_
-    ) {
+    function _lazyActivate(address token)
+        internal
+        returns (uint256 windowDuration_, uint256 limitBps_, uint256 limitAbsolute_)
+    {
         OutflowConfig storage config = _outflowConfigs[token];
 
         // Emits fire before SSTOREs so the optimizer doesn't hold the prior
@@ -476,29 +473,21 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
         // the parameters. Without this, a drain executed in the same block as a just-activated
         // loosening would still enforce the stale pre-loosening limit.
         // _lazyActivate returns the post-activation values so we don't re-SLOAD windowDuration below (audit-75).
-        (uint256 windowDur, , ) = _lazyActivate(token);
+        (uint256 windowDur,,) = _lazyActivate(token);
 
         OutflowConfig storage config = _outflowConfigs[token];
         // address(0) sentinel routes balance lookup to native ETH; IERC20 calls on the
         // zero address would revert at the high-level EXTCODESIZE check.
-        uint256 treasuryBalance = token == address(0)
-            ? address(this).balance
-            : IERC20(token).balanceOf(address(this));
+        uint256 treasuryBalance = token == address(0) ? address(this).balance : IERC20(token).balanceOf(address(this));
         uint256 effectiveLimit = _effectiveLimit(config, treasuryBalance);
 
         // Sum recent outflows within the rolling window
         uint256 recentOutflow = _sumRecentRecords(_outflowHistory[token], windowDur);
 
-        require(
-            recentOutflow + amount <= effectiveLimit,
-            "ArmadaTreasuryGov: outflow limit exceeded"
-        );
+        require(recentOutflow + amount <= effectiveLimit, "ArmadaTreasuryGov: outflow limit exceeded");
 
         // Record this outflow
-        _outflowHistory[token].push(OutflowRecord({
-            amount: amount,
-            timestamp: block.timestamp
-        }));
+        _outflowHistory[token].push(OutflowRecord({amount: amount, timestamp: block.timestamp}));
     }
 
     /// @dev Sum amounts within a rolling window, iterating backwards from most recent.
@@ -508,7 +497,11 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     ///      thanks to the backwards iteration with early-break. At realistic usage rates
     ///      (~1 distribution/week ≈ 260 records/year), growth is bounded and manageable.
     ///      If usage patterns change significantly, consider adding a pruning mechanism.
-    function _sumRecentRecords(OutflowRecord[] storage records, uint256 windowDuration) internal view returns (uint256 total) {
+    function _sumRecentRecords(OutflowRecord[] storage records, uint256 windowDuration)
+        internal
+        view
+        returns (uint256 total)
+    {
         uint256 len = records.length;
         if (len == 0) return 0;
 
@@ -595,12 +588,11 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     ///      (i.e. what the next distribute/stewardSpend call would enforce), use
     ///      getEffectiveOutflowConfig instead. Kept for debugging and monitoring that needs
     ///      to distinguish scheduled-but-not-yet-activated pending values from stale storage.
-    function getOutflowConfig(address token) external view returns (
-        uint256 windowDuration,
-        uint256 limitBps,
-        uint256 limitAbsolute,
-        uint256 floorAbsolute
-    ) {
+    function getOutflowConfig(address token)
+        external
+        view
+        returns (uint256 windowDuration, uint256 limitBps, uint256 limitAbsolute, uint256 floorAbsolute)
+    {
         OutflowConfig storage config = _outflowConfigs[token];
         return (config.windowDuration, config.limitBps, config.limitAbsolute, config.floorAbsolute);
     }
@@ -610,12 +602,11 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     ///         values whose timers have elapsed). View counterpart of _lazyActivate.
     /// @dev Must return identical values to what _lazyActivate would produce if called now.
     ///      Cyfrin verifies this parity as part of the delay-mechanism audit.
-    function getEffectiveOutflowConfig(address token) external view returns (
-        uint256 windowDuration,
-        uint256 limitBps,
-        uint256 limitAbsolute,
-        uint256 floorAbsolute
-    ) {
+    function getEffectiveOutflowConfig(address token)
+        external
+        view
+        returns (uint256 windowDuration, uint256 limitBps, uint256 limitAbsolute, uint256 floorAbsolute)
+    {
         OutflowConfig storage config = _outflowConfigs[token];
         (windowDuration, limitBps, limitAbsolute) = _effectiveParams(config);
         floorAbsolute = config.floorAbsolute;
@@ -624,14 +615,18 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     /// @notice Get the pending (not-yet-activated) outflow parameter state for a token.
     ///         Each activation timestamp is 0 if no change is pending for that parameter.
     /// @dev Intended for monitoring frontends so users can see upcoming loosenings.
-    function getPendingOutflowConfig(address token) external view returns (
-        uint256 pendingWindowDuration,
-        uint256 pendingWindowDurationActivation,
-        uint256 pendingLimitBps,
-        uint256 pendingLimitBpsActivation,
-        uint256 pendingLimitAbsolute,
-        uint256 pendingLimitAbsoluteActivation
-    ) {
+    function getPendingOutflowConfig(address token)
+        external
+        view
+        returns (
+            uint256 pendingWindowDuration,
+            uint256 pendingWindowDurationActivation,
+            uint256 pendingLimitBps,
+            uint256 pendingLimitBpsActivation,
+            uint256 pendingLimitAbsolute,
+            uint256 pendingLimitAbsoluteActivation
+        )
+    {
         OutflowConfig storage config = _outflowConfigs[token];
         return (
             config.pendingWindowDuration,
@@ -646,20 +641,18 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     /// @notice Get the current outflow status for a token: effective limit, recent outflow, and available.
     /// @dev Uses post-lazy-activation values so the reported `available` matches what the next
     ///      distribute/stewardSpend call would actually enforce.
-    function getOutflowStatus(address token) external view returns (
-        uint256 effectiveLimit,
-        uint256 recentOutflow,
-        uint256 available
-    ) {
+    function getOutflowStatus(address token)
+        external
+        view
+        returns (uint256 effectiveLimit, uint256 recentOutflow, uint256 available)
+    {
         OutflowConfig storage config = _outflowConfigs[token];
         if (!config.initialized) return (0, 0, 0);
 
         (uint256 effWindow, uint256 effBps, uint256 effAbsolute) = _effectiveParams(config);
 
         // address(0) sentinel routes balance lookup to native ETH; mirrors _checkAndRecordOutflow.
-        uint256 treasuryBalance = token == address(0)
-            ? address(this).balance
-            : IERC20(token).balanceOf(address(this));
+        uint256 treasuryBalance = token == address(0) ? address(this).balance : IERC20(token).balanceOf(address(this));
         uint256 pctLimit = (treasuryBalance * effBps) / 10000;
         uint256 limit = pctLimit > effAbsolute ? pctLimit : effAbsolute;
         effectiveLimit = limit > config.floorAbsolute ? limit : config.floorAbsolute;
@@ -671,22 +664,23 @@ contract ArmadaTreasuryGov is ReentrancyGuard {
     /// @dev View-only computation of effective outflow parameters: mirrors _lazyActivate
     ///      without mutating state. Returns (windowDuration, limitBps, limitAbsolute) that
     ///      would be active right now.
-    function _effectiveParams(OutflowConfig storage config) internal view returns (
-        uint256 effWindowDuration,
-        uint256 effLimitBps,
-        uint256 effLimitAbsolute
-    ) {
+    function _effectiveParams(OutflowConfig storage config)
+        internal
+        view
+        returns (uint256 effWindowDuration, uint256 effLimitBps, uint256 effLimitAbsolute)
+    {
         // Cache each activation slot — read twice in the (>0 && >=) pattern (audit-76).
         uint256 absActivation = config.pendingLimitAbsoluteActivation;
         effLimitAbsolute = (absActivation > 0 && block.timestamp >= absActivation)
-            ? config.pendingLimitAbsolute : config.limitAbsolute;
+            ? config.pendingLimitAbsolute
+            : config.limitAbsolute;
 
         uint256 bpsActivation = config.pendingLimitBpsActivation;
-        effLimitBps = (bpsActivation > 0 && block.timestamp >= bpsActivation)
-            ? config.pendingLimitBps : config.limitBps;
+        effLimitBps = (bpsActivation > 0 && block.timestamp >= bpsActivation) ? config.pendingLimitBps : config.limitBps;
 
         uint256 winActivation = config.pendingWindowDurationActivation;
         effWindowDuration = (winActivation > 0 && block.timestamp >= winActivation)
-            ? config.pendingWindowDuration : config.windowDuration;
+            ? config.pendingWindowDuration
+            : config.windowDuration;
     }
 }

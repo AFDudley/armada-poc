@@ -48,10 +48,8 @@ contract ArmadaFeeModuleTest is Test {
     function setUp() public {
         // Deploy implementation + proxy
         ArmadaFeeModule impl = new ArmadaFeeModule();
-        bytes memory initData = abi.encodeCall(
-            ArmadaFeeModule.initialize,
-            (owner, treasury, privacyPool, yieldVault, asset)
-        );
+        bytes memory initData =
+            abi.encodeCall(ArmadaFeeModule.initialize, (owner, treasury, privacyPool, yieldVault, asset));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         feeModule = ArmadaFeeModule(address(proxy));
     }
@@ -81,20 +79,16 @@ contract ArmadaFeeModuleTest is Test {
 
     function test_initialize_revertsOnZeroAddress() public {
         ArmadaFeeModule impl = new ArmadaFeeModule();
-        bytes memory badInit = abi.encodeCall(
-            ArmadaFeeModule.initialize,
-            (address(0), treasury, privacyPool, yieldVault, asset)
-        );
+        bytes memory badInit =
+            abi.encodeCall(ArmadaFeeModule.initialize, (address(0), treasury, privacyPool, yieldVault, asset));
         vm.expectRevert("ArmadaFeeModule: zero owner");
         new ERC1967Proxy(address(impl), badInit);
     }
 
     function test_initialize_revertsOnZeroUsdc() public {
         ArmadaFeeModule impl = new ArmadaFeeModule();
-        bytes memory badInit = abi.encodeCall(
-            ArmadaFeeModule.initialize,
-            (owner, treasury, privacyPool, yieldVault, address(0))
-        );
+        bytes memory badInit =
+            abi.encodeCall(ArmadaFeeModule.initialize, (owner, treasury, privacyPool, yieldVault, address(0)));
         vm.expectRevert("ArmadaFeeModule: zero usdc");
         new ERC1967Proxy(address(impl), badInit);
     }
@@ -170,8 +164,7 @@ contract ArmadaFeeModuleTest is Test {
     }
 
     function test_calculateShieldFee_zeroAmount() public view {
-        (uint256 armadaTake, uint256 integratorFee, uint256 totalFee) =
-            feeModule.calculateShieldFee(address(0), 0);
+        (uint256 armadaTake, uint256 integratorFee, uint256 totalFee) = feeModule.calculateShieldFee(address(0), 0);
 
         assertEq(armadaTake, 0);
         assertEq(integratorFee, 0);
@@ -261,21 +254,21 @@ contract ArmadaFeeModuleTest is Test {
         feeModule.setIntegratorFee(20);
 
         // Below both tiers
-        (uint256 take1, , ) = feeModule.calculateShieldFee(integrator1, 1000e6);
+        (uint256 take1,,) = feeModule.calculateShieldFee(integrator1, 1000e6);
         assertEq(take1, (1000e6 * 50) / 10000); // base rate
 
         // Push volume above $250k
         vm.prank(privacyPool);
         feeModule.recordShieldFee(asset, integrator1, 300_000e6, 0, 0);
 
-        (uint256 take2, , ) = feeModule.calculateShieldFee(integrator1, 1000e6);
+        (uint256 take2,,) = feeModule.calculateShieldFee(integrator1, 1000e6);
         assertEq(take2, (1000e6 * 40) / 10000); // tier 1: 40 bps
 
         // Push volume above $1M
         vm.prank(privacyPool);
         feeModule.recordShieldFee(asset, integrator1, 800_000e6, 0, 0);
 
-        (uint256 take3, , ) = feeModule.calculateShieldFee(integrator1, 1000e6);
+        (uint256 take3,,) = feeModule.calculateShieldFee(integrator1, 1000e6);
         assertEq(take3, (1000e6 * 30) / 10000); // tier 2: 30 bps
     }
 
@@ -349,11 +342,11 @@ contract ArmadaFeeModuleTest is Test {
         emit ShieldFeeRecorded(
             asset,
             address(0),
-            10_000e6,       // amount
-            50,             // armadaTakeBps (baseArmadaTakeBps default)
-            5e6,            // armadaTakePaid
-            0,              // integratorFeePaid (no integrator)
-            0               // integratorCumulativeVolume (no integrator)
+            10_000e6, // amount
+            50, // armadaTakeBps (baseArmadaTakeBps default)
+            5e6, // armadaTakePaid
+            0, // integratorFeePaid (no integrator)
+            0 // integratorCumulativeVolume (no integrator)
         );
 
         vm.prank(privacyPool);
@@ -373,11 +366,11 @@ contract ArmadaFeeModuleTest is Test {
         emit ShieldFeeRecorded(
             asset,
             integrator1,
-            100_000e6,      // amount
-            50,             // armadaTakeBps (still base — below 250k threshold)
-            500e6,          // armadaTakePaid (5 bps of 100k = 50e6, but caller passed 500e6 — pin whatever caller passes)
-            300e6,          // integratorFeePaid (matches caller arg)
-            100_000e6       // integratorCumulativeVolume AFTER this shield
+            100_000e6, // amount
+            50, // armadaTakeBps (still base — below 250k threshold)
+            500e6, // armadaTakePaid (5 bps of 100k = 50e6, but caller passed 500e6 — pin whatever caller passes)
+            300e6, // integratorFeePaid (matches caller arg)
+            100_000e6 // integratorCumulativeVolume AFTER this shield
         );
 
         vm.prank(privacyPool);
@@ -404,10 +397,10 @@ contract ArmadaFeeModuleTest is Test {
             asset,
             integrator1,
             100_000e6,
-            50,             // PRE-bump rate
+            50, // PRE-bump rate
             500e6,
             300e6,
-            300_000e6       // POST-bump cumulative
+            300_000e6 // POST-bump cumulative
         );
 
         vm.prank(privacyPool);
@@ -623,21 +616,20 @@ contract ArmadaFeeModuleTest is Test {
     function testFuzz_calculateShieldFee_totalNeverExceedsAmount(uint256 amount) public view {
         amount = bound(amount, 0, 1_000_000_000e6); // up to $1B
 
-        (, , uint256 totalFee) = feeModule.calculateShieldFee(address(0), amount);
+        (,, uint256 totalFee) = feeModule.calculateShieldFee(address(0), amount);
         assertLe(totalFee, amount);
     }
 
-    function testFuzz_calculateShieldFee_withIntegrator_totalNeverExceedsAmount(
-        uint256 amount,
-        uint256 integratorFee
-    ) public {
+    function testFuzz_calculateShieldFee_withIntegrator_totalNeverExceedsAmount(uint256 amount, uint256 integratorFee)
+        public
+    {
         amount = bound(amount, 0, 1_000_000_000e6);
         integratorFee = bound(integratorFee, 0, 500);
 
         vm.prank(integrator1);
         feeModule.setIntegratorFee(integratorFee);
 
-        (, , uint256 totalFee) = feeModule.calculateShieldFee(integrator1, amount);
+        (,, uint256 totalFee) = feeModule.calculateShieldFee(integrator1, amount);
         assertLe(totalFee, amount);
     }
 

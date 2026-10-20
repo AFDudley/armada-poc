@@ -31,11 +31,11 @@ contract VerifierModule is PrivacyPoolStorage, IVerifierModule {
     /// @param _nullifiers Nullifier count of the circuit (N).
     /// @param _commitments Commitment count of the circuit (M).
     /// @param _verifyingKey Groth16 verification key to store.
-    function setVerificationKey(
-        uint256 _nullifiers,
-        uint256 _commitments,
-        VerifyingKey calldata _verifyingKey
-    ) external override onlyDelegatecall {
+    function setVerificationKey(uint256 _nullifiers, uint256 _commitments, VerifyingKey calldata _verifyingKey)
+        external
+        override
+        onlyDelegatecall
+    {
         require(msg.sender == owner, "VerifierModule: Only owner");
 
         verificationKeys[_nullifiers][_commitments] = _verifyingKey;
@@ -48,10 +48,12 @@ contract VerifierModule is PrivacyPoolStorage, IVerifierModule {
     /// @param _nullifiers Nullifier count of the circuit (N).
     /// @param _commitments Commitment count of the circuit (M).
     /// @return The stored key, or a zero-valued key if the shape is unregistered.
-    function getVerificationKey(
-        uint256 _nullifiers,
-        uint256 _commitments
-    ) external view override returns (VerifyingKey memory) {
+    function getVerificationKey(uint256 _nullifiers, uint256 _commitments)
+        external
+        view
+        override
+        returns (VerifyingKey memory)
+    {
         return verificationKeys[_nullifiers][_commitments];
     }
 

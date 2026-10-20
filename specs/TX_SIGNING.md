@@ -78,86 +78,86 @@ One wallet signature, one forced backup, done. The backup is the recovery path �
    - message.purpose: "Generate privacy keys (NOT a transaction)"
    - message.issuedAt: <timestamp>
    - message.version: "1"                      [GOVERNANCE-FROZEN]
-   
+
    IMPORTANT — chainId is deliberately OMITTED from the EIP-712 domain.
-   
+
    EIP-712 allows partial domain separators — not all fields are required.
-   If chainId were included, the domain separator hash would differ per 
-   chain, producing a different signature, a different root_secret, and a 
-   different shielded identity on each chain. That directly breaks Axiom 2 
-   ("one shielded identity, many rails"). Omitting chainId means the signed 
-   domain is determined solely by {name, verifyingContract}, which are 
+   If chainId were included, the domain separator hash would differ per
+   chain, producing a different signature, a different root_secret, and a
+   different shielded identity on each chain. That directly breaks Axiom 2
+   ("one shielded identity, many rails"). Omitting chainId means the signed
+   domain is determined solely by {name, verifyingContract}, which are
    protocol-wide constants. The user can enroll from any chain.
 
-   Some wallets may display a warning when chainId is absent from the 
-   domain. This is acceptable — the alternative (including chainId) would 
-   silently create per-chain identity fragmentation, which is worse. The 
-   SDK should include clear UX copy explaining that this signature is not 
-   chain-specific ("This generates your Armada privacy keys across all 
+   Some wallets may display a warning when chainId is absent from the
+   domain. This is acceptable — the alternative (including chainId) would
+   silently create per-chain identity fragmentation, which is worse. The
+   SDK should include clear UX copy explaining that this signature is not
+   chain-specific ("This generates your Armada privacy keys across all
    supported chains").
 
-   IMPORTANT — Governance-frozen signing domain: every field in the signed 
-   data that affects the signature output is identity-determining. Changing 
-   ANY of the following after launch permanently forks all existing user 
+   IMPORTANT — Governance-frozen signing domain: every field in the signed
+   data that affects the signature output is identity-determining. Changing
+   ANY of the following after launch permanently forks all existing user
    identities with no migration path:
-   
+
      - domain.name ("Armada Protocol")
      - domain.verifyingContract (canonical enrollment address)
      - message.purpose ("Generate privacy keys (NOT a transaction)")
      - message.version ("1")
-   
-   These four values are jointly a governance-frozen tuple. The canonical 
-   enrollment address must be decided before mainnet launch. None of these 
-   values may be changed by governance vote, protocol upgrade, rebrand, or 
-   operational decision. A "rebrand" that changes domain.name is 
+
+   These four values are jointly a governance-frozen tuple. The canonical
+   enrollment address must be decided before mainnet launch. None of these
+   values may be changed by governance vote, protocol upgrade, rebrand, or
+   operational decision. A "rebrand" that changes domain.name is
    operationally equivalent to deleting every user's shielded identity.
 
-   Note on verifyingContract: EIP-712 defines this field as "the address 
-   of the contract that will verify the signature." Armada deliberately 
-   repurposes it as a governance-frozen protocol identity constant — it 
-   may be an address that has no deployed code and is never called. This 
-   is a conscious departure from EIP-712's intended semantics, chosen 
-   because identity stability requires a permanent, chain-agnostic 
-   constant, and verifyingContract is the standard field that wallets 
-   display for domain binding. Implementers and auditors should understand 
+   Note on verifyingContract: EIP-712 defines this field as "the address
+   of the contract that will verify the signature." Armada deliberately
+   repurposes it as a governance-frozen protocol identity constant — it
+   may be an address that has no deployed code and is never called. This
+   is a conscious departure from EIP-712's intended semantics, chosen
+   because identity stability requires a permanent, chain-agnostic
+   constant, and verifyingContract is the standard field that wallets
+   display for domain binding. Implementers and auditors should understand
    this is not a contract address in the operational sense.
 
-   Design decision: message.version vs domain.version. EIP-712 defines a 
-   standard `version` field in the domain separator itself. This spec 
-   instead places version in the message body. Both are signed and 
-   therefore identity-determining. The tradeoff: domain.version is more 
-   conventional and may get better wallet UX treatment (some wallets 
-   display domain fields more prominently); message.version keeps the 
-   domain minimal ({name, verifyingContract} only) which simplifies the 
-   chain-agnostic identity model. This is a conscious choice, not an 
-   oversight. If wallet testing reveals that domain.version improves 
-   phishing resistance or UX clarity, it can be adopted — but only before 
+   Design decision: message.version vs domain.version. EIP-712 defines a
+   standard `version` field in the domain separator itself. This spec
+   instead places version in the message body. Both are signed and
+   therefore identity-determining. The tradeoff: domain.version is more
+   conventional and may get better wallet UX treatment (some wallets
+   display domain fields more prominently); message.version keeps the
+   domain minimal ({name, verifyingContract} only) which simplifies the
+   chain-agnostic identity model. This is a conscious choice, not an
+   oversight. If wallet testing reveals that domain.version improves
+   phishing resistance or UX clarity, it can be adopted — but only before
    mainnet launch, since moving it post-launch would fork identity.
 
    Note: issuedAt MUST use millisecond precision (Unix epoch, milliseconds)
    and the SDK MUST enforce monotonicity (never reuse a previous timestamp).
-   This ensures payload uniqueness even if a future wallet implements 
-   deterministic signing (RFC 6979), where identical payloads produce 
+   This ensures payload uniqueness even if a future wallet implements
+   deterministic signing (RFC 6979), where identical payloads produce
    identical signatures.
 
 3. User signs -> signature_bytes (65 bytes)
 
-   NORMATIVE -- Signature byte ordering: the SDK MUST normalize the wallet 
+   NORMATIVE -- Signature byte ordering: the SDK MUST normalize the wallet
    signature response to exactly 65 bytes in the order r(32) || s(32) || v(1).
-   
+
    - r and s are the ECDSA signature components, each zero-padded to 32 bytes,
      big-endian.
-   - v is a single byte. If the wallet returns v as 0 or 1 (EIP-155 style), the 
-     SDK MUST add 27 before concatenation (producing 27 or 28). If the wallet 
+   - v is a single byte. If the wallet returns v as 0 or 1 (EIP-155 style), the
+     SDK MUST add 27 before concatenation (producing 27 or 28). If the wallet
      returns v as 27 or 28, use as-is.
-   - EIP-2098 compact signatures (64 bytes) MUST be expanded to the canonical 
+   - EIP-2098 compact signatures (64 bytes) MUST be expanded to the canonical
      65-byte r||s||v form before use as HKDF input.
-   - The normalized 65 bytes are passed directly to HKDF-Extract as IKM. No 
+   - The normalized 65 bytes are passed directly to HKDF-Extract as IKM. No
      further parsing or reordering occurs after normalization.
-   
-   This normalization is interop-critical: two SDKs that receive the same 
-   mathematical signature but serialize the components differently will derive 
-   different root_secret values. The SDK MUST include a test that verifies 
+
+   This normalization is interop-critical: two SDKs that receive the same
+   mathematical signature but serialize the components differently will derive
+   different root_secret values. The SDK MUST include a test that verifies
    byte ordering against the IC-4 canonical test vector.
 
 4. SDK derives root secret:
@@ -178,7 +178,7 @@ One wallet signature, one forced backup, done. The backup is the recovery path �
      and shoulder-surfing can capture; should require explicit opt-in)
 ```
 
-Backup file format: the "encrypted file" export prompts the user for a 
+Backup file format: the "encrypted file" export prompts the user for a
 passphrase and produces a JSON file with the following exact schema:
 
 ```json
@@ -197,51 +197,51 @@ passphrase and produces a JSON file with the following exact schema:
 Field rules:
 - `format`: always "armada-backup-v1". Parsers MUST reject unknown format values.
 - `kdf`: one of "argon2id", "scrypt", "pbkdf2-sha256". Parsers MUST reject unknown KDF values.
-- `kdf_params`: KDF-specific. argon2id: {t, m, p}. scrypt: {N, r, p}. 
+- `kdf_params`: KDF-specific. argon2id: {t, m, p}. scrypt: {N, r, p}.
   pbkdf2: {iterations}.
 - All binary values are lowercase hex-encoded, no "0x" prefix.
-- `tag` is the AES-GCM authentication tag, stored separately (not 
+- `tag` is the AES-GCM authentication tag, stored separately (not
   appended to ciphertext).
-- `ciphertext` length equals plaintext length (32 bytes for v1, since 
-  root_secret is 32 bytes). Future format versions may differ; parsers 
-  should not hard-code 32 bytes but should validate against the expected 
+- `ciphertext` length equals plaintext length (32 bytes for v1, since
+  root_secret is 32 bytes). Future format versions may differ; parsers
+  should not hard-code 32 bytes but should validate against the expected
   payload size for the declared format version.
-- Parsers MUST reject blobs with unknown top-level fields. This prevents 
+- Parsers MUST reject blobs with unknown top-level fields. This prevents
   format drift where one SDK silently adds metadata that another ignores.
-- Field ordering in the JSON is not significant; parsers must not depend 
+- Field ordering in the JSON is not significant; parsers must not depend
   on key order.
 
-Encryption uses AES-256-GCM with a 32-byte key derived via the KDF 
-preference hierarchy (argon2id > scrypt > PBKDF2-600k). Interop 
-contract: all compliant SDKs MUST support decrypting backups encrypted 
-with ANY of the three supported KDFs (argon2id, scrypt, PBKDF2), even 
+Encryption uses AES-256-GCM with a 32-byte key derived via the KDF
+preference hierarchy (argon2id > scrypt > PBKDF2-600k). Interop
+contract: all compliant SDKs MUST support decrypting backups encrypted
+with ANY of the three supported KDFs (argon2id, scrypt, PBKDF2), even
 if they only encrypt with their preferred KDF.
 
-For clipboard and QR export, the value is the raw root_secret as a 
-hex string (no encryption). These paths trade security for convenience 
+For clipboard and QR export, the value is the raw root_secret as a
+hex string (no encryption). These paths trade security for convenience
 and the user must be warned accordingly.
 
-The user must acknowledge that the root secret is equivalent to full 
+The user must acknowledge that the root secret is equivalent to full
 ownership of their shielded balance. Loss means permanent loss of access.
 Compromise means full compromise of privacy and funds.
 
 7. User confirms backup → enrollment complete
 
-Minimum confirmation requirement: the user must re-enter the anti-phish 
-checksum (the 12 hex characters displayed in step 5) to prove they have 
-access to a working backup. A checkbox ("I have saved my backup") is 
+Minimum confirmation requirement: the user must re-enter the anti-phish
+checksum (the 12 hex characters displayed in step 5) to prove they have
+access to a working backup. A checkbox ("I have saved my backup") is
 NOT sufficient — it does not verify the backup is usable.
 
-For encrypted file export, the SDK MUST require a full round-trip 
-before enrollment completes: export the file, re-import it in the 
-same session, enter the passphrase, and verify the derived checksum 
-matches. Enrollment does not complete until this round-trip succeeds. 
-For clipboard/QR export, the user MUST paste back the full 64-character 
-hex secret, which the SDK verifies against the derived root_secret. 
-Checksum re-entry alone is not sufficient for raw-secret export modes 
-— it proves awareness, not restorable possession. The SDK MUST display 
-a warning: "Pasting back from clipboard only proves you have the secret 
-now. Make sure you have saved it in a persistent, secure location before 
+For encrypted file export, the SDK MUST require a full round-trip
+before enrollment completes: export the file, re-import it in the
+same session, enter the passphrase, and verify the derived checksum
+matches. Enrollment does not complete until this round-trip succeeds.
+For clipboard/QR export, the user MUST paste back the full 64-character
+hex secret, which the SDK verifies against the derived root_secret.
+Checksum re-entry alone is not sufficient for raw-secret export modes
+— it proves awareness, not restorable possession. The SDK MUST display
+a warning: "Pasting back from clipboard only proves you have the secret
+now. Make sure you have saved it in a persistent, secure location before
 continuing. Closing this browser will clear your clipboard."
 
 
@@ -357,11 +357,11 @@ The target algorithm for spending key derivation:
 1. Start with raw HKDF output: 32 bytes (Uint8Array)
 2. Interpret as unsigned integer, BIG-ENDIAN (most significant byte first)
 3. Reduce to the correct modulus:
-   
+
    Option A (if Railgun reduces mod r):
      spending_scalar = bigint_from_bytes_be(hkdf_output) % r
      Range: [0, r). Valid circuit input. ~8 F_r values per Baby Jubjub point.
-   
+
    Option B (if Railgun reduces mod l for canonical form):
      spending_scalar = bigint_from_bytes_be(hkdf_output) % l
      Range: [0, l). Canonical Baby Jubjub scalar. One value per point.
@@ -509,7 +509,7 @@ At least one full-chain test vector MUST be published alongside this spec and va
 ```
 Input:
   signature_bytes: 0x[known 65-byte hex value]
-  
+
 Expected outputs:
   root_secret:  0x[32-byte hex]
   spending_key: 0x[32-byte hex]  (after field mapping)

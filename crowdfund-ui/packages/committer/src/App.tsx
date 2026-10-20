@@ -1,12 +1,12 @@
 // ABOUTME: Root component for the crowdfund committer app.
 // ABOUTME: Renders three header-nav pages: Network, Participate, and My Position.
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useStore, useAtomValue } from 'jotai'
-import { toast } from 'sonner'
-import { type JsonRpcProvider } from 'ethers'
-import { ConnectButton, useConnectModal } from '@rainbow-me/rainbowkit'
-import { useAccount, useDisconnect } from 'wagmi'
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useStore, useAtomValue } from "jotai";
+import { toast } from "sonner";
+import { type JsonRpcProvider } from "ethers";
+import { ConnectButton, useConnectModal } from "@rainbow-me/rainbowkit";
+import { useAccount, useDisconnect } from "wagmi";
 import {
   createProvider,
   useContractEvents,
@@ -32,43 +32,63 @@ import {
   type UserHopPosition,
   type CrowdfundExperienceLiveData,
   type CrowdfundExperienceMyPositionData,
-} from '@armada/crowdfund-shared'
-import { Button as ArmadaButton, WalletPillMenu } from '@armada/ui'
-import { getExplorerUrl, getHubChainId, getHubRpcUrls, getMaxBlockRange, getPollIntervalMs, getNetworkMode, getIndexerUrl } from '@/config/network'
-import { loadDeployment } from '@/config/deployments'
-import type { CrowdfundDeployment } from '@/config/deployments'
-import { PROJECT_URL } from '@/config/socials'
-import { useWallet } from '@/hooks/useWallet'
-import { useEligibility } from '@/hooks/useEligibility'
-import { useAllowance } from '@/hooks/useAllowance'
-import { useInviteLinks } from '@/hooks/useInviteLinks'
-import { ParticipateFlowV2 } from '@/components/ParticipateFlowV2'
-import { ClaimFlowV2 } from '@/components/ClaimFlowV2'
-import { ObserveDetailsModal } from '@/components/ObserveDetailsModal'
-import { CommitterMobileMenu } from '@/components/CommitterMobileMenu'
-import { CommitterMobileWallet } from '@/components/CommitterMobileWallet'
-import { useInviteSlots } from '@/hooks/useInviteSlots'
-import { useBeforeUnloadGuard } from '@/hooks/useBeforeUnloadGuard'
-import { abortPipelinesForOtherAddress, applyWatchedTxResult, pipelinesAtom } from '@/hooks/useTxPipeline'
-import { usePendingTxWatcher } from '@/hooks/usePendingTxWatcher'
-import { localWindowEndUnix, commitWindowSecondsLeft } from '@/lib/windowClock'
-import { formatSaleStatusLabel, isPreOpen } from '@/lib/saleStatus'
-import { getClaimAvailability, isProjectedRefund } from '@/lib/claimAvailability'
-import { shouldDismissClaimModal, CLAIM_CLOSE_CONFIRM_MESSAGE } from '@/lib/claimModal'
-import { PageNav, type Page } from '@/appNav'
+} from "@armada/crowdfund-shared";
+import { Button as ArmadaButton, WalletPillMenu } from "@armada/ui";
+import {
+  getExplorerUrl,
+  getHubChainId,
+  getHubRpcUrls,
+  getMaxBlockRange,
+  getPollIntervalMs,
+  getNetworkMode,
+  getIndexerUrl,
+} from "@/config/network";
+import { loadDeployment } from "@/config/deployments";
+import type { CrowdfundDeployment } from "@/config/deployments";
+import { PROJECT_URL } from "@/config/socials";
+import { useWallet } from "@/hooks/useWallet";
+import { useEligibility } from "@/hooks/useEligibility";
+import { useAllowance } from "@/hooks/useAllowance";
+import { useInviteLinks } from "@/hooks/useInviteLinks";
+import { ParticipateFlowV2 } from "@/components/ParticipateFlowV2";
+import { ClaimFlowV2 } from "@/components/ClaimFlowV2";
+import { ObserveDetailsModal } from "@/components/ObserveDetailsModal";
+import { CommitterMobileMenu } from "@/components/CommitterMobileMenu";
+import { CommitterMobileWallet } from "@/components/CommitterMobileWallet";
+import { useInviteSlots } from "@/hooks/useInviteSlots";
+import { useBeforeUnloadGuard } from "@/hooks/useBeforeUnloadGuard";
+import {
+  abortPipelinesForOtherAddress,
+  applyWatchedTxResult,
+  pipelinesAtom,
+} from "@/hooks/useTxPipeline";
+import { usePendingTxWatcher } from "@/hooks/usePendingTxWatcher";
+import { localWindowEndUnix, commitWindowSecondsLeft } from "@/lib/windowClock";
+import { formatSaleStatusLabel, isPreOpen } from "@/lib/saleStatus";
+import {
+  getClaimAvailability,
+  isProjectedRefund,
+} from "@/lib/claimAvailability";
+import {
+  shouldDismissClaimModal,
+  CLAIM_CLOSE_CONFIRM_MESSAGE,
+} from "@/lib/claimModal";
+import { PageNav, type Page } from "@/appNav";
 
 /**
  * Map a wagmi connector id to the `walletProvider` slug WalletPillMenu uses to
  * pick the brand icon. Returns undefined for unknown connectors so the menu
  * falls back to its generic wallet glyph.
  */
-function detectWalletProvider(connectorId: string | undefined): string | undefined {
-  if (!connectorId) return undefined
-  const id = connectorId.toLowerCase()
-  if (id.includes('metamask')) return 'metamask'
-  if (id.includes('phantom')) return 'phantom'
-  if (id.includes('walletconnect')) return 'walletconnect'
-  return undefined
+function detectWalletProvider(
+  connectorId: string | undefined,
+): string | undefined {
+  if (!connectorId) return undefined;
+  const id = connectorId.toLowerCase();
+  if (id.includes("metamask")) return "metamask";
+  if (id.includes("phantom")) return "phantom";
+  if (id.includes("walletconnect")) return "walletconnect";
+  return undefined;
 }
 
 /**
@@ -86,11 +106,11 @@ function HeaderWalletButton({
   className,
   usdcBalance,
 }: {
-  className?: string
-  usdcBalance?: bigint
+  className?: string;
+  usdcBalance?: bigint;
 }) {
-  const { connector } = useAccount()
-  const { disconnect } = useDisconnect()
+  const { connector } = useAccount();
+  const { disconnect } = useDisconnect();
   return (
     <ConnectButton.Custom>
       {({
@@ -101,12 +121,12 @@ function HeaderWalletButton({
         openChainModal,
         openConnectModal,
       }) => {
-        const isReady = mounted && authenticationStatus !== 'loading'
+        const isReady = mounted && authenticationStatus !== "loading";
         const isConnected =
           isReady &&
           account &&
           chain &&
-          (!authenticationStatus || authenticationStatus === 'authenticated')
+          (!authenticationStatus || authenticationStatus === "authenticated");
 
         if (!isReady) {
           return (
@@ -118,7 +138,7 @@ function HeaderWalletButton({
               disabled
               className={className}
             />
-          )
+          );
         }
 
         if (!isConnected) {
@@ -131,7 +151,7 @@ function HeaderWalletButton({
               onClick={openConnectModal}
               className={className}
             />
-          )
+          );
         }
 
         if (chain.unsupported) {
@@ -144,19 +164,20 @@ function HeaderWalletButton({
               onClick={openChainModal}
               className={className}
             />
-          )
+          );
         }
 
         // Mockup convention is 6 chars before the ellipsis ("0x1234...abcd").
         // RainbowKit's `displayName` truncates to 4, so reach through to the
         // raw address. Preserve ENS resolutions (no leading "0x") as-is.
-        const displayAddress = account.displayName.startsWith('0x')
+        const displayAddress = account.displayName.startsWith("0x")
           ? truncateAddress(account.address)
-          : account.displayName
+          : account.displayName;
 
         // USDC is 6 decimals. WalletPillMenu renders a whole-number label
         // ("123 USDC"), so the sub-cent dust is fine to drop here.
-        const balanceWhole = usdcBalance !== undefined ? Number(usdcBalance / 1_000_000n) : 0
+        const balanceWhole =
+          usdcBalance !== undefined ? Number(usdcBalance / 1_000_000n) : 0;
 
         return (
           <WalletPillMenu
@@ -170,12 +191,11 @@ function HeaderWalletButton({
             // so a centered menu would clip past the screen edge.
             align="right"
           />
-        )
+        );
       }}
     </ConnectButton.Custom>
-  )
+  );
 }
-
 
 /** Format the Crowdfund hero Progress card's countdown tag from a remaining
  *  duration in seconds. Wraps the shared {@link formatTimeLeft} helper (the
@@ -185,12 +205,12 @@ function HeaderWalletButton({
  *  entirely — the status pill flips to "CLOSED" via `formatSaleStatusLabel` in
  *  that case, which is the user-facing signal we want without a stale tag. */
 function formatRemainingLabel(seconds: number): string | null {
-  const label = formatTimeLeft(seconds)
-  if (!label) return null
+  const label = formatTimeLeft(seconds);
+  if (!label) return null;
   // Under 48h the shared helper returns an HH:MM:SS counter — leave it bare
   // (no "LEFT" suffix) so it reads as a timer rather than a static tag.
-  if (seconds < 48 * 60 * 60) return label
-  return `${label.toUpperCase()} LEFT`
+  if (seconds < 48 * 60 * 60) return label;
+  return `${label.toUpperCase()} LEFT`;
 }
 
 /** Map contract state to the lifecycle banner's stage. */
@@ -199,12 +219,13 @@ function deriveLifecycleStage(
   windowEnd: number,
   blockTimestamp: number,
   claimDeadline: number,
-): 'commit-invite' | 'claim' | 'complete' {
-  if (phase === 1 && claimDeadline > 0 && blockTimestamp > claimDeadline) return 'complete'
-  if (phase === 1 || phase === 2) return 'claim'
+): "commit-invite" | "claim" | "complete" {
+  if (phase === 1 && claimDeadline > 0 && blockTimestamp > claimDeadline)
+    return "complete";
+  if (phase === 1 || phase === 2) return "claim";
   // phase 0
-  if (windowEnd > 0 && blockTimestamp > windowEnd) return 'claim'
-  return 'commit-invite'
+  if (windowEnd > 0 && blockTimestamp > windowEnd) return "claim";
+  return "commit-invite";
 }
 
 /** Resolve the initial page from the URL. `/observe` and `?view=observe` open
@@ -213,95 +234,105 @@ function deriveLifecycleStage(
  *  `?view=claim` opens the Claim modal over the hero (see `claimOpenFromUrl`)
  *  and keeps the underlying page on Crowdfund — Claim is never a selected tab. */
 function pageFromUrl(): Page | null {
-  if (typeof window === 'undefined') return null
-  if (window.location.pathname === '/observe') return 'network'
-  switch (new URLSearchParams(window.location.search).get('view')) {
-    case 'myposition':
-      return 'my-position'
-    case 'claim':
-      return 'network'
-    case 'network':
-    case 'observe':
-      return 'network'
+  if (typeof window === "undefined") return null;
+  if (window.location.pathname === "/observe") return "network";
+  switch (new URLSearchParams(window.location.search).get("view")) {
+    case "myposition":
+      return "my-position";
+    case "claim":
+      return "network";
+    case "network":
+    case "observe":
+      return "network";
     default:
-      return null
+      return null;
   }
 }
 
 function claimOpenFromUrl(): boolean {
-  if (typeof window === 'undefined') return false
-  return new URLSearchParams(window.location.search).get('view') === 'claim'
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("view") === "claim";
 }
 
 function detailsOpenFromUrl(): boolean {
-  if (typeof window === 'undefined') return false
-  if (window.location.pathname === '/observe') return true
-  return new URLSearchParams(window.location.search).get('view') === 'observe'
+  if (typeof window === "undefined") return false;
+  if (window.location.pathname === "/observe") return true;
+  return new URLSearchParams(window.location.search).get("view") === "observe";
 }
 
 export function App() {
   // Mock-mode selection now happens in main.tsx, so App() has no early return
   // before its hooks — they run unconditionally (no rules-of-hooks violation).
-  const [deployment, setDeployment] = useState<CrowdfundDeployment | null>(null)
-  const [deployError, setDeployError] = useState<string | null>(null)
-  const [provider, setProvider] = useState<JsonRpcProvider | null>(null)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const [page, setPage] = useState<Page>(() => pageFromUrl() ?? 'network')
+  const [deployment, setDeployment] = useState<CrowdfundDeployment | null>(
+    null,
+  );
+  const [deployError, setDeployError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<JsonRpcProvider | null>(null);
+
+  const [page, setPage] = useState<Page>(() => pageFromUrl() ?? "network");
   // Keep `page` in sync with back/forward navigation that changes the path or
   // `?view=`.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   useEffect(() => {
     const onPopState = () => {
-      const next = pageFromUrl()
-      if (next) setPage(next)
-      setDetailsOpen(detailsOpenFromUrl())
-      setClaimOpen(claimOpenFromUrl())
-    }
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
-  }, [])
+      const next = pageFromUrl();
+      if (next) setPage(next);
+      setDetailsOpen(detailsOpenFromUrl());
+      setClaimOpen(claimOpenFromUrl());
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
   // Phase 6 — v2 Participate flow runs as a modal overlay; v1 fallback still
   // uses the dedicated `?page=participate` page. `openParticipate()` routes
   // based on the active design flag.
-  const [participateOpen, setParticipateOpen] = useState(false)
+  const [participateOpen, setParticipateOpen] = useState(false);
   // Whether the participate modal renders its own X. The commit steps draw a
   // FlowChrome close instead, so the flow reports which steps need ours.
-  const [participateModalClose, setParticipateModalClose] = useState(true)
+  const [participateModalClose, setParticipateModalClose] = useState(true);
   // Crowdfund Progress "Details" — observe cards in a blurred modal overlay.
-  const [detailsOpen, setDetailsOpen] = useState(() => detailsOpenFromUrl())
+  const [detailsOpen, setDetailsOpen] = useState(() => detailsOpenFromUrl());
   // Claim opens as a modal over the hero — never a selected page tab.
-  const [claimOpen, setClaimOpen] = useState(() => claimOpenFromUrl())
+  const [claimOpen, setClaimOpen] = useState(() => claimOpenFromUrl());
   // True while the participate pipeline is in flight — gates modal close confirm.
-  const [participateRunning, setParticipateRunning] = useState(false)
+  const [participateRunning, setParticipateRunning] = useState(false);
   // True while a claim tx is in flight — gates the Claim modal's close confirm.
-  const [claimRunning, setClaimRunning] = useState(false)
+  const [claimRunning, setClaimRunning] = useState(false);
   // Whether the Claim modal renders its own X — only on claim gate screens,
   // which draw no in-card close (mirrors `participateModalClose`).
-  const [claimModalClose, setClaimModalClose] = useState(true)
+  const [claimModalClose, setClaimModalClose] = useState(true);
   // Warn before a refresh/tab-close drops the user while a commit is broadcasting.
-  useBeforeUnloadGuard(participateRunning)
+  useBeforeUnloadGuard(participateRunning);
 
-  const pollInterval = getPollIntervalMs()
-  const indexerUrl = getIndexerUrl()
+  const pollInterval = getPollIntervalMs();
+  const indexerUrl = getIndexerUrl();
 
   // Load deployment
   useEffect(() => {
     loadDeployment()
       .then((d) => {
-        setDeployment(d)
-        setProvider(createProvider(getHubRpcUrls()))
+        setDeployment(d);
+        setProvider(createProvider(getHubRpcUrls()));
       })
       .catch((err) => {
-        setDeployError(err instanceof Error ? err.message : 'Failed to load deployment')
-      })
-  }, [])
+        setDeployError(
+          err instanceof Error ? err.message : "Failed to load deployment",
+        );
+      });
+  }, []);
 
-  const crowdfundAddress = deployment?.contracts.crowdfund ?? null
-  const usdcAddress = deployment?.contracts.usdc ?? null
-  const armTokenAddress = deployment?.contracts.armToken ?? null
+  const crowdfundAddress = deployment?.contracts.crowdfund ?? null;
+  const usdcAddress = deployment?.contracts.usdc ?? null;
+  const armTokenAddress = deployment?.contracts.armToken ?? null;
 
   // Shared data layer
-  const { events, loading: eventsLoading, indexerHealth, ingestReceiptLogs, backfill } = useContractEvents({
+  const {
+    events,
+    loading: eventsLoading,
+    indexerHealth,
+    ingestReceiptLogs,
+    backfill,
+  } = useContractEvents({
     provider,
     contractAddress: crowdfundAddress,
     pollIntervalMs: pollInterval,
@@ -309,17 +340,21 @@ export function App() {
     chainId: getHubChainId(),
     maxBlockRange: getMaxBlockRange(),
     indexerBaseUrl: indexerUrl,
-  })
-  const { summaries, nodes } = useGraphState()
-  const contractState = useContractState(provider, crowdfundAddress, pollInterval)
+  });
+  const { summaries, nodes } = useGraphState();
+  const contractState = useContractState(
+    provider,
+    crowdfundAddress,
+    pollInterval,
+  );
   // ENS resolver (kept addresses dep stable via memo).
-  const addresses = useMemo(() => [...summaries.keys()], [summaries])
-  useENS({ provider, addresses })
-  const summaryArray = useMemo(() => [...summaries.values()], [summaries])
+  const addresses = useMemo(() => [...summaries.keys()], [summaries]);
+  useENS({ provider, addresses });
+  const summaryArray = useMemo(() => [...summaries.values()], [summaries]);
 
   // RainbowKit's programmatic connect-modal opener. Wired to the
   // MyPositionEmptyState's "Connect wallet" CTA below.
-  const { openConnectModal } = useConnectModal()
+  const { openConnectModal } = useConnectModal();
 
   // Phase 4b.2 — project the live graph into the CrowdfundExperience liveData
   // shape. `loading` covers the initial fetch (no successful event load yet);
@@ -348,46 +383,51 @@ export function App() {
   const dashRows = useMemo(
     () => (eventsLoading ? [] : toDashboardParticipantsFromGraph(summaryArray)),
     [eventsLoading, summaryArray],
-  )
+  );
 
   // Local time at which the current block timestamp was observed. Sampled only
   // when a new block timestamp arrives, so the Progress live counter (which
   // ticks on the device clock) stays anchored to chain time between polls.
   const blockObservedAtMs = useMemo(
     () => Date.now(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [contractState.blockTimestamp],
-  )
+  );
 
   // Cheap scalars + labels recompute on the poll tick, but reuse the stable
   // `dashRows` reference above so no O(N) work runs per tick.
   const crowdfundLiveData = useMemo<CrowdfundExperienceLiveData>(() => {
-    if (eventsLoading) return { status: 'loading' }
-    const totalCommitted = usdcToDollars(contractState.cappedDemand)
-    const windowEnd = Number(contractState.windowEnd)
-    const remaining = windowEnd - contractState.blockTimestamp
-    const daysLeftLabel = formatRemainingLabel(remaining)
+    if (eventsLoading) return { status: "loading" };
+    const totalCommitted = usdcToDollars(contractState.cappedDemand);
+    const windowEnd = Number(contractState.windowEnd);
+    const remaining = windowEnd - contractState.blockTimestamp;
+    const daysLeftLabel = formatRemainingLabel(remaining);
     // Exact-time detail for the countdown tag's hover tooltip — same helper the
     // observer's stats banner uses, so both tooltips read identically.
-    const daysLeftTooltip = formatTimeLeftDetail(remaining, windowEnd) || undefined
+    const daysLeftTooltip =
+      formatTimeLeftDetail(remaining, windowEnd) || undefined;
     // Inline rather than reading the `windowOpen` const further down — this
     // memo is hoisted above that declaration. Same predicate.
     const liveWindowOpen =
       contractState.armLoaded &&
       contractState.blockTimestamp >= contractState.windowStart &&
-      contractState.blockTimestamp <= contractState.windowEnd
+      contractState.blockTimestamp <= contractState.windowEnd;
     const preOpen = isPreOpen(
       contractState.phase,
       contractState.windowStart,
       contractState.blockTimestamp,
-    )
-    const saleStatus = formatSaleStatusLabel(contractState.phase, liveWindowOpen, preOpen)
+    );
+    const saleStatus = formatSaleStatusLabel(
+      contractState.phase,
+      liveWindowOpen,
+      preOpen,
+    );
     // Before the window opens the countdown targets the opening, not the close.
     // Same chain-to-device-clock anchoring as the close countdown, so it hits
     // zero when chain time reaches windowStart.
     if (preOpen) {
       return {
-        status: 'ready',
+        status: "ready",
         dashRows,
         totalCommitted,
         opensAtUnix: localWindowEndUnix(
@@ -395,13 +435,14 @@ export function App() {
           contractState.blockTimestamp,
           blockObservedAtMs,
         ),
-        daysLeftTooltip: formatOpensAtDetail(contractState.windowStart) || undefined,
+        daysLeftTooltip:
+          formatOpensAtDetail(contractState.windowStart) || undefined,
         saleStatusLabel: saleStatus.label,
         saleStatusDot: saleStatus.dot,
-      }
+      };
     }
     return {
-      status: 'ready',
+      status: "ready",
       dashRows,
       totalCommitted,
       daysLeftLabel,
@@ -417,7 +458,7 @@ export function App() {
       daysLeftTooltip,
       saleStatusLabel: saleStatus.label,
       saleStatusDot: saleStatus.dot,
-    }
+    };
   }, [
     eventsLoading,
     dashRows,
@@ -428,81 +469,116 @@ export function App() {
     blockObservedAtMs,
     contractState.phase,
     contractState.armLoaded,
-  ])
+  ]);
 
   // Wallet
-  const wallet = useWallet()
+  const wallet = useWallet();
 
   // Abort any pipeline left running/paused for a different account when the
   // wallet switches — its in-flight tx still settles, but no stale-signer send
   // fires. (A modal close is a detach/pause, handled by the flow; this is the
   // hard account-change abort.)
-  const jotaiStore = useStore()
+  const jotaiStore = useStore();
   useEffect(() => {
-    abortPipelinesForOtherAddress(jotaiStore, wallet.address)
-  }, [jotaiStore, wallet.address])
+    abortPipelinesForOtherAddress(jotaiStore, wallet.address);
+  }, [jotaiStore, wallet.address]);
 
   // Wallet-specific hooks
-  const eligibility = useEligibility(wallet.address, nodes)
-  const allowance = useAllowance(wallet.address, usdcAddress, crowdfundAddress, armTokenAddress, provider, pollInterval)
-  const inviteLinks = useInviteLinks(wallet.address, wallet.signer, crowdfundAddress, contractState.blockTimestamp, events)
+  const eligibility = useEligibility(wallet.address, nodes);
+  const allowance = useAllowance(
+    wallet.address,
+    usdcAddress,
+    crowdfundAddress,
+    armTokenAddress,
+    provider,
+    pollInterval,
+  );
+  const inviteLinks = useInviteLinks(
+    wallet.address,
+    wallet.signer,
+    crowdfundAddress,
+    contractState.blockTimestamp,
+    events,
+  );
 
   // Resume-watch any tx that was broadcast but not yet confirmed — survivors of
   // a reload (persisted in sessionStorage) and txs whose `tx.wait` timed out
   // mid-session — via the fallback provider. On resolution, refresh balances and
   // flip the matching pipeline row to done/reverted (post-timeout watcher).
   const onWatchedTxResolved = useCallback(
-    (txHash: string, status: 'pending' | 'confirmed' | 'failed', label: string) => {
-      void allowance.refresh()
-      if (status !== 'pending') {
-        applyWatchedTxResult(jotaiStore, txHash, status === 'confirmed' ? 'confirmed' : 'reverted')
+    (
+      txHash: string,
+      status: "pending" | "confirmed" | "failed",
+      label: string,
+    ) => {
+      void allowance.refresh();
+      if (status !== "pending") {
+        applyWatchedTxResult(
+          jotaiStore,
+          txHash,
+          status === "confirmed" ? "confirmed" : "reverted",
+        );
       }
       // Surface a reverted tx cross-page. The header chip only renders the
       // in-flight (pending) state and clears on any resolution, so without this
       // a failure that lands while the user is on another page (or after they
       // closed the flow) is otherwise silent. Covers every flow that persists a
       // pending tx (commit, invite, claim).
-      if (status === 'failed') {
-        const explorerUrl = getExplorerUrl()
+      if (status === "failed") {
+        const explorerUrl = getExplorerUrl();
         toast.error(`${label} failed`, {
-          description: 'The transaction reverted on-chain.',
+          description: "The transaction reverted on-chain.",
           duration: 10_000,
           ...(explorerUrl
             ? {
                 action: {
-                  label: 'View',
+                  label: "View",
                   onClick: () =>
-                    window.open(`${explorerUrl}/tx/${txHash}`, '_blank', 'noopener,noreferrer'),
+                    window.open(
+                      `${explorerUrl}/tx/${txHash}`,
+                      "_blank",
+                      "noopener,noreferrer",
+                    ),
                 },
               }
             : {}),
-        })
+        });
       }
     },
     [allowance, jotaiStore],
-  )
-  const watchedTxs = usePendingTxWatcher(provider, getHubChainId(), onWatchedTxResolved)
-  const pipelines = useAtomValue(pipelinesAtom)
+  );
+  const watchedTxs = usePendingTxWatcher(
+    provider,
+    getHubChainId(),
+    onWatchedTxResolved,
+  );
+  const pipelines = useAtomValue(pipelinesAtom);
   // A single header chip: prefer an unresolved watched tx; otherwise nudge to
   // reopen Participate if a pipeline is still live (running/paused) off-screen.
   const lastTxChip = useMemo<LastTx | null>(() => {
-    const explorerUrl = getExplorerUrl()
-    const pending = watchedTxs.find((t) => t.status === 'pending')
+    const explorerUrl = getExplorerUrl();
+    const pending = watchedTxs.find((t) => t.status === "pending");
     if (pending) {
-      return { status: 'submitted', label: pending.label, hash: pending.txHash, explorerUrl, timestamp: 0 }
-    }
-    const pipe = wallet.address ? pipelines[wallet.address] : undefined
-    if (pipe && (pipe.phase === 'running' || pipe.phase === 'paused')) {
       return {
-        status: 'submitted',
-        label: 'Transaction in progress — reopen Participate to continue',
+        status: "submitted",
+        label: pending.label,
+        hash: pending.txHash,
+        explorerUrl,
+        timestamp: 0,
+      };
+    }
+    const pipe = wallet.address ? pipelines[wallet.address] : undefined;
+    if (pipe && (pipe.phase === "running" || pipe.phase === "paused")) {
+      return {
+        status: "submitted",
+        label: "Transaction in progress — reopen Participate to continue",
         hash: null,
         explorerUrl,
         timestamp: 0,
-      }
+      };
     }
-    return null
-  }, [watchedTxs, pipelines, wallet.address])
+    return null;
+  }, [watchedTxs, pipelines, wallet.address]);
 
   // Per-hop invite-slot sections derived from real eligibility + invite-link
   // state. Multi-hop wallets get a section per eligible hop; single-hop
@@ -519,19 +595,19 @@ export function App() {
     wallet.isWrongNetwork,
     wallet.switchNetwork,
     ingestReceiptLogs,
-  )
+  );
 
   // Compute the user's personal committed amount (not the global total)
   const userTotalCommitted = useMemo(
     () => eligibility.positions.reduce((sum, p) => sum + p.committed, 0n),
     [eligibility.positions],
-  )
+  );
 
   // Is the commitment window open?
   const windowOpen =
     contractState.armLoaded &&
     contractState.blockTimestamp >= contractState.windowStart &&
-    contractState.blockTimestamp <= contractState.windowEnd
+    contractState.blockTimestamp <= contractState.windowEnd;
 
   // Before the commit window opens there are no positions yet — Your position
   // is disabled in the nav (and a deep link to it falls back to Crowdfund).
@@ -539,25 +615,28 @@ export function App() {
     contractState.phase,
     contractState.windowStart,
     contractState.blockTimestamp,
-  )
+  );
 
   // Seconds left in the commit window — shown on the participate splash card.
   // Anchored on the chain block timestamp (same source as the Progress tag and
   // stats banner) and formatted by the shared helper, so every "time left"
   // surface agrees. Undefined until the window/block load so Step0Invite falls
   // back to its placeholder rather than flashing "ENDS TODAY".
-  const secondsLeft = commitWindowSecondsLeft(contractState.windowEnd, contractState.blockTimestamp)
+  const secondsLeft = commitWindowSecondsLeft(
+    contractState.windowEnd,
+    contractState.blockTimestamp,
+  );
 
   // Connected user's projected ARM allocation, used by StatsBar's
   // "Your Allocation" card. Undefined when the user has no positions —
   // the card falls back to a "Connect wallet" placeholder.
   const userAllocation = useMemo((): UserAllocation | undefined => {
-    if (!wallet.address || eligibility.positions.length === 0) return undefined
+    if (!wallet.address || eligibility.positions.length === 0) return undefined;
     const positions: UserHopPosition[] = eligibility.positions.map((p) => ({
       hop: p.hop,
       committed: p.committed,
       effectiveCap: p.effectiveCap,
-    }))
+    }));
     return {
       estArmAllocation: estimateUserArmAllocation(
         positions,
@@ -566,14 +645,14 @@ export function App() {
         contractState.saleSize,
       ),
       hopCount: eligibility.positions.length,
-    }
+    };
   }, [
     wallet.address,
     eligibility.positions,
     contractState.hopStats,
     contractState.cappedDemand,
     contractState.saleSize,
-  ])
+  ]);
 
   // Pre-finalize refund projection from the post-waterfall allocation (see
   // isProjectedRefund). Drives the My Position refund card, the Claim gate and
@@ -595,7 +674,7 @@ export function App() {
       contractState.hopStats,
       contractState.cappedDemand,
     ],
-  )
+  );
 
   // Phase 4b.3 — project the connected wallet's primary hop position into the
   // CrowdfundExperience MyPosition discriminated union. Three states:
@@ -603,8 +682,8 @@ export function App() {
   //   - no-position: wallet but no eligible hop → "Participate" empty state
   //   - ready: wallet + position → live numbers
   const myPositionData = useMemo<CrowdfundExperienceMyPositionData>(() => {
-    if (!wallet.address) return { status: 'disconnected' }
-    const walletDisplay = truncateAddress(wallet.address)
+    if (!wallet.address) return { status: "disconnected" };
+    const walletDisplay = truncateAddress(wallet.address);
     // Filter eligibility positions down to the renderable hop range, mapped
     // into the shape `CrowdfundExperienceMyPositionData` expects. Sorted
     // ascending so `positions[0]` is the primary (smallest) hop.
@@ -618,32 +697,30 @@ export function App() {
         invitesAvailable: p.invitesAvailable,
         invitesUsed: p.invitesUsed,
       }))
-      .sort((a, b) => a.hop - b.hop)
-    const primary = renderablePositions[0]
-    if (!primary) return { status: 'no-position', walletDisplay }
-    const hop = primary.hop
-    const userSummary = summaries.get(wallet.address.toLowerCase())
+      .sort((a, b) => a.hop - b.hop);
+    const primary = renderablePositions[0];
+    if (!primary) return { status: "no-position", walletDisplay };
+    const hop = primary.hop;
+    const userSummary = summaries.get(wallet.address.toLowerCase());
     // Refund-mode signal: contract flag is canonical post-finalize; pre-
     // finalize we project it from the closed window + post-waterfall
     // allocation so the card stops showing a misleading "ARM allocation"
     // before the launch team calls finalize().
     const refundMode =
-      contractState.refundMode ||
-      contractState.phase === 2 ||
-      projectedRefund
+      contractState.refundMode || contractState.phase === 2 || projectedRefund;
     // Refund amount: prefer the on-chain post-claim `refundUsdc` from the
     // user's graph summary; otherwise the user's total committed across
     // all hops (full refund when sale falls below min).
     const totalCommittedUsdcAcrossHops = eligibility.positions.reduce(
       (sum, p) => sum + p.committed,
       0n,
-    )
+    );
     const refundUsdc =
       userSummary?.refundUsdc != null
         ? userSummary.refundUsdc
-        : totalCommittedUsdcAcrossHops
+        : totalCommittedUsdcAcrossHops;
     return {
-      status: 'ready',
+      status: "ready",
       walletAddress: wallet.address,
       walletDisplay,
       hop,
@@ -657,7 +734,7 @@ export function App() {
       refundUsdc,
       refundClaimed: !!userSummary?.refundClaimed,
       cancelled: contractState.phase === 2,
-    }
+    };
   }, [
     wallet.address,
     eligibility.positions,
@@ -666,7 +743,7 @@ export function App() {
     contractState.phase,
     contractState.refundMode,
     projectedRefund,
-  ])
+  ]);
 
   // Claim availability + lifecycle stage — drive the Claim page state and
   // the persistent lifecycle banner shown above every page.
@@ -686,26 +763,32 @@ export function App() {
       contractState.blockTimestamp,
       projectedRefund,
     ],
-  )
+  );
 
   // Claim is disabled in the nav and its modal closed until claim opens.
-  const claimReady = claimAvailability.state === 'available'
+  const claimReady = claimAvailability.state === "available";
 
   // Close an open Claim modal once the loaded state says claim isn't available.
   // Sits above the load-gate early returns below — hooks must run every render.
-  const claimStateLoading = contractState.loading
+  const claimStateLoading = contractState.loading;
   useEffect(() => {
-    if (shouldDismissClaimModal({ open: claimOpen, ready: claimReady, stateLoading: claimStateLoading })) {
-      setClaimOpen(false)
+    if (
+      shouldDismissClaimModal({
+        open: claimOpen,
+        ready: claimReady,
+        stateLoading: claimStateLoading,
+      })
+    ) {
+      setClaimOpen(false);
     }
-  }, [claimOpen, claimReady, claimStateLoading])
+  }, [claimOpen, claimReady, claimStateLoading]);
 
   // Leave Your position (e.g. a `?view=myposition` deep link) while the sale
   // hasn't opened. Sits above the load-gate early returns — hooks must run
   // every render.
   useEffect(() => {
-    if (preOpen && page === 'my-position') setPage('network')
-  }, [preOpen, page])
+    if (preOpen && page === "my-position") setPage("network");
+  }, [preOpen, page]);
 
   const lifecycleStage = useMemo(
     () =>
@@ -721,22 +804,28 @@ export function App() {
       contractState.blockTimestamp,
       contractState.claimDeadline,
     ],
-  )
+  );
 
   const lifecycleCountdown = useMemo(() => {
-    if (lifecycleStage === 'commit-invite' && contractState.windowEnd > 0) {
-      return Math.max(0, contractState.windowEnd - contractState.blockTimestamp)
+    if (lifecycleStage === "commit-invite" && contractState.windowEnd > 0) {
+      return Math.max(
+        0,
+        contractState.windowEnd - contractState.blockTimestamp,
+      );
     }
-    if (lifecycleStage === 'claim' && contractState.claimDeadline > 0) {
-      return Math.max(0, contractState.claimDeadline - contractState.blockTimestamp)
+    if (lifecycleStage === "claim" && contractState.claimDeadline > 0) {
+      return Math.max(
+        0,
+        contractState.claimDeadline - contractState.blockTimestamp,
+      );
     }
-    return undefined
+    return undefined;
   }, [
     lifecycleStage,
     contractState.windowEnd,
     contractState.claimDeadline,
     contractState.blockTimestamp,
-  ])
+  ]);
 
   // Error states
   if (deployError) {
@@ -747,14 +836,14 @@ export function App() {
           <p className="text-muted-foreground">{deployError}</p>
         </div>
       </div>
-    )
+    );
   }
 
   // On a Hero page (Network or My Position), CrowdfundExperience renders with
   // mock data while contract state hydrates — so we skip the loading gate for
   // those views. Other pages (Participate, Claim, Invite Slots) still wait on
   // the deployment before rendering.
-  const isHeroPage = page === 'network' || page === 'my-position'
+  const isHeroPage = page === "network" || page === "my-position";
 
   if ((!deployment || contractState.loading) && !isHeroPage) {
     const backfillPct =
@@ -767,14 +856,14 @@ export function App() {
                 100,
             ),
           )
-        : null
+        : null;
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-center space-y-2">
           <div className="">Loading...</div>
           {backfill?.active ? (
             <div className="text-muted-foreground">
-              Syncing history…{backfillPct !== null ? ` ${backfillPct}%` : ''}
+              Syncing history…{backfillPct !== null ? ` ${backfillPct}%` : ""}
             </div>
           ) : (
             <div className="text-muted-foreground">
@@ -783,7 +872,7 @@ export function App() {
           )}
         </div>
       </div>
-    )
+    );
   }
 
   // Right-side chrome: wallet + Participate CTA. Crowdfund / My position /
@@ -802,31 +891,31 @@ export function App() {
   // The hero / header CTAs that drive this are also hidden via
   // `participationEnabled` below; this is belt-and-braces.
   const openParticipate = () => {
-    if (!windowOpen) return
-    setParticipateOpen(true)
-  }
+    if (!windowOpen) return;
+    setParticipateOpen(true);
+  };
   const closeParticipate = () => {
-    setParticipateOpen(false)
-    setParticipateModalClose(true)
-  }
+    setParticipateOpen(false);
+    setParticipateModalClose(true);
+  };
 
   const openClaim = () => {
-    if (!claimReady) return
-    setParticipateOpen(false)
-    setClaimOpen(true)
-  }
+    if (!claimReady) return;
+    setParticipateOpen(false);
+    setClaimOpen(true);
+  };
   const closeClaim = () => {
-    setClaimOpen(false)
-  }
+    setClaimOpen(false);
+  };
 
   const handlePageNav = (next: Page) => {
-    if (next === 'claim') {
-      openClaim()
-      return
+    if (next === "claim") {
+      openClaim();
+      return;
     }
-    setClaimOpen(false)
-    setPage(next)
-  }
+    setClaimOpen(false);
+    setPage(next);
+  };
 
   const headerRightChrome = (
     <div className="flex items-center gap-3">
@@ -843,14 +932,14 @@ export function App() {
         />
       )}
     </div>
-  )
+  );
 
   const mobileMenu = (close: () => void) => (
     <CommitterMobileMenu
       onClose={close}
       current={page}
       onNavigate={(next) => {
-        handlePageNav(next)
+        handlePageNav(next);
       }}
       onParticipate={openParticipate}
       claimAvailable={claimReady}
@@ -858,9 +947,11 @@ export function App() {
       participationEnabled={windowOpen}
       usdcBalance={allowance.balance}
     />
-  )
+  );
 
-  const mobileActions = <CommitterMobileWallet usdcBalance={allowance.balance} />
+  const mobileActions = (
+    <CommitterMobileWallet usdcBalance={allowance.balance} />
+  );
 
   const headerNav = (
     <PageNav
@@ -869,7 +960,7 @@ export function App() {
       claimEnabled={claimReady}
       myPositionEnabled={!preOpen}
     />
-  )
+  );
 
   const participateModal = (
     <ParticipateFlowModal
@@ -884,7 +975,7 @@ export function App() {
       {participateOpen && (
         <ParticipateFlowV2
           // Remount on account switch so mount-frozen baselines can't mix accounts.
-          key={wallet.address ?? 'disconnected'}
+          key={wallet.address ?? "disconnected"}
           onRunningChange={setParticipateRunning}
           onModalCloseChange={setParticipateModalClose}
           eventsLoading={eventsLoading}
@@ -905,12 +996,12 @@ export function App() {
           cappedDemand={contractState.cappedDemand}
           windowOpen={windowOpen}
           onGoToMyPosition={() => {
-            closeParticipate()
-            setPage('my-position')
+            closeParticipate();
+            setPage("my-position");
           }}
           onGoToNetwork={() => {
-            closeParticipate()
-            setPage('network')
+            closeParticipate();
+            setPage("network");
           }}
           onClose={closeParticipate}
           inviteSlotSections={inviteSlots.sections}
@@ -918,7 +1009,7 @@ export function App() {
         />
       )}
     </ParticipateFlowModal>
-  )
+  );
 
   const detailsModal = (
     <ObserveDetailsModal
@@ -929,7 +1020,7 @@ export function App() {
       eventsLoading={eventsLoading}
       provider={provider}
     />
-  )
+  );
 
   const claimModal = (
     <ParticipateFlowModal
@@ -946,7 +1037,7 @@ export function App() {
           <ClaimFlowV2
             // Remount on account switch so one account's claim state
             // (hasClaimed, allocation) can't show under another.
-            key={wallet.address ?? 'disconnected'}
+            key={wallet.address ?? "disconnected"}
             onRunningChange={setClaimRunning}
             onModalCloseChange={setClaimModalClose}
             onClose={closeClaim}
@@ -965,15 +1056,15 @@ export function App() {
             totalCommitted={userTotalCommitted}
             windowEnd={contractState.windowEnd}
             projectedRefund={projectedRefund}
-            claimAvailable={claimAvailability.state === 'available'}
+            claimAvailable={claimAvailability.state === "available"}
             claimCountdownSeconds={lifecycleCountdown}
             onGoToMyPosition={() => {
-              closeClaim()
-              setPage('my-position')
+              closeClaim();
+              setPage("my-position");
             }}
             onGoToNetwork={() => {
-              closeClaim()
-              setPage('network')
+              closeClaim();
+              setPage("network");
             }}
             onReceiptLogs={ingestReceiptLogs}
             refreshAllowance={allowance.refresh}
@@ -981,7 +1072,7 @@ export function App() {
         </ErrorBoundary>
       ) : null}
     </ParticipateFlowModal>
-  )
+  );
 
   // Hero shell — AppShell renders the single chrome header (via AppHeader);
   // CrowdfundExperience renders the full-bleed body with its own header slot
@@ -1001,9 +1092,9 @@ export function App() {
           bare
         >
           <CrowdfundExperience
-            view={page === 'my-position' ? 'myposition' : 'crowdfund'}
+            view={page === "my-position" ? "myposition" : "crowdfund"}
             onViewChange={(next) =>
-              setPage(next === 'myposition' ? 'my-position' : 'network')
+              setPage(next === "myposition" ? "my-position" : "network")
             }
             header={null}
             inviteSlotSections={inviteSlots.sections}
@@ -1030,28 +1121,28 @@ export function App() {
         {claimModal}
         {detailsModal}
       </>
-    )
+    );
   }
 
   return (
     <>
-    <AppShell
-      appName="Committer"
-      network={getNetworkMode()}
-      headerNav={headerNav}
-      headerRight={headerRightChrome}
-      mobileMenu={mobileMenu}
-      logoHref={PROJECT_URL}
-    >
-     <ErrorBoundary>
-      <div className="container mx-auto p-4 space-y-4">
-        <StaleDataBanner indexerHealth={indexerHealth} />
-        {wallet.error && <ErrorAlert>{wallet.error}</ErrorAlert>}
-      </div>
-     </ErrorBoundary>
-    </AppShell>
-    {participateModal}
-    {claimModal}
+      <AppShell
+        appName="Committer"
+        network={getNetworkMode()}
+        headerNav={headerNav}
+        headerRight={headerRightChrome}
+        mobileMenu={mobileMenu}
+        logoHref={PROJECT_URL}
+      >
+        <ErrorBoundary>
+          <div className="container mx-auto p-4 space-y-4">
+            <StaleDataBanner indexerHealth={indexerHealth} />
+            {wallet.error && <ErrorAlert>{wallet.error}</ErrorAlert>}
+          </div>
+        </ErrorBoundary>
+      </AppShell>
+      {participateModal}
+      {claimModal}
     </>
-  )
+  );
 }

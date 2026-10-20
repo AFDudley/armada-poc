@@ -14,17 +14,13 @@ import "../fees/IArmadaFeeModule.sol";
  * @dev Matches the ISpokeBase interface from Aave V4
  */
 interface IAaveSpoke {
-    function supply(
-        uint256 reserveId,
-        uint256 amount,
-        address onBehalfOf
-    ) external returns (uint256 shares, uint256 supplied);
+    function supply(uint256 reserveId, uint256 amount, address onBehalfOf)
+        external
+        returns (uint256 shares, uint256 supplied);
 
-    function withdraw(
-        uint256 reserveId,
-        uint256 amount,
-        address onBehalfOf
-    ) external returns (uint256 shares, uint256 withdrawn);
+    function withdraw(uint256 reserveId, uint256 amount, address onBehalfOf)
+        external
+        returns (uint256 shares, uint256 withdrawn);
 
     function getUserSuppliedAssets(uint256 reserveId, address user) external view returns (uint256);
     function getUserSuppliedShares(uint256 reserveId, address user) external view returns (uint256);
@@ -137,12 +133,7 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
 
     // ============ Events ============
 
-    event Deposit(
-        address indexed caller,
-        address indexed receiver,
-        uint256 assets,
-        uint256 shares
-    );
+    event Deposit(address indexed caller, address indexed receiver, uint256 assets, uint256 shares);
 
     event Withdraw(
         address indexed caller,
@@ -176,13 +167,9 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
      * @param _name ERC-20 token name
      * @param _symbol ERC-20 token symbol
      */
-    constructor(
-        address _spoke,
-        uint256 _reserveId,
-        address _treasury,
-        string memory _name,
-        string memory _symbol
-    ) ERC20(_name, _symbol) {
+    constructor(address _spoke, uint256 _reserveId, address _treasury, string memory _name, string memory _symbol)
+        ERC20(_name, _symbol)
+    {
         require(_spoke != address(0), "ArmadaYieldVault: zero spoke");
         require(_treasury != address(0), "ArmadaYieldVault: zero treasury");
 
@@ -250,10 +237,7 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
      *      Calling `redeem` between harvests also settles, so the timer can be reset earlier.
      */
     function harvestProtocolFee() external nonReentrant {
-        require(
-            block.timestamp >= lastHarvestTime + _effectiveHarvestInterval(),
-            "ArmadaYieldVault: interval not met"
-        );
+        require(block.timestamp >= lastHarvestTime + _effectiveHarvestInterval(), "ArmadaYieldVault: interval not met");
         _settleProtocolFee();
     }
 
@@ -308,7 +292,8 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
         } else {
             // Weighted average: ((oldBasis * oldShares) + (assets * PRECISION)) / (oldShares + newShares)
             uint256 oldBasis = userCostBasisPerShare[receiver];
-            userCostBasisPerShare[receiver] = (oldBasis * existingShares + assets * COST_BASIS_PRECISION) / (existingShares + shares);
+            userCostBasisPerShare[receiver] =
+                (oldBasis * existingShares + assets * COST_BASIS_PRECISION) / (existingShares + shares);
         }
 
         // Transfer underlying from caller
@@ -333,11 +318,7 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
      *      payout directly (pending is zero). The `yieldFee` field in `Withdraw` is
      *      retained for log-parser compatibility but is always 0.
      */
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner_
-    ) external nonReentrant returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner_) external nonReentrant returns (uint256 assets) {
         require(shares > 0, "ArmadaYieldVault: zero shares");
         require(receiver != address(0), "ArmadaYieldVault: zero receiver");
 
@@ -510,7 +491,14 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
      *      out of `totalAssets`, so the returned figure is what `redeem` will pay (modulo
      *      block-level yield drift). The `owner_` parameter is retained for ABI stability.
      */
-    function previewRedeem(uint256 shares, address /* owner_ */) external view returns (uint256) {
+    function previewRedeem(
+        uint256 shares,
+        address /* owner_ */
+    )
+        external
+        view
+        returns (uint256)
+    {
         return _convertToAssets(shares);
     }
 

@@ -9,10 +9,17 @@ import * as path from "path";
 const ROOT = path.join(__dirname, "..");
 // Synthetic 32-byte value, built at runtime so this file itself carries no key-shaped literal.
 const TX_HASH = "0x" + "ab".repeat(32);
-const MANIFEST = JSON.stringify({ revenueLockDeploymentTransaction: TX_HASH }, null, 2);
+const MANIFEST = JSON.stringify(
+  { revenueLockDeploymentTransaction: TX_HASH },
+  null,
+  2,
+);
 
 function checkSecrets(file: string) {
-  return spawnSync("./scripts/check-secrets.sh", [file], { cwd: ROOT, encoding: "utf8" });
+  return spawnSync("./scripts/check-secrets.sh", [file], {
+    cwd: ROOT,
+    encoding: "utf8",
+  });
 }
 
 describe("Pre-commit secrets check", function () {
@@ -32,7 +39,10 @@ describe("Pre-commit secrets check", function () {
 
   // WHY: The manifest exemption must not weaken the check for any other file.
   it("still flags the same 32-byte hex outside deployment manifests", function () {
-    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "check-secrets-")), "config.json");
+    const file = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), "check-secrets-")),
+      "config.json",
+    );
     fs.writeFileSync(file, MANIFEST);
     try {
       const result = checkSecrets(file);

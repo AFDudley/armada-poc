@@ -1,9 +1,13 @@
 // ABOUTME: Unit tests for indexer operator CLI command parsing and status output.
 // ABOUTME: Ensures repair-oriented commands are accepted and status reflects store health.
 
-import { describe, expect, it } from 'vitest'
-import { formatStatus, parseCliArgs, runReadOnlyCommand } from './commands.js'
-import type { CursorState, IndexerStoreData, IngestRangeRecord } from '../types.js'
+import { describe, expect, it } from "vitest";
+import { formatStatus, parseCliArgs, runReadOnlyCommand } from "./commands.js";
+import type {
+  CursorState,
+  IndexerStoreData,
+  IngestRangeRecord,
+} from "../types.js";
 
 const cursor: CursorState = {
   deployBlock: 100,
@@ -12,99 +16,105 @@ const cursor: CursorState = {
   confirmedHead: 138,
   ingestedCursor: 138,
   verifiedCursor: 110,
-}
+};
 
 function makeRange(overrides: Partial<IngestRangeRecord>): IngestRangeRecord {
   return {
     fromBlock: 120,
     toBlock: 129,
-    status: 'failed',
-    provider: 'primary',
+    status: "failed",
+    provider: "primary",
     attempts: 2,
     logCount: 0,
     digest: null,
     fetchedAt: null,
     verifiedAt: null,
-    lastError: 'RPC timeout',
+    lastError: "RPC timeout",
     nextRetryAt: null,
     ...overrides,
-  }
+  };
 }
 
 const storeData: IndexerStoreData = {
   cursor,
   ranges: [makeRange({})],
   rawLogs: [],
-  lastIngestedAt: '2026-04-28T00:00:00.000Z',
-  lastVerifiedAt: '2026-04-28T00:00:01.000Z',
+  lastIngestedAt: "2026-04-28T00:00:00.000Z",
+  lastVerifiedAt: "2026-04-28T00:00:01.000Z",
   lastReconciledAt: null,
-  lastError: 'RPC timeout',
-  latestSnapshotHash: '0xabc',
-  latestStaticSnapshotUrl: 'https://example.com/latest.json',
-}
+  lastError: "RPC timeout",
+  latestSnapshotHash: "0xabc",
+  latestStaticSnapshotUrl: "https://example.com/latest.json",
+};
 
-describe('CLI commands', () => {
-  it('parses status as the default command', () => {
+describe("CLI commands", () => {
+  it("parses status as the default command", () => {
     expect(parseCliArgs([])).toEqual({
-      command: 'status',
+      command: "status",
       fromBlock: null,
       toBlock: null,
-    })
-  })
+    });
+  });
 
-  it('parses repair ranges with latest as an upper bound', () => {
-    expect(parseCliArgs(['repair', '--from', '120', '--to', 'latest'])).toEqual({
-      command: 'repair',
-      fromBlock: 120,
-      toBlock: 'latest',
-    })
-  })
+  it("parses repair ranges with latest as an upper bound", () => {
+    expect(parseCliArgs(["repair", "--from", "120", "--to", "latest"])).toEqual(
+      {
+        command: "repair",
+        fromBlock: 120,
+        toBlock: "latest",
+      },
+    );
+  });
 
-  it('parses repair with no range bounds (operator-driven repair-everything mode)', () => {
-    expect(parseCliArgs(['repair'])).toEqual({
-      command: 'repair',
+  it("parses repair with no range bounds (operator-driven repair-everything mode)", () => {
+    expect(parseCliArgs(["repair"])).toEqual({
+      command: "repair",
       fromBlock: null,
       toBlock: null,
-    })
-  })
+    });
+  });
 
-  it('formats status with cursor, gap, and snapshot details', () => {
-    expect(formatStatus(storeData)).toContain('status: unhealthy')
-    expect(formatStatus(storeData)).toContain('verifiedCursor: 110')
-    expect(formatStatus(storeData)).toContain('gaps: 120-129')
-    expect(formatStatus(storeData)).toContain('latestSnapshotHash: 0xabc')
-  })
+  it("formats status with cursor, gap, and snapshot details", () => {
+    expect(formatStatus(storeData)).toContain("status: unhealthy");
+    expect(formatStatus(storeData)).toContain("verifiedCursor: 110");
+    expect(formatStatus(storeData)).toContain("gaps: 120-129");
+    expect(formatStatus(storeData)).toContain("latestSnapshotHash: 0xabc");
+  });
 
-  it('runs the status command and rejects others (which are dispatched in cli/index.ts)', () => {
-    const status = runReadOnlyCommand(parseCliArgs([]), storeData)
-    expect(status.exitCode).toBe(0)
-    expect(status.output).toContain('status:')
+  it("runs the status command and rejects others (which are dispatched in cli/index.ts)", () => {
+    const status = runReadOnlyCommand(parseCliArgs([]), storeData);
+    expect(status.exitCode).toBe(0);
+    expect(status.output).toContain("status:");
 
-    expect(() => runReadOnlyCommand(parseCliArgs(['repair', '--from', '120', '--to', '129']), storeData))
-      .toThrow(/non-status command/)
-  })
+    expect(() =>
+      runReadOnlyCommand(
+        parseCliArgs(["repair", "--from", "120", "--to", "129"]),
+        storeData,
+      ),
+    ).toThrow(/non-status command/);
+  });
 
-  it('parses backfill command', () => {
-    expect(parseCliArgs(['backfill', '--to', 'latest'])).toEqual({
-      command: 'backfill',
+  it("parses backfill command", () => {
+    expect(parseCliArgs(["backfill", "--to", "latest"])).toEqual({
+      command: "backfill",
       fromBlock: null,
-      toBlock: 'latest',
-    })
-  })
+      toBlock: "latest",
+    });
+  });
 
-  it('parses backfill positional upper bound for nested npm scripts', () => {
-    expect(parseCliArgs(['backfill', 'latest'])).toEqual({
-      command: 'backfill',
+  it("parses backfill positional upper bound for nested npm scripts", () => {
+    expect(parseCliArgs(["backfill", "latest"])).toEqual({
+      command: "backfill",
       fromBlock: null,
-      toBlock: 'latest',
-    })
-  })
+      toBlock: "latest",
+    });
+  });
 
-  it('parses evaluate-alerts (dispatched in cli/index.ts)', () => {
-    expect(parseCliArgs(['evaluate-alerts'])).toEqual({
-      command: 'evaluate-alerts',
+  it("parses evaluate-alerts (dispatched in cli/index.ts)", () => {
+    expect(parseCliArgs(["evaluate-alerts"])).toEqual({
+      command: "evaluate-alerts",
       fromBlock: null,
       toBlock: null,
-    })
-  })
-})
+    });
+  });
+});

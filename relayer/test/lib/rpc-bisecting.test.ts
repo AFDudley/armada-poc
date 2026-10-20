@@ -59,7 +59,9 @@ describe("isBlockRangeError", function () {
     // WHY: bisecting on the wrong error class would double traffic and likely re-fail. The
     // narrow regex keeps us conservative — uncaught patterns surface as scan errors (loud,
     // operator-actionable) rather than infinite retry loops.
-    expect(_isBlockRangeError(new Error("CALL_EXCEPTION: execution reverted"))).to.equal(false);
+    expect(
+      _isBlockRangeError(new Error("CALL_EXCEPTION: execution reverted")),
+    ).to.equal(false);
     expect(_isBlockRangeError(new Error("timeout"))).to.equal(false);
     expect(_isBlockRangeError(null)).to.equal(false);
     expect(_isBlockRangeError(undefined)).to.equal(false);
@@ -106,8 +108,12 @@ describe("bisectEthGetLogs", function () {
     );
     expect(result).to.deep.equal([{ blockNumber: 10 }, { blockNumber: 80 }]);
     expect(calls.length).to.equal(3);
-    expect(calls[1]?.[1]).to.deep.equal([{ fromBlock: "0x0", toBlock: "0x32" }]);
-    expect(calls[2]?.[1]).to.deep.equal([{ fromBlock: "0x33", toBlock: "0x64" }]);
+    expect(calls[1]?.[1]).to.deep.equal([
+      { fromBlock: "0x0", toBlock: "0x32" },
+    ]);
+    expect(calls[2]?.[1]).to.deep.equal([
+      { fromBlock: "0x33", toBlock: "0x64" },
+    ]);
   });
 
   it("recurses multiple levels when the first bisection is still too large", async function () {
@@ -181,7 +187,11 @@ describe("bisectEthGetLogs", function () {
       throw err;
     };
     try {
-      await _bisectEthGetLogs(send, { fromBlock: "0x0", toBlock: "0xFFFFFF" }, 0);
+      await _bisectEthGetLogs(
+        send,
+        { fromBlock: "0x0", toBlock: "0xFFFFFF" },
+        0,
+      );
       expect.fail("should have thrown");
     } catch (e) {
       expect((e as Error).message).to.match(/block range too wide/);
@@ -198,7 +208,11 @@ describe("bisectEthGetLogs", function () {
       throw err;
     };
     try {
-      await _bisectEthGetLogs(send, { fromBlock: "0x0", toBlock: "0xFFFFFFFF" }, 24);
+      await _bisectEthGetLogs(
+        send,
+        { fromBlock: "0x0", toBlock: "0xFFFFFFFF" },
+        24,
+      );
       expect.fail("should have thrown");
     } catch (e) {
       expect((e as Error).message).to.match(/bisection exceeded max depth/);
@@ -264,6 +278,8 @@ describe("installBisectingGetLogs", function () {
 
     await provider.send("eth_getLogs", [{ fromBlock: "0x0", toBlock: "0x10" }]);
     expect(recordedMethod).to.equal("eth_getLogs");
-    expect(recordedParams).to.deep.equal([{ fromBlock: "0x0", toBlock: "0x10" }]);
+    expect(recordedParams).to.deep.equal([
+      { fromBlock: "0x0", toBlock: "0x10" },
+    ]);
   });
 });

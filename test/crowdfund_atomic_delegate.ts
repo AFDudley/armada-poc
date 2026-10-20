@@ -19,7 +19,11 @@ describe("Crowdfund: Atomic Delegation on Claim", function () {
   let usdc: any;
   let armToken: any;
 
-  async function fundAndApprove(signer: HardhatEthersSigner, amount: bigint, cf: any) {
+  async function fundAndApprove(
+    signer: HardhatEthersSigner,
+    amount: bigint,
+    cf: any,
+  ) {
     await usdc.mint(signer.address, amount);
     await usdc.connect(signer).approve(await cf.getAddress(), amount);
   }
@@ -31,9 +35,9 @@ describe("Crowdfund: Atomic Delegation on Claim", function () {
       await usdc.getAddress(),
       await armToken.getAddress(),
       treasury.address,
-      deployer.address,         // launchTeam
+      deployer.address, // launchTeam
       securityCouncil.address,
-      openTimestamp
+      openTimestamp,
     );
     await crowdfund.waitForDeployment();
 
@@ -66,11 +70,19 @@ describe("Crowdfund: Atomic Delegation on Claim", function () {
     // and thus its cap) to reach the $436K needed: $564K + $436K = $1M MIN_SALE.
     const hop1Pool = allSigners.slice(140, 195);
     const hop1Invitees: HardhatEthersSigner[] = [];
-    const committedSlots = new Map<string, { signer: HardhatEthersSigner; slots: number }>();
+    const committedSlots = new Map<
+      string,
+      { signer: HardhatEthersSigner; slots: number }
+    >();
     for (let i = 0; i < 109; i++) {
       const invitee = hop1Pool[i % hop1Pool.length];
-      await crowdfund.connect(seeds[i % seeds.length]).invite(invitee.address, 0);
-      const entry = committedSlots.get(invitee.address) ?? { signer: invitee, slots: 0 };
+      await crowdfund
+        .connect(seeds[i % seeds.length])
+        .invite(invitee.address, 0);
+      const entry = committedSlots.get(invitee.address) ?? {
+        signer: invitee,
+        slots: 0,
+      };
       entry.slots++;
       committedSlots.set(invitee.address, entry);
     }
@@ -113,12 +125,16 @@ describe("Crowdfund: Atomic Delegation on Claim", function () {
     expect(allocArm).to.be.gt(0n);
 
     // Before claim: no delegation
-    expect(await armToken.delegates(claimant.address)).to.equal(ethers.ZeroAddress);
+    expect(await armToken.delegates(claimant.address)).to.equal(
+      ethers.ZeroAddress,
+    );
 
     await crowdfund.connect(claimant).claim(delegateTarget.address);
 
     // After claim: voting power delegated to target
-    expect(await armToken.delegates(claimant.address)).to.equal(delegateTarget.address);
+    expect(await armToken.delegates(claimant.address)).to.equal(
+      delegateTarget.address,
+    );
     expect(await armToken.getVotes(delegateTarget.address)).to.equal(allocArm);
   });
 
@@ -129,7 +145,9 @@ describe("Crowdfund: Atomic Delegation on Claim", function () {
     const claimant = seeds[1];
     await crowdfund.connect(claimant).claim(claimant.address);
 
-    expect(await armToken.delegates(claimant.address)).to.equal(claimant.address);
+    expect(await armToken.delegates(claimant.address)).to.equal(
+      claimant.address,
+    );
     expect(await armToken.getVotes(claimant.address)).to.be.gt(0n);
   });
 
@@ -139,7 +157,7 @@ describe("Crowdfund: Atomic Delegation on Claim", function () {
 
     const claimant = seeds[2];
     await expect(
-      crowdfund.connect(claimant).claim(ethers.ZeroAddress)
+      crowdfund.connect(claimant).claim(ethers.ZeroAddress),
     ).to.be.revertedWith("ArmadaCrowdfund: delegate required");
   });
 });

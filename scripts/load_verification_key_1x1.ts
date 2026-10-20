@@ -28,7 +28,10 @@ async function main() {
   const deployment = JSON.parse(fs.readFileSync(hubDeploymentPath, "utf-8"));
   const privacyPoolAddress = deployment.contracts.privacyPool;
 
-  const privacyPool = await ethers.getContractAt("PrivacyPool", privacyPoolAddress);
+  const privacyPool = await ethers.getContractAt(
+    "PrivacyPool",
+    privacyPoolAddress,
+  );
   const [signer] = await ethers.getSigners();
 
   console.log("PrivacyPool:", privacyPoolAddress);
@@ -43,7 +46,11 @@ async function main() {
   }
 
   console.log("Loading VK[1x1] (1 nullifier, 1 commitment) for lend/redeem...");
-  await loadVerificationKeys(privacyPool, [{ nullifiers: 1, commitments: 1 }], true);
+  await loadVerificationKeys(
+    privacyPool,
+    [{ nullifiers: 1, commitments: 1 }],
+    true,
+  );
   console.log("\n✓ Done. Shielded lend and redeem should now work.");
 }
 

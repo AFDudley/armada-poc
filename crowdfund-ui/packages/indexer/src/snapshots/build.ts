@@ -1,55 +1,63 @@
 // ABOUTME: Builds verified crowdfund snapshots from persisted raw logs.
 // ABOUTME: Reconstructs events and graph state, then computes deterministic snapshot metadata.
 
-import { createHash } from 'node:crypto'
-import { parseCrowdfundEvents } from '../../../shared/src/lib/events.js'
-import { buildGraph } from '../../../shared/src/lib/graph.js'
-import { SNAPSHOT_SCHEMA_VERSION } from '../types.js'
-import { stableStringify } from './json.js'
+import { createHash } from "node:crypto";
+import { parseCrowdfundEvents } from "../../../shared/src/lib/events.js";
+import { buildGraph } from "../../../shared/src/lib/graph.js";
+import { SNAPSHOT_SCHEMA_VERSION } from "../types.js";
+import { stableStringify } from "./json.js";
 import type {
   CrowdfundSnapshot,
   IndexedRawLog,
   IndexerStoreData,
   ReconciliationResult,
   SnapshotMetadata,
-} from '../types.js'
+} from "../types.js";
 
-const ZERO_BLOCK_HASH = `0x${'00'.repeat(32)}`
+const ZERO_BLOCK_HASH = `0x${"00".repeat(32)}`;
 
 export interface BuildSnapshotInput {
-  data: IndexerStoreData
-  chainId: number
-  contractAddress: string
-  reconciliation?: ReconciliationResult
-  verifiedBlockHash?: string
+  data: IndexerStoreData;
+  chainId: number;
+  contractAddress: string;
+  reconciliation?: ReconciliationResult;
+  verifiedBlockHash?: string;
 }
 
 // Only logs matching this chain AND contract (and within the verified cursor) feed the
 // snapshot. Filtering on chain/contract prevents stale events from a previous deployment
 // — if the store ever holds logs for another address/chain — from silently merging into a
 // snapshot whose metadata claims the current address.
-function getVerifiedLogs(data: IndexerStoreData, chainId: number, contractAddress: string): IndexedRawLog[] {
-  const wantAddress = contractAddress.toLowerCase()
+function getVerifiedLogs(
+  data: IndexerStoreData,
+  chainId: number,
+  contractAddress: string,
+): IndexedRawLog[] {
+  const wantAddress = contractAddress.toLowerCase();
   return data.rawLogs
-    .filter((log) =>
-      log.blockNumber <= data.cursor.verifiedCursor &&
-      log.chainId === chainId &&
-      log.contractAddress.toLowerCase() === wantAddress,
+    .filter(
+      (log) =>
+        log.blockNumber <= data.cursor.verifiedCursor &&
+        log.chainId === chainId &&
+        log.contractAddress.toLowerCase() === wantAddress,
     )
     .sort((a, b) => {
-      if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber
-      if (a.logIndex !== b.logIndex) return a.logIndex - b.logIndex
-      return a.transactionHash.localeCompare(b.transactionHash)
-    })
+      if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber;
+      if (a.logIndex !== b.logIndex) return a.logIndex - b.logIndex;
+      return a.transactionHash.localeCompare(b.transactionHash);
+    });
 }
 
-function getVerifiedBlockHash(logs: readonly IndexedRawLog[], verifiedBlockHash?: string): string {
-  if (verifiedBlockHash) return verifiedBlockHash
+function getVerifiedBlockHash(
+  logs: readonly IndexedRawLog[],
+  verifiedBlockHash?: string,
+): string {
+  if (verifiedBlockHash) return verifiedBlockHash;
   const lastLog = [...logs].sort((a, b) => {
-    if (a.blockNumber !== b.blockNumber) return b.blockNumber - a.blockNumber
-    return b.logIndex - a.logIndex
-  })[0]
-  return lastLog?.blockHash ?? ZERO_BLOCK_HASH
+    if (a.blockNumber !== b.blockNumber) return b.blockNumber - a.blockNumber;
+    return b.logIndex - a.logIndex;
+  })[0];
+  return lastLog?.blockHash ?? ZERO_BLOCK_HASH;
 }
 
 // The snapshot hash is a CONTENT ADDRESS: it must be byte-identical for identical
@@ -58,43 +66,49 @@ function getVerifiedBlockHash(logs: readonly IndexedRawLog[], verifiedBlockHash?
 // `reconciliation` (a post-hoc check that withReconciliation can swap in without
 // altering snapshot identity).
 interface SnapshotHashInput {
-  schemaVersion: SnapshotMetadata['schemaVersion']
-  chainId: number
-  contractAddress: string
-  deployBlock: number
-  verifiedBlock: number
-  verifiedBlockHash: string
-  events: CrowdfundSnapshot['events']
-  graph: CrowdfundSnapshot['graph']
+  schemaVersion: SnapshotMetadata["schemaVersion"];
+  chainId: number;
+  contractAddress: string;
+  deployBlock: number;
+  verifiedBlock: number;
+  verifiedBlockHash: string;
+  events: CrowdfundSnapshot["events"];
+  graph: CrowdfundSnapshot["graph"];
 }
 
 function createSnapshotHash(input: SnapshotHashInput): string {
-  const hash = createHash('sha256')
-  hash.update(stableStringify(input))
-  return `0x${hash.digest('hex')}`
+  const hash = createHash("sha256");
+  hash.update(stableStringify(input));
+  return `0x${hash.digest("hex")}`;
 }
 
 function pendingReconciliation(): ReconciliationResult {
   return {
-    status: 'pending',
+    status: "pending",
     checkedBlock: null,
     provider: null,
     checkedAt: null,
     mismatches: [],
-  }
+  };
 }
 
 export function buildSnapshot(input: BuildSnapshotInput): CrowdfundSnapshot {
-  const logs = getVerifiedLogs(input.data, input.chainId, input.contractAddress)
-  const events = parseCrowdfundEvents(logs.map((log) => ({
-    blockNumber: log.blockNumber,
-    transactionHash: log.transactionHash,
-    logIndex: log.logIndex,
-    topics: [...log.topics],
-    data: log.data,
-  })))
-  const graph = buildGraph(events)
-  const metadataWithoutHash: Omit<SnapshotMetadata, 'snapshotHash'> = {
+  const logs = getVerifiedLogs(
+    input.data,
+    input.chainId,
+    input.contractAddress,
+  );
+  const events = parseCrowdfundEvents(
+    logs.map((log) => ({
+      blockNumber: log.blockNumber,
+      transactionHash: log.transactionHash,
+      logIndex: log.logIndex,
+      topics: [...log.topics],
+      data: log.data,
+    })),
+  );
+  const graph = buildGraph(events);
+  const metadataWithoutHash: Omit<SnapshotMetadata, "snapshotHash"> = {
     schemaVersion: SNAPSHOT_SCHEMA_VERSION,
     chainId: input.chainId,
     contractAddress: input.contractAddress.toLowerCase(),
@@ -103,7 +117,7 @@ export function buildSnapshot(input: BuildSnapshotInput): CrowdfundSnapshot {
     verifiedBlockHash: getVerifiedBlockHash(logs, input.verifiedBlockHash),
     generatedAt: new Date().toISOString(),
     reconciliation: input.reconciliation ?? pendingReconciliation(),
-  }
+  };
   const snapshotHash = createSnapshotHash({
     schemaVersion: metadataWithoutHash.schemaVersion,
     chainId: metadataWithoutHash.chainId,
@@ -113,7 +127,7 @@ export function buildSnapshot(input: BuildSnapshotInput): CrowdfundSnapshot {
     verifiedBlockHash: metadataWithoutHash.verifiedBlockHash,
     events,
     graph,
-  })
+  });
 
   return {
     metadata: {
@@ -122,7 +136,7 @@ export function buildSnapshot(input: BuildSnapshotInput): CrowdfundSnapshot {
     },
     events,
     graph,
-  }
+  };
 }
 
 // Returns a snapshot with its reconciliation result swapped in. Because reconciliation
@@ -138,5 +152,5 @@ export function withReconciliation(
       ...snapshot.metadata,
       reconciliation,
     },
-  }
+  };
 }

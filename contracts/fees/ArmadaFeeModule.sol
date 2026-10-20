@@ -9,7 +9,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./IArmadaFeeModule.sol";
 
 contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, IArmadaFeeModule {
-
     // ══════════════════════════════════════════════════════════════════════════
     // CONSTANTS
     // ══════════════════════════════════════════════════════════════════════════
@@ -17,8 +16,8 @@ contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
     uint256 public constant BPS_DENOMINATOR = 10000;
     uint256 public constant MAX_TIERS = 10;
     uint256 public constant MAX_BPS = 1000; // 10% max for any fee component
-    uint256 public constant MIN_YIELD_FEE_BPS = 100;  // 1%
-    uint256 public constant MAX_YIELD_FEE_BPS = 5000;  // 50%
+    uint256 public constant MIN_YIELD_FEE_BPS = 100; // 1%
+    uint256 public constant MAX_YIELD_FEE_BPS = 5000; // 50%
     uint256 public constant MAX_INTEGRATOR_FEE_BPS = 500; // 5% max integrator base fee
 
     /// @notice Default cadence for permissionless yield-vault harvests.
@@ -84,13 +83,10 @@ contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
     /// @param _privacyPool PrivacyPool address (authorized recordShieldFee caller)
     /// @param _yieldVault ArmadaYieldVault address (authorized recordYieldFee caller)
     /// @param _usdc USDC address (the only asset whose shield fees and volume are recorded)
-    function initialize(
-        address _owner,
-        address _treasury,
-        address _privacyPool,
-        address _yieldVault,
-        address _usdc
-    ) external initializer {
+    function initialize(address _owner, address _treasury, address _privacyPool, address _yieldVault, address _usdc)
+        external
+        initializer
+    {
         require(_owner != address(0), "ArmadaFeeModule: zero owner");
         require(_treasury != address(0), "ArmadaFeeModule: zero treasury");
         require(_privacyPool != address(0), "ArmadaFeeModule: zero privacyPool");
@@ -107,8 +103,8 @@ contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
         usdc = _usdc;
 
         // Defaults per spec
-        baseArmadaTakeBps = 50;    // 0.50%
-        yieldFeeBps = 1500;        // 15%
+        baseArmadaTakeBps = 50; // 0.50%
+        yieldFeeBps = 1500; // 15%
         harvestInterval = DEFAULT_HARVEST_INTERVAL;
 
         // Default tier: $250k volume → 40 bps armada take
@@ -120,10 +116,12 @@ contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
     // ══════════════════════════════════════════════════════════════════════════
 
     /// @inheritdoc IArmadaFeeModule
-    function calculateShieldFee(
-        address integrator,
-        uint256 amount
-    ) external view override returns (uint256 armadaTake, uint256 integratorFee, uint256 totalFee) {
+    function calculateShieldFee(address integrator, uint256 amount)
+        external
+        view
+        override
+        returns (uint256 armadaTake, uint256 integratorFee, uint256 totalFee)
+    {
         if (amount == 0) return (0, 0, 0);
 
         uint256 effectiveTakeBps = _getEffectiveArmadaTake(integrator);
@@ -187,13 +185,7 @@ contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
         uint256 cumulativeVolumeAfter = integratorRegistered ? _integrators[integrator].cumulativeVolume : 0;
 
         emit ShieldFeeRecorded(
-            asset,
-            integrator,
-            amount,
-            armadaTakeBps,
-            armadaTakePaid,
-            integratorFeePaid,
-            cumulativeVolumeAfter
+            asset, integrator, amount, armadaTakeBps, armadaTakePaid, integratorFeePaid, cumulativeVolumeAfter
         );
     }
 
@@ -292,20 +284,16 @@ contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
     }
 
     /// @inheritdoc IArmadaFeeModule
-    function setIntegratorTerms(
-        address integrator,
-        uint256 takeBps,
-        uint256 threshold,
-        bool active
-    ) external override onlyOwner {
+    function setIntegratorTerms(address integrator, uint256 takeBps, uint256 threshold, bool active)
+        external
+        override
+        onlyOwner
+    {
         require(integrator != address(0), "ArmadaFeeModule: zero integrator");
         require(takeBps <= MAX_BPS, "ArmadaFeeModule: custom take too high");
 
-        _customTerms[integrator] = CustomTerms({
-            customArmadaTakeBps: takeBps,
-            customVolumeThreshold: threshold,
-            active: active
-        });
+        _customTerms[integrator] =
+            CustomTerms({customArmadaTakeBps: takeBps, customVolumeThreshold: threshold, active: active});
 
         emit IntegratorTermsSet(integrator, takeBps, threshold, active);
     }

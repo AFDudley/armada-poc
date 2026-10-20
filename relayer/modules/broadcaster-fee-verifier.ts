@@ -226,7 +226,10 @@ export async function verifyBroadcasterFee(
 ): Promise<bigint> {
   // Normalise wrapper calls (lendAndShield / redeemAndShield) into synthetic vanilla transact
   // calldata before handing to the SDK helper. Vanilla transact requests pass through unchanged.
-  const normalised = normaliseRequestToVanillaTransact(request, ctx.privacyPoolAddress);
+  const normalised = normaliseRequestToVanillaTransact(
+    request,
+    ctx.privacyPoolAddress,
+  );
 
   // The SDK helper signature wants an ethers `ContractTransaction`. Only `to` + `data` are
   // load-bearing for decoding; `value` defaults to 0 (Transaction structs don't carry ETH).

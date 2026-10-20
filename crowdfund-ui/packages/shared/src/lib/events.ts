@@ -1,60 +1,60 @@
 // ABOUTME: Crowdfund event type definitions and parsing utilities.
 // ABOUTME: Converts raw ethers log entries into typed CrowdfundEvent objects (12 event types).
 
-import { Interface } from 'ethers'
-import { CROWDFUND_ABI_FRAGMENTS } from './constants.js'
+import { Interface } from "ethers";
+import { CROWDFUND_ABI_FRAGMENTS } from "./constants.js";
 
 /** All event types emitted by ArmadaCrowdfund */
 export type CrowdfundEventType =
-  | 'ArmLoaded'
-  | 'SeedAdded'
-  | 'Invited'
-  | 'LaunchTeamInvited'
-  | 'Committed'
-  | 'Finalized'
-  | 'Cancelled'
-  | 'Allocated'
-  | 'AllocatedHop'
-  | 'RefundClaimed'
-  | 'InviteNonceRevoked'
-  | 'UnallocatedArmWithdrawn'
+  | "ArmLoaded"
+  | "SeedAdded"
+  | "Invited"
+  | "LaunchTeamInvited"
+  | "Committed"
+  | "Finalized"
+  | "Cancelled"
+  | "Allocated"
+  | "AllocatedHop"
+  | "RefundClaimed"
+  | "InviteNonceRevoked"
+  | "UnallocatedArmWithdrawn";
 
 /** Raw log shape from eth_getLogs or ethers provider */
 export interface RawLog {
-  readonly blockNumber: number
-  readonly transactionHash: string
-  readonly logIndex: number
-  readonly topics: string[]
-  readonly data: string
+  readonly blockNumber: number;
+  readonly transactionHash: string;
+  readonly logIndex: number;
+  readonly topics: string[];
+  readonly data: string;
 }
 
 /** Parsed crowdfund event with typed fields */
 export interface CrowdfundEvent {
-  readonly type: CrowdfundEventType
-  readonly blockNumber: number
-  readonly transactionHash: string
-  readonly logIndex: number
-  readonly args: Record<string, unknown>
+  readonly type: CrowdfundEventType;
+  readonly blockNumber: number;
+  readonly transactionHash: string;
+  readonly logIndex: number;
+  readonly args: Record<string, unknown>;
 }
 
 /** The full set of event names ArmadaCrowdfund emits — single source of truth
  *  for both log parsing and indexer-snapshot validation. */
 export const VALID_EVENT_TYPES: ReadonlySet<string> = new Set<string>([
-  'ArmLoaded',
-  'SeedAdded',
-  'Invited',
-  'LaunchTeamInvited',
-  'Committed',
-  'Finalized',
-  'Cancelled',
-  'Allocated',
-  'AllocatedHop',
-  'RefundClaimed',
-  'InviteNonceRevoked',
-  'UnallocatedArmWithdrawn',
-])
+  "ArmLoaded",
+  "SeedAdded",
+  "Invited",
+  "LaunchTeamInvited",
+  "Committed",
+  "Finalized",
+  "Cancelled",
+  "Allocated",
+  "AllocatedHop",
+  "RefundClaimed",
+  "InviteNonceRevoked",
+  "UnallocatedArmWithdrawn",
+]);
 
-const crowdfundInterface = new Interface(CROWDFUND_ABI_FRAGMENTS)
+const crowdfundInterface = new Interface(CROWDFUND_ABI_FRAGMENTS);
 
 /**
  * Serialize parsed event args into a plain record.
@@ -64,22 +64,26 @@ function serializeArgs(
   args: Record<string, unknown>,
   inputs: ReadonlyArray<{ name: string }>,
 ): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
+  const result: Record<string, unknown> = {};
   for (const input of inputs) {
-    const value = args[input.name]
-    if (typeof value === 'string' && value.startsWith('0x') && value.length === 42) {
-      result[input.name] = value.toLowerCase()
-    } else if (typeof value === 'bigint') {
-      result[input.name] = value
-    } else if (typeof value === 'number') {
-      result[input.name] = value
-    } else if (typeof value === 'boolean') {
-      result[input.name] = value
+    const value = args[input.name];
+    if (
+      typeof value === "string" &&
+      value.startsWith("0x") &&
+      value.length === 42
+    ) {
+      result[input.name] = value.toLowerCase();
+    } else if (typeof value === "bigint") {
+      result[input.name] = value;
+    } else if (typeof value === "number") {
+      result[input.name] = value;
+    } else if (typeof value === "boolean") {
+      result[input.name] = value;
     } else {
-      result[input.name] = value
+      result[input.name] = value;
     }
   }
-  return result
+  return result;
 }
 
 /**
@@ -91,9 +95,9 @@ export function parseCrowdfundEvent(log: RawLog): CrowdfundEvent | null {
     const parsed = crowdfundInterface.parseLog({
       topics: log.topics,
       data: log.data,
-    })
-    if (!parsed) return null
-    if (!VALID_EVENT_TYPES.has(parsed.name)) return null
+    });
+    if (!parsed) return null;
+    if (!VALID_EVENT_TYPES.has(parsed.name)) return null;
 
     return {
       type: parsed.name as CrowdfundEventType,
@@ -101,18 +105,18 @@ export function parseCrowdfundEvent(log: RawLog): CrowdfundEvent | null {
       transactionHash: log.transactionHash,
       logIndex: log.logIndex,
       args: serializeArgs(parsed.args, parsed.fragment.inputs),
-    }
+    };
   } catch {
-    return null
+    return null;
   }
 }
 
 /** Parse multiple raw logs, filtering out unrecognized events */
 export function parseCrowdfundEvents(logs: RawLog[]): CrowdfundEvent[] {
-  const events: CrowdfundEvent[] = []
+  const events: CrowdfundEvent[] = [];
   for (const log of logs) {
-    const event = parseCrowdfundEvent(log)
-    if (event) events.push(event)
+    const event = parseCrowdfundEvent(log);
+    if (event) events.push(event);
   }
-  return events
+  return events;
 }

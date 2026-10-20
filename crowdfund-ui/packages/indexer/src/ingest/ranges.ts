@@ -1,8 +1,8 @@
 // ABOUTME: Pure range-ingestion helpers for no-gap crowdfund event indexing.
 // ABOUTME: Keeps cursor promotion and digest creation deterministic and independently testable.
 
-import { createHash } from 'node:crypto'
-import type { BlockRange, IndexedRawLog, IngestRangeRecord } from '../types.js'
+import { createHash } from "node:crypto";
+import type { BlockRange, IndexedRawLog, IngestRangeRecord } from "../types.js";
 
 export function getLogIdentity(log: IndexedRawLog): string {
   return [
@@ -12,7 +12,7 @@ export function getLogIdentity(log: IndexedRawLog): string {
     log.blockNumber,
     log.transactionHash.toLowerCase(),
     log.logIndex,
-  ].join(':')
+  ].join(":");
 }
 
 // Store dedup key: mirrors the Postgres crowdfund_indexer_raw_logs primary key
@@ -27,27 +27,27 @@ export function getLogDedupeKey(log: IndexedRawLog): string {
     log.contractAddress.toLowerCase(),
     log.transactionHash.toLowerCase(),
     log.logIndex,
-  ].join(':')
+  ].join(":");
 }
 
 export function createRangeDigest(logs: readonly IndexedRawLog[]): string {
-  const hash = createHash('sha256')
+  const hash = createHash("sha256");
   const sorted = [...logs].sort((a, b) => {
-    if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber
-    if (a.logIndex !== b.logIndex) return a.logIndex - b.logIndex
-    return a.transactionHash.localeCompare(b.transactionHash)
-  })
+    if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber;
+    if (a.logIndex !== b.logIndex) return a.logIndex - b.logIndex;
+    return a.transactionHash.localeCompare(b.transactionHash);
+  });
 
   for (const log of sorted) {
-    hash.update(getLogIdentity(log))
-    hash.update('|')
-    hash.update(log.topics.join(',').toLowerCase())
-    hash.update('|')
-    hash.update(log.data.toLowerCase())
-    hash.update('\n')
+    hash.update(getLogIdentity(log));
+    hash.update("|");
+    hash.update(log.topics.join(",").toLowerCase());
+    hash.update("|");
+    hash.update(log.data.toLowerCase());
+    hash.update("\n");
   }
 
-  return `0x${hash.digest('hex')}`
+  return `0x${hash.digest("hex")}`;
 }
 
 export function findFirstGap(
@@ -55,55 +55,65 @@ export function findFirstGap(
   fromBlock: number,
   toBlock: number,
 ): BlockRange | null {
-  let expected = fromBlock
-  const sorted = [...verifiedRanges].sort((a, b) => a.fromBlock - b.fromBlock)
+  let expected = fromBlock;
+  const sorted = [...verifiedRanges].sort((a, b) => a.fromBlock - b.fromBlock);
 
   for (const range of sorted) {
-    if (range.toBlock < expected) continue
+    if (range.toBlock < expected) continue;
     if (range.fromBlock > expected) {
       return {
         fromBlock: expected,
         toBlock: Math.min(range.fromBlock - 1, toBlock),
-      }
+      };
     }
-    expected = Math.max(expected, range.toBlock + 1)
-    if (expected > toBlock) return null
+    expected = Math.max(expected, range.toBlock + 1);
+    if (expected > toBlock) return null;
   }
 
-  if (expected <= toBlock) return { fromBlock: expected, toBlock }
-  return null
+  if (expected <= toBlock) return { fromBlock: expected, toBlock };
+  return null;
 }
 
 export function getContiguousVerifiedCursor(
   records: readonly IngestRangeRecord[],
   currentVerifiedCursor: number,
 ): number {
-  let expected = currentVerifiedCursor + 1
+  let expected = currentVerifiedCursor + 1;
   const verified = records
-    .filter((record) => record.status === 'verified')
-    .sort((a, b) => a.fromBlock - b.fromBlock)
+    .filter((record) => record.status === "verified")
+    .sort((a, b) => a.fromBlock - b.fromBlock);
 
   for (const range of verified) {
-    if (range.toBlock < expected) continue
-    if (range.fromBlock > expected) break
-    expected = Math.max(expected, range.toBlock + 1)
+    if (range.toBlock < expected) continue;
+    if (range.fromBlock > expected) break;
+    expected = Math.max(expected, range.toBlock + 1);
   }
 
-  return expected - 1
+  return expected - 1;
 }
 
-export function getRepairRanges(records: readonly IngestRangeRecord[]): BlockRange[] {
+export function getRepairRanges(
+  records: readonly IngestRangeRecord[],
+): BlockRange[] {
   // A failed/suspicious record whose span is fully covered by verified ranges is a
   // phantom gap — its blocks were re-verified under different chunk boundaries (e.g.
   // after CROWDFUND_MAX_BLOCK_RANGE changed). Drop it so it is not reported as a gap.
   const verified = records
-    .filter((record) => record.status === 'verified')
-    .map((record) => ({ fromBlock: record.fromBlock, toBlock: record.toBlock }))
-  return records
-    .filter((record) => record.status === 'failed' || record.status === 'suspicious')
-    .filter((record) => findFirstGap(verified, record.fromBlock, record.toBlock) !== null)
+    .filter((record) => record.status === "verified")
     .map((record) => ({
       fromBlock: record.fromBlock,
       toBlock: record.toBlock,
-    }))
+    }));
+  return records
+    .filter(
+      (record) => record.status === "failed" || record.status === "suspicious",
+    )
+    .filter(
+      (record) =>
+        findFirstGap(verified, record.fromBlock, record.toBlock) !== null,
+    )
+    .map((record) => ({
+      fromBlock: record.fromBlock,
+      toBlock: record.toBlock,
+    }));
 }

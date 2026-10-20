@@ -216,7 +216,7 @@ contract CrowdfundFullInvariantTest is Test {
             address(armToken),
             address(0xBEEF), // treasury
             admin,
-            admin,            // securityCouncil
+            admin, // securityCouncil
             block.timestamp
         );
 
@@ -265,15 +265,7 @@ contract CrowdfundFullInvariantTest is Test {
         vm.warp(crowdfund.windowStart() + 1);
 
         // Create handler
-        handler = new CrowdfundFullHandler(
-            crowdfund,
-            usdc,
-            armToken,
-            admin,
-            seeds,
-            hop1Addrs,
-            hop2Addrs
-        );
+        handler = new CrowdfundFullHandler(crowdfund, usdc, armToken, admin, seeds, hop1Addrs, hop2Addrs);
 
         usdc.addMinter(address(handler));
         targetContract(address(handler));
@@ -285,9 +277,9 @@ contract CrowdfundFullInvariantTest is Test {
 
     /// @notice Hop ceiling basis points match spec: 6000/4500/0 (hop-2 uses floor+rollover, not BPS)
     function invariant_ceilingBpsAreValid() public view {
-        (uint16 bps0, , , ) = crowdfund.hopConfigs(0);
-        (uint16 bps1, , , ) = crowdfund.hopConfigs(1);
-        (uint16 bps2, , , ) = crowdfund.hopConfigs(2);
+        (uint16 bps0,,,) = crowdfund.hopConfigs(0);
+        (uint16 bps1,,,) = crowdfund.hopConfigs(1);
+        (uint16 bps2,,,) = crowdfund.hopConfigs(2);
         assertEq(bps0, 6000, "INV-C2: Hop 0 ceiling should be 6000");
         assertEq(bps1, 4500, "INV-C2: Hop 1 ceiling should be 4500");
         assertEq(bps2, 0, "INV-C2: Hop 2 ceiling should be 0 (uses floor+rollover)");
@@ -302,11 +294,7 @@ contract CrowdfundFullInvariantTest is Test {
         if (handler.ghost_finalized() || handler.ghost_canceled()) return;
 
         uint256 contractUsdc = usdc.balanceOf(address(crowdfund));
-        assertEq(
-            contractUsdc,
-            handler.ghost_totalUsdcIn(),
-            "INV-C3: USDC balance != totalCommitted (before finalize)"
-        );
+        assertEq(contractUsdc, handler.ghost_totalUsdcIn(), "INV-C3: USDC balance != totalCommitted (before finalize)");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -382,11 +370,7 @@ contract CrowdfundFullInvariantTest is Test {
 
     /// @notice totalCommitted matches ghost tracking
     function invariant_totalCommittedConsistency() public view {
-        assertEq(
-            crowdfund.totalCommitted(),
-            handler.ghost_totalUsdcIn(),
-            "totalCommitted mismatch"
-        );
+        assertEq(crowdfund.totalCommitted(), handler.ghost_totalUsdcIn(), "totalCommitted mismatch");
     }
 
     /// @notice INV-C5: aggregate allocated USDC never exceeds the sale size (waterfall conservation).
@@ -396,10 +380,6 @@ contract CrowdfundFullInvariantTest is Test {
     ///         (totalAllocatedUsdc == 0). This is the aggregate counterpart to INV-C1
     ///         (per-participant alloc + refund == committed).
     function invariant_totalAllocatedWithinSaleSize() public view {
-        assertLe(
-            crowdfund.totalAllocatedUsdc(),
-            crowdfund.saleSize(),
-            "INV-C5: totalAllocatedUsdc > saleSize"
-        );
+        assertLe(crowdfund.totalAllocatedUsdc(), crowdfund.saleSize(), "INV-C5: totalAllocatedUsdc > saleSize");
     }
 }

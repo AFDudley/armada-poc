@@ -75,11 +75,7 @@ contract GaslessShieldWrapperClient is EIP712 {
      *      shield fee).
      */
     event GaslessShield(
-        address indexed user,
-        uint256 totalAmount,
-        uint256 feeValue,
-        uint64 cctpNonce,
-        bytes32 notesHash
+        address indexed user, uint256 totalAmount, uint256 feeValue, uint64 cctpNonce, bytes32 notesHash
     );
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -130,10 +126,7 @@ contract GaslessShieldWrapperClient is EIP712 {
         // feeExecuted. PrivacyPoolClient enforces `maxFee < userNote.value`; pre-check here so an
         // over-large maxFee (which would strand the burn on the Hub) is rejected before we permit,
         // pull, and burn rather than reverting downstream.
-        require(
-            params.maxFee < uint256(userNote.value),
-            "GaslessShieldWrapperClient: maxFee >= user note"
-        );
+        require(params.maxFee < uint256(userNote.value), "GaslessShieldWrapperClient: maxFee >= user note");
         uint256 total = uint256(userNote.value) + uint256(feeNote.value);
 
         cctpNonce = _permitPullApproveShield(params, total, userNote, feeNote);
@@ -184,9 +177,11 @@ contract GaslessShieldWrapperClient is EIP712 {
         // The signed intent (checked above), not the permit, authorizes this spend. The permit is
         // public in the mempool, so anyone may have submitted it already, consuming its nonce;
         // tolerate a failed permit as long as the allowance is in place.
-        try IERC20Permit(usdc).permit(
-            params.user, address(this), total, params.deadline, params.permitV, params.permitR, params.permitS
-        ) {} catch {
+        try IERC20Permit(usdc)
+            .permit(
+                params.user, address(this), total, params.deadline, params.permitV, params.permitR, params.permitS
+            ) {}
+        catch {
             require(
                 IERC20(usdc).allowance(params.user, address(this)) >= total,
                 "GaslessShieldWrapperClient: permit failed and allowance too low"
@@ -195,8 +190,7 @@ contract GaslessShieldWrapperClient is EIP712 {
         IERC20(usdc).safeTransferFrom(params.user, address(this), total);
         IERC20(usdc).safeApprove(privacyPoolClient, 0);
         IERC20(usdc).safeApprove(privacyPoolClient, total);
-        return IPrivacyPoolClient(privacyPoolClient).crossChainShieldWithFee(
-            params.maxFee, params.minFinalityThreshold, userNote, feeNote
-        );
+        return IPrivacyPoolClient(privacyPoolClient)
+            .crossChainShieldWithFee(params.maxFee, params.minFinalityThreshold, userNote, feeNote);
     }
 }

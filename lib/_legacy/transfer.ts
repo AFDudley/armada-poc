@@ -18,19 +18,15 @@ import {
   computeNpk,
   getNoteCommitment,
   toBytes32,
-  getTokenId
+  getTokenId,
 } from "./wallet";
-import {
-  MerkleTree,
-  syncTreeFromContract,
-  MerkleProof
-} from "./merkle_tree";
+import { MerkleTree, syncTreeFromContract, MerkleProof } from "./merkle_tree";
 import {
   buildTransaction,
   TransactionInputs,
   BoundParams,
   createMockCiphertext,
-  TransactionData
+  TransactionData,
 } from "./prover";
 
 // ============ Types ============
@@ -61,7 +57,7 @@ export interface UnshieldRequest {
 
   // Unshield details
   unshieldAmount: bigint;
-  recipientAddress: string;  // EOA or contract to receive unshielded tokens
+  recipientAddress: string; // EOA or contract to receive unshielded tokens
   tokenAddress: string;
 
   // Chain info
@@ -78,7 +74,7 @@ export interface UnshieldRequest {
 
 export interface UnshieldResult {
   transaction: TransactionData;
-  changeNote: Note | null;  // Change note if any
+  changeNote: Note | null; // Change note if any
   nullifiers: string[];
   unshieldValue: bigint;
   unshieldRecipient: string;
@@ -86,7 +82,7 @@ export interface UnshieldResult {
 
 export interface TransferResult {
   transaction: TransactionData;
-  outputNotes: Note[];  // Notes created (recipient + change)
+  outputNotes: Note[]; // Notes created (recipient + change)
   nullifiers: string[];
 }
 
@@ -101,7 +97,7 @@ export interface TransferResult {
  */
 export async function createTransfer(
   request: TransferRequest,
-  merkleTree: MerkleTree
+  merkleTree: MerkleTree,
 ): Promise<TransferResult> {
   await initCrypto();
 
@@ -112,7 +108,7 @@ export async function createTransfer(
     amount,
     tokenAddress,
     chainId,
-    treeNumber
+    treeNumber,
   } = request;
 
   // Calculate total input value
@@ -140,7 +136,7 @@ export async function createTransfer(
   }
 
   // Get merkle proofs for input notes
-  const inputProofs: MerkleProof[] = inputNotes.map(note => {
+  const inputProofs: MerkleProof[] = inputNotes.map((note) => {
     if (note.leafIndex === undefined) {
       throw new Error("Input note missing leafIndex");
     }
@@ -150,12 +146,12 @@ export async function createTransfer(
   // Create bound params
   const boundParams: BoundParams = {
     treeNumber,
-    minGasPrice: 0n,  // Not enforcing gas price
-    unshield: 0,  // NONE - private transfer, no unshield
+    minGasPrice: 0n, // Not enforcing gas price
+    unshield: 0, // NONE - private transfer, no unshield
     chainId,
     adaptContract: ethers.ZeroAddress,
     adaptParams: ethers.zeroPadValue("0x00", 32),
-    commitmentCiphertext: outputNotes.map(() => createMockCiphertext())
+    commitmentCiphertext: outputNotes.map(() => createMockCiphertext()),
   };
 
   // Build transaction inputs
@@ -164,7 +160,7 @@ export async function createTransfer(
     inputProofs,
     outputNotes,
     boundParams,
-    wallet: senderWallet
+    wallet: senderWallet,
   };
 
   // Generate proof and build transaction
@@ -174,7 +170,7 @@ export async function createTransfer(
   return {
     transaction,
     outputNotes,
-    nullifiers: transaction.nullifiers
+    nullifiers: transaction.nullifiers,
   };
 }
 
@@ -187,7 +183,7 @@ export async function createTransfer(
  */
 export async function createUnshield(
   request: UnshieldRequest,
-  merkleTree: MerkleTree
+  merkleTree: MerkleTree,
 ): Promise<UnshieldResult> {
   await initCrypto();
 
@@ -199,9 +195,9 @@ export async function createUnshield(
     tokenAddress,
     chainId,
     treeNumber,
-    unshieldType = 1,  // Default: NORMAL
+    unshieldType = 1, // Default: NORMAL
     adaptContract = ethers.ZeroAddress,
-    adaptParams = ethers.zeroPadValue("0x00", 32)
+    adaptParams = ethers.zeroPadValue("0x00", 32),
   } = request;
 
   // Calculate total input value
@@ -209,7 +205,9 @@ export async function createUnshield(
 
   // Validate we have enough funds
   if (totalIn < unshieldAmount) {
-    throw new Error(`Insufficient funds: have ${totalIn}, need ${unshieldAmount}`);
+    throw new Error(
+      `Insufficient funds: have ${totalIn}, need ${unshieldAmount}`,
+    );
   }
 
   // Calculate change
@@ -238,12 +236,12 @@ export async function createUnshield(
     npk: BigInt(recipientAddress),
     token: getTokenId(tokenAddress),
     value: unshieldAmount,
-    random: 0n  // Random not needed for unshield
+    random: 0n, // Random not needed for unshield
   };
   outputNotes.push(unshieldOutput);
 
   // Get merkle proofs for input notes
-  const inputProofs: MerkleProof[] = inputNotes.map(note => {
+  const inputProofs: MerkleProof[] = inputNotes.map((note) => {
     if (note.leafIndex === undefined) {
       throw new Error("Input note missing leafIndex");
     }
@@ -254,16 +252,19 @@ export async function createUnshield(
   // For unshields, commitmentCiphertext array should have length = commitments - 1
   // since the unshield output (last output) doesn't have ciphertext
   // Only the change notes (first N-1 outputs) need ciphertext
-  const ciphertextCount = outputNotes.length - 1;  // Exclude unshield output (last)
+  const ciphertextCount = outputNotes.length - 1; // Exclude unshield output (last)
   const boundParams: BoundParams = {
     treeNumber,
     minGasPrice: 0n,
-    unshield: unshieldType,  // 1 = NORMAL, 2 = REDIRECT
+    unshield: unshieldType, // 1 = NORMAL, 2 = REDIRECT
     chainId,
     adaptContract: unshieldType === 2 ? adaptContract : ethers.ZeroAddress,
-    adaptParams: unshieldType === 2 ? adaptParams : ethers.zeroPadValue("0x00", 32),
+    adaptParams:
+      unshieldType === 2 ? adaptParams : ethers.zeroPadValue("0x00", 32),
     // Ciphertext for change notes only (not unshield output)
-    commitmentCiphertext: Array(ciphertextCount).fill(null).map(() => createMockCiphertext())
+    commitmentCiphertext: Array(ciphertextCount)
+      .fill(null)
+      .map(() => createMockCiphertext()),
   };
 
   // Build transaction inputs
@@ -275,10 +276,10 @@ export async function createUnshield(
     wallet: senderWallet,
     // Unshield preimage - this goes to the recipient
     unshieldPreimage: {
-      npk: ethers.zeroPadValue(recipientAddress, 32),  // For unshield, npk is the recipient address
+      npk: ethers.zeroPadValue(recipientAddress, 32), // For unshield, npk is the recipient address
       tokenAddress,
-      value: unshieldAmount
-    }
+      value: unshieldAmount,
+    },
   };
 
   // Generate proof and build transaction
@@ -290,109 +291,109 @@ export async function createUnshield(
     changeNote,
     nullifiers: transaction.nullifiers,
     unshieldValue: unshieldAmount,
-    unshieldRecipient: recipientAddress
+    unshieldRecipient: recipientAddress,
   };
 }
 
 // ABI for transact function (JSON format to avoid parsing issues)
 const TRANSACT_ABI = [
   {
-    "inputs": [
+    inputs: [
       {
-        "components": [
+        components: [
           {
-            "components": [
+            components: [
               {
-                "components": [
-                  { "name": "x", "type": "uint256" },
-                  { "name": "y", "type": "uint256" }
+                components: [
+                  { name: "x", type: "uint256" },
+                  { name: "y", type: "uint256" },
                 ],
-                "name": "a",
-                "type": "tuple"
+                name: "a",
+                type: "tuple",
               },
               {
-                "components": [
-                  { "name": "x", "type": "uint256[2]" },
-                  { "name": "y", "type": "uint256[2]" }
+                components: [
+                  { name: "x", type: "uint256[2]" },
+                  { name: "y", type: "uint256[2]" },
                 ],
-                "name": "b",
-                "type": "tuple"
+                name: "b",
+                type: "tuple",
               },
               {
-                "components": [
-                  { "name": "x", "type": "uint256" },
-                  { "name": "y", "type": "uint256" }
+                components: [
+                  { name: "x", type: "uint256" },
+                  { name: "y", type: "uint256" },
                 ],
-                "name": "c",
-                "type": "tuple"
-              }
+                name: "c",
+                type: "tuple",
+              },
             ],
-            "name": "proof",
-            "type": "tuple"
+            name: "proof",
+            type: "tuple",
           },
-          { "name": "merkleRoot", "type": "bytes32" },
-          { "name": "nullifiers", "type": "bytes32[]" },
-          { "name": "commitments", "type": "bytes32[]" },
+          { name: "merkleRoot", type: "bytes32" },
+          { name: "nullifiers", type: "bytes32[]" },
+          { name: "commitments", type: "bytes32[]" },
           {
-            "components": [
-              { "name": "treeNumber", "type": "uint16" },
-              { "name": "minGasPrice", "type": "uint72" },
-              { "name": "unshield", "type": "uint8" },
-              { "name": "chainID", "type": "uint64" },
-              { "name": "adaptContract", "type": "address" },
-              { "name": "adaptParams", "type": "bytes32" },
+            components: [
+              { name: "treeNumber", type: "uint16" },
+              { name: "minGasPrice", type: "uint72" },
+              { name: "unshield", type: "uint8" },
+              { name: "chainID", type: "uint64" },
+              { name: "adaptContract", type: "address" },
+              { name: "adaptParams", type: "bytes32" },
               {
-                "components": [
-                  { "name": "ciphertext", "type": "bytes32[4]" },
-                  { "name": "blindedSenderViewingKey", "type": "bytes32" },
-                  { "name": "blindedReceiverViewingKey", "type": "bytes32" },
-                  { "name": "annotationData", "type": "bytes" },
-                  { "name": "memo", "type": "bytes" }
+                components: [
+                  { name: "ciphertext", type: "bytes32[4]" },
+                  { name: "blindedSenderViewingKey", type: "bytes32" },
+                  { name: "blindedReceiverViewingKey", type: "bytes32" },
+                  { name: "annotationData", type: "bytes" },
+                  { name: "memo", type: "bytes" },
                 ],
-                "name": "commitmentCiphertext",
-                "type": "tuple[]"
-              }
+                name: "commitmentCiphertext",
+                type: "tuple[]",
+              },
             ],
-            "name": "boundParams",
-            "type": "tuple"
+            name: "boundParams",
+            type: "tuple",
           },
           {
-            "components": [
-              { "name": "npk", "type": "bytes32" },
+            components: [
+              { name: "npk", type: "bytes32" },
               {
-                "components": [
-                  { "name": "tokenType", "type": "uint8" },
-                  { "name": "tokenAddress", "type": "address" },
-                  { "name": "tokenSubID", "type": "uint256" }
+                components: [
+                  { name: "tokenType", type: "uint8" },
+                  { name: "tokenAddress", type: "address" },
+                  { name: "tokenSubID", type: "uint256" },
                 ],
-                "name": "token",
-                "type": "tuple"
+                name: "token",
+                type: "tuple",
               },
-              { "name": "value", "type": "uint120" }
+              { name: "value", type: "uint120" },
             ],
-            "name": "unshieldPreimage",
-            "type": "tuple"
-          }
+            name: "unshieldPreimage",
+            type: "tuple",
+          },
         ],
-        "name": "_transactions",
-        "type": "tuple[]"
-      }
+        name: "_transactions",
+        type: "tuple[]",
+      },
     ],
-    "name": "transact",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "transact",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [
-      { "name": "", "type": "uint256" },
-      { "name": "", "type": "bytes32" }
+    inputs: [
+      { name: "", type: "uint256" },
+      { name: "", type: "bytes32" },
     ],
-    "name": "nullifiers",
-    "outputs": [{ "name": "", "type": "bool" }],
-    "stateMutability": "view",
-    "type": "function"
-  }
+    name: "nullifiers",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ];
 
 /**
@@ -402,7 +403,7 @@ export async function submitTransfer(
   provider: ethers.Provider,
   signer: ethers.Signer,
   railgunAddress: string,
-  transferResult: TransferResult
+  transferResult: TransferResult,
 ): Promise<ethers.TransactionReceipt | null> {
   const { transaction } = transferResult;
 
@@ -410,11 +411,7 @@ export async function submitTransfer(
   const txStruct = formatTransactionForContract(transaction);
 
   // Get contract with JSON ABI
-  const railgun = new ethers.Contract(
-    railgunAddress,
-    TRANSACT_ABI,
-    signer
-  );
+  const railgun = new ethers.Contract(railgunAddress, TRANSACT_ABI, signer);
 
   // Submit transaction
   console.log("Submitting transaction to RailgunSmartWallet...");
@@ -431,7 +428,7 @@ export async function submitUnshield(
   provider: ethers.Provider,
   signer: ethers.Signer,
   railgunAddress: string,
-  unshieldResult: UnshieldResult
+  unshieldResult: UnshieldResult,
 ): Promise<ethers.TransactionReceipt | null> {
   const { transaction } = unshieldResult;
 
@@ -439,11 +436,7 @@ export async function submitUnshield(
   const txStruct = formatTransactionForContract(transaction);
 
   // Get contract with JSON ABI
-  const railgun = new ethers.Contract(
-    railgunAddress,
-    TRANSACT_ABI,
-    signer
-  );
+  const railgun = new ethers.Contract(railgunAddress, TRANSACT_ABI, signer);
 
   // Submit transaction
   console.log("Submitting unshield transaction to RailgunSmartWallet...");
@@ -462,9 +455,9 @@ function formatTransactionForContract(txData: TransactionData): any {
       a: { x: txData.proof.a.x.toString(), y: txData.proof.a.y.toString() },
       b: {
         x: [txData.proof.b.x[0].toString(), txData.proof.b.x[1].toString()],
-        y: [txData.proof.b.y[0].toString(), txData.proof.b.y[1].toString()]
+        y: [txData.proof.b.y[0].toString(), txData.proof.b.y[1].toString()],
       },
-      c: { x: txData.proof.c.x.toString(), y: txData.proof.c.y.toString() }
+      c: { x: txData.proof.c.x.toString(), y: txData.proof.c.y.toString() },
     },
     merkleRoot: txData.merkleRoot,
     nullifiers: txData.nullifiers,
@@ -476,32 +469,36 @@ function formatTransactionForContract(txData: TransactionData): any {
       chainID: txData.boundParams.chainId.toString(),
       adaptContract: txData.boundParams.adaptContract,
       adaptParams: txData.boundParams.adaptParams,
-      commitmentCiphertext: txData.boundParams.commitmentCiphertext.map((ct: any) => ({
-        ciphertext: ct.ciphertext,
-        blindedSenderViewingKey: ct.blindedSenderViewingKey,
-        blindedReceiverViewingKey: ct.blindedReceiverViewingKey,
-        annotationData: ct.annotationData,
-        memo: ct.memo
-      }))
+      commitmentCiphertext: txData.boundParams.commitmentCiphertext.map(
+        (ct: any) => ({
+          ciphertext: ct.ciphertext,
+          blindedSenderViewingKey: ct.blindedSenderViewingKey,
+          blindedReceiverViewingKey: ct.blindedReceiverViewingKey,
+          annotationData: ct.annotationData,
+          memo: ct.memo,
+        }),
+      ),
     },
     // Format unshield preimage - either from txData or empty
-    unshieldPreimage: txData.unshieldPreimage ? {
-      npk: txData.unshieldPreimage.npk,
-      token: {
-        tokenType: 0,  // ERC20
-        tokenAddress: txData.unshieldPreimage.tokenAddress,
-        tokenSubID: 0
-      },
-      value: txData.unshieldPreimage.value.toString()
-    } : {
-      npk: ethers.zeroPadValue("0x00", 32),
-      token: {
-        tokenType: 0,
-        tokenAddress: ethers.ZeroAddress,
-        tokenSubID: 0
-      },
-      value: 0
-    }
+    unshieldPreimage: txData.unshieldPreimage
+      ? {
+          npk: txData.unshieldPreimage.npk,
+          token: {
+            tokenType: 0, // ERC20
+            tokenAddress: txData.unshieldPreimage.tokenAddress,
+            tokenSubID: 0,
+          },
+          value: txData.unshieldPreimage.value.toString(),
+        }
+      : {
+          npk: ethers.zeroPadValue("0x00", 32),
+          token: {
+            tokenType: 0,
+            tokenAddress: ethers.ZeroAddress,
+            tokenSubID: 0,
+          },
+          value: 0,
+        },
   };
 }
 
@@ -514,7 +511,7 @@ function formatTransactionForContract(txData: TransactionData): any {
 export function findSpendableNotes(
   wallet: RailgunWallet,
   notes: Note[],
-  merkleTree: MerkleTree
+  merkleTree: MerkleTree,
 ): SpentNote[] {
   const spendable: SpentNote[] = [];
 
@@ -528,7 +525,7 @@ export function findSpendableNotes(
         ...note,
         treeNumber: 0,
         leafIndex: i,
-        pathElements: merkleTree.getProof(i).pathElements
+        pathElements: merkleTree.getProof(i).pathElements,
       });
     }
   }
@@ -542,13 +539,13 @@ export function findSpendableNotes(
 export function noteToSpentNote(
   note: Note,
   leafIndex: number,
-  merkleTree: MerkleTree
+  merkleTree: MerkleTree,
 ): SpentNote {
   return {
     ...note,
     treeNumber: 0,
     leafIndex,
-    pathElements: merkleTree.getProof(leafIndex).pathElements
+    pathElements: merkleTree.getProof(leafIndex).pathElements,
   };
 }
 
@@ -563,11 +560,15 @@ export function printTransactionSummary(result: TransferResult): void {
   result.nullifiers.forEach((n, i) => console.log(`  [${i}] ${n}`));
 
   console.log(`\nOutput Commitments: ${result.transaction.commitments.length}`);
-  result.transaction.commitments.forEach((c, i) => console.log(`  [${i}] ${c}`));
+  result.transaction.commitments.forEach((c, i) =>
+    console.log(`  [${i}] ${c}`),
+  );
 
   console.log(`\nOutput Notes:`);
   result.outputNotes.forEach((note, i) => {
-    console.log(`  [${i}] Value: ${note.value}, NPK: ${toBytes32(note.npk).slice(0, 20)}...`);
+    console.log(
+      `  [${i}] Value: ${note.value}, NPK: ${toBytes32(note.npk).slice(0, 20)}...`,
+    );
   });
 
   console.log(`\nMerkle Root: ${result.transaction.merkleRoot}`);

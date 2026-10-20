@@ -18,10 +18,10 @@ import {
   TokenBalances,
   getTokenDataERC20,
   getTokenDataHash,
-} from '@railgun-community/engine';
-import { Chain } from '@railgun-community/shared-models';
-import { ethers, ContractTransaction, Signer, Provider } from 'ethers';
-import { getEngine } from './init';
+} from "@railgun-community/engine";
+import { Chain } from "@railgun-community/shared-models";
+import { ethers, ContractTransaction, Signer, Provider } from "ethers";
+import { getEngine } from "./init";
 import {
   initializeProver,
   isProverInitialized,
@@ -31,9 +31,9 @@ import {
   generateProvedTransactions,
   generateTransactCall,
   ProofProgressCallback,
-} from './prover';
-import { getWalletBalances, scanWalletBalances } from './network';
-import { DEFAULT_ENCRYPTION_KEY } from './wallet';
+} from "./prover";
+import { getWalletBalances, scanWalletBalances } from "./network";
+import { DEFAULT_ENCRYPTION_KEY } from "./wallet";
 
 // ============ Types ============
 
@@ -106,12 +106,12 @@ export interface BalanceInfo {
 export async function getSpendableBalance(
   wallet: RailgunWallet,
   chain: Chain,
-  tokenAddress: string
+  tokenAddress: string,
 ): Promise<bigint> {
   const balances = await wallet.getTokenBalances(
     TXIDVersion.V2_PoseidonMerkle,
     chain,
-    true // onlySpendable
+    true, // onlySpendable
   );
 
   const tokenData = getTokenDataERC20(tokenAddress);
@@ -130,19 +130,19 @@ export async function getSpendableBalance(
  */
 export async function getAllBalances(
   wallet: RailgunWallet,
-  chain: Chain
+  chain: Chain,
 ): Promise<BalanceInfo[]> {
   const balances = await wallet.getTokenBalances(
     TXIDVersion.V2_PoseidonMerkle,
     chain,
-    false // all balances, not just spendable
+    false, // all balances, not just spendable
   );
 
   const result: BalanceInfo[] = [];
 
   for (const [tokenHash, treeBalance] of Object.entries(balances)) {
     result.push({
-      tokenAddress: 'unknown', // Would need reverse lookup
+      tokenAddress: "unknown", // Would need reverse lookup
       tokenHash,
       balance: treeBalance.balance,
       utxoCount: treeBalance.utxos.length,
@@ -165,7 +165,7 @@ export async function hasSufficientBalance(
   wallet: RailgunWallet,
   chain: Chain,
   tokenAddress: string,
-  amount: bigint
+  amount: bigint,
 ): Promise<boolean> {
   const balance = await getSpendableBalance(wallet, chain, tokenAddress);
   return balance >= amount;
@@ -186,7 +186,7 @@ export async function hasSufficientBalance(
  * @returns TransferResult with proved transaction
  */
 export async function createPrivateTransfer(
-  request: TransferRequest
+  request: TransferRequest,
 ): Promise<TransferResult> {
   const {
     wallet,
@@ -201,25 +201,32 @@ export async function createPrivateTransfer(
 
   // Ensure prover is initialized
   if (!isProverInitialized()) {
-    console.log('Initializing prover...');
+    console.log("Initializing prover...");
     await initializeProver();
   }
 
   // Check balance
   const balance = await getSpendableBalance(wallet, chain, tokenAddress);
   if (balance < amount) {
-    throw new Error(
-      `Insufficient balance: have ${balance}, need ${amount}`
-    );
+    throw new Error(`Insufficient balance: have ${balance}, need ${amount}`);
   }
 
-  console.log(`Creating private transfer of ${amount} to ${recipientAddress.slice(0, 20)}...`);
+  console.log(
+    `Creating private transfer of ${amount} to ${recipientAddress.slice(0, 20)}...`,
+  );
 
   // Create transaction batch
   const batch = createTransactionBatch(chain);
 
   // Add transfer output
-  addTransferOutput(batch, recipientAddress, amount, tokenAddress, false, memoText);
+  addTransferOutput(
+    batch,
+    recipientAddress,
+    amount,
+    tokenAddress,
+    false,
+    memoText,
+  );
 
   // Generate proved transactions
   const transactions = await generateProvedTransactions(
@@ -227,18 +234,18 @@ export async function createPrivateTransfer(
     wallet,
     TXIDVersion.V2_PoseidonMerkle,
     encryptionKey,
-    progressCallback
+    progressCallback,
   );
 
   // Generate contract transaction
   const contractTransaction = await generateTransactCall(
     TXIDVersion.V2_PoseidonMerkle,
     transactions,
-    chain
+    chain,
   );
 
   // Extract nullifiers
-  const nullifiers = transactions.flatMap(tx => tx.nullifiers as string[]);
+  const nullifiers = transactions.flatMap((tx) => tx.nullifiers as string[]);
 
   return {
     transactions,
@@ -260,7 +267,7 @@ export async function createPrivateTransfer(
  * @returns TransferResult with proved transaction
  */
 export async function createUnshield(
-  request: UnshieldRequest
+  request: UnshieldRequest,
 ): Promise<TransferResult> {
   const {
     wallet,
@@ -274,16 +281,14 @@ export async function createUnshield(
 
   // Ensure prover is initialized
   if (!isProverInitialized()) {
-    console.log('Initializing prover...');
+    console.log("Initializing prover...");
     await initializeProver();
   }
 
   // Check balance
   const balance = await getSpendableBalance(wallet, chain, tokenAddress);
   if (balance < amount) {
-    throw new Error(
-      `Insufficient balance: have ${balance}, need ${amount}`
-    );
+    throw new Error(`Insufficient balance: have ${balance}, need ${amount}`);
   }
 
   console.log(`Creating unshield of ${amount} to ${recipientAddress}...`);
@@ -300,18 +305,18 @@ export async function createUnshield(
     wallet,
     TXIDVersion.V2_PoseidonMerkle,
     encryptionKey,
-    progressCallback
+    progressCallback,
   );
 
   // Generate contract transaction
   const contractTransaction = await generateTransactCall(
     TXIDVersion.V2_PoseidonMerkle,
     transactions,
-    chain
+    chain,
   );
 
   // Extract nullifiers
-  const nullifiers = transactions.flatMap(tx => tx.nullifiers as string[]);
+  const nullifiers = transactions.flatMap((tx) => tx.nullifiers as string[]);
 
   return {
     transactions,
@@ -331,11 +336,11 @@ export async function createUnshield(
  */
 export async function submitTransaction(
   signer: Signer,
-  result: TransferResult
+  result: TransferResult,
 ): Promise<ethers.TransactionReceipt | null> {
   const { contractTransaction } = result;
 
-  console.log('Submitting transaction...');
+  console.log("Submitting transaction...");
 
   // Send the transaction
   const tx = await signer.sendTransaction({
@@ -364,7 +369,7 @@ export async function submitTransaction(
  */
 export async function estimateGas(
   provider: Provider,
-  result: TransferResult
+  result: TransferResult,
 ): Promise<bigint> {
   const { contractTransaction } = result;
 
@@ -394,7 +399,7 @@ export async function createBatchTransfer(
   tokenAddress: string,
   recipients: Array<{ address: string; amount: bigint }>,
   encryptionKey: string = DEFAULT_ENCRYPTION_KEY,
-  progressCallback?: ProofProgressCallback
+  progressCallback?: ProofProgressCallback,
 ): Promise<TransferResult> {
   // Ensure prover is initialized
   if (!isProverInitialized()) {
@@ -408,11 +413,13 @@ export async function createBatchTransfer(
   const balance = await getSpendableBalance(wallet, chain, tokenAddress);
   if (balance < totalAmount) {
     throw new Error(
-      `Insufficient balance: have ${balance}, need ${totalAmount}`
+      `Insufficient balance: have ${balance}, need ${totalAmount}`,
     );
   }
 
-  console.log(`Creating batch transfer of ${totalAmount} to ${recipients.length} recipients...`);
+  console.log(
+    `Creating batch transfer of ${totalAmount} to ${recipients.length} recipients...`,
+  );
 
   // Create transaction batch
   const batch = createTransactionBatch(chain);
@@ -428,17 +435,17 @@ export async function createBatchTransfer(
     wallet,
     TXIDVersion.V2_PoseidonMerkle,
     encryptionKey,
-    progressCallback
+    progressCallback,
   );
 
   // Generate contract transaction
   const contractTransaction = await generateTransactCall(
     TXIDVersion.V2_PoseidonMerkle,
     transactions,
-    chain
+    chain,
   );
 
-  const nullifiers = transactions.flatMap(tx => tx.nullifiers as string[]);
+  const nullifiers = transactions.flatMap((tx) => tx.nullifiers as string[]);
 
   return {
     transactions,
@@ -457,7 +464,7 @@ export function formatTransferResult(result: TransferResult): string {
 Transfer Result:
   Transactions: ${result.transactions.length}
   Nullifiers: ${result.nullifiers.length}
-    ${result.nullifiers.map(n => `- ${n.slice(0, 20)}...`).join('\n    ')}
+    ${result.nullifiers.map((n) => `- ${n.slice(0, 20)}...`).join("\n    ")}
   Contract TX: ${result.contractTransaction.to}
 `;
 }
@@ -486,7 +493,7 @@ export function formatUSDCAmount(amount: bigint): string {
  */
 export async function refreshBalances(
   wallet: RailgunWallet,
-  chain: Chain
+  chain: Chain,
 ): Promise<void> {
   const engine = getEngine();
   await engine.fullRescanUTXOMerkletreesAndWallets(chain, [wallet.id]);

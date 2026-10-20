@@ -1,64 +1,73 @@
 // ABOUTME: Postgres-backed persistence for the resilient crowdfund indexer.
 // ABOUTME: Stores cursors, range verification records, raw logs, and snapshot metadata in durable tables.
 
-import { Pool } from 'pg'
-import { getLogDedupeKey } from '../ingest/ranges.js'
-import { createEmptyStoreData } from './fileStore.js'
-import type { IndexerMeta, IndexerMetaPatch, IndexerStore } from './store.js'
-import type { CursorState, IndexedRawLog, IndexerStoreData, IngestRangeRecord, IngestRangeStatus } from '../types.js'
-import type { PoolClient, PoolConfig, QueryResult } from 'pg'
+import { Pool } from "pg";
+import { getLogDedupeKey } from "../ingest/ranges.js";
+import { createEmptyStoreData } from "./fileStore.js";
+import type { IndexerMeta, IndexerMetaPatch, IndexerStore } from "./store.js";
+import type {
+  CursorState,
+  IndexedRawLog,
+  IndexerStoreData,
+  IngestRangeRecord,
+  IngestRangeStatus,
+} from "../types.js";
+import type { PoolClient, PoolConfig, QueryResult } from "pg";
 
 export interface PostgresStoreOptions {
-  connectionString?: string
-  pool?: Pool
-  initialCursor: CursorState
+  connectionString?: string;
+  pool?: Pool;
+  initialCursor: CursorState;
 }
 
 interface DbClient {
-  query<T extends object = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<QueryResult<T>>
+  query<T extends object = Record<string, unknown>>(
+    text: string,
+    values?: readonly unknown[],
+  ): Promise<QueryResult<T>>;
 }
 
 interface CursorRow {
-  deploy_block: number
-  confirmation_depth: number
-  chain_head: number
-  confirmed_head: number
-  ingested_cursor: number
-  verified_cursor: number
+  deploy_block: number;
+  confirmation_depth: number;
+  chain_head: number;
+  confirmed_head: number;
+  ingested_cursor: number;
+  verified_cursor: number;
 }
 
 interface RangeRow {
-  from_block: number
-  to_block: number
-  status: IngestRangeStatus
-  provider: string
-  attempts: number
-  log_count: number
-  digest: string | null
-  fetched_at: Date | string | null
-  verified_at: Date | string | null
-  last_error: string | null
-  next_retry_at: Date | string | null
+  from_block: number;
+  to_block: number;
+  status: IngestRangeStatus;
+  provider: string;
+  attempts: number;
+  log_count: number;
+  digest: string | null;
+  fetched_at: Date | string | null;
+  verified_at: Date | string | null;
+  last_error: string | null;
+  next_retry_at: Date | string | null;
 }
 
 interface RawLogRow {
-  chain_id: number
-  contract_address: string
-  block_number: number
-  block_hash: string
-  transaction_hash: string
-  log_index: number
-  topics: readonly string[] | string
-  data: string
+  chain_id: number;
+  contract_address: string;
+  block_number: number;
+  block_hash: string;
+  transaction_hash: string;
+  log_index: number;
+  topics: readonly string[] | string;
+  data: string;
 }
 
 interface MetadataRow {
-  last_ingested_at: Date | string | null
-  last_verified_at: Date | string | null
-  last_reconciled_at: Date | string | null
-  last_error: string | null
-  latest_snapshot_hash: string | null
-  latest_static_snapshot_url: string | null
+  last_ingested_at: Date | string | null;
+  last_verified_at: Date | string | null;
+  last_reconciled_at: Date | string | null;
+  last_error: string | null;
+  latest_snapshot_hash: string | null;
+  latest_static_snapshot_url: string | null;
 }
 
 export const POSTGRES_SCHEMA_SQL = `
@@ -119,27 +128,27 @@ CREATE TABLE IF NOT EXISTS crowdfund_indexer_metadata (
   latest_static_snapshot_url text,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-`
+`;
 
 function toIso(value: Date | string | null): string | null {
-  if (value === null) return null
-  if (value instanceof Date) return value.toISOString()
-  return value
+  if (value === null) return null;
+  if (value instanceof Date) return value.toISOString();
+  return value;
 }
 
 function sortRanges(ranges: readonly IngestRangeRecord[]): IngestRangeRecord[] {
   return [...ranges].sort((a, b) => {
-    if (a.fromBlock !== b.fromBlock) return a.fromBlock - b.fromBlock
-    return a.toBlock - b.toBlock
-  })
+    if (a.fromBlock !== b.fromBlock) return a.fromBlock - b.fromBlock;
+    return a.toBlock - b.toBlock;
+  });
 }
 
 function sortLogs(logs: readonly IndexedRawLog[]): IndexedRawLog[] {
   return [...logs].sort((a, b) => {
-    if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber
-    if (a.logIndex !== b.logIndex) return a.logIndex - b.logIndex
-    return a.transactionHash.localeCompare(b.transactionHash)
-  })
+    if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber;
+    if (a.logIndex !== b.logIndex) return a.logIndex - b.logIndex;
+    return a.transactionHash.localeCompare(b.transactionHash);
+  });
 }
 
 function toCursor(row: CursorRow): CursorState {
@@ -150,7 +159,7 @@ function toCursor(row: CursorRow): CursorState {
     confirmedHead: row.confirmed_head,
     ingestedCursor: row.ingested_cursor,
     verifiedCursor: row.verified_cursor,
-  }
+  };
 }
 
 function toRange(row: RangeRow): IngestRangeRecord {
@@ -166,12 +175,12 @@ function toRange(row: RangeRow): IngestRangeRecord {
     verifiedAt: toIso(row.verified_at),
     lastError: row.last_error,
     nextRetryAt: toIso(row.next_retry_at),
-  }
+  };
 }
 
-function parseTopics(value: RawLogRow['topics']): readonly string[] {
-  if (typeof value === 'string') return JSON.parse(value) as readonly string[]
-  return value
+function parseTopics(value: RawLogRow["topics"]): readonly string[] {
+  if (typeof value === "string") return JSON.parse(value) as readonly string[];
+  return value;
 }
 
 function toRawLog(row: RawLogRow): IndexedRawLog {
@@ -184,20 +193,25 @@ function toRawLog(row: RawLogRow): IndexedRawLog {
     logIndex: row.log_index,
     topics: parseTopics(row.topics),
     data: row.data,
-  }
+  };
 }
 
-function rangeKey(range: Pick<IngestRangeRecord, 'fromBlock' | 'toBlock'>): string {
-  return `${range.fromBlock}-${range.toBlock}`
+function rangeKey(
+  range: Pick<IngestRangeRecord, "fromBlock" | "toBlock">,
+): string {
+  return `${range.fromBlock}-${range.toBlock}`;
 }
 
 function dedupeLogs(logs: readonly IndexedRawLog[]): IndexedRawLog[] {
-  const records = new Map<string, IndexedRawLog>()
-  for (const log of logs) records.set(getLogDedupeKey(log), log)
-  return [...records.values()]
+  const records = new Map<string, IndexedRawLog>();
+  for (const log of logs) records.set(getLogDedupeKey(log), log);
+  return [...records.values()];
 }
 
-async function ensureSeedRows(client: DbClient, initialCursor: CursorState): Promise<void> {
+async function ensureSeedRows(
+  client: DbClient,
+  initialCursor: CursorState,
+): Promise<void> {
   await client.query(
     `INSERT INTO crowdfund_indexer_cursor (
       id, deploy_block, confirmation_depth, chain_head, confirmed_head, ingested_cursor, verified_cursor
@@ -212,15 +226,20 @@ async function ensureSeedRows(client: DbClient, initialCursor: CursorState): Pro
       initialCursor.ingestedCursor,
       initialCursor.verifiedCursor,
     ],
-  )
-  await client.query('INSERT INTO crowdfund_indexer_metadata (id) VALUES (true) ON CONFLICT (id) DO NOTHING')
+  );
+  await client.query(
+    "INSERT INTO crowdfund_indexer_metadata (id) VALUES (true) ON CONFLICT (id) DO NOTHING",
+  );
 }
 
 // Per-row upsert helpers. These hold the single source of truth for each table's write
 // SQL and are reused both by the whole-store writeWithClient and by the narrow ops, so
 // the two paths can never drift.
 
-async function upsertCursorRow(client: DbClient, cursor: CursorState): Promise<void> {
+async function upsertCursorRow(
+  client: DbClient,
+  cursor: CursorState,
+): Promise<void> {
   await client.query(
     `INSERT INTO crowdfund_indexer_cursor (
       id, deploy_block, confirmation_depth, chain_head, confirmed_head, ingested_cursor, verified_cursor
@@ -242,15 +261,23 @@ async function upsertCursorRow(client: DbClient, cursor: CursorState): Promise<v
       cursor.ingestedCursor,
       cursor.verifiedCursor,
     ],
-  )
+  );
 }
 
 type MetadataFields = Pick<
   IndexerStoreData,
-  'lastIngestedAt' | 'lastVerifiedAt' | 'lastReconciledAt' | 'lastError' | 'latestSnapshotHash' | 'latestStaticSnapshotUrl'
->
+  | "lastIngestedAt"
+  | "lastVerifiedAt"
+  | "lastReconciledAt"
+  | "lastError"
+  | "latestSnapshotHash"
+  | "latestStaticSnapshotUrl"
+>;
 
-async function upsertMetadataRow(client: DbClient, data: MetadataFields): Promise<void> {
+async function upsertMetadataRow(
+  client: DbClient,
+  data: MetadataFields,
+): Promise<void> {
   await client.query(
     `INSERT INTO crowdfund_indexer_metadata (
       id, last_ingested_at, last_verified_at, last_reconciled_at, last_error, latest_snapshot_hash, latest_static_snapshot_url
@@ -272,10 +299,13 @@ async function upsertMetadataRow(client: DbClient, data: MetadataFields): Promis
       data.latestSnapshotHash,
       data.latestStaticSnapshotUrl,
     ],
-  )
+  );
 }
 
-async function upsertRangeRow(client: DbClient, range: IngestRangeRecord): Promise<void> {
+async function upsertRangeRow(
+  client: DbClient,
+  range: IngestRangeRecord,
+): Promise<void> {
   await client.query(
     `INSERT INTO crowdfund_indexer_ranges (
       from_block, to_block, status, provider, attempts, log_count, digest, fetched_at, verified_at, last_error, next_retry_at
@@ -305,10 +335,13 @@ async function upsertRangeRow(client: DbClient, range: IngestRangeRecord): Promi
       range.lastError,
       range.nextRetryAt,
     ],
-  )
+  );
 }
 
-async function upsertRawLogRow(client: DbClient, log: IndexedRawLog): Promise<void> {
+async function upsertRawLogRow(
+  client: DbClient,
+  log: IndexedRawLog,
+): Promise<void> {
   await client.query(
     `INSERT INTO crowdfund_indexer_raw_logs (
       chain_id, contract_address, block_number, block_hash, transaction_hash, log_index, topics, data
@@ -329,108 +362,129 @@ async function upsertRawLogRow(client: DbClient, log: IndexedRawLog): Promise<vo
       JSON.stringify(log.topics),
       log.data,
     ],
-  )
+  );
 }
 
 export class PostgresIndexerStore implements IndexerStore {
-  private readonly pool: Pool
-  private readonly initialCursor: CursorState
-  private readonly ownsPool: boolean
-  private isReady = false
+  private readonly pool: Pool;
+  private readonly initialCursor: CursorState;
+  private readonly ownsPool: boolean;
+  private isReady = false;
 
   constructor(options: PostgresStoreOptions) {
-    this.initialCursor = options.initialCursor
-    this.pool = options.pool ?? new Pool({ connectionString: options.connectionString } satisfies PoolConfig)
-    this.ownsPool = options.pool === undefined
+    this.initialCursor = options.initialCursor;
+    this.pool =
+      options.pool ??
+      new Pool({
+        connectionString: options.connectionString,
+      } satisfies PoolConfig);
+    this.ownsPool = options.pool === undefined;
   }
 
   async close(): Promise<void> {
-    if (this.ownsPool) await this.pool.end()
+    if (this.ownsPool) await this.pool.end();
   }
 
   async migrate(): Promise<void> {
-    await this.pool.query(POSTGRES_SCHEMA_SQL)
-    await ensureSeedRows(this.pool, this.initialCursor)
-    this.isReady = true
+    await this.pool.query(POSTGRES_SCHEMA_SQL);
+    await ensureSeedRows(this.pool, this.initialCursor);
+    this.isReady = true;
   }
 
   async read(): Promise<IndexerStoreData> {
-    await this.ensureReady()
-    return this.readWithClient(this.pool)
+    await this.ensureReady();
+    return this.readWithClient(this.pool);
   }
 
   async write(data: IndexerStoreData): Promise<void> {
-    await this.ensureReady()
+    await this.ensureReady();
     await this.withTransaction(async (client) => {
-      await this.writeWithClient(client, data)
-    })
+      await this.writeWithClient(client, data);
+    });
   }
 
-  async update(mutator: (data: IndexerStoreData) => IndexerStoreData): Promise<IndexerStoreData> {
-    await this.ensureReady()
+  async update(
+    mutator: (data: IndexerStoreData) => IndexerStoreData,
+  ): Promise<IndexerStoreData> {
+    await this.ensureReady();
     return this.withTransaction(async (client) => {
-      await client.query("SELECT pg_advisory_xact_lock(hashtext('armada_crowdfund_indexer_store'))")
-      const current = await this.readWithClient(client)
-      const next = mutator(current)
-      await this.writeWithClient(client, next)
-      return next
-    })
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtext('armada_crowdfund_indexer_store'))",
+      );
+      const current = await this.readWithClient(client);
+      const next = mutator(current);
+      await this.writeWithClient(client, next);
+      return next;
+    });
   }
 
   async upsertRange(record: IngestRangeRecord): Promise<IndexerStoreData> {
     return this.update((data) => {
-      const records = new Map(data.ranges.map((range) => [rangeKey(range), range]))
-      records.set(rangeKey(record), record)
+      const records = new Map(
+        data.ranges.map((range) => [rangeKey(range), range]),
+      );
+      records.set(rangeKey(record), record);
       return {
         ...data,
         ranges: sortRanges([...records.values()]),
-      }
-    })
+      };
+    });
   }
 
   async updateCursor(cursor: CursorState): Promise<IndexerStoreData> {
     return this.update((data) => ({
       ...data,
       cursor,
-    }))
+    }));
   }
 
-  async upsertRawLogs(logs: readonly IndexedRawLog[]): Promise<IndexerStoreData> {
+  async upsertRawLogs(
+    logs: readonly IndexedRawLog[],
+  ): Promise<IndexerStoreData> {
     return this.update((data) => ({
       ...data,
       rawLogs: sortLogs(dedupeLogs([...data.rawLogs, ...logs])),
-    }))
+    }));
   }
 
   private async ensureReady(): Promise<void> {
-    if (!this.isReady) await this.migrate()
+    if (!this.isReady) await this.migrate();
   }
 
-  private async withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-    const client = await this.pool.connect()
+  private async withTransaction<T>(
+    fn: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
     try {
-      await client.query('BEGIN')
-      const result = await fn(client)
-      await client.query('COMMIT')
-      return result
+      await client.query("BEGIN");
+      const result = await fn(client);
+      await client.query("COMMIT");
+      return result;
     } catch (err) {
-      await client.query('ROLLBACK')
-      throw err
+      await client.query("ROLLBACK");
+      throw err;
     } finally {
-      client.release()
+      client.release();
     }
   }
 
   private async readWithClient(client: DbClient): Promise<IndexerStoreData> {
-    const cursor = await client.query<CursorRow>('SELECT * FROM crowdfund_indexer_cursor WHERE id = true')
-    if (cursor.rows.length === 0) return createEmptyStoreData(this.initialCursor)
+    const cursor = await client.query<CursorRow>(
+      "SELECT * FROM crowdfund_indexer_cursor WHERE id = true",
+    );
+    if (cursor.rows.length === 0)
+      return createEmptyStoreData(this.initialCursor);
 
-    const metadata = await client.query<MetadataRow>('SELECT * FROM crowdfund_indexer_metadata WHERE id = true')
-    const ranges = await client.query<RangeRow>('SELECT * FROM crowdfund_indexer_ranges ORDER BY from_block, to_block')
+    const metadata = await client.query<MetadataRow>(
+      "SELECT * FROM crowdfund_indexer_metadata WHERE id = true",
+    );
+    const ranges = await client.query<RangeRow>(
+      "SELECT * FROM crowdfund_indexer_ranges ORDER BY from_block, to_block",
+    );
     const rawLogs = await client.query<RawLogRow>(
-      'SELECT * FROM crowdfund_indexer_raw_logs ORDER BY block_number, log_index, transaction_hash',
-    )
-    const meta = metadata.rows[0]
+      "SELECT * FROM crowdfund_indexer_raw_logs ORDER BY block_number, log_index, transaction_hash",
+    );
+    const meta = metadata.rows[0];
 
     return {
       cursor: toCursor(cursor.rows[0]),
@@ -442,28 +496,41 @@ export class PostgresIndexerStore implements IndexerStore {
       lastError: meta?.last_error ?? null,
       latestSnapshotHash: meta?.latest_snapshot_hash ?? null,
       latestStaticSnapshotUrl: meta?.latest_static_snapshot_url ?? null,
-    }
+    };
   }
 
-  private async writeWithClient(client: DbClient, data: IndexerStoreData): Promise<void> {
-    await upsertCursorRow(client, data.cursor)
-    await upsertMetadataRow(client, data)
-    for (const range of sortRanges(data.ranges)) await upsertRangeRow(client, range)
-    for (const log of sortLogs(dedupeLogs(data.rawLogs))) await upsertRawLogRow(client, log)
+  private async writeWithClient(
+    client: DbClient,
+    data: IndexerStoreData,
+  ): Promise<void> {
+    await upsertCursorRow(client, data.cursor);
+    await upsertMetadataRow(client, data);
+    for (const range of sortRanges(data.ranges))
+      await upsertRangeRow(client, range);
+    for (const log of sortLogs(dedupeLogs(data.rawLogs)))
+      await upsertRawLogRow(client, log);
   }
 
   // --- Narrow operations: touch only affected rows, no whole-store read or rewrite. ---
 
   async readMeta(): Promise<IndexerMeta> {
-    await this.ensureReady()
-    const cursor = await this.pool.query<CursorRow>('SELECT * FROM crowdfund_indexer_cursor WHERE id = true')
+    await this.ensureReady();
+    const cursor = await this.pool.query<CursorRow>(
+      "SELECT * FROM crowdfund_indexer_cursor WHERE id = true",
+    );
     if (cursor.rows.length === 0) {
-      const { rawLogs: _rawLogs, ...meta } = createEmptyStoreData(this.initialCursor)
-      return meta
+      const { rawLogs: _rawLogs, ...meta } = createEmptyStoreData(
+        this.initialCursor,
+      );
+      return meta;
     }
-    const metadata = await this.pool.query<MetadataRow>('SELECT * FROM crowdfund_indexer_metadata WHERE id = true')
-    const ranges = await this.pool.query<RangeRow>('SELECT * FROM crowdfund_indexer_ranges ORDER BY from_block, to_block')
-    const meta = metadata.rows[0]
+    const metadata = await this.pool.query<MetadataRow>(
+      "SELECT * FROM crowdfund_indexer_metadata WHERE id = true",
+    );
+    const ranges = await this.pool.query<RangeRow>(
+      "SELECT * FROM crowdfund_indexer_ranges ORDER BY from_block, to_block",
+    );
+    const meta = metadata.rows[0];
     return {
       cursor: toCursor(cursor.rows[0]),
       ranges: ranges.rows.map(toRange),
@@ -473,59 +540,74 @@ export class PostgresIndexerStore implements IndexerStore {
       lastError: meta?.last_error ?? null,
       latestSnapshotHash: meta?.latest_snapshot_hash ?? null,
       latestStaticSnapshotUrl: meta?.latest_static_snapshot_url ?? null,
-    }
+    };
   }
 
   async readLogs(upToBlock?: number): Promise<readonly IndexedRawLog[]> {
-    await this.ensureReady()
-    const result = upToBlock === undefined
-      ? await this.pool.query<RawLogRow>(
-          'SELECT * FROM crowdfund_indexer_raw_logs ORDER BY block_number, log_index, transaction_hash',
-        )
-      : await this.pool.query<RawLogRow>(
-          'SELECT * FROM crowdfund_indexer_raw_logs WHERE block_number <= $1 ORDER BY block_number, log_index, transaction_hash',
-          [upToBlock],
-        )
-    return result.rows.map(toRawLog)
+    await this.ensureReady();
+    const result =
+      upToBlock === undefined
+        ? await this.pool.query<RawLogRow>(
+            "SELECT * FROM crowdfund_indexer_raw_logs ORDER BY block_number, log_index, transaction_hash",
+          )
+        : await this.pool.query<RawLogRow>(
+            "SELECT * FROM crowdfund_indexer_raw_logs WHERE block_number <= $1 ORDER BY block_number, log_index, transaction_hash",
+            [upToBlock],
+          );
+    return result.rows.map(toRawLog);
   }
 
   async appendRawLogs(logs: readonly IndexedRawLog[]): Promise<void> {
-    await this.ensureReady()
-    const deduped = sortLogs(dedupeLogs(logs))
-    if (deduped.length === 0) return
+    await this.ensureReady();
+    const deduped = sortLogs(dedupeLogs(logs));
+    if (deduped.length === 0) return;
     await this.withTransaction(async (client) => {
-      for (const log of deduped) await upsertRawLogRow(client, log)
-    })
+      for (const log of deduped) await upsertRawLogRow(client, log);
+    });
   }
 
   async patchRange(record: IngestRangeRecord): Promise<void> {
-    await this.ensureReady()
-    await upsertRangeRow(this.pool, record)
+    await this.ensureReady();
+    await upsertRangeRow(this.pool, record);
   }
 
   async patchMeta(patch: IndexerMetaPatch): Promise<void> {
-    await this.ensureReady()
+    await this.ensureReady();
     await this.withTransaction(async (client) => {
-      if (patch.cursor) await upsertCursorRow(client, patch.cursor)
+      if (patch.cursor) await upsertCursorRow(client, patch.cursor);
 
-      const columns: Array<{ col: string; value: string | null }> = []
-      if (patch.lastIngestedAt !== undefined) columns.push({ col: 'last_ingested_at', value: patch.lastIngestedAt })
-      if (patch.lastVerifiedAt !== undefined) columns.push({ col: 'last_verified_at', value: patch.lastVerifiedAt })
-      if (patch.lastReconciledAt !== undefined) columns.push({ col: 'last_reconciled_at', value: patch.lastReconciledAt })
-      if (patch.lastError !== undefined) columns.push({ col: 'last_error', value: patch.lastError })
-      if (patch.latestSnapshotHash !== undefined) columns.push({ col: 'latest_snapshot_hash', value: patch.latestSnapshotHash })
+      const columns: Array<{ col: string; value: string | null }> = [];
+      if (patch.lastIngestedAt !== undefined)
+        columns.push({ col: "last_ingested_at", value: patch.lastIngestedAt });
+      if (patch.lastVerifiedAt !== undefined)
+        columns.push({ col: "last_verified_at", value: patch.lastVerifiedAt });
+      if (patch.lastReconciledAt !== undefined)
+        columns.push({
+          col: "last_reconciled_at",
+          value: patch.lastReconciledAt,
+        });
+      if (patch.lastError !== undefined)
+        columns.push({ col: "last_error", value: patch.lastError });
+      if (patch.latestSnapshotHash !== undefined)
+        columns.push({
+          col: "latest_snapshot_hash",
+          value: patch.latestSnapshotHash,
+        });
       if (patch.latestStaticSnapshotUrl !== undefined) {
-        columns.push({ col: 'latest_static_snapshot_url', value: patch.latestStaticSnapshotUrl })
+        columns.push({
+          col: "latest_static_snapshot_url",
+          value: patch.latestStaticSnapshotUrl,
+        });
       }
 
       if (columns.length > 0) {
-        const sets = columns.map((c, i) => `${c.col} = $${i + 1}`)
-        sets.push('updated_at = now()')
+        const sets = columns.map((c, i) => `${c.col} = $${i + 1}`);
+        sets.push("updated_at = now()");
         await client.query(
-          `UPDATE crowdfund_indexer_metadata SET ${sets.join(', ')} WHERE id = true`,
+          `UPDATE crowdfund_indexer_metadata SET ${sets.join(", ")} WHERE id = true`,
           columns.map((c) => c.value),
-        )
+        );
       }
-    })
+    });
   }
 }

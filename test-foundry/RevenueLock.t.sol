@@ -36,8 +36,8 @@ contract RevenueLockTest is Test {
 
     uint256 constant TOTAL_SUPPLY = 12_000_000 * 1e18;
     uint256 constant ALLOC_A = 1_200_000 * 1e18; // 10% of supply
-    uint256 constant ALLOC_B = 800_000 * 1e18;   // ~6.7%
-    uint256 constant ALLOC_C = 400_000 * 1e18;   // ~3.3%
+    uint256 constant ALLOC_B = 800_000 * 1e18; // ~6.7%
+    uint256 constant ALLOC_C = 400_000 * 1e18; // ~3.3%
     uint256 constant TOTAL_LOCK = ALLOC_A + ALLOC_B + ALLOC_C; // 2,400,000 ARM
 
     // $10k/day, 18-decimal USD. Matches PARAMETER_MANIFEST.md / issue #225.
@@ -67,13 +67,8 @@ contract RevenueLockTest is Test {
         amounts[2] = ALLOC_C;
 
         // Deploy RevenueLock
-        revenueLock = new RevenueLock(
-            address(armToken),
-            address(revenueCounter),
-            MAX_INCREASE_PER_DAY,
-            beneficiaries,
-            amounts
-        );
+        revenueLock =
+            new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, beneficiaries, amounts);
 
         // Whitelist RevenueLock + beneficiaries for transfers
         address[] memory whitelist = new address[](5);
@@ -265,13 +260,7 @@ contract RevenueLockTest is Test {
         uint256[] memory a = new uint256[](1);
         a[0] = 1e18;
 
-        RevenueLock freshLock = new RevenueLock(
-            address(armToken),
-            address(prePopulated),
-            MAX_INCREASE_PER_DAY,
-            b,
-            a
-        );
+        RevenueLock freshLock = new RevenueLock(address(armToken), address(prePopulated), MAX_INCREASE_PER_DAY, b, a);
         assertEq(freshLock.maxObservedRevenue(), 0, "maxObservedRevenue must start at 0");
     }
 
@@ -294,13 +283,7 @@ contract RevenueLockTest is Test {
         a[0] = ALLOC_A;
         a[1] = ALLOC_B;
         a[2] = ALLOC_C;
-        return new RevenueLock(
-            address(armToken),
-            address(revenueCounter),
-            MAX_INCREASE_PER_DAY,
-            b,
-            a
-        );
+        return new RevenueLock(address(armToken), address(revenueCounter), MAX_INCREASE_PER_DAY, b, a);
     }
 
     // WHY: The contract is immutable with no admin/sweep — an underfunded deployment
@@ -621,8 +604,7 @@ contract RevenueLockTest is Test {
         revenueLock.release(delegateeX);
 
         uint256 lockBalance = armToken.balanceOf(address(revenueLock));
-        uint256 totalReleased = revenueLock.released(beneficiaryA)
-            + revenueLock.released(beneficiaryB)
+        uint256 totalReleased = revenueLock.released(beneficiaryA) + revenueLock.released(beneficiaryB)
             + revenueLock.released(beneficiaryC);
 
         assertEq(lockBalance + totalReleased, TOTAL_LOCK, "supply conservation violated");
@@ -664,8 +646,7 @@ contract RevenueLockTest is Test {
 
         // Must be one of the valid step values
         assertTrue(
-            pct == 0 || pct == 1000 || pct == 2500 || pct == 4000 ||
-            pct == 6000 || pct == 8000 || pct == 10000,
+            pct == 0 || pct == 1000 || pct == 2500 || pct == 4000 || pct == 6000 || pct == 8000 || pct == 10000,
             "unlock percentage not a valid step value"
         );
     }
@@ -757,8 +738,11 @@ contract RevenueLockTest is Test {
 
         // A single sync: budget = 10 * MAX_INCREASE_PER_DAY, ratchet advances by that much.
         revenueLock.syncObservedRevenue();
-        assertEq(revenueLock.maxObservedRevenue(), 10 * MAX_INCREASE_PER_DAY,
-            "budget accumulates over idle days - exactly why regular syncs are required");
+        assertEq(
+            revenueLock.maxObservedRevenue(),
+            10 * MAX_INCREASE_PER_DAY,
+            "budget accumulates over idle days - exactly why regular syncs are required"
+        );
     }
 
     /// @dev WHY: ratchet must cap to `reported` when the counter is the smaller
@@ -881,7 +865,6 @@ contract RevenueLockTest is Test {
 
         // But views reflect what a release would see: 10% unlock, allocation * 10%.
         assertEq(revenueLock.unlockPercentage(), 1000, "unlockPercentage must preview");
-        assertEq(revenueLock.releasable(beneficiaryA), ALLOC_A * 1000 / 10000,
-            "releasable must preview");
+        assertEq(revenueLock.releasable(beneficiaryA), ALLOC_A * 1000 / 10000, "releasable must preview");
     }
 }

@@ -12,7 +12,10 @@ contract MockUSDCOutflow is ERC20 {
     constructor() ERC20("MockUSDC", "USDC") {
         _mint(msg.sender, 100_000_000e6);
     }
-    function decimals() public pure override returns (uint8) { return 6; }
+
+    function decimals() public pure override returns (uint8) {
+        return 6;
+    }
 }
 
 /// @dev Handler for stateful fuzzing of treasury outflow limits
@@ -74,8 +77,8 @@ contract TreasuryOutflowHandler is Test {
     function setLimitAbsoluteFuzzed(uint256 newAbsolute) external {
         newAbsolute = bound(newAbsolute, 100_000e6, 5_000_000e6); // >= floor
         vm.prank(owner);
-        try treasury.setOutflowLimitAbsolute(token, newAbsolute) {
-        } catch {
+        try treasury.setOutflowLimitAbsolute(token, newAbsolute) {}
+        catch {
             ghost_revertCount++;
         }
     }
@@ -83,8 +86,8 @@ contract TreasuryOutflowHandler is Test {
     function setLimitBpsFuzzed(uint256 newBps) external {
         newBps = bound(newBps, 1, 10_000);
         vm.prank(owner);
-        try treasury.setOutflowLimitBps(token, newBps) {
-        } catch {
+        try treasury.setOutflowLimitBps(token, newBps) {}
+        catch {
             ghost_revertCount++;
         }
     }
@@ -92,8 +95,8 @@ contract TreasuryOutflowHandler is Test {
     function setWindowFuzzed(uint256 newWindow) external {
         newWindow = bound(newWindow, 1 days, 365 days);
         vm.prank(owner);
-        try treasury.setOutflowWindow(token, newWindow) {
-        } catch {
+        try treasury.setOutflowWindow(token, newWindow) {}
+        catch {
             ghost_revertCount++;
         }
     }
@@ -127,13 +130,7 @@ contract TreasuryOutflowInvariantTest is Test {
         usdc.transfer(address(treasury), TREASURY_FUNDING);
 
         // Initialize outflow config
-        treasury.initOutflowConfig(
-            address(usdc),
-            WINDOW,
-            LIMIT_BPS,
-            LIMIT_ABSOLUTE,
-            FLOOR
-        );
+        treasury.initOutflowConfig(address(usdc), WINDOW, LIMIT_BPS, LIMIT_ABSOLUTE, FLOOR);
 
         // Setup steward budget
         treasury.addStewardBudgetToken(address(usdc), STEWARD_LIMIT, STEWARD_WINDOW);
@@ -146,23 +143,16 @@ contract TreasuryOutflowInvariantTest is Test {
     ///         WHY: Treasury cannot distribute more than it holds. SafeERC20 reverts on overdraw.
     function invariant_noOverdraw() public {
         assertLe(
-            handler.ghost_totalDistributed() + handler.ghost_totalStewardSpent(),
-            TREASURY_FUNDING,
-            "INV-TO1: overdraw"
+            handler.ghost_totalDistributed() + handler.ghost_totalStewardSpent(), TREASURY_FUNDING, "INV-TO1: overdraw"
         );
     }
 
     /// @notice INV-TO2: Treasury USDC balance == funding - total outflows.
     ///         WHY: All outflows go to address(0xBEEF). Conservation of value.
     function invariant_balanceConservation() public {
-        uint256 expectedBalance = TREASURY_FUNDING
-            - handler.ghost_totalDistributed()
-            - handler.ghost_totalStewardSpent();
-        assertEq(
-            usdc.balanceOf(address(treasury)),
-            expectedBalance,
-            "INV-TO2: balance conservation"
-        );
+        uint256 expectedBalance =
+            TREASURY_FUNDING - handler.ghost_totalDistributed() - handler.ghost_totalStewardSpent();
+        assertEq(usdc.balanceOf(address(treasury)), expectedBalance, "INV-TO2: balance conservation");
     }
 
     /// @notice INV-TO3: Outflow recipient received exactly what treasury sent.

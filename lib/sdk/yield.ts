@@ -17,9 +17,13 @@
  * destination the proof committed to, so it cannot deviate.
  */
 
-import { Chain } from '@railgun-community/shared-models';
-import { RailgunWallet, TXIDVersion, TransactionStructV2 } from '@railgun-community/engine';
-import { ethers } from 'ethers';
+import { Chain } from "@railgun-community/shared-models";
+import {
+  RailgunWallet,
+  TXIDVersion,
+  TransactionStructV2,
+} from "@railgun-community/engine";
+import { ethers } from "ethers";
 import {
   createTransactionBatch,
   addUnshieldOutput,
@@ -27,10 +31,10 @@ import {
   isProverInitialized,
   initializeProver,
   ProofProgressCallback,
-} from './prover';
-import { DEFAULT_ENCRYPTION_KEY } from './wallet';
+} from "./prover";
+import { DEFAULT_ENCRYPTION_KEY } from "./wallet";
 
-export type YieldAdaptMode = 'lend' | 'redeem';
+export type YieldAdaptMode = "lend" | "redeem";
 
 /**
  * Bind the shield destination into adaptParams. Solidity verifies adaptParams matches
@@ -42,7 +46,7 @@ function encodeYieldAdaptParams(
   shieldKey: string,
 ): string {
   const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
-    ['bytes32', 'bytes32[3]', 'bytes32'],
+    ["bytes32", "bytes32[3]", "bytes32"],
     [npk, encryptedBundle, shieldKey],
   );
   return ethers.keccak256(encoded);
@@ -63,8 +67,24 @@ function encodeYieldAdaptParamsWithFee(
   feeAmount: bigint,
 ): string {
   const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
-    ['bytes32', 'bytes32[3]', 'bytes32', 'bytes32', 'bytes32[3]', 'bytes32', 'uint256'],
-    [npk, encryptedBundle, shieldKey, feeNpk, feeEncryptedBundle, feeShieldKey, feeAmount],
+    [
+      "bytes32",
+      "bytes32[3]",
+      "bytes32",
+      "bytes32",
+      "bytes32[3]",
+      "bytes32",
+      "uint256",
+    ],
+    [
+      npk,
+      encryptedBundle,
+      shieldKey,
+      feeNpk,
+      feeEncryptedBundle,
+      feeShieldKey,
+      feeAmount,
+    ],
   );
   return ethers.keccak256(encoded);
 }
@@ -73,16 +93,19 @@ function encodeYieldAdaptParamsWithFee(
  * Normalize the proved Transaction into the tuple the adapter ABI expects (strict bigint / hex).
  * Ported from the interface; defensive against both engine structs and ethers Result proxies.
  */
-function normalizeTransactionForAdapter(tx: unknown, hubChainId: number): unknown {
+function normalizeTransactionForAdapter(
+  tx: unknown,
+  hubChainId: number,
+): unknown {
   const toBigInt = (v: unknown): bigint => {
     if (v == null) return 0n;
-    if (typeof v === 'bigint') return v;
-    if (typeof v === 'number' || typeof v === 'string') return BigInt(v);
+    if (typeof v === "bigint") return v;
+    if (typeof v === "number" || typeof v === "string") return BigInt(v);
     return 0n;
   };
   const toHex = (v: unknown): string => {
     if (v == null) return ethers.ZeroHash;
-    if (typeof v === 'string' && v.startsWith('0x')) return v;
+    if (typeof v === "string" && v.startsWith("0x")) return v;
     try {
       return ethers.hexlify(v as ethers.BytesLike);
     } catch {
@@ -91,23 +114,31 @@ function normalizeTransactionForAdapter(tx: unknown, hubChainId: number): unknow
   };
   const t = tx as Record<string, unknown>;
   const bp = t.boundParams as Record<string, unknown> | undefined;
-  const rawCiphertext = (bp?.commitmentCiphertext ?? []) as Array<Record<string, unknown> | null | undefined>;
+  const rawCiphertext = (bp?.commitmentCiphertext ?? []) as Array<
+    Record<string, unknown> | null | undefined
+  >;
   const defaultCiphertext: [string, string, string, string] = [
-    ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash,
+    ethers.ZeroHash,
+    ethers.ZeroHash,
+    ethers.ZeroHash,
+    ethers.ZeroHash,
   ];
   const commitmentCiphertext = rawCiphertext
     .filter((c): c is Record<string, unknown> => c != null)
     .map((c) => {
       const ct = c.ciphertext as string[] | undefined;
-      const arr = Array.isArray(ct) && ct.length >= 4
-        ? [ct[0], ct[1], ct[2], ct[3]] as [string, string, string, string]
-        : defaultCiphertext;
+      const arr =
+        Array.isArray(ct) && ct.length >= 4
+          ? ([ct[0], ct[1], ct[2], ct[3]] as [string, string, string, string])
+          : defaultCiphertext;
       return {
         ciphertext: arr,
-        blindedSenderViewingKey: (c.blindedSenderViewingKey ?? ethers.ZeroHash) as string,
-        blindedReceiverViewingKey: (c.blindedReceiverViewingKey ?? ethers.ZeroHash) as string,
-        annotationData: (c.annotationData ?? '0x') as string,
-        memo: (c.memo ?? '0x') as string,
+        blindedSenderViewingKey: (c.blindedSenderViewingKey ??
+          ethers.ZeroHash) as string,
+        blindedReceiverViewingKey: (c.blindedReceiverViewingKey ??
+          ethers.ZeroHash) as string,
+        annotationData: (c.annotationData ?? "0x") as string,
+        memo: (c.memo ?? "0x") as string,
       };
     });
 
@@ -117,7 +148,9 @@ function normalizeTransactionForAdapter(tx: unknown, hubChainId: number): unknow
     npk: toHex(up?.npk) || ethers.ZeroHash,
     token: {
       tokenType: Number(token.tokenType ?? 0),
-      tokenAddress: (token.tokenAddress != null ? String(token.tokenAddress) : ethers.ZeroAddress) as string,
+      tokenAddress: (token.tokenAddress != null
+        ? String(token.tokenAddress)
+        : ethers.ZeroAddress) as string,
       tokenSubID: toBigInt(token.tokenSubID),
     },
     value: toBigInt(up?.value),
@@ -141,14 +174,20 @@ function normalizeTransactionForAdapter(tx: unknown, hubChainId: number): unknow
   return {
     proof: snarkProof,
     merkleRoot: toHex(t.merkleRoot) || ethers.ZeroHash,
-    nullifiers: ((t.nullifiers ?? []) as unknown[]).map((n) => toHex(n) || ethers.ZeroHash) as string[],
-    commitments: ((t.commitments ?? []) as unknown[]).map((c) => toHex(c) || ethers.ZeroHash) as string[],
+    nullifiers: ((t.nullifiers ?? []) as unknown[]).map(
+      (n) => toHex(n) || ethers.ZeroHash,
+    ) as string[],
+    commitments: ((t.commitments ?? []) as unknown[]).map(
+      (c) => toHex(c) || ethers.ZeroHash,
+    ) as string[],
     boundParams: {
       treeNumber: Number(bp?.treeNumber ?? 0),
       minGasPrice: toBigInt(bp?.minGasPrice),
       unshield: Number(bp?.unshield ?? 1),
       chainID: toBigInt(bp?.chainID) || BigInt(hubChainId),
-      adaptContract: (bp?.adaptContract != null ? String(bp.adaptContract) : ethers.ZeroAddress) as string,
+      adaptContract: (bp?.adaptContract != null
+        ? String(bp.adaptContract)
+        : ethers.ZeroAddress) as string,
       adaptParams: toHex(bp?.adaptParams) || ethers.ZeroHash,
       commitmentCiphertext,
     },
@@ -162,8 +201,8 @@ function normalizeTransactionForAdapter(tx: unknown, hubChainId: number): unknow
  * destination + amount.
  */
 const ADAPTER_ABI = [
-  'function lendAndShield(tuple(tuple(tuple(uint256 x, uint256 y) a, tuple(uint256[2] x, uint256[2] y) b, tuple(uint256 x, uint256 y) c) proof, bytes32 merkleRoot, bytes32[] nullifiers, bytes32[] commitments, tuple(uint16 treeNumber, uint72 minGasPrice, uint8 unshield, uint64 chainID, address adaptContract, bytes32 adaptParams, tuple(bytes32[4] ciphertext, bytes32 blindedSenderViewingKey, bytes32 blindedReceiverViewingKey, bytes annotationData, bytes memo)[] commitmentCiphertext) boundParams, tuple(bytes32 npk, tuple(uint8 tokenType, address tokenAddress, uint256 tokenSubID) token, uint120 value) unshieldPreimage) _transaction, bytes32 _npk, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey) _shieldCiphertext) returns (uint256)',
-  'function redeemAndShield(tuple(tuple(tuple(uint256 x, uint256 y) a, tuple(uint256[2] x, uint256[2] y) b, tuple(uint256 x, uint256 y) c) proof, bytes32 merkleRoot, bytes32[] nullifiers, bytes32[] commitments, tuple(uint16 treeNumber, uint72 minGasPrice, uint8 unshield, uint64 chainID, address adaptContract, bytes32 adaptParams, tuple(bytes32[4] ciphertext, bytes32 blindedSenderViewingKey, bytes32 blindedReceiverViewingKey, bytes annotationData, bytes memo)[] commitmentCiphertext) boundParams, tuple(bytes32 npk, tuple(uint8 tokenType, address tokenAddress, uint256 tokenSubID) token, uint120 value) unshieldPreimage) _transaction, bytes32 _npk, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey) _shieldCiphertext, bytes32 _feeNpk, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey) _feeShieldCiphertext, uint256 _feeAmount) returns (uint256)',
+  "function lendAndShield(tuple(tuple(tuple(uint256 x, uint256 y) a, tuple(uint256[2] x, uint256[2] y) b, tuple(uint256 x, uint256 y) c) proof, bytes32 merkleRoot, bytes32[] nullifiers, bytes32[] commitments, tuple(uint16 treeNumber, uint72 minGasPrice, uint8 unshield, uint64 chainID, address adaptContract, bytes32 adaptParams, tuple(bytes32[4] ciphertext, bytes32 blindedSenderViewingKey, bytes32 blindedReceiverViewingKey, bytes annotationData, bytes memo)[] commitmentCiphertext) boundParams, tuple(bytes32 npk, tuple(uint8 tokenType, address tokenAddress, uint256 tokenSubID) token, uint120 value) unshieldPreimage) _transaction, bytes32 _npk, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey) _shieldCiphertext) returns (uint256)",
+  "function redeemAndShield(tuple(tuple(tuple(uint256 x, uint256 y) a, tuple(uint256[2] x, uint256[2] y) b, tuple(uint256 x, uint256 y) c) proof, bytes32 merkleRoot, bytes32[] nullifiers, bytes32[] commitments, tuple(uint16 treeNumber, uint72 minGasPrice, uint8 unshield, uint64 chainID, address adaptContract, bytes32 adaptParams, tuple(bytes32[4] ciphertext, bytes32 blindedSenderViewingKey, bytes32 blindedReceiverViewingKey, bytes annotationData, bytes memo)[] commitmentCiphertext) boundParams, tuple(bytes32 npk, tuple(uint8 tokenType, address tokenAddress, uint256 tokenSubID) token, uint120 value) unshieldPreimage) _transaction, bytes32 _npk, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey) _shieldCiphertext, bytes32 _feeNpk, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey) _feeShieldCiphertext, uint256 _feeAmount) returns (uint256)",
 ];
 
 export interface YieldAdaptResult {
@@ -195,8 +234,7 @@ export async function buildYieldAdaptTransaction(opts: {
   feeRecipientRailgunAddress?: string;
   progressCallback?: ProofProgressCallback;
 }): Promise<YieldAdaptResult> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { RelayAdaptHelper, ByteUtils } = require('@railgun-community/engine');
+  const { RelayAdaptHelper, ByteUtils } = require("@railgun-community/engine");
 
   const encryptionKey = opts.encryptionKey ?? DEFAULT_ENCRYPTION_KEY;
   if (!isProverInitialized()) {
@@ -206,13 +244,21 @@ export async function buildYieldAdaptTransaction(opts: {
   // 16-byte random binds the resulting shield request — the adapter receives this same value as
   // part of the shield ciphertext and derives identical commitments.
   const shieldRandom = ByteUtils.randomHex(16);
-  const relayShieldRequests = await RelayAdaptHelper.generateRelayShieldRequests(
-    shieldRandom,
-    [{ tokenAddress: opts.shieldOutputToken, recipientAddress: opts.railgunAddress }],
-    [],
-  );
+  const relayShieldRequests =
+    await RelayAdaptHelper.generateRelayShieldRequests(
+      shieldRandom,
+      [
+        {
+          tokenAddress: opts.shieldOutputToken,
+          recipientAddress: opts.railgunAddress,
+        },
+      ],
+      [],
+    );
   if (relayShieldRequests.length === 0) {
-    throw new Error('buildYieldAdaptTransaction: failed to generate relay shield request');
+    throw new Error(
+      "buildYieldAdaptTransaction: failed to generate relay shield request",
+    );
   }
   const shieldRequest = relayShieldRequests[0];
   const npk = String(shieldRequest.preimage.npk);
@@ -223,25 +269,38 @@ export async function buildYieldAdaptTransaction(opts: {
   ] as [string, string, string];
   const shieldKey = String(shieldRequest.ciphertext.shieldKey);
 
-  const isRedeem = opts.mode === 'redeem';
+  const isRedeem = opts.mode === "redeem";
   const feeAmount = isRedeem ? (opts.feeAmount ?? 0n) : 0n;
 
   // Redeem binds the fee-shield destination into adaptParams (all-zero when feeAmount is 0).
   let feeNpk = ethers.ZeroHash;
-  let feeEncryptedBundle: [string, string, string] = [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash];
+  let feeEncryptedBundle: [string, string, string] = [
+    ethers.ZeroHash,
+    ethers.ZeroHash,
+    ethers.ZeroHash,
+  ];
   let feeShieldKey = ethers.ZeroHash;
   if (isRedeem && feeAmount > 0n) {
     if (!opts.feeRecipientRailgunAddress) {
-      throw new Error('buildYieldAdaptTransaction: feeAmount > 0 requires feeRecipientRailgunAddress');
+      throw new Error(
+        "buildYieldAdaptTransaction: feeAmount > 0 requires feeRecipientRailgunAddress",
+      );
     }
     const feeShieldRandom = ByteUtils.randomHex(16);
     const feeShieldReqs = await RelayAdaptHelper.generateRelayShieldRequests(
       feeShieldRandom,
-      [{ tokenAddress: opts.shieldOutputToken, recipientAddress: opts.feeRecipientRailgunAddress }],
+      [
+        {
+          tokenAddress: opts.shieldOutputToken,
+          recipientAddress: opts.feeRecipientRailgunAddress,
+        },
+      ],
       [],
     );
     if (feeShieldReqs.length === 0) {
-      throw new Error('buildYieldAdaptTransaction: failed to generate relayer fee shield request');
+      throw new Error(
+        "buildYieldAdaptTransaction: failed to generate relayer fee shield request",
+      );
     }
     const feeReq = feeShieldReqs[0];
     feeNpk = String(feeReq.preimage.npk);
@@ -254,13 +313,26 @@ export async function buildYieldAdaptTransaction(opts: {
   }
 
   const adaptParams = isRedeem
-    ? encodeYieldAdaptParamsWithFee(npk, encryptedBundle, shieldKey, feeNpk, feeEncryptedBundle, feeShieldKey, feeAmount)
+    ? encodeYieldAdaptParamsWithFee(
+        npk,
+        encryptedBundle,
+        shieldKey,
+        feeNpk,
+        feeEncryptedBundle,
+        feeShieldKey,
+        feeAmount,
+      )
     : encodeYieldAdaptParams(npk, encryptedBundle, shieldKey);
 
   // Build the CrossContractCalls proof: unshield the input token to the adapter, and bind the
   // adapter + adaptParams via the batch's adaptID so the proof commits to the shield destination.
   const batch = createTransactionBatch(opts.chain);
-  addUnshieldOutput(batch, opts.adapterAddress, opts.amount, opts.unshieldToken);
+  addUnshieldOutput(
+    batch,
+    opts.adapterAddress,
+    opts.amount,
+    opts.unshieldToken,
+  );
   batch.setAdaptID({ contract: opts.adapterAddress, parameters: adaptParams });
 
   const transactions = await generateProvedTransactions(
@@ -271,13 +343,18 @@ export async function buildYieldAdaptTransaction(opts: {
     opts.progressCallback,
   );
   if (!transactions.length) {
-    throw new Error('buildYieldAdaptTransaction: SDK returned no proved transactions');
+    throw new Error(
+      "buildYieldAdaptTransaction: SDK returned no proved transactions",
+    );
   }
 
-  const transaction = normalizeTransactionForAdapter(transactions[0], opts.hubChainId);
+  const transaction = normalizeTransactionForAdapter(
+    transactions[0],
+    opts.hubChainId,
+  );
   const iface = new ethers.Interface(ADAPTER_ABI);
   const data = isRedeem
-    ? iface.encodeFunctionData('redeemAndShield', [
+    ? iface.encodeFunctionData("redeemAndShield", [
         transaction,
         npk,
         { encryptedBundle, shieldKey },
@@ -285,7 +362,11 @@ export async function buildYieldAdaptTransaction(opts: {
         { encryptedBundle: feeEncryptedBundle, shieldKey: feeShieldKey },
         feeAmount,
       ])
-    : iface.encodeFunctionData('lendAndShield', [transaction, npk, { encryptedBundle, shieldKey }]);
+    : iface.encodeFunctionData("lendAndShield", [
+        transaction,
+        npk,
+        { encryptedBundle, shieldKey },
+      ]);
 
   return {
     transaction: { to: opts.adapterAddress, data, value: 0n },

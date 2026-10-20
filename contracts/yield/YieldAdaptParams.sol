@@ -27,11 +27,7 @@ library YieldAdaptParams {
      * @param shieldKey Public key used to generate shared encryption key
      * @return adaptParams Keccak256 hash of all parameters
      */
-    function encode(
-        bytes32 npk,
-        bytes32[3] memory encryptedBundle,
-        bytes32 shieldKey
-    ) internal pure returns (bytes32) {
+    function encode(bytes32 npk, bytes32[3] memory encryptedBundle, bytes32 shieldKey) internal pure returns (bytes32) {
         return keccak256(abi.encode(npk, encryptedBundle, shieldKey));
     }
 
@@ -74,12 +70,11 @@ library YieldAdaptParams {
      * @param shieldKey Shield public key from shield request
      * @return True if parameters match the commitment
      */
-    function verify(
-        bytes32 adaptParams,
-        bytes32 npk,
-        bytes32[3] memory encryptedBundle,
-        bytes32 shieldKey
-    ) internal pure returns (bool) {
+    function verify(bytes32 adaptParams, bytes32 npk, bytes32[3] memory encryptedBundle, bytes32 shieldKey)
+        internal
+        pure
+        returns (bool)
+    {
         return adaptParams == encode(npk, encryptedBundle, shieldKey);
     }
 

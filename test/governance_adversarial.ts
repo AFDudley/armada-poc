@@ -17,8 +17,13 @@ import { deployGovernorProxy } from "./helpers/deploy-governor";
 
 const ProposalType = { Standard: 0, Extended: 1, VetoRatification: 2 };
 const ProposalState = {
-  Pending: 0, Active: 1, Defeated: 2, Succeeded: 3,
-  Queued: 4, Executed: 5, Canceled: 6,
+  Pending: 0,
+  Active: 1,
+  Defeated: 2,
+  Succeeded: 3,
+  Queued: 4,
+  Executed: 5,
+  Canceled: 6,
 };
 const Vote = { Against: 0, For: 1, Abstain: 2 };
 
@@ -33,9 +38,9 @@ const EXTENDED_EXECUTION_DELAY = SEVEN_DAYS;
 
 const ARM_DECIMALS = 18;
 const TOTAL_SUPPLY = ethers.parseUnits("12000000", ARM_DECIMALS); // must match ArmadaToken.INITIAL_SUPPLY
-const TREASURY_AMOUNT = TOTAL_SUPPLY * 65n / 100n; // 65% to treasury
-const ALICE_AMOUNT = TOTAL_SUPPLY * 20n / 100n;    // 20% to Alice (voter)
-const BOB_AMOUNT = TOTAL_SUPPLY * 15n / 100n;      // 15% to Bob (voter)
+const TREASURY_AMOUNT = (TOTAL_SUPPLY * 65n) / 100n; // 65% to treasury
+const ALICE_AMOUNT = (TOTAL_SUPPLY * 20n) / 100n; // 20% to Alice (voter)
+const BOB_AMOUNT = (TOTAL_SUPPLY * 15n) / 100n; // 15% to Bob (voter)
 
 describe("Governance Adversarial", function () {
   let armToken: any;
@@ -62,18 +67,20 @@ describe("Governance Adversarial", function () {
   async function createProposal(
     proposer: SignerWithAddress,
     proposalType: number = ProposalType.Extended,
-    description: string = "Test proposal"
+    description: string = "Test proposal",
   ): Promise<number> {
     // Dummy target: call a view function (harmless).
     // proposalCount() is not a recognized selector, so the proposal is
     // auto-classified as Extended regardless of the requested type.
-    const tx = await governor.connect(proposer).propose(
-      proposalType,
-      [await governor.getAddress()],
-      [0n],
-      [governor.interface.encodeFunctionData("proposalCount")],
-      description
-    );
+    const tx = await governor
+      .connect(proposer)
+      .propose(
+        proposalType,
+        [await governor.getAddress()],
+        [0n],
+        [governor.interface.encodeFunctionData("proposalCount")],
+        description,
+      );
     await tx.wait();
     return Number(await governor.proposalCount());
   }
@@ -81,9 +88,13 @@ describe("Governance Adversarial", function () {
   beforeEach(async function () {
     [deployer, alice, bob, carol, dave] = await ethers.getSigners();
 
-    const TimelockController = await ethers.getContractFactory("TimelockController");
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
     timelockController = await TimelockController.deploy(
-      TWO_DAYS, [], [], deployer.address
+      TWO_DAYS,
+      [],
+      [],
+      deployer.address,
     );
     await timelockController.waitForDeployment();
     const timelockAddr = await timelockController.getAddress();
@@ -92,7 +103,8 @@ describe("Governance Adversarial", function () {
     armToken = await ArmadaToken.deploy(deployer.address, timelockAddr);
     await armToken.waitForDeployment();
 
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasuryContract = await ArmadaTreasuryGov.deploy(timelockAddr);
     await treasuryContract.waitForDeployment();
 
@@ -111,8 +123,14 @@ describe("Governance Adversarial", function () {
     const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
     const ADMIN_ROLE = await timelockController.TIMELOCK_ADMIN_ROLE();
 
-    await timelockController.grantRole(PROPOSER_ROLE, await governor.getAddress());
-    await timelockController.grantRole(EXECUTOR_ROLE, await governor.getAddress());
+    await timelockController.grantRole(
+      PROPOSER_ROLE,
+      await governor.getAddress(),
+    );
+    await timelockController.grantRole(
+      EXECUTOR_ROLE,
+      await governor.getAddress(),
+    );
     await timelockController.renounceRole(ADMIN_ROLE, deployer.address);
 
     const MockUSDCV2 = await ethers.getContractFactory("MockUSDCV2");
@@ -129,7 +147,10 @@ describe("Governance Adversarial", function () {
     ]);
 
     // Distribute ARM tokens
-    await armToken.transfer(await treasuryContract.getAddress(), TREASURY_AMOUNT);
+    await armToken.transfer(
+      await treasuryContract.getAddress(),
+      TREASURY_AMOUNT,
+    );
     await armToken.transfer(alice.address, ALICE_AMOUNT);
     await armToken.transfer(bob.address, BOB_AMOUNT);
 
@@ -178,7 +199,7 @@ describe("Governance Adversarial", function () {
       await time.increaseTo(voteEnd);
 
       await expect(
-        governor.connect(alice).castVote(proposalId, Vote.For)
+        governor.connect(alice).castVote(proposalId, Vote.For),
       ).to.be.revertedWithCustomError(governor, "Gov_VotingEnded");
     });
 
@@ -191,7 +212,7 @@ describe("Governance Adversarial", function () {
       await time.increaseTo(voteStart - 2n);
 
       await expect(
-        governor.connect(alice).castVote(proposalId, Vote.For)
+        governor.connect(alice).castVote(proposalId, Vote.For),
       ).to.be.revertedWithCustomError(governor, "Gov_VotingNotStarted");
     });
 
@@ -205,7 +226,9 @@ describe("Governance Adversarial", function () {
       // forVotes=15M < againstVotes=20M → Defeated
 
       // For a TRUE tie: alice needs same voting power as bob. Transfer the difference away.
-      await armToken.connect(alice).transfer(carol.address, ALICE_AMOUNT - BOB_AMOUNT);
+      await armToken
+        .connect(alice)
+        .transfer(carol.address, ALICE_AMOUNT - BOB_AMOUNT);
       await mineBlock();
 
       // Now alice and bob both have BOB_AMOUNT locked
@@ -273,9 +296,10 @@ describe("Governance Adversarial", function () {
 
     it("propose with no voting power reverts", async function () {
       // carol has no locked tokens
-      await expect(
-        createProposal(carol)
-      ).to.be.revertedWithCustomError(governor, "Gov_BelowProposalThreshold");
+      await expect(createProposal(carol)).to.be.revertedWithCustomError(
+        governor,
+        "Gov_BelowProposalThreshold",
+      );
     });
 
     it("invalid vote type (>2) reverts", async function () {
@@ -283,7 +307,7 @@ describe("Governance Adversarial", function () {
       await time.increase(TWO_DAYS + 1);
 
       await expect(
-        governor.connect(alice).castVote(proposalId, 3)
+        governor.connect(alice).castVote(proposalId, 3),
       ).to.be.revertedWithCustomError(governor, "Gov_InvalidVoteType");
     });
   });
@@ -305,9 +329,10 @@ describe("Governance Adversarial", function () {
 
       expect(await governor.state(proposalId)).to.equal(ProposalState.Defeated);
 
-      await expect(
-        governor.queue(proposalId)
-      ).to.be.revertedWithCustomError(governor, "Gov_NotSucceeded");
+      await expect(governor.queue(proposalId)).to.be.revertedWithCustomError(
+        governor,
+        "Gov_NotSucceeded",
+      );
     });
 
     it("execute a proposal that was never queued reverts", async function () {
@@ -320,12 +345,15 @@ describe("Governance Adversarial", function () {
 
       await time.increase(EXTENDED_VOTING_PERIOD + 1);
 
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
 
       // Try to execute without queuing
-      await expect(
-        governor.execute(proposalId)
-      ).to.be.revertedWithCustomError(governor, "Gov_NotQueued");
+      await expect(governor.execute(proposalId)).to.be.revertedWithCustomError(
+        governor,
+        "Gov_NotQueued",
+      );
     });
 
     it("cancel a proposal that is Active (voting started) reverts", async function () {
@@ -337,7 +365,7 @@ describe("Governance Adversarial", function () {
       expect(await governor.state(proposalId)).to.equal(ProposalState.Active);
 
       await expect(
-        governor.connect(alice).cancel(proposalId)
+        governor.connect(alice).cancel(proposalId),
       ).to.be.revertedWithCustomError(governor, "Gov_NotPending");
     });
 
@@ -348,7 +376,7 @@ describe("Governance Adversarial", function () {
       expect(await governor.state(proposalId)).to.equal(ProposalState.Pending);
 
       await expect(
-        governor.connect(bob).cancel(proposalId)
+        governor.connect(bob).cancel(proposalId),
       ).to.be.revertedWithCustomError(governor, "Gov_NotProposer");
     });
 
@@ -356,7 +384,7 @@ describe("Governance Adversarial", function () {
       await time.increase(TWO_DAYS + 1);
 
       await expect(
-        governor.connect(alice).castVote(999, Vote.For)
+        governor.connect(alice).castVote(999, Vote.For),
       ).to.be.revertedWithCustomError(governor, "Gov_UnknownProposal");
     });
 
@@ -371,9 +399,10 @@ describe("Governance Adversarial", function () {
       await governor.queue(proposalId);
 
       // Second queue attempt — state is now Queued, not Succeeded
-      await expect(
-        governor.queue(proposalId)
-      ).to.be.revertedWithCustomError(governor, "Gov_NotSucceeded");
+      await expect(governor.queue(proposalId)).to.be.revertedWithCustomError(
+        governor,
+        "Gov_NotSucceeded",
+      );
     });
 
     it("vote without delegated tokens reverts", async function () {
@@ -383,7 +412,7 @@ describe("Governance Adversarial", function () {
 
       // carol has no delegated tokens
       await expect(
-        governor.connect(carol).castVote(proposalId, Vote.For)
+        governor.connect(carol).castVote(proposalId, Vote.For),
       ).to.be.revertedWithCustomError(governor, "Gov_NoVotingPower");
     });
   });
@@ -407,7 +436,9 @@ describe("Governance Adversarial", function () {
       await mineBlock();
 
       expect(await armToken.getVotes(alice.address)).to.equal(0);
-      expect(await armToken.getVotes(bob.address)).to.equal(ALICE_AMOUNT + BOB_AMOUNT);
+      expect(await armToken.getVotes(bob.address)).to.equal(
+        ALICE_AMOUNT + BOB_AMOUNT,
+      );
 
       // Alice re-delegates back to self
       await armToken.connect(alice).delegate(alice.address);
@@ -427,7 +458,7 @@ describe("Governance Adversarial", function () {
     it("getPastVotes for current block reverts", async function () {
       const blockNum = await ethers.provider.getBlockNumber();
       await expect(
-        armToken.getPastVotes(alice.address, blockNum)
+        armToken.getPastVotes(alice.address, blockNum),
       ).to.be.revertedWith("ERC20Votes: future lookup");
     });
 
@@ -444,7 +475,10 @@ describe("Governance Adversarial", function () {
       expect(await armToken.getVotes(alice.address)).to.equal(0);
 
       // But voting power at snapshot should still be ALICE_AMOUNT
-      const pastVotes = await armToken.getPastVotes(alice.address, snapshotBlock);
+      const pastVotes = await armToken.getPastVotes(
+        alice.address,
+        snapshotBlock,
+      );
       expect(pastVotes).to.equal(ALICE_AMOUNT);
 
       // Alice can still vote (using snapshot power)
@@ -463,14 +497,17 @@ describe("Governance Adversarial", function () {
       const ArmadaGovernor = await ethers.getContractFactory("ArmadaGovernor");
       const impl = await ArmadaGovernor.deploy();
       await impl.waitForDeployment();
-      const initData = ArmadaGovernor.interface.encodeFunctionData("initialize", [
-        ethers.ZeroAddress,
-        await timelockController.getAddress(),
-        await treasuryContract.getAddress(),
-      ]);
+      const initData = ArmadaGovernor.interface.encodeFunctionData(
+        "initialize",
+        [
+          ethers.ZeroAddress,
+          await timelockController.getAddress(),
+          await treasuryContract.getAddress(),
+        ],
+      );
       const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
       await expect(
-        ERC1967Proxy.deploy(await impl.getAddress(), initData)
+        ERC1967Proxy.deploy(await impl.getAddress(), initData),
       ).to.be.revertedWithCustomError(governor, "Gov_ZeroArmToken");
     });
 
@@ -478,14 +515,17 @@ describe("Governance Adversarial", function () {
       const ArmadaGovernor = await ethers.getContractFactory("ArmadaGovernor");
       const impl = await ArmadaGovernor.deploy();
       await impl.waitForDeployment();
-      const initData = ArmadaGovernor.interface.encodeFunctionData("initialize", [
-        await armToken.getAddress(),
-        ethers.ZeroAddress,
-        await treasuryContract.getAddress(),
-      ]);
+      const initData = ArmadaGovernor.interface.encodeFunctionData(
+        "initialize",
+        [
+          await armToken.getAddress(),
+          ethers.ZeroAddress,
+          await treasuryContract.getAddress(),
+        ],
+      );
       const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
       await expect(
-        ERC1967Proxy.deploy(await impl.getAddress(), initData)
+        ERC1967Proxy.deploy(await impl.getAddress(), initData),
       ).to.be.revertedWithCustomError(governor, "Gov_ZeroTimelock");
     });
 
@@ -493,21 +533,25 @@ describe("Governance Adversarial", function () {
       const ArmadaGovernor = await ethers.getContractFactory("ArmadaGovernor");
       const impl = await ArmadaGovernor.deploy();
       await impl.waitForDeployment();
-      const initData = ArmadaGovernor.interface.encodeFunctionData("initialize", [
-        await armToken.getAddress(),
-        await timelockController.getAddress(),
-        ethers.ZeroAddress,
-      ]);
+      const initData = ArmadaGovernor.interface.encodeFunctionData(
+        "initialize",
+        [
+          await armToken.getAddress(),
+          await timelockController.getAddress(),
+          ethers.ZeroAddress,
+        ],
+      );
       const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
       await expect(
-        ERC1967Proxy.deploy(await impl.getAddress(), initData)
+        ERC1967Proxy.deploy(await impl.getAddress(), initData),
       ).to.be.revertedWithCustomError(governor, "Gov_ZeroTreasury");
     });
 
     it("TreasurySteward rejects zero timelock", async function () {
-      const TreasurySteward = await ethers.getContractFactory("TreasurySteward");
+      const TreasurySteward =
+        await ethers.getContractFactory("TreasurySteward");
       await expect(
-        TreasurySteward.deploy(ethers.ZeroAddress)
+        TreasurySteward.deploy(ethers.ZeroAddress),
       ).to.be.revertedWith("TreasurySteward: zero timelock");
     });
   });
@@ -525,7 +569,9 @@ describe("Governance Adversarial", function () {
 
       // Transfer some of alice's ARM to treasury to change the balance.
       const transferAmount = ethers.parseUnits("1000000", ARM_DECIMALS);
-      await armToken.connect(alice).transfer(await treasuryContract.getAddress(), transferAmount);
+      await armToken
+        .connect(alice)
+        .transfer(await treasuryContract.getAddress(), transferAmount);
 
       // Quorum should be unchanged despite treasury now holding more ARM
       const quorumAfterDeposit = await governor.quorum(proposalId);
@@ -564,21 +610,33 @@ describe("Governance Adversarial", function () {
       expect(quorumAfterVoting).to.equal(quorumAtCreation);
 
       // Proposal should succeed (alice+bob = 35% of supply > 10.5% quorum for Extended)
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
     });
 
     it("concurrent proposals have independent quorum snapshots", async function () {
       // Create proposal 1 (auto-classified as Extended due to unrecognized selector)
-      const proposalId1 = await createProposal(alice, ProposalType.Extended, "Proposal 1");
+      const proposalId1 = await createProposal(
+        alice,
+        ProposalType.Extended,
+        "Proposal 1",
+      );
       const quorum1 = await governor.quorum(proposalId1);
 
       // Transfer 5% of supply worth of alice's ARM to treasury, changing the balance
-      const transferAmount = TOTAL_SUPPLY * 5n / 100n;
-      await armToken.connect(alice).transfer(await treasuryContract.getAddress(), transferAmount);
+      const transferAmount = (TOTAL_SUPPLY * 5n) / 100n;
+      await armToken
+        .connect(alice)
+        .transfer(await treasuryContract.getAddress(), transferAmount);
       await mineBlock();
 
       // Create proposal 2 with different treasury balance
-      const proposalId2 = await createProposal(alice, ProposalType.Extended, "Proposal 2");
+      const proposalId2 = await createProposal(
+        alice,
+        ProposalType.Extended,
+        "Proposal 2",
+      );
       const quorum2 = await governor.quorum(proposalId2);
 
       // Proposal 1 quorum should reflect original treasury balance (65% excluded)
@@ -602,7 +660,11 @@ describe("Governance Adversarial", function () {
   describe("Extended Proposal Timing", function () {
     it("Extended proposal uses 14d voting and 7d execution delay", async function () {
       // Create an Extended proposal
-      const proposalId = await createProposal(alice, ProposalType.Extended, "Elect steward");
+      const proposalId = await createProposal(
+        alice,
+        ProposalType.Extended,
+        "Elect steward",
+      );
 
       await time.increase(TWO_DAYS + 1);
 
@@ -616,7 +678,9 @@ describe("Governance Adversarial", function () {
 
       // Succeeded after 14 days
       await time.increase(SEVEN_DAYS + 2);
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
     });
 
     it("Extended proposal requires 30% quorum", async function () {
@@ -631,7 +695,9 @@ describe("Governance Adversarial", function () {
 
       await time.increase(EXTENDED_VOTING_PERIOD + 1);
 
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
     });
 
     it("Extended proposal defeated if 30% quorum not reached", async function () {
@@ -665,13 +731,18 @@ describe("Governance Adversarial", function () {
       expect(await treasuryContract.owner()).to.equal(timelockAddr);
 
       // There is no transferOwnership function — calling it reverts (no fallback)
-      const transferOwnershipSelector = ethers.id("transferOwnership(address)").slice(0, 10);
-      const encodedCall = transferOwnershipSelector +
-        ethers.AbiCoder.defaultAbiCoder().encode(["address"], [alice.address]).slice(2);
+      const transferOwnershipSelector = ethers
+        .id("transferOwnership(address)")
+        .slice(0, 10);
+      const encodedCall =
+        transferOwnershipSelector +
+        ethers.AbiCoder.defaultAbiCoder()
+          .encode(["address"], [alice.address])
+          .slice(2);
 
       const treasuryAddr = await treasuryContract.getAddress();
       await expect(
-        deployer.sendTransaction({ to: treasuryAddr, data: encodedCall })
+        deployer.sendTransaction({ to: treasuryAddr, data: encodedCall }),
       ).to.be.reverted;
 
       // Owner remains the timelock — unchanged
@@ -686,9 +757,14 @@ describe("Governance Adversarial", function () {
 
       // The ABI does not contain transferOwnership — confirm by checking the contract interface
       const treasuryInterface = treasuryContract.interface;
-      const functionNames = Object.keys(treasuryInterface.fragments
-        .filter((f: any) => f.type === "function")
-        .reduce((acc: any, f: any) => { acc[f.name] = true; return acc; }, {}));
+      const functionNames = Object.keys(
+        treasuryInterface.fragments
+          .filter((f: any) => f.type === "function")
+          .reduce((acc: any, f: any) => {
+            acc[f.name] = true;
+            return acc;
+          }, {}),
+      );
 
       expect(functionNames).to.not.include("transferOwnership");
     });
@@ -709,11 +785,15 @@ describe("Governance Adversarial", function () {
 
       // Wait for voting to end (Extended: 14 days)
       await time.increase(EXTENDED_VOTING_PERIOD + 1);
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
 
       // Wait 13 days (still within 14-day grace period)
       await time.increase(13 * ONE_DAY);
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
 
       // Queue succeeds
       await governor.queue(proposalId);
@@ -730,16 +810,19 @@ describe("Governance Adversarial", function () {
 
       // Wait for voting to end (Extended: 14 days)
       await time.increase(EXTENDED_VOTING_PERIOD + 1);
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
 
       // Wait past the 14-day grace period
       await time.increase(FOURTEEN_DAYS + 1);
       expect(await governor.state(proposalId)).to.equal(ProposalState.Defeated);
 
       // Queue now reverts
-      await expect(
-        governor.queue(proposalId)
-      ).to.be.revertedWithCustomError(governor, "Gov_NotSucceeded");
+      await expect(governor.queue(proposalId)).to.be.revertedWithCustomError(
+        governor,
+        "Gov_NotSucceeded",
+      );
     });
 
     it("queued proposal is unaffected by grace period expiry", async function () {
@@ -773,20 +856,29 @@ describe("Governance Adversarial", function () {
     // stewardSpend is onlyOwner — deployer calls it directly as the authorized timelock/owner.
     let budgetTreasury: any;
     const TREASURY_USDC = ethers.parseUnits("1000000", 6); // $1M USDC
-    const STEWARD_LIMIT = ethers.parseUnits("10000", 6);   // $10K steward budget per window
+    const STEWARD_LIMIT = ethers.parseUnits("10000", 6); // $10K steward budget per window
     const STEWARD_WINDOW = 30 * ONE_DAY;
 
     async function setupBudgetTreasury() {
-      const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+      const ArmadaTreasuryGov =
+        await ethers.getContractFactory("ArmadaTreasuryGov");
       budgetTreasury = await ArmadaTreasuryGov.deploy(deployer.address);
       await budgetTreasury.waitForDeployment();
 
       // Fund with USDC, initialize outflow config, and authorize token for steward spending
       await usdc.mint(await budgetTreasury.getAddress(), TREASURY_USDC);
       await budgetTreasury.initOutflowConfig(
-        await usdc.getAddress(), STEWARD_WINDOW, 1000, TREASURY_USDC, STEWARD_LIMIT
+        await usdc.getAddress(),
+        STEWARD_WINDOW,
+        1000,
+        TREASURY_USDC,
+        STEWARD_LIMIT,
       ); // 10% or $1M absolute, floor=$10K — permissive enough for steward tests
-      await budgetTreasury.addStewardBudgetToken(await usdc.getAddress(), STEWARD_LIMIT, STEWARD_WINDOW);
+      await budgetTreasury.addStewardBudgetToken(
+        await usdc.getAddress(),
+        STEWARD_LIMIT,
+        STEWARD_WINDOW,
+      );
     }
 
     it("stewardSpend enforces the authorized budget limit", async function () {
@@ -795,20 +887,22 @@ describe("Governance Adversarial", function () {
       // $5K spend — within $10K limit
       const firstSpend = ethers.parseUnits("5000", 6);
       await budgetTreasury.stewardSpend(
-        await usdc.getAddress(), dave.address, firstSpend
+        await usdc.getAddress(),
+        dave.address,
+        firstSpend,
       );
 
       // Another $5K — reaches limit
       const secondSpend = ethers.parseUnits("5000", 6);
       await budgetTreasury.stewardSpend(
-        await usdc.getAddress(), dave.address, secondSpend
+        await usdc.getAddress(),
+        dave.address,
+        secondSpend,
       );
 
       // $10K budget fully used — even $1 more should fail
       await expect(
-        budgetTreasury.stewardSpend(
-          await usdc.getAddress(), dave.address, 1n
-        )
+        budgetTreasury.stewardSpend(await usdc.getAddress(), dave.address, 1n),
       ).to.be.revertedWith("ArmadaTreasuryGov: exceeds steward budget");
     });
 
@@ -817,12 +911,14 @@ describe("Governance Adversarial", function () {
 
       // Use the full $10K budget
       await budgetTreasury.stewardSpend(
-        await usdc.getAddress(), dave.address, STEWARD_LIMIT
+        await usdc.getAddress(),
+        dave.address,
+        STEWARD_LIMIT,
       );
 
       // At limit — next spend fails
       await expect(
-        budgetTreasury.stewardSpend(await usdc.getAddress(), dave.address, 1n)
+        budgetTreasury.stewardSpend(await usdc.getAddress(), dave.address, 1n),
       ).to.be.revertedWith("ArmadaTreasuryGov: exceeds steward budget");
 
       // Advance past window
@@ -830,7 +926,9 @@ describe("Governance Adversarial", function () {
 
       // Budget resets — can spend again
       await budgetTreasury.stewardSpend(
-        await usdc.getAddress(), dave.address, STEWARD_LIMIT
+        await usdc.getAddress(),
+        dave.address,
+        STEWARD_LIMIT,
       );
       expect(await usdc.balanceOf(dave.address)).to.equal(STEWARD_LIMIT * 2n);
     });
@@ -840,10 +938,14 @@ describe("Governance Adversarial", function () {
 
       const spend = ethers.parseUnits("3000", 6);
       await budgetTreasury.stewardSpend(
-        await usdc.getAddress(), dave.address, spend
+        await usdc.getAddress(),
+        dave.address,
+        spend,
       );
 
-      const [budget, spent, remaining] = await budgetTreasury.getStewardBudget(await usdc.getAddress());
+      const [budget, spent, remaining] = await budgetTreasury.getStewardBudget(
+        await usdc.getAddress(),
+      );
       expect(budget).to.equal(STEWARD_LIMIT);
       expect(spent).to.equal(spend);
       expect(remaining).to.equal(STEWARD_LIMIT - spend);
@@ -855,14 +957,18 @@ describe("Governance Adversarial", function () {
       // Spend some in current window
       const spend = ethers.parseUnits("3000", 6);
       await budgetTreasury.stewardSpend(
-        await usdc.getAddress(), dave.address, spend
+        await usdc.getAddress(),
+        dave.address,
+        spend,
       );
 
       // Advance past window
       await time.increase(STEWARD_WINDOW + 1);
 
       // Spent resets to 0 (view-level reset)
-      const [budget, spent, remaining] = await budgetTreasury.getStewardBudget(await usdc.getAddress());
+      const [budget, spent, remaining] = await budgetTreasury.getStewardBudget(
+        await usdc.getAddress(),
+      );
       expect(budget).to.equal(STEWARD_LIMIT);
       expect(spent).to.equal(0n);
       expect(remaining).to.equal(STEWARD_LIMIT);
@@ -872,9 +978,13 @@ describe("Governance Adversarial", function () {
       await setupBudgetTreasury();
 
       await expect(
-        budgetTreasury.connect(carol).stewardSpend(
-          await usdc.getAddress(), dave.address, ethers.parseUnits("100", 6)
-        )
+        budgetTreasury
+          .connect(carol)
+          .stewardSpend(
+            await usdc.getAddress(),
+            dave.address,
+            ethers.parseUnits("100", 6),
+          ),
       ).to.be.revertedWith("ArmadaTreasuryGov: not owner");
     });
 
@@ -885,13 +995,20 @@ describe("Governance Adversarial", function () {
       const MockERC20 = await ethers.getContractFactory("MockUSDCV2");
       const otherToken = await MockERC20.deploy("Other Token", "OTH");
       await otherToken.waitForDeployment();
-      await otherToken.mint(await budgetTreasury.getAddress(), ethers.parseUnits("100000", 6));
+      await otherToken.mint(
+        await budgetTreasury.getAddress(),
+        ethers.parseUnits("100000", 6),
+      );
 
       await expect(
         budgetTreasury.stewardSpend(
-          await otherToken.getAddress(), dave.address, ethers.parseUnits("100", 6)
-        )
-      ).to.be.revertedWith("ArmadaTreasuryGov: token not authorized for steward");
+          await otherToken.getAddress(),
+          dave.address,
+          ethers.parseUnits("100", 6),
+        ),
+      ).to.be.revertedWith(
+        "ArmadaTreasuryGov: token not authorized for steward",
+      );
     });
   });
 
@@ -901,9 +1018,10 @@ describe("Governance Adversarial", function () {
     let testSteward: any;
 
     async function setupStewardTest() {
-      const TreasurySteward = await ethers.getContractFactory("TreasurySteward");
+      const TreasurySteward =
+        await ethers.getContractFactory("TreasurySteward");
       testSteward = await TreasurySteward.deploy(
-        deployer.address,   // deployer acts as timelock for direct control
+        deployer.address, // deployer acts as timelock for direct control
       );
       await testSteward.waitForDeployment();
     }
@@ -913,7 +1031,11 @@ describe("Governance Adversarial", function () {
 
       await expect(testSteward.electSteward(carol.address))
         .to.emit(testSteward, "StewardElected")
-        .withArgs(carol.address, (v: bigint) => v > 0n, (v: bigint) => v > 0n);
+        .withArgs(
+          carol.address,
+          (v: bigint) => v > 0n,
+          (v: bigint) => v > 0n,
+        );
 
       expect(await testSteward.currentSteward()).to.equal(carol.address);
       expect(await testSteward.isStewardActive()).to.be.true;
@@ -935,7 +1057,7 @@ describe("Governance Adversarial", function () {
       await setupStewardTest();
 
       await expect(
-        testSteward.connect(carol).electSteward(carol.address)
+        testSteward.connect(carol).electSteward(carol.address),
       ).to.be.revertedWith("TreasurySteward: not timelock");
     });
 
@@ -944,7 +1066,7 @@ describe("Governance Adversarial", function () {
 
       await testSteward.electSteward(carol.address);
       await expect(
-        testSteward.connect(carol).removeSteward()
+        testSteward.connect(carol).removeSteward(),
       ).to.be.revertedWith("TreasurySteward: not timelock");
     });
 
@@ -964,7 +1086,7 @@ describe("Governance Adversarial", function () {
       await setupStewardTest();
 
       await expect(
-        testSteward.electSteward(ethers.ZeroAddress)
+        testSteward.electSteward(ethers.ZeroAddress),
       ).to.be.revertedWith("TreasurySteward: zero address");
     });
   });

@@ -69,11 +69,7 @@ contract GovernorStewardTest is Test, GovernorDeployHelper {
         treasury = new ArmadaTreasuryGov(address(timelock));
 
         // Deploy governor
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Deploy steward contract
         stewardContract = new TreasurySteward(address(timelock));
@@ -292,12 +288,8 @@ contract GovernorStewardTest is Test, GovernorDeployHelper {
     }
 
     function test_setProposalTypeParams_rejectsStewardType() public {
-        ProposalParams memory params = ProposalParams({
-            votingDelay: 1 days,
-            votingPeriod: 7 days,
-            executionDelay: 2 days,
-            quorumBps: 2000
-        });
+        ProposalParams memory params =
+            ProposalParams({votingDelay: 1 days, votingPeriod: 7 days, executionDelay: 2 days, quorumBps: 2000});
 
         vm.prank(address(timelock));
         vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_ImmutableProposalType.selector));
@@ -383,15 +375,10 @@ contract GovernorStewardTest is Test, GovernorDeployHelper {
         targets[0] = address(treasury);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSignature(
-            "distribute(address,address,uint256)",
-            address(usdc), bob, 100
-        );
+        calldatas[0] = abi.encodeWithSignature("distribute(address,address,uint256)", address(usdc), bob, 100);
 
         vm.prank(alice);
-        uint256 proposalId = governor.propose(
-            ProposalType.Standard, targets, values, calldatas, "standard proposal"
-        );
+        uint256 proposalId = governor.propose(ProposalType.Standard, targets, values, calldatas, "standard proposal");
 
         // Should be Pending (48h delay)
         assertEq(uint256(governor.state(proposalId)), uint256(ProposalState.Pending));
@@ -613,11 +600,8 @@ contract GovernorStewardTest is Test, GovernorDeployHelper {
 
     function test_setStewardContract_rejectsNonDeployer() public {
         // Deploy a fresh governor to test before lock
-        ArmadaGovernor freshGovernor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        ArmadaGovernor freshGovernor =
+            _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_NotDeployer.selector));
@@ -943,10 +927,9 @@ contract GovernorStewardTest is Test, GovernorDeployHelper {
     // Fuzz
     // ══════════════════════════════════════════════════════════════════════
 
-    function testFuzz_passByDefault_passesUnlessQuorumAndMajorityAgainst(
-        uint256 forVotes,
-        uint256 againstVotes
-    ) public {
+    function testFuzz_passByDefault_passesUnlessQuorumAndMajorityAgainst(uint256 forVotes, uint256 againstVotes)
+        public
+    {
         // Bound: alice has 20% of supply, bob has 15%
         uint256 aliceVP = TOTAL_SUPPLY * 20 / 100;
         uint256 bobVP = TOTAL_SUPPLY * 15 / 100;

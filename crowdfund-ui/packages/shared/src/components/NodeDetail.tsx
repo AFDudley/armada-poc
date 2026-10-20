@@ -1,55 +1,63 @@
 // ABOUTME: Expanded detail view for a single participant address.
 // ABOUTME: Shows per-hop breakdown of commitment, cap, allocation, and invite info.
 
-import { Copy } from 'lucide-react'
-import { toast } from 'sonner'
-import { formatUsdc, formatArm, hopLabel, truncateAddress } from '../lib/format.js'
-import type { AddressSummary, GraphNode } from '../lib/graph.js'
-import { Button } from './ui/button.js'
-import { CopyToast } from './CopyToast.js'
+import { Copy } from "lucide-react";
+import { toast } from "sonner";
+import {
+  formatUsdc,
+  formatArm,
+  hopLabel,
+  truncateAddress,
+} from "../lib/format.js";
+import type { AddressSummary, GraphNode } from "../lib/graph.js";
+import { Button } from "./ui/button.js";
+import { CopyToast } from "./CopyToast.js";
 
 export interface NodeDetailProps {
-  summary: AddressSummary
-  hopNodes: GraphNode[]
-  resolveENS?: (addr: string) => string | null
-  phase: number
+  summary: AddressSummary;
+  hopNodes: GraphNode[];
+  resolveENS?: (addr: string) => string | null;
+  phase: number;
 }
 
-function displayAddress(addr: string, resolve?: (a: string) => string | null): string {
-  if (addr === 'armada') return 'Armada'
-  const ens = resolve?.(addr)
-  return ens ?? truncateAddress(addr)
+function displayAddress(
+  addr: string,
+  resolve?: (a: string) => string | null,
+): string {
+  if (addr === "armada") return "Armada";
+  const ens = resolve?.(addr);
+  return ens ?? truncateAddress(addr);
 }
 
 export function NodeDetail(props: NodeDetailProps) {
-  const { summary, hopNodes, resolveENS, phase } = props
-  const ensName = resolveENS?.(summary.address)
+  const { summary, hopNodes, resolveENS, phase } = props;
+  const ensName = resolveENS?.(summary.address);
 
   // Compute total invites used / available across all hops
-  let totalInvitesUsed = 0
-  let totalInvitesAvailable = 0
+  let totalInvitesUsed = 0;
+  let totalInvitesAvailable = 0;
   for (const node of hopNodes) {
-    totalInvitesUsed += node.invitesUsed
-    totalInvitesAvailable += node.invitesUsed + node.invitesAvailable
+    totalInvitesUsed += node.invitesUsed;
+    totalInvitesAvailable += node.invitesUsed + node.invitesAvailable;
   }
 
   // Build per-hop inviter chain for multi-hop addresses
   const inviterChain = hopNodes.map((node) => {
-    const inviter = node.invitedBy.length > 0 ? node.invitedBy[0] : null
-    const isSelfInvite = inviter === summary.address
-    const isSeed = node.hop === 0
+    const inviter = node.invitedBy.length > 0 ? node.invitedBy[0] : null;
+    const isSelfInvite = inviter === summary.address;
+    const isSeed = node.hop === 0;
     return {
       hop: node.hop,
       inviter,
       label: isSeed
-        ? 'Armada (hop-0)'
+        ? "Armada (hop-0)"
         : isSelfInvite
-          ? 'self-invited'
+          ? "self-invited"
           : inviter
             ? displayAddress(inviter, resolveENS)
-            : 'unknown',
-    }
-  })
+            : "unknown",
+    };
+  });
 
   return (
     <div className="space-y-2">
@@ -57,7 +65,7 @@ export function NodeDetail(props: NodeDetailProps) {
       <div className="">
         {ensName ? (
           <span>
-            {ensName}{' '}
+            {ensName}{" "}
             <span className="text-muted-foreground">
               ({truncateAddress(summary.address)})
             </span>
@@ -69,42 +77,48 @@ export function NodeDetail(props: NodeDetailProps) {
 
       {/* Per-hop breakdown: compact inline format */}
       {hopNodes.map((node) => {
-        const slotCount = node.invitesReceived
+        const slotCount = node.invitesReceived;
         return (
           <div key={`${node.address}-${node.hop}`} className="">
-            <span className="text-muted-foreground">{hopLabel(node.hop)}: </span>
+            <span className="text-muted-foreground">
+              {hopLabel(node.hop)}:{" "}
+            </span>
             <span>{formatUsdc(node.committed)} committed</span>
             {slotCount > 1 && (
-              <span className="text-muted-foreground"> ({slotCount} slots)</span>
+              <span className="text-muted-foreground">
+                {" "}
+                ({slotCount} slots)
+              </span>
             )}
             {slotCount === 1 && node.hop > 0 && (
               <span className="text-muted-foreground"> (1 slot)</span>
             )}
             {node.rawDeposited > node.committed && (
               <span className="text-amber-500">
-                {' '}(over-cap by {formatUsdc(node.rawDeposited - node.committed)})
+                {" "}
+                (over-cap by {formatUsdc(node.rawDeposited - node.committed)})
               </span>
             )}
           </div>
-        )
+        );
       })}
 
       {/* Total (only shown for multi-hop) */}
       {hopNodes.length > 1 && (
-        <div className="">
-          Total: {formatUsdc(summary.totalCommitted)}
-        </div>
+        <div className="">Total: {formatUsdc(summary.totalCommitted)}</div>
       )}
 
       {/* Invited by: per-hop inviter chain */}
       <div className="text-muted-foreground">
-        Invited by:{' '}
+        Invited by:{" "}
         {inviterChain.map((entry, idx) => {
           const copyable =
-            entry.inviter !== null && entry.inviter !== summary.address && entry.hop !== 0
+            entry.inviter !== null &&
+            entry.inviter !== summary.address &&
+            entry.hop !== 0;
           return (
             <span key={entry.hop} className="inline-flex items-center gap-1">
-              {idx > 0 && ' · '}
+              {idx > 0 && " · "}
               {hopNodes.length > 1 && <span>{hopLabel(entry.hop)}: </span>}
               <span>{entry.label}</span>
               {copyable && entry.inviter && (
@@ -115,18 +129,19 @@ export function NodeDetail(props: NodeDetailProps) {
                   aria-label="Copy inviter address"
                   className="h-auto p-0.5 text-muted-foreground hover:text-foreground"
                   onClick={(e) => {
-                    e.stopPropagation()
+                    e.stopPropagation();
                     navigator.clipboard.writeText(entry.inviter!).then(
-                      () => toast.success(<CopyToast>Address copied</CopyToast>),
-                      () => toast.error('Clipboard write failed'),
-                    )
+                      () =>
+                        toast.success(<CopyToast>Address copied</CopyToast>),
+                      () => toast.error("Clipboard write failed"),
+                    );
                   }}
                 >
                   <Copy className="size-3" />
                 </Button>
               )}
             </span>
-          )
+          );
         })}
       </div>
 
@@ -140,7 +155,9 @@ export function NodeDetail(props: NodeDetailProps) {
         <div className="pt-1 border-t border-border space-y-1">
           <div className="">
             <span className="text-muted-foreground">Allocated: </span>
-            <span className="text-success">{formatArm(summary.allocatedArm)}</span>
+            <span className="text-success">
+              {formatArm(summary.allocatedArm)}
+            </span>
           </div>
           {summary.refundUsdc !== null && summary.refundUsdc > 0n && (
             <div className="">
@@ -156,13 +173,13 @@ export function NodeDetail(props: NodeDetailProps) {
           )}
           <div className="">
             <span className="text-muted-foreground">ARM claimed: </span>
-            <span>{summary.armClaimed ? '\u2713' : '\u2717'}</span>
+            <span>{summary.armClaimed ? "\u2713" : "\u2717"}</span>
             <span className="mx-2 text-border">|</span>
             <span className="text-muted-foreground">Refund claimed: </span>
-            <span>{summary.refundClaimed ? '\u2713' : '\u2717'}</span>
+            <span>{summary.refundClaimed ? "\u2713" : "\u2717"}</span>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,74 +1,80 @@
 // ABOUTME: /invite landing page — designer's standalone chrome (logo + Step0Invite landing card + footer) running URL pre-validation and mounting the inline Path 1 flow controller on Join.
 // ABOUTME: Replaces the legacy InviteLinkRedemption page entirely; preserves its URL parsing, nonce / slots / deadline pre-checks, and approve + commitWithInvite tx pipeline through the new step machine.
 
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Contract } from 'ethers'
-import { ArmadaLogo, Button } from '@armada/ui'
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Contract } from "ethers";
+import { ArmadaLogo, Button } from "@armada/ui";
 import {
   Step0Invite,
   CROWDFUND_ABI_FRAGMENTS,
   createProvider,
   type Step0InviteProps,
-} from '@armada/crowdfund-shared'
-import { InviteLinkFlowController } from '@/components/InviteLinkFlowController'
-import { decodeInviteUrl, type InviteLinkData } from '@/lib/inviteLinks'
-import { hasNoInviteSlots } from '@/lib/inviteSlots'
-import { getHubRpcUrls } from '@/config/network'
-import { loadDeployment } from '@/config/deployments'
-import styles from './InviteLanding.module.css'
+} from "@armada/crowdfund-shared";
+import { InviteLinkFlowController } from "@/components/InviteLinkFlowController";
+import { decodeInviteUrl, type InviteLinkData } from "@/lib/inviteLinks";
+import { hasNoInviteSlots } from "@/lib/inviteSlots";
+import { getHubRpcUrls } from "@/config/network";
+import { loadDeployment } from "@/config/deployments";
+import styles from "./InviteLanding.module.css";
 
-type HopVariant = Step0InviteProps['hopVariant']
+type HopVariant = Step0InviteProps["hopVariant"];
 
 type PreCheckError =
-  | 'expired'
-  | 'nonce_consumed'
-  | 'nonce_revoked'
-  | 'no_slots'
-  | 'deadline_passed'
-  | 'not_open'
-  | 'cancelled'
+  | "expired"
+  | "nonce_consumed"
+  | "nonce_revoked"
+  | "no_slots"
+  | "deadline_passed"
+  | "not_open"
+  | "cancelled";
 
 const PRE_CHECK_MESSAGES: Record<PreCheckError, string> = {
-  expired: 'This invite link has expired. Ask the inviter for a new link.',
-  nonce_consumed: 'This invite link has already been used by someone else.',
-  nonce_revoked: 'This invite link has been revoked by the inviter.',
-  no_slots: 'The inviter has no remaining invite slots.',
-  deadline_passed: 'The commitment deadline has passed.',
+  expired: "This invite link has expired. Ask the inviter for a new link.",
+  nonce_consumed: "This invite link has already been used by someone else.",
+  nonce_revoked: "This invite link has been revoked by the inviter.",
+  no_slots: "The inviter has no remaining invite slots.",
+  deadline_passed: "The commitment deadline has passed.",
   not_open: "The crowdfund hasn't opened yet. Come back once it opens.",
-  cancelled: 'This crowdfund was cancelled, so no new commitments can be made.',
-}
+  cancelled: "This crowdfund was cancelled, so no new commitments can be made.",
+};
 
 /** `Phase.Canceled` in IArmadaCrowdfund (Active = 0, Finalized = 1, Canceled = 2). */
-const PHASE_CANCELED = 2
+const PHASE_CANCELED = 2;
 
-const DEFAULT_DAYS_LEFT = 3
+const DEFAULT_DAYS_LEFT = 3;
 
 function parseHopVariant(fromHop: number): HopVariant {
   // The invite carries the inviter's hop; the invitee joins at the next hop.
   // Step0's landing card visualizes that target hop.
-  if (fromHop === 0) return 'hop-1'
-  if (fromHop === 1) return 'hop-2'
-  return 'hop-1'
+  if (fromHop === 0) return "hop-1";
+  if (fromHop === 1) return "hop-2";
+  return "hop-1";
 }
 
 export function InviteLandingPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const navigate = useNavigate()
-  const [joined, setJoined] = useState(false)
-  const [preCheckError, setPreCheckError] = useState<PreCheckError | null>(null)
-  const [preCheckLoading, setPreCheckLoading] = useState(true)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [joined, setJoined] = useState(false);
+  const [preCheckError, setPreCheckError] = useState<PreCheckError | null>(
+    null,
+  );
+  const [preCheckLoading, setPreCheckLoading] = useState(true);
   // Crowdfund `windowEnd` and the chain block timestamp at pre-check time (both
   // epoch seconds), populated by the pre-check effect below. Together they drive
   // the "TIME LEFT" label on the landing card from the same chain clock the main
   // crowdfund page uses — not the browser's local clock — so the two agree.
-  const [windowEndSec, setWindowEndSec] = useState<number | null>(null)
-  const [blockTimestampSec, setBlockTimestampSec] = useState<number | null>(null)
+  const [windowEndSec, setWindowEndSec] = useState<number | null>(null);
+  const [blockTimestampSec, setBlockTimestampSec] = useState<number | null>(
+    null,
+  );
 
   // Capture the invite once, on mount, so the flow no longer depends on the query
   // string — that lets the effect below strip the signed link out of the URL
   // without tearing the landing card / commit flow down.
-  const [inviteData] = useState<InviteLinkData | null>(() => decodeInviteUrl(searchParams))
+  const [inviteData] = useState<InviteLinkData | null>(() =>
+    decodeInviteUrl(searchParams),
+  );
 
   // The invite signature is a single-use bearer credential (the invitee isn't
   // bound in the signed struct), so an un-redeemed link left in the address bar or
@@ -77,13 +83,13 @@ export function InviteLandingPage() {
   // state, so the InviteLinkFlowController (which reads its props, not the URL)
   // keeps working after the query is gone.
   useEffect(() => {
-    if (inviteData) setSearchParams(new URLSearchParams(), { replace: true })
-  }, [inviteData, setSearchParams])
+    if (inviteData) setSearchParams(new URLSearchParams(), { replace: true });
+  }, [inviteData, setSearchParams]);
 
   const hopVariant = useMemo(
-    () => (inviteData ? parseHopVariant(inviteData.fromHop) : 'hop-1'),
+    () => (inviteData ? parseHopVariant(inviteData.fromHop) : "hop-1"),
     [inviteData],
-  )
+  );
 
   const secondsLeft = useMemo(() => {
     // Live on-chain `windowEnd` minus the chain block timestamp once the
@@ -92,51 +98,51 @@ export function InviteLandingPage() {
     // first paint. Step0Invite floors/ceils nothing — the shared formatTimeLeft
     // helper handles the day-vs-hour formatting uniformly.
     if (windowEndSec !== null && blockTimestampSec !== null) {
-      return Math.max(0, windowEndSec - blockTimestampSec)
+      return Math.max(0, windowEndSec - blockTimestampSec);
     }
-    return DEFAULT_DAYS_LEFT * 86400
-  }, [windowEndSec, blockTimestampSec])
+    return DEFAULT_DAYS_LEFT * 86400;
+  }, [windowEndSec, blockTimestampSec]);
 
   // Seconds until *this invite link* expires, anchored on the chain block time
   // fetched during pre-check (falling back to wall-clock before it resolves) so
   // it agrees with the campaign countdown above. Surfaced on the landing card so
   // the invitee sees the link's own deadline, not just the campaign close.
   const inviteSecondsLeft = useMemo(() => {
-    if (!inviteData) return undefined
-    const nowSec = blockTimestampSec ?? Math.floor(Date.now() / 1000)
-    return Math.max(0, inviteData.deadline - nowSec)
-  }, [inviteData, blockTimestampSec])
+    if (!inviteData) return undefined;
+    const nowSec = blockTimestampSec ?? Math.floor(Date.now() / 1000);
+    return Math.max(0, inviteData.deadline - nowSec);
+  }, [inviteData, blockTimestampSec]);
 
   // Pre-redemption sale-state + nonce + slot + deadline validation. Extends the
   // legacy InviteLinkRedemption useEffect's four failure modes with a cancelled
   // or not-yet-open sale, so an unusable invite is communicated before Join.
   useEffect(() => {
     if (!inviteData) {
-      setPreCheckLoading(false)
-      return
+      setPreCheckLoading(false);
+      return;
     }
-    let cancelled = false
+    let cancelled = false;
     const check = async () => {
-      setPreCheckLoading(true)
+      setPreCheckLoading(true);
       try {
-        const deployment = await loadDeployment()
-        const provider = createProvider(getHubRpcUrls())
+        const deployment = await loadDeployment();
+        const provider = createProvider(getHubRpcUrls());
         const contract = new Contract(
           deployment.contracts.crowdfund,
           CROWDFUND_ABI_FRAGMENTS,
           provider,
-        )
+        );
 
         // Read `windowEnd` up front (and stash it for the days-left label) so
         // a downstream failure on `queryFilter` below can't strand us with the
         // hardcoded 3-day fallback. Block timestamp also needed for the
         // deadline_passed check further down.
-        const windowEnd = (await contract.windowEnd()) as bigint
-        if (!cancelled) setWindowEndSec(Number(windowEnd))
-        const block = await provider.getBlock('latest')
+        const windowEnd = (await contract.windowEnd()) as bigint;
+        if (!cancelled) setWindowEndSec(Number(windowEnd));
+        const block = await provider.getBlock("latest");
         // Stash the chain block time so the days-left label is anchored on the
         // same clock as the main crowdfund page (not the browser's local clock).
-        if (!cancelled && block) setBlockTimestampSec(Number(block.timestamp))
+        if (!cancelled && block) setBlockTimestampSec(Number(block.timestamp));
 
         // commitWithInvite only succeeds in an Active, ARM-loaded sale inside
         // [windowStart, windowEnd] — catch a cancelled or not-yet-open sale here,
@@ -145,20 +151,20 @@ export function InviteLandingPage() {
           contract.phase(),
           contract.armLoaded(),
           contract.windowStart(),
-        ])) as [bigint, boolean, bigint]
+        ])) as [bigint, boolean, bigint];
         if (Number(salePhase) === PHASE_CANCELED) {
-          if (!cancelled) setPreCheckError('cancelled')
-          return
+          if (!cancelled) setPreCheckError("cancelled");
+          return;
         }
         if (!armLoaded || (block && BigInt(block.timestamp) < windowStart)) {
-          if (!cancelled) setPreCheckError('not_open')
-          return
+          if (!cancelled) setPreCheckError("not_open");
+          return;
         }
 
         const nonceUsed = (await contract.usedNonces(
           inviteData.inviter,
           inviteData.nonce,
-        )) as boolean
+        )) as boolean;
         if (nonceUsed) {
           // Distinguish revoked (inviter actively cancelled) from consumed
           // (someone redeemed it). `queryFilter` defaults to fromBlock=0,
@@ -166,62 +172,66 @@ export function InviteLandingPage() {
           // to the deployment block and ignore failures — `nonce_consumed` is
           // a safe fallback since both states mean "the link cannot be used
           // again," and that's what the user needs to know.
-          let isRevoked = false
+          let isRevoked = false;
           try {
             const revokedFilter = contract.filters.InviteNonceRevoked(
               inviteData.inviter,
               inviteData.nonce,
-            )
+            );
             const revokedLogs = await contract.queryFilter(
               revokedFilter,
               deployment.deployBlock ?? 0,
-              'latest',
-            )
-            isRevoked = revokedLogs.length > 0
+              "latest",
+            );
+            isRevoked = revokedLogs.length > 0;
           } catch {
             // Provider couldn't scan logs — treat as `nonce_consumed`. Loses
             // the revoked-vs-consumed distinction in copy, doesn't lose the
             // "this link is dead" gate that's the actual safety property.
           }
           if (!cancelled) {
-            setPreCheckError(isRevoked ? 'nonce_revoked' : 'nonce_consumed')
+            setPreCheckError(isRevoked ? "nonce_revoked" : "nonce_consumed");
           }
-          return
+          return;
         }
 
         const remaining = (await contract.getInvitesRemaining(
           inviteData.inviter,
           inviteData.fromHop,
-        )) as bigint
+        )) as bigint;
         if (hasNoInviteSlots(remaining)) {
-          if (!cancelled) setPreCheckError('no_slots')
-          return
+          if (!cancelled) setPreCheckError("no_slots");
+          return;
         }
 
         if (block && BigInt(block.timestamp) > windowEnd) {
-          if (!cancelled) setPreCheckError('deadline_passed')
-          return
+          if (!cancelled) setPreCheckError("deadline_passed");
+          return;
         }
 
         // Use the chain's block time (already fetched above) for the deadline
         // check too — a skewed local clock shouldn't falsely expire an invite.
-        const nowSec = block ? Number(block.timestamp) : Math.floor(Date.now() / 1000)
+        const nowSec = block
+          ? Number(block.timestamp)
+          : Math.floor(Date.now() / 1000);
         if (inviteData.deadline < nowSec) {
-          if (!cancelled) setPreCheckError('expired')
-          return
+          if (!cancelled) setPreCheckError("expired");
+          return;
         }
 
-        if (!cancelled) setPreCheckError(null)
+        if (!cancelled) setPreCheckError(null);
       } catch {
         // Non-fatal — the tx itself will surface anything pre-check missed.
-        if (!cancelled) setPreCheckError(null)
+        if (!cancelled) setPreCheckError(null);
       } finally {
-        if (!cancelled) setPreCheckLoading(false)
+        if (!cancelled) setPreCheckLoading(false);
       }
-    }
-    check()
-    return () => { cancelled = true }
-  }, [inviteData])
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteData]);
 
   // "Not ready to participate yet?" — centered crowdfund page CTA (hidden once
   // the user joins the flow).
@@ -235,11 +245,11 @@ export function InviteLandingPage() {
           label="View crowdfund page"
           showIcon={false}
           className={styles.footerBtn}
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
         />
       </div>
     </footer>
-  )
+  );
 
   // Malformed URL — missing required params. Show the same wording as the
   // legacy page so external links land cleanly.
@@ -253,13 +263,14 @@ export function InviteLandingPage() {
           <div className={styles.errorCard}>
             <h1 className={styles.errorTitle}>Invalid invite link</h1>
             <p className={styles.errorBody}>
-              This link is missing required parameters. Ask the inviter for a fresh link.
+              This link is missing required parameters. Ask the inviter for a
+              fresh link.
             </p>
           </div>
           {footer}
         </div>
       </div>
-    )
+    );
   }
 
   // Pre-check failure — render the matching message and let the user bounce
@@ -273,12 +284,14 @@ export function InviteLandingPage() {
         <div className={styles.stack}>
           <div className={styles.errorCard}>
             <h1 className={styles.errorTitle}>Invite unavailable</h1>
-            <p className={styles.errorBody}>{PRE_CHECK_MESSAGES[preCheckError]}</p>
+            <p className={styles.errorBody}>
+              {PRE_CHECK_MESSAGES[preCheckError]}
+            </p>
           </div>
           {footer}
         </div>
       </div>
-    )
+    );
   }
 
   // Pre-check still in flight — render a placeholder card matching the
@@ -305,7 +318,7 @@ export function InviteLandingPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -330,5 +343,5 @@ export function InviteLandingPage() {
         {!joined && !preCheckLoading && footer}
       </div>
     </div>
-  )
+  );
 }

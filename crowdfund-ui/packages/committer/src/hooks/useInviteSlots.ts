@@ -1,15 +1,19 @@
 // ABOUTME: Derives one CrowdfundInviteSlotSection per eligible hop from useInviteLinks + eligibility state.
 // ABOUTME: Single-source-of-truth adapter consumed by both inline (MyPosition view) and standalone (Invite Slots page) surfaces; multi-hop wallets get multiple sections.
 
-import { useCallback, useMemo, useState } from 'react'
-import { Contract, type JsonRpcProvider, type Signer } from 'ethers'
-import { toast } from 'sonner'
-import { type StoredInviteLink } from '@/lib/inviteLinks'
-import { buildSlotRows } from '@/lib/slotRows'
-import { TX_WAIT_TIMEOUT_MS, TX_PENDING_MESSAGE, isTxTimeoutError } from '@/lib/txWait'
-import { mapRevertToMessage } from '@/lib/revertMessages'
-import { submitWrite } from '@/lib/submitWrite'
-import { getHubNetworkLabel, getTxConfirmations } from '@/config/network'
+import { useCallback, useMemo, useState } from "react";
+import { Contract, type JsonRpcProvider, type Signer } from "ethers";
+import { toast } from "sonner";
+import { type StoredInviteLink } from "@/lib/inviteLinks";
+import { buildSlotRows } from "@/lib/slotRows";
+import {
+  TX_WAIT_TIMEOUT_MS,
+  TX_PENDING_MESSAGE,
+  isTxTimeoutError,
+} from "@/lib/txWait";
+import { mapRevertToMessage } from "@/lib/revertMessages";
+import { submitWrite } from "@/lib/submitWrite";
+import { getHubNetworkLabel, getTxConfirmations } from "@/config/network";
 import {
   CROWDFUND_ABI_FRAGMENTS,
   HOP_CONFIGS,
@@ -21,23 +25,23 @@ import {
   type CrowdfundInviteSlotSection,
   type ReceiptLogLike,
   type SlotCardEnsResult,
-} from '@armada/crowdfund-shared'
-import type { HopPosition } from '@/hooks/useEligibility'
-import type { UseInviteLinksResult } from '@/hooks/useInviteLinks'
+} from "@armada/crowdfund-shared";
+import type { HopPosition } from "@/hooks/useEligibility";
+import type { UseInviteLinksResult } from "@/hooks/useInviteLinks";
 
 export interface UseInviteSlotsResult {
   /** One section per eligible hop. Multi-hop wallets carry two/three; single
    *  hop wallets carry one. Empty array when the wallet isn't eligible at
    *  any hop. */
-  sections: CrowdfundInviteSlotSection[]
+  sections: CrowdfundInviteSlotSection[];
   /** True when the wallet has no eligibility positions at all; consumers
    *  short-circuit to a "no invite slots" message rather than rendering an
    *  empty section list. */
-  empty: boolean
+  empty: boolean;
 }
 
-const HOP_LABELS = ['HOP-0', 'HOP-1', 'HOP-2'] as const
-const HOP_DOT_KEYS = ['seed', 'hop-1', 'hop-2'] as const
+const HOP_LABELS = ["HOP-0", "HOP-1", "HOP-2"] as const;
+const HOP_DOT_KEYS = ["seed", "hop-1", "hop-2"] as const;
 
 /** Map an `HopPosition` plus its slot UI to one `CrowdfundInviteSlotSection`.
  *  Used by the public `useInviteSlots` hook below — extracted so the hook
@@ -47,27 +51,27 @@ const HOP_DOT_KEYS = ['seed', 'hop-1', 'hop-2'] as const
  *  with `startId` provided by the parent so the shared `copiedId` /
  *  `loadingId` numeric state never collides across sections. */
 function useHopSection(args: {
-  position: HopPosition
+  position: HopPosition;
   /** First slot ID for this section. The parent computes startId per hop
    *  from the cumulative slot count of preceding hops so the wallet's full
    *  set is numbered 1..N globally. */
-  startId: number
-  inviteLinks: UseInviteLinksResult
-  signer: Signer | null
-  crowdfundAddress: string | null
-  address: string | null
-  events: CrowdfundEvent[]
+  startId: number;
+  inviteLinks: UseInviteLinksResult;
+  signer: Signer | null;
+  crowdfundAddress: string | null;
+  address: string | null;
+  events: CrowdfundEvent[];
   /** Wallet is on a chain other than the hub — invite actions must switch
    *  networks before signing rather than send to (or sign for) the wrong chain. */
-  isWrongNetwork: boolean
+  isWrongNetwork: boolean;
   /** Trigger the hub-chain switch (wagmi switchChain + RainbowKit fallback). */
-  switchNetwork: () => void
-  copiedId: number | null
-  loadingId: number | null
-  setCopiedId: React.Dispatch<React.SetStateAction<number | null>>
-  setLoadingId: React.Dispatch<React.SetStateAction<number | null>>
-  resolveEns: CrowdfundInviteSlotConfig['resolveEns']
-  onReceiptLogs?: (logs: readonly ReceiptLogLike[]) => void
+  switchNetwork: () => void;
+  copiedId: number | null;
+  loadingId: number | null;
+  setCopiedId: React.Dispatch<React.SetStateAction<number | null>>;
+  setLoadingId: React.Dispatch<React.SetStateAction<number | null>>;
+  resolveEns: CrowdfundInviteSlotConfig["resolveEns"];
+  onReceiptLogs?: (logs: readonly ReceiptLogLike[]) => void;
 }): CrowdfundInviteSlotSection {
   const {
     position,
@@ -85,83 +89,96 @@ function useHopSection(args: {
     setLoadingId,
     resolveEns,
     onReceiptLogs,
-  } = args
+  } = args;
 
   // Invite actions (on-chain invite, link generation, revoke) all touch the
   // signer, which targets the hub chain. On the wrong network, prompt a switch
   // instead of signing/sending against the wrong chain.
   const guardNetwork = useCallback((): boolean => {
-    if (!isWrongNetwork) return true
-    switchNetwork()
-    toast.error('Wrong network', {
+    if (!isWrongNetwork) return true;
+    switchNetwork();
+    toast.error("Wrong network", {
       description: `Switch to ${getHubNetworkLabel()} to manage invites.`,
-    })
-    return false
-  }, [isWrongNetwork, switchNetwork])
+    });
+    return false;
+  }, [isWrongNetwork, switchNetwork]);
 
-  const hop = position.hop
+  const hop = position.hop;
   // Total slot budget for this hop = `invitesReceived * maxInvites[hop]`.
   // We compute it from the canonical `HOP_CONFIGS` rather than reading
   // `position.invitesAvailable + position.invitesUsed`, because the graph's
   // `invitesAvailable` is initialized once at node-creation time and never
   // bumped when the wallet is invited into the same hop a second time —
   // so multi-invite hops would otherwise under-report their slot count.
-  const perInviteSlots = hop < HOP_CONFIGS.length ? HOP_CONFIGS[hop].maxInvites : 0
-  const totalSlots = position.invitesReceived * perInviteSlots
+  const perInviteSlots =
+    hop < HOP_CONFIGS.length ? HOP_CONFIGS[hop].maxInvites : 0;
+  const totalSlots = position.invitesReceived * perInviteSlots;
 
   // Active link records (pending or redeemed) consume slot rows. Revoked /
   // expired records are dropped so the slot returns to "empty".
   const activeLinks = useMemo<StoredInviteLink[]>(() => {
     return inviteLinks.links
       .filter((l) => l.fromHop === hop)
-      .filter((l) => l.status === 'pending' || l.status === 'redeemed')
-      .sort((a, b) => a.createdAt - b.createdAt)
-  }, [inviteLinks.links, hop])
+      .filter((l) => l.status === "pending" || l.status === "redeemed")
+      .sort((a, b) => a.createdAt - b.createdAt);
+  }, [inviteLinks.links, hop]);
 
   // `Invited(inviter, invitee, hop, nonce)` covers both signed-link
   // redemptions (nonce = the link's nonce) and direct `invite()` calls
   // (nonce = 0). Split per-hop so each section drives its own slot state.
   // `Committed` at the invitee hop marks a direct invitee as joined (link
   // redemptions commit atomically, so they're joined by construction).
-  const { directInvitedAddresses, linkRedemptions, committedInvitees } = useMemo<{
-    directInvitedAddresses: string[]
-    linkRedemptions: Map<number, string>
-    committedInvitees: Set<string>
-  }>(() => {
-    const directs: string[] = []
-    const redemptions = new Map<number, string>()
-    const committed = new Set<string>()
-    if (!address) {
-      return { directInvitedAddresses: directs, linkRedemptions: redemptions, committedInvitees: committed }
-    }
-    const lowerAddr = address.toLowerCase()
-    const targetHop = hop + 1
-    const matched = events
-      .filter((e) => {
-        if (e.type !== 'Invited') return false
-        const inviter = String(e.args.inviter).toLowerCase()
-        if (inviter !== lowerAddr) return false
-        if (Number(e.args.hop) !== targetHop) return false
-        return true
-      })
-      .sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex)
-    for (const e of matched) {
-      const nonce = e.args.nonce
-      const nonceNum = typeof nonce === 'bigint' ? Number(nonce) : Number(nonce)
-      const invitee = String(e.args.invitee).toLowerCase()
-      if (nonceNum === 0) {
-        directs.push(invitee)
-      } else {
-        redemptions.set(nonceNum, invitee)
+  const { directInvitedAddresses, linkRedemptions, committedInvitees } =
+    useMemo<{
+      directInvitedAddresses: string[];
+      linkRedemptions: Map<number, string>;
+      committedInvitees: Set<string>;
+    }>(() => {
+      const directs: string[] = [];
+      const redemptions = new Map<number, string>();
+      const committed = new Set<string>();
+      if (!address) {
+        return {
+          directInvitedAddresses: directs,
+          linkRedemptions: redemptions,
+          committedInvitees: committed,
+        };
       }
-    }
-    for (const e of events) {
-      if (e.type !== 'Committed') continue
-      if (Number(e.args.hop) !== targetHop) continue
-      committed.add(String(e.args.participant).toLowerCase())
-    }
-    return { directInvitedAddresses: directs, linkRedemptions: redemptions, committedInvitees: committed }
-  }, [events, address, hop])
+      const lowerAddr = address.toLowerCase();
+      const targetHop = hop + 1;
+      const matched = events
+        .filter((e) => {
+          if (e.type !== "Invited") return false;
+          const inviter = String(e.args.inviter).toLowerCase();
+          if (inviter !== lowerAddr) return false;
+          if (Number(e.args.hop) !== targetHop) return false;
+          return true;
+        })
+        .sort(
+          (a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex,
+        );
+      for (const e of matched) {
+        const nonce = e.args.nonce;
+        const nonceNum =
+          typeof nonce === "bigint" ? Number(nonce) : Number(nonce);
+        const invitee = String(e.args.invitee).toLowerCase();
+        if (nonceNum === 0) {
+          directs.push(invitee);
+        } else {
+          redemptions.set(nonceNum, invitee);
+        }
+      }
+      for (const e of events) {
+        if (e.type !== "Committed") continue;
+        if (Number(e.args.hop) !== targetHop) continue;
+        committed.add(String(e.args.participant).toLowerCase());
+      }
+      return {
+        directInvitedAddresses: directs,
+        linkRedemptions: redemptions,
+        committedInvitees: committed,
+      };
+    }, [events, address, hop]);
 
   // Build visible slot rows. On-chain consumption (redemptions + direct
   // invites) takes priority over local pending links, and cross-device
@@ -180,89 +197,128 @@ function useHopSection(args: {
         selfAddress: address,
         inviteeHop: (hop + 1 <= 2 ? hop + 1 : 2) as 0 | 1 | 2,
       }),
-    [totalSlots, activeLinks, directInvitedAddresses, linkRedemptions, committedInvitees, startId, address, hop],
-  )
+    [
+      totalSlots,
+      activeLinks,
+      directInvitedAddresses,
+      linkRedemptions,
+      committedInvitees,
+      startId,
+      address,
+      hop,
+    ],
+  );
 
   const onGenerateLink = useCallback(
     async (slotId: number) => {
-      if (!guardNetwork()) return
-      setLoadingId(slotId)
+      if (!guardNetwork()) return;
+      setLoadingId(slotId);
       try {
-        const created = await inviteLinks.createLink(hop)
-        if (!created) return
+        const created = await inviteLinks.createLink(hop);
+        if (!created) return;
         return {
           id: slotId,
           link: created.url,
           expiresAt: new Date(created.deadline * 1000),
           nonce: created.nonce,
-        }
+        };
       } finally {
-        setLoadingId((cur) => (cur === slotId ? null : cur))
+        setLoadingId((cur) => (cur === slotId ? null : cur));
       }
     },
     [inviteLinks, hop, setLoadingId, guardNetwork],
-  )
+  );
 
   const onCopy = useCallback(
     (slotId: number, link: string) => {
       navigator.clipboard.writeText(link).catch(() => {
         // Non-fatal — clipboard API may be unavailable in non-secure contexts.
-      })
-      setCopiedId(slotId)
-      setTimeout(() => setCopiedId((cur) => (cur === slotId ? null : cur)), 2000)
+      });
+      setCopiedId(slotId);
+      setTimeout(
+        () => setCopiedId((cur) => (cur === slotId ? null : cur)),
+        2000,
+      );
     },
     [setCopiedId],
-  )
+  );
 
   const onRevoke = useCallback(
     (slotId: number) => {
-      if (!guardNetwork()) return
-      const link = linkBySlotId.get(slotId)
-      if (!link) return
-      setLoadingId(slotId)
+      if (!guardNetwork()) return;
+      const link = linkBySlotId.get(slotId);
+      if (!link) return;
+      setLoadingId(slotId);
       void inviteLinks
         .revokeLink(link.nonce)
-        .finally(() => setLoadingId((cur) => (cur === slotId ? null : cur)))
+        .finally(() => setLoadingId((cur) => (cur === slotId ? null : cur)));
     },
     [linkBySlotId, inviteLinks, setLoadingId, guardNetwork],
-  )
+  );
 
   // Resolves true only once the invite tx is confirmed. Failures are surfaced
   // here via toast and resolve false so callers never show a success state.
   const onInviteOnchain = useCallback(
-    async (slotId: number, invitee: string, ensName?: string): Promise<boolean> => {
-      if (!guardNetwork()) return false
-      if (!signer || !crowdfundAddress) return false
-      setLoadingId(slotId)
+    async (
+      slotId: number,
+      invitee: string,
+      ensName?: string,
+    ): Promise<boolean> => {
+      if (!guardNetwork()) return false;
+      if (!signer || !crowdfundAddress) return false;
+      setLoadingId(slotId);
       try {
-        const crowdfund = new Contract(crowdfundAddress, CROWDFUND_ABI_FRAGMENTS, signer)
-        const tx = await submitWrite(crowdfund, 'invite', [invitee, hop], signer)
-        const receipt = await tx.wait(getTxConfirmations(), TX_WAIT_TIMEOUT_MS)
+        const crowdfund = new Contract(
+          crowdfundAddress,
+          CROWDFUND_ABI_FRAGMENTS,
+          signer,
+        );
+        const tx = await submitWrite(
+          crowdfund,
+          "invite",
+          [invitee, hop],
+          signer,
+        );
+        const receipt = await tx.wait(getTxConfirmations(), TX_WAIT_TIMEOUT_MS);
         if (!receipt || receipt.status === 0) {
-          throw new Error('Transaction reverted')
+          throw new Error("Transaction reverted");
         }
         if (onReceiptLogs) {
-          onReceiptLogs(receipt.logs as unknown as readonly ReceiptLogLike[])
+          onReceiptLogs(receipt.logs as unknown as readonly ReceiptLogLike[]);
         }
-        await inviteLinks.refreshLinks()
-        toast.success(`Invite sent to ${ensName ?? truncateAddress(invitee)}`)
-        return true
+        await inviteLinks.refreshLinks();
+        toast.success(`Invite sent to ${ensName ?? truncateAddress(invitee)}`);
+        return true;
       } catch (err) {
         if (isTxTimeoutError(err)) {
           // The invite tx may still confirm — don't claim failure.
-          toast.error('Invite still pending', { description: TX_PENDING_MESSAGE, duration: 10_000 })
+          toast.error("Invite still pending", {
+            description: TX_PENDING_MESSAGE,
+            duration: 10_000,
+          });
         } else {
           // Route through the revert mapper so the toast shows a friendly
           // message, not raw calldata/internal error text.
-          toast.error('Invite failed', { description: mapRevertToMessage(err), duration: 10_000 })
+          toast.error("Invite failed", {
+            description: mapRevertToMessage(err),
+            duration: 10_000,
+          });
         }
-        return false
+        return false;
       } finally {
-        setLoadingId((cur) => (cur === slotId ? null : cur))
+        setLoadingId((cur) => (cur === slotId ? null : cur));
       }
     },
-    [hop, signer, crowdfundAddress, inviteLinks, onReceiptLogs, setLoadingId, guardNetwork],
-  )
+    [
+      hop,
+      signer,
+      crowdfundAddress,
+      inviteLinks,
+      onReceiptLogs,
+      setLoadingId,
+      guardNetwork,
+    ],
+  );
 
   const config: CrowdfundInviteSlotConfig = {
     slots,
@@ -275,7 +331,7 @@ function useHopSection(args: {
     resolveEns,
     isWrongNetwork,
     onSwitchNetwork: switchNetwork,
-  }
+  };
 
   return {
     hop: hop as 0 | 1 | 2,
@@ -283,7 +339,7 @@ function useHopSection(args: {
     hopColor: hopPillDotColor(HOP_DOT_KEYS[hop]),
     totalSlots,
     config,
-  }
+  };
 }
 
 /**
@@ -323,52 +379,52 @@ export function useInviteSlots(
    *  immediately instead of waiting for the next event-poll tick. */
   onReceiptLogs?: (logs: readonly ReceiptLogLike[]) => void,
 ): UseInviteSlotsResult {
-  const [copiedId, setCopiedId] = useState<number | null>(null)
-  const [loadingId, setLoadingId] = useState<number | null>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
 
   // Real ENS resolver — only wired when a provider is available. Falls back
   // to SlotCard's internal mock if the prop is undefined.
-  const resolveEns = useMemo<CrowdfundInviteSlotConfig['resolveEns']>(() => {
-    if (!provider) return undefined
+  const resolveEns = useMemo<CrowdfundInviteSlotConfig["resolveEns"]>(() => {
+    if (!provider) return undefined;
     return async (input: string): Promise<SlotCardEnsResult> => {
       try {
-        const resolved = await provider.resolveName(input)
-        if (!resolved) return { error: 'ENS name not found' }
-        return { address: resolved }
+        const resolved = await provider.resolveName(input);
+        if (!resolved) return { error: "ENS name not found" };
+        return { address: resolved };
       } catch (err) {
         return {
-          error: err instanceof Error ? err.message : 'ENS resolution failed',
-        }
+          error: err instanceof Error ? err.message : "ENS resolution failed",
+        };
       }
-    }
-  }, [provider])
+    };
+  }, [provider]);
 
   // Build a fixed 3-slot array of HopPosition | null so we call useHopSection
   // in a stable order regardless of which hops the wallet is eligible at.
   // React's rules of hooks require the same number of hook calls per render;
   // we always call useHopSection three times and filter the result.
   const positionByHop = useMemo<(HopPosition | null)[]>(() => {
-    const slots: (HopPosition | null)[] = [null, null, null]
+    const slots: (HopPosition | null)[] = [null, null, null];
     for (const p of positions) {
-      if (p.hop === 0 || p.hop === 1 || p.hop === 2) slots[p.hop] = p
+      if (p.hop === 0 || p.hop === 1 || p.hop === 2) slots[p.hop] = p;
     }
-    return slots
-  }, [positions])
+    return slots;
+  }, [positions]);
 
   // Per-hop starting slot ID so the wallet's full invite set is numbered
   // 1..N globally across sections. A wallet with 3 seed slots + 4 hop-1
   // slots renders SEED 1-3 and HOP-1 4-7.
   const startIdByHop = useMemo<[number, number, number]>(() => {
     const slotsPerHop = (i: 0 | 1 | 2): number => {
-      const p = positionByHop[i]
-      if (!p) return 0
-      const per = i < HOP_CONFIGS.length ? HOP_CONFIGS[i].maxInvites : 0
-      return p.invitesReceived * per
-    }
-    const h0 = slotsPerHop(0)
-    const h1 = slotsPerHop(1)
-    return [1, 1 + h0, 1 + h0 + h1]
-  }, [positionByHop])
+      const p = positionByHop[i];
+      if (!p) return 0;
+      const per = i < HOP_CONFIGS.length ? HOP_CONFIGS[i].maxInvites : 0;
+      return p.invitesReceived * per;
+    };
+    const h0 = slotsPerHop(0);
+    const h1 = slotsPerHop(1);
+    return [1, 1 + h0, 1 + h0 + h1];
+  }, [positionByHop]);
 
   // Stable empty position placeholder so disabled-hop hook calls receive a
   // typed `HopPosition`. The resulting section gets discarded below — we
@@ -382,11 +438,11 @@ export function useInviteSlots(
     invitesUsed: 0,
     invitesAvailable: 0,
     invitedBy: [],
-  }
+  };
 
   // Three hook calls in a stable order — one per hop slot. Disabled slots get
   // the placeholder position; we filter them out of the returned array.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   const section0 = useHopSection({
     position: positionByHop[0] ?? { ...placeholder, hop: 0 },
     startId: startIdByHop[0],
@@ -403,8 +459,8 @@ export function useInviteSlots(
     setLoadingId,
     resolveEns,
     onReceiptLogs,
-  })
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  });
+
   const section1 = useHopSection({
     position: positionByHop[1] ?? { ...placeholder, hop: 1 },
     startId: startIdByHop[1],
@@ -421,8 +477,8 @@ export function useInviteSlots(
     setLoadingId,
     resolveEns,
     onReceiptLogs,
-  })
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  });
+
   const section2 = useHopSection({
     position: positionByHop[2] ?? { ...placeholder, hop: 2 },
     startId: startIdByHop[2],
@@ -439,29 +495,32 @@ export function useInviteSlots(
     setLoadingId,
     resolveEns,
     onReceiptLogs,
-  })
+  });
 
   const rawSections = useMemo(() => {
-    const all = [section0, section1, section2]
-    return all.filter((_, i) => positionByHop[i] !== null)
-  }, [section0, section1, section2, positionByHop])
+    const all = [section0, section1, section2];
+    return all.filter((_, i) => positionByHop[i] !== null);
+  }, [section0, section1, section2, positionByHop]);
 
   // Collect every address that appears in a slot row so `useENS` can issue
   // one batched reverse lookup. The hook dedupes internally; passing the
   // raw list is fine. Both `invitedAddress` (onchain-pending) and
   // `redeemedBy` (redeemed) feed into the slot display, so both go in.
   const slotAddresses = useMemo(() => {
-    const out: string[] = []
+    const out: string[] = [];
     for (const section of rawSections) {
       for (const slot of section.config.slots) {
-        if (slot.invitedAddress) out.push(slot.invitedAddress)
-        if (slot.redeemedBy) out.push(slot.redeemedBy)
+        if (slot.invitedAddress) out.push(slot.invitedAddress);
+        if (slot.redeemedBy) out.push(slot.redeemedBy);
       }
     }
-    return out
-  }, [rawSections])
+    return out;
+  }, [rawSections]);
 
-  const { resolve: resolveCachedName } = useENS({ provider, addresses: slotAddresses })
+  const { resolve: resolveCachedName } = useENS({
+    provider,
+    addresses: slotAddresses,
+  });
 
   // Enrich each slot with reverse-resolved names so the SlotCard rows can
   // render `alice.eth` instead of `0xabcd…1234`. Forward-resolved names (set
@@ -475,25 +534,30 @@ export function useInviteSlots(
       config: {
         ...section.config,
         slots: section.config.slots.map((slot) => {
-          if (slot.status === 'onchain-pending' && slot.invitedAddress) {
-            const ensName = slot.ensName ?? resolveCachedName(slot.invitedAddress) ?? undefined
-            return ensName === slot.ensName ? slot : { ...slot, ensName }
+          if (slot.status === "onchain-pending" && slot.invitedAddress) {
+            const ensName =
+              slot.ensName ??
+              resolveCachedName(slot.invitedAddress) ??
+              undefined;
+            return ensName === slot.ensName ? slot : { ...slot, ensName };
           }
-          if (slot.status === 'redeemed' && slot.redeemedBy) {
+          if (slot.status === "redeemed" && slot.redeemedBy) {
             const redeemedEnsName =
-              slot.redeemedEnsName ?? resolveCachedName(slot.redeemedBy) ?? undefined
+              slot.redeemedEnsName ??
+              resolveCachedName(slot.redeemedBy) ??
+              undefined;
             return redeemedEnsName === slot.redeemedEnsName
               ? slot
-              : { ...slot, redeemedEnsName }
+              : { ...slot, redeemedEnsName };
           }
-          return slot
+          return slot;
         }),
       },
-    }))
-  }, [rawSections, resolveCachedName])
+    }));
+  }, [rawSections, resolveCachedName]);
 
   return {
     sections,
     empty: positions.length === 0,
-  }
+  };
 }

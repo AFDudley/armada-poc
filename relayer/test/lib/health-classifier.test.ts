@@ -11,7 +11,9 @@ import { classifyChainHealth, rollupStatus } from "../../lib/health-classifier";
 const POLL = 30_000; // 30s — typical iris-relay cadence
 const NOW = 1_700_000_000_000;
 
-function input(overrides: Partial<Parameters<typeof classifyChainHealth>[0]> = {}) {
+function input(
+  overrides: Partial<Parameters<typeof classifyChainHealth>[0]> = {},
+) {
   return {
     lastError: null,
     lastScanAt: NOW - 5_000,
@@ -43,7 +45,9 @@ describe("classifyChainHealth", function () {
       // worse than one that ticked once and stalled — at least the latter has a known last-good
       // state. The classifier MUST escalate this case past 'stale' to 'unhealthy' so monitoring
       // pages immediately rather than waiting for the stale-threshold window to elapse.
-      expect(classifyChainHealth(input({ lastScanAt: 0 }))).to.equal("unhealthy");
+      expect(classifyChainHealth(input({ lastScanAt: 0 }))).to.equal(
+        "unhealthy",
+      );
     });
 
     it("returns 'unhealthy' even if lastError is null when never scanned", function () {
@@ -107,7 +111,9 @@ describe("classifyChainHealth", function () {
       // WHY: a recent tick that failed is the canonical degraded case — scanner alive,
       // last attempt errored, will retry. Operator-visible but not paged.
       expect(
-        classifyChainHealth(input({ lastError: { message: "RPC 500", at: NOW - 1_000 } })),
+        classifyChainHealth(
+          input({ lastError: { message: "RPC 500", at: NOW - 1_000 } }),
+        ),
       ).to.equal("degraded");
     });
 
@@ -115,11 +121,15 @@ describe("classifyChainHealth", function () {
       // WHY: cursor is falling behind chain head — the bisecting getLogs WILL catch up,
       // but until then anything depending on cursor freshness (UIs polling for events) is
       // showing stale data. Operators want to know.
-      expect(classifyChainHealth(input({ lagBlocks: 101 }))).to.equal("degraded");
+      expect(classifyChainHealth(input({ lagBlocks: 101 }))).to.equal(
+        "degraded",
+      );
     });
 
     it("does NOT flag degraded at lagBlocks = 100 (boundary)", function () {
-      expect(classifyChainHealth(input({ lagBlocks: 100 }))).to.equal("healthy");
+      expect(classifyChainHealth(input({ lagBlocks: 100 }))).to.equal(
+        "healthy",
+      );
     });
   });
 });
@@ -136,7 +146,9 @@ describe("rollupStatus", function () {
   });
 
   it("worst-wins: 'unhealthy' beats 'degraded' beats 'healthy'", function () {
-    expect(rollupStatus(["healthy", "degraded", "unhealthy"])).to.equal("unhealthy");
+    expect(rollupStatus(["healthy", "degraded", "unhealthy"])).to.equal(
+      "unhealthy",
+    );
     expect(rollupStatus(["healthy", "degraded"])).to.equal("degraded");
     expect(rollupStatus(["healthy", "stale"])).to.equal("stale");
   });

@@ -15,7 +15,6 @@ import "./IFeeCollector.sol";
 ///         2. attestRevenue() — governance-only, for off-chain or non-USDC sources
 ///         Used by downstream systems (wind-down triggers, token unlock gates).
 contract RevenueCounter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
-
     /// @notice Cumulative recognized revenue in 18-decimal USD. Monotonically non-decreasing.
     uint256 public recognizedRevenueUsd;
 

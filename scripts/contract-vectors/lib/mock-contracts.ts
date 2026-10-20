@@ -27,7 +27,7 @@ import { ethers } from "hardhat";
 import { Contract, Signer } from "ethers";
 
 // solc is a transitive dependency of hardhat (0.8.26 in this repo).
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const solc = require("solc");
 
 const MOCK_SOURCES = `
@@ -89,11 +89,15 @@ function compileMocks(): Record<string, { abi: any; bytecode: string }> {
   if (output.errors) {
     const fatal = output.errors.filter((e: any) => e.severity === "error");
     if (fatal.length > 0) {
-      throw new Error(`solc failed compiling capture mocks: ${JSON.stringify(fatal, null, 2)}`);
+      throw new Error(
+        `solc failed compiling capture mocks: ${JSON.stringify(fatal, null, 2)}`,
+      );
     }
   }
   const out: Record<string, { abi: any; bytecode: string }> = {};
-  for (const [name, artifact] of Object.entries<any>(output.contracts["CaptureMocks.sol"])) {
+  for (const [name, artifact] of Object.entries<any>(
+    output.contracts["CaptureMocks.sol"],
+  )) {
     out[name] = { abi: artifact.abi, bytecode: artifact.evm.bytecode.object };
   }
   return out;
@@ -101,13 +105,23 @@ function compileMocks(): Record<string, { abi: any; bytecode: string }> {
 
 export async function deployMock(
   deployer: Signer,
-  name: "MockShieldPauseController" | "MockConfigurableFeeModule" | "MockAdapterRegistry"
+  name:
+    | "MockShieldPauseController"
+    | "MockConfigurableFeeModule"
+    | "MockAdapterRegistry",
 ): Promise<DeployedMock> {
   const compiled = compileMocks();
   const artifact = compiled[name];
   if (!artifact) throw new Error(`mock ${name} not found in solc output`);
-  const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, deployer);
+  const factory = new ethers.ContractFactory(
+    artifact.abi,
+    artifact.bytecode,
+    deployer,
+  );
   const contract = await factory.deploy();
   await contract.waitForDeployment();
-  return { contract: contract as unknown as Contract, address: await contract.getAddress() };
+  return {
+    contract: contract as unknown as Contract,
+    address: await contract.getAddress(),
+  };
 }

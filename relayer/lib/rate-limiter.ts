@@ -55,7 +55,10 @@ export class RateLimiter {
       this.buckets.set(key, b);
     } else {
       const elapsedSec = (now - b.last) / 1000;
-      b.tokens = Math.min(this.capacity, b.tokens + elapsedSec * this.refillPerSec);
+      b.tokens = Math.min(
+        this.capacity,
+        b.tokens + elapsedSec * this.refillPerSec,
+      );
       b.last = now;
     }
     if (b.tokens >= 1) {
@@ -75,7 +78,10 @@ export class RateLimiter {
     if (now - this.lastPrune < this.pruneIntervalMs) return;
     this.lastPrune = now;
     for (const [k, b] of this.buckets) {
-      const refilled = Math.min(this.capacity, b.tokens + ((now - b.last) / 1000) * this.refillPerSec);
+      const refilled = Math.min(
+        this.capacity,
+        b.tokens + ((now - b.last) / 1000) * this.refillPerSec,
+      );
       if (refilled >= this.capacity) this.buckets.delete(k);
     }
   }
@@ -87,7 +93,10 @@ export class RateLimiter {
  * socket address. Trusting XFF blindly would let any client spoof their key, so it's opt-in via
  * `RELAYER_TRUST_PROXY`.
  */
-export function clientKey(req: RateLimitedRequest, trustProxy: boolean): string {
+export function clientKey(
+  req: RateLimitedRequest,
+  trustProxy: boolean,
+): string {
   if (trustProxy) {
     const xff = req.headers["x-forwarded-for"];
     const value = Array.isArray(xff) ? xff[0] : xff;

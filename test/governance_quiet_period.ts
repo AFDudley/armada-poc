@@ -52,12 +52,13 @@ describe("Governance Quiet Period (T6.1)", function () {
     await usdc.waitForDeployment();
 
     // Deploy governance infrastructure (timelock first — ArmadaToken needs its address)
-    const TimelockController = await ethers.getContractFactory("TimelockController");
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
     timelockController = await TimelockController.deploy(
       ONE_DAY,
       [deployer.address],
       [deployer.address],
-      deployer.address
+      deployer.address,
     );
     await timelockController.waitForDeployment();
     const timelockAddr = await timelockController.getAddress();
@@ -76,12 +77,16 @@ describe("Governance Quiet Period (T6.1)", function () {
       treasuryAddr.address,
       deployer.address,
       deployer.address, // securityCouncil
-      openTimestamp      // openTimestamp
+      openTimestamp, // openTimestamp
     );
     await crowdfund.waitForDeployment();
 
     // Initialize token whitelist (after crowdfund is deployed, before transfers)
-    await armToken.initWhitelist([deployer.address, await crowdfund.getAddress(), treasuryAddr.address]);
+    await armToken.initWhitelist([
+      deployer.address,
+      await crowdfund.getAddress(),
+      treasuryAddr.address,
+    ]);
 
     // Fund ARM to crowdfund (1.8M for MAX_SALE)
     await armToken.transfer(await crowdfund.getAddress(), ARM(1_800_000));
@@ -94,11 +99,18 @@ describe("Governance Quiet Period (T6.1)", function () {
     );
 
     // Grant governor roles on timelock
-    await timelockController.grantRole(PROPOSER_ROLE, await governor.getAddress());
-    await timelockController.grantRole(EXECUTOR_ROLE, await governor.getAddress());
+    await timelockController.grantRole(
+      PROPOSER_ROLE,
+      await governor.getAddress(),
+    );
+    await timelockController.grantRole(
+      EXECUTOR_ROLE,
+      await governor.getAddress(),
+    );
 
     // Deploy treasury for dummy calldata target
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
     await treasury.waitForDeployment();
   }
@@ -112,20 +124,27 @@ describe("Governance Quiet Period (T6.1)", function () {
   // Helper: create a basic proposal (async — resolves treasury address)
   async function propose(description = "Test proposal") {
     const treasuryAddress = await treasury.getAddress();
-    const calldata = treasury.interface.encodeFunctionData("distribute", [await usdc.getAddress(), deployer.address, 1]);
+    const calldata = treasury.interface.encodeFunctionData("distribute", [
+      await usdc.getAddress(),
+      deployer.address,
+      1,
+    ]);
     return governor.propose(
       ProposalType.Standard,
       [treasuryAddress],
       [0],
       [calldata],
-      description
+      description,
     );
   }
 
   // Helper: run crowdfund to finalization (normal path — above MIN_SALE)
   async function finalizeCrowdfund() {
-    { const ws = Number(await crowdfund.windowStart()); if ((await time.latest()) < ws) await time.increaseTo(ws); }
-    await crowdfund.addSeeds(seeds.map(s => s.address));
+    {
+      const ws = Number(await crowdfund.windowStart());
+      if ((await time.latest()) < ws) await time.increaseTo(ws);
+    }
+    await crowdfund.addSeeds(seeds.map((s) => s.address));
 
     for (const seed of seeds) {
       const amount = USDC(15_000);
@@ -153,7 +172,10 @@ describe("Governance Quiet Period (T6.1)", function () {
       // Day 3 — well within 10-day quiet period
       await time.increase(3 * ONE_DAY);
 
-      await expect(propose()).to.be.revertedWithCustomError(governor, "Gov_QuietPeriodActive");
+      await expect(propose()).to.be.revertedWithCustomError(
+        governor,
+        "Gov_QuietPeriodActive",
+      );
     });
 
     // WHY: pins the 10-day length — day 9 post-finalization is still inside the quiet period.
@@ -164,7 +186,10 @@ describe("Governance Quiet Period (T6.1)", function () {
 
       await time.increase(9 * ONE_DAY);
 
-      await expect(propose()).to.be.revertedWithCustomError(governor, "Gov_QuietPeriodActive");
+      await expect(propose()).to.be.revertedWithCustomError(
+        governor,
+        "Gov_QuietPeriodActive",
+      );
     });
 
     it("propose succeeds after quiet period (day 11+)", async function () {
@@ -226,19 +251,21 @@ describe("Governance Quiet Period (T6.1)", function () {
       await governor.setCrowdfundAddress(await crowdfund.getAddress());
 
       await expect(
-        governor.setCrowdfundAddress(await crowdfund.getAddress())
+        governor.setCrowdfundAddress(await crowdfund.getAddress()),
       ).to.be.revertedWithCustomError(governor, "Gov_AlreadyLocked");
     });
 
     it("setCrowdfundAddress by non-deployer reverts", async function () {
       await expect(
-        governor.connect(nonDeployer).setCrowdfundAddress(await crowdfund.getAddress())
+        governor
+          .connect(nonDeployer)
+          .setCrowdfundAddress(await crowdfund.getAddress()),
       ).to.be.revertedWithCustomError(governor, "Gov_NotDeployer");
     });
 
     it("setCrowdfundAddress with zero address reverts", async function () {
       await expect(
-        governor.setCrowdfundAddress(ethers.ZeroAddress)
+        governor.setCrowdfundAddress(ethers.ZeroAddress),
       ).to.be.revertedWithCustomError(governor, "Gov_ZeroAddress");
     });
   });
@@ -255,8 +282,11 @@ describe("Governance Quiet Period (T6.1)", function () {
       // Hop-0 ceiling = 47% × $1.2M = $564K. Demand $1.05M > $564K → pro-rata $564K.
       // No hop-1/2 participants → totalAllocUsdc = $564K < $1M → refundMode. ✓
       const refundSeeds = seeds.slice(0, 70);
-      { const ws = Number(await crowdfund.windowStart()); if ((await time.latest()) < ws) await time.increaseTo(ws); }
-      await crowdfund.addSeeds(refundSeeds.map(s => s.address));
+      {
+        const ws = Number(await crowdfund.windowStart());
+        if ((await time.latest()) < ws) await time.increaseTo(ws);
+      }
+      await crowdfund.addSeeds(refundSeeds.map((s) => s.address));
 
       for (const seed of refundSeeds) {
         const amount = USDC(15_000);
@@ -276,7 +306,10 @@ describe("Governance Quiet Period (T6.1)", function () {
 
       // Quiet period should be active even in refundMode
       await time.increase(3 * ONE_DAY);
-      await expect(propose()).to.be.revertedWithCustomError(governor, "Gov_QuietPeriodActive");
+      await expect(propose()).to.be.revertedWithCustomError(
+        governor,
+        "Gov_QuietPeriodActive",
+      );
 
       // After quiet period, proposal succeeds
       await time.increase(8 * ONE_DAY);

@@ -14,10 +14,11 @@ import { getNetworkConfig } from "../config/networks";
 const DEPLOYMENTS_DIR = path.join(__dirname, "../deployments");
 
 // Anvil default account 0 — publicly known, acceptable for local dev only
-const ANVIL_DEFAULT_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const ANVIL_DEFAULT_KEY =
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 // ABI for adding faucet as minter on MockUSDCV2
-const USDC_V3_ABI = ['function addMinter(address minter) external'];
+const USDC_V3_ABI = ["function addMinter(address minter) external"];
 
 interface Deployment {
   chainId: number;
@@ -43,7 +44,7 @@ async function deployFaucet(
   chainName: string,
   rpcUrl: string,
   v2DeploymentName: string,
-  v3DeploymentName: string
+  v3DeploymentName: string,
 ) {
   console.log(`\nDeploying Faucet to ${chainName}...`);
 
@@ -53,7 +54,9 @@ async function deployFaucet(
   const privateKey = process.env.DEPLOYER_PRIVATE_KEY || ANVIL_DEFAULT_KEY;
   // NonceManager tracks nonces locally; a bare Wallet can reuse a stale cached nonce when the deploy
   // is mined quickly and the next transaction follows straight away ("nonce too low").
-  const deployer = new ethers.NonceManager(new ethers.Wallet(privateKey, provider));
+  const deployer = new ethers.NonceManager(
+    new ethers.Wallet(privateKey, provider),
+  );
 
   console.log(`Deployer: ${await deployer.getAddress()}`);
 
@@ -62,14 +65,17 @@ async function deployFaucet(
   const v2Deployment = loadDeployment(v2DeploymentName);
 
   // V3 uses 'usdc', V2 uses 'mockUSDC'
-  const usdcAddress = v3Deployment?.contracts.usdc || v2Deployment?.contracts.mockUSDC;
+  const usdcAddress =
+    v3Deployment?.contracts.usdc || v2Deployment?.contracts.mockUSDC;
 
   if (!usdcAddress) {
-    throw new Error(`USDC not found in ${v3DeploymentName} or ${v2DeploymentName} deployment`);
+    throw new Error(
+      `USDC not found in ${v3DeploymentName} or ${v2DeploymentName} deployment`,
+    );
   }
 
   const isV3 = !!v3Deployment?.contracts.usdc;
-  console.log(`Using ${isV3 ? 'V3' : 'V2'} deployment`);
+  console.log(`Using ${isV3 ? "V3" : "V2"} deployment`);
   console.log(`USDC address: ${usdcAddress}`);
 
   // Deploy Faucet with 100 ETH
@@ -111,7 +117,9 @@ async function deployFaucet(
 async function main() {
   // Faucets are local-only — hardcoded localhost URLs and Anvil private key
   if (process.env.DEPLOY_ENV && process.env.DEPLOY_ENV !== "local") {
-    throw new Error("deploy_faucet.ts is local-only. Do not run on testnet/mainnet.");
+    throw new Error(
+      "deploy_faucet.ts is local-only. Do not run on testnet/mainnet.",
+    );
   }
 
   console.log("=".repeat(60));
@@ -125,7 +133,12 @@ async function main() {
 
   // Deploy to each configured client chain
   for (const client of config.clients) {
-    await deployFaucet(client.name, client.rpc, client.deploymentPrefix, `${client.deploymentPrefix}-v3`);
+    await deployFaucet(
+      client.name,
+      client.rpc,
+      client.deploymentPrefix,
+      `${client.deploymentPrefix}-v3`,
+    );
   }
 
   console.log("\n" + "=".repeat(60));

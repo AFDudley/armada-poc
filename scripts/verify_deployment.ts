@@ -21,12 +21,22 @@
 
 import { ethers } from "hardhat";
 import { loadDeployment } from "./deploy-utils";
-import { timelockBootstrapChecks, timelockUnexpectedRoleHolders } from "./verify-timelock";
-import { initialStewardChecks } from "./initial-steward";
-import { LAUNCH2_GROUPS, resolveVerifyScope, verificationVerdict } from "./verify-scope";
 import {
-  assertReservePostFunding, assertCreationProvenance, reserveConfigMismatch,
-  assertRevenueLockAllocation, assertRevenueLockSchedule,
+  timelockBootstrapChecks,
+  timelockUnexpectedRoleHolders,
+} from "./verify-timelock";
+import { initialStewardChecks } from "./initial-steward";
+import {
+  LAUNCH2_GROUPS,
+  resolveVerifyScope,
+  verificationVerdict,
+} from "./verify-scope";
+import {
+  assertReservePostFunding,
+  assertCreationProvenance,
+  reserveConfigMismatch,
+  assertRevenueLockAllocation,
+  assertRevenueLockSchedule,
 } from "./revenue-reserve";
 import {
   isLocal,
@@ -80,12 +90,19 @@ function addressToBytes32(addr: string): string {
  * Read an on-chain value and record PASS if it equals `expected`, FAIL otherwise (or if the
  * read throws). Strings compare case-insensitively (addresses); everything else by String().
  */
-async function expectOnChain(group: string, check: string, read: () => Promise<unknown>, expected: unknown) {
-  const norm = (v: unknown) => (typeof v === "string" ? v.toLowerCase() : String(v));
+async function expectOnChain(
+  group: string,
+  check: string,
+  read: () => Promise<unknown>,
+  expected: unknown,
+) {
+  const norm = (v: unknown) =>
+    typeof v === "string" ? v.toLowerCase() : String(v);
   try {
     const actual = await read();
     if (norm(actual) === norm(expected)) pass(group, check);
-    else fail(group, check, `expected ${String(expected)}, got ${String(actual)}`);
+    else
+      fail(group, check, `expected ${String(expected)}, got ${String(actual)}`);
   } catch (error) {
     fail(group, check, `error reading: ${(error as Error).message}`);
   }
@@ -112,20 +129,34 @@ async function checkSnarkVerification(poolManifest: any) {
   // testingMode must be false
   const testingMode = await pool.testingMode();
   if (testingMode) {
-    fail(GROUP, "testingMode disabled", "testingMode is TRUE — proofs are NOT being verified");
+    fail(
+      GROUP,
+      "testingMode disabled",
+      "testingMode is TRUE — proofs are NOT being verified",
+    );
   } else {
     pass(GROUP, "testingMode disabled");
   }
 
   // Verification keys loaded (must match TESTING_ARTIFACT_CONFIGS in lib/artifacts.ts)
-  const configs = [[1,1], [1,2], [2,2], [2,3], [8,4]];
+  const configs = [
+    [1, 1],
+    [1, 2],
+    [2, 2],
+    [2, 3],
+    [8, 4],
+  ];
   for (const [n, c] of configs) {
     try {
       const vk = await pool.getVerificationKey(n, c);
       if (vk.alpha1.x !== 0n) {
         pass(GROUP, `VK[${n}x${c}] loaded`);
       } else {
-        fail(GROUP, `VK[${n}x${c}] loaded`, "Verification key not set (alpha1.x == 0)");
+        fail(
+          GROUP,
+          `VK[${n}x${c}] loaded`,
+          "Verification key not set (alpha1.x == 0)",
+        );
       }
     } catch {
       fail(GROUP, `VK[${n}x${c}] loaded`, "Error reading verification key");
@@ -157,7 +188,10 @@ async function checkCCTPWiring(hubCCTP: any) {
   // managed by Circle, not us, so there's nothing meaningful for this script to assert.
   if (isCCTPReal()) {
     pass(GROUP, "TokenMessenger ↔ USDC wiring (managed by Circle, real CCTP)");
-    pass(GROUP, "MessageTransmitter → TokenMessenger link (managed by Circle, real CCTP)");
+    pass(
+      GROUP,
+      "MessageTransmitter → TokenMessenger link (managed by Circle, real CCTP)",
+    );
     return;
   }
 
@@ -170,7 +204,11 @@ async function checkCCTPWiring(hubCCTP: any) {
     if (isMinter) {
       pass(GROUP, "TokenMessenger is USDC minter");
     } else {
-      fail(GROUP, "TokenMessenger is USDC minter", "TokenMessenger not authorized as minter");
+      fail(
+        GROUP,
+        "TokenMessenger is USDC minter",
+        "TokenMessenger not authorized as minter",
+      );
     }
   } catch {
     fail(GROUP, "TokenMessenger is USDC minter", "Error checking minter role");
@@ -178,15 +216,26 @@ async function checkCCTPWiring(hubCCTP: any) {
 
   // MessageTransmitter has tokenMessenger set
   try {
-    const mt = await ethers.getContractAt("MockMessageTransmitterV2", hubCCTP.contracts.messageTransmitter);
+    const mt = await ethers.getContractAt(
+      "MockMessageTransmitterV2",
+      hubCCTP.contracts.messageTransmitter,
+    );
     const tmOnMT = await mt.tokenMessenger();
     if (tmOnMT.toLowerCase() === tokenMessengerAddr.toLowerCase()) {
       pass(GROUP, "MessageTransmitter → TokenMessenger link");
     } else {
-      fail(GROUP, "MessageTransmitter → TokenMessenger link", `Expected ${tokenMessengerAddr}, got ${tmOnMT}`);
+      fail(
+        GROUP,
+        "MessageTransmitter → TokenMessenger link",
+        `Expected ${tokenMessengerAddr}, got ${tmOnMT}`,
+      );
     }
   } catch {
-    fail(GROUP, "MessageTransmitter → TokenMessenger link", "Error reading tokenMessenger from MessageTransmitter");
+    fail(
+      GROUP,
+      "MessageTransmitter → TokenMessenger link",
+      "Error reading tokenMessenger from MessageTransmitter",
+    );
   }
 }
 
@@ -223,22 +272,35 @@ async function checkPrivacyPoolWiring(
       if (registered.toLowerCase() === expectedBytes32) {
         pass(GROUP, `Remote pool (${role}) domain=${clientDomain}`);
       } else {
-        fail(GROUP, `Remote pool (${role}) domain=${clientDomain}`,
-          `Expected ${expectedBytes32}, got ${registered}`);
+        fail(
+          GROUP,
+          `Remote pool (${role}) domain=${clientDomain}`,
+          `Expected ${expectedBytes32}, got ${registered}`,
+        );
       }
     } catch {
-      fail(GROUP, `Remote pool (${role}) domain=${clientDomain}`, "Error reading remotePools");
+      fail(
+        GROUP,
+        `Remote pool (${role}) domain=${clientDomain}`,
+        "Error reading remotePools",
+      );
     }
   }
 
   // Hook router
   try {
     const hookRouter = await pool.hookRouter();
-    if (hookRouter.toLowerCase() === hubPoolManifest.contracts.hookRouter.toLowerCase()) {
+    if (
+      hookRouter.toLowerCase() ===
+      hubPoolManifest.contracts.hookRouter.toLowerCase()
+    ) {
       pass(GROUP, "Hook router set");
     } else {
-      fail(GROUP, "Hook router set",
-        `Expected ${hubPoolManifest.contracts.hookRouter}, got ${hookRouter}`);
+      fail(
+        GROUP,
+        "Hook router set",
+        `Expected ${hubPoolManifest.contracts.hookRouter}, got ${hookRouter}`,
+      );
     }
   } catch {
     fail(GROUP, "Hook router set", "Error reading hookRouter");
@@ -248,14 +310,24 @@ async function checkPrivacyPoolWiring(
   if (govManifest?.contracts?.shieldPauseController) {
     try {
       const pauseContract = await pool.shieldPauseContract();
-      if (pauseContract.toLowerCase() === govManifest.contracts.shieldPauseController.toLowerCase()) {
+      if (
+        pauseContract.toLowerCase() ===
+        govManifest.contracts.shieldPauseController.toLowerCase()
+      ) {
         pass(GROUP, "ShieldPauseController linked");
       } else {
-        fail(GROUP, "ShieldPauseController linked",
-          `Expected ${govManifest.contracts.shieldPauseController}, got ${pauseContract}`);
+        fail(
+          GROUP,
+          "ShieldPauseController linked",
+          `Expected ${govManifest.contracts.shieldPauseController}, got ${pauseContract}`,
+        );
       }
     } catch {
-      fail(GROUP, "ShieldPauseController linked", "Error reading shieldPauseContract");
+      fail(
+        GROUP,
+        "ShieldPauseController linked",
+        "Error reading shieldPauseContract",
+      );
     }
   }
 
@@ -263,11 +335,17 @@ async function checkPrivacyPoolWiring(
   if (feeManifest?.contracts?.feeModuleProxy) {
     try {
       const feeModule = await pool.feeModule();
-      if (feeModule.toLowerCase() === feeManifest.contracts.feeModuleProxy.toLowerCase()) {
+      if (
+        feeModule.toLowerCase() ===
+        feeManifest.contracts.feeModuleProxy.toLowerCase()
+      ) {
         pass(GROUP, "FeeModule linked to pool");
       } else {
-        fail(GROUP, "FeeModule linked to pool",
-          `Expected ${feeManifest.contracts.feeModuleProxy}, got ${feeModule}`);
+        fail(
+          GROUP,
+          "FeeModule linked to pool",
+          `Expected ${feeManifest.contracts.feeModuleProxy}, got ${feeModule}`,
+        );
       }
     } catch {
       fail(GROUP, "FeeModule linked to pool", "Error reading feeModule");
@@ -276,7 +354,10 @@ async function checkPrivacyPoolWiring(
 
   // Yield adapter shield privilege is driven by the governance adapter registry (issue #370):
   // the pool must point at the registry, and the registry must have the adapter authorized.
-  if (yieldManifest?.contracts?.armadaYieldAdapter && govManifest?.contracts?.adapterRegistry) {
+  if (
+    yieldManifest?.contracts?.armadaYieldAdapter &&
+    govManifest?.contracts?.adapterRegistry
+  ) {
     const adapterAddr = yieldManifest.contracts.armadaYieldAdapter;
     const registryAddr = govManifest.contracts.adapterRegistry;
     try {
@@ -284,18 +365,36 @@ async function checkPrivacyPoolWiring(
       if (poolRegistry.toLowerCase() === registryAddr.toLowerCase()) {
         pass(GROUP, "Pool adapterRegistry points at governance registry");
       } else {
-        fail(GROUP, "Pool adapterRegistry points at governance registry", `got ${poolRegistry}`);
+        fail(
+          GROUP,
+          "Pool adapterRegistry points at governance registry",
+          `got ${poolRegistry}`,
+        );
       }
 
-      const registry = await ethers.getContractAt("AdapterRegistry", registryAddr);
+      const registry = await ethers.getContractAt(
+        "AdapterRegistry",
+        registryAddr,
+      );
       const isAuthorized = await registry.authorizedAdapters(adapterAddr);
       if (isAuthorized) {
-        pass(GROUP, "Yield adapter authorized in registry (fee-exempt shield path)");
+        pass(
+          GROUP,
+          "Yield adapter authorized in registry (fee-exempt shield path)",
+        );
       } else {
-        fail(GROUP, "Yield adapter authorized in registry (fee-exempt shield path)", "Adapter not authorized");
+        fail(
+          GROUP,
+          "Yield adapter authorized in registry (fee-exempt shield path)",
+          "Adapter not authorized",
+        );
       }
     } catch {
-      fail(GROUP, "Yield adapter shield privilege via registry", "Error reading adapterRegistry/authorizedAdapters");
+      fail(
+        GROUP,
+        "Yield adapter shield privilege via registry",
+        "Error reading adapterRegistry/authorizedAdapters",
+      );
     }
   }
 }
@@ -309,7 +408,10 @@ async function checkGovernanceWiring(govManifest: any) {
   const timelockAddr = govManifest.contracts.timelockController;
   const governorAddr = govManifest.contracts.governor;
 
-  const timelock = await ethers.getContractAt("TimelockController", timelockAddr);
+  const timelock = await ethers.getContractAt(
+    "TimelockController",
+    timelockAddr,
+  );
   const governor = await ethers.getContractAt("ArmadaGovernor", governorAddr);
 
   // Timelock roles
@@ -326,15 +428,22 @@ async function checkGovernanceWiring(govManifest: any) {
     if (hasRole) {
       pass(GROUP, `Governor has ${roleName}`);
     } else {
-      fail(GROUP, `Governor has ${roleName}`, `Governor ${governorAddr} lacks role on timelock`);
+      fail(
+        GROUP,
+        `Governor has ${roleName}`,
+        `Governor ${governorAddr} lacks role on timelock`,
+      );
     }
   }
 
   // In hardened mode, an incomplete bootstrap is a failure even if the final
   // crowdfund manifest was never written. Other modes support partial deployment.
   const config = getNetworkConfig();
-  for (const check of await timelockBootstrapChecks(timelockAddr, govManifest.deployer,
-    config.hardenTimelock ? BigInt(config.timelockDelay) : undefined)) {
+  for (const check of await timelockBootstrapChecks(
+    timelockAddr,
+    govManifest.deployer,
+    config.hardenTimelock ? BigInt(config.timelockDelay) : undefined,
+  )) {
     results.push({ group: GROUP, ...check });
   }
 
@@ -342,11 +451,16 @@ async function checkGovernanceWiring(govManifest: any) {
   if (govManifest.contracts.steward) {
     try {
       const steward = await governor.stewardContract();
-      if (steward.toLowerCase() === govManifest.contracts.steward.toLowerCase()) {
+      if (
+        steward.toLowerCase() === govManifest.contracts.steward.toLowerCase()
+      ) {
         pass(GROUP, "Governor → steward link");
       } else {
-        fail(GROUP, "Governor → steward link",
-          `Expected ${govManifest.contracts.steward}, got ${steward}`);
+        fail(
+          GROUP,
+          "Governor → steward link",
+          `Expected ${govManifest.contracts.steward}, got ${steward}`,
+        );
       }
     } catch {
       fail(GROUP, "Governor → steward link", "Error reading stewardContract");
@@ -361,8 +475,11 @@ async function checkGovernanceWiring(govManifest: any) {
       pass(GROUP, "Governor deployer cleared");
       deployerCleared = true;
     } else {
-      warn(GROUP, "Governor deployer cleared",
-        `deployer() = ${currentDeployer} (expected if crowdfund not yet deployed)`);
+      warn(
+        GROUP,
+        "Governor deployer cleared",
+        `deployer() = ${currentDeployer} (expected if crowdfund not yet deployed)`,
+      );
     }
   } catch {
     fail(GROUP, "Governor deployer cleared", "Error reading deployer");
@@ -375,17 +492,27 @@ async function checkGovernanceWiring(govManifest: any) {
     const sc = await governor.securityCouncil();
     if (sc === ethers.ZeroAddress) {
       if (deployerCleared) {
-        fail(GROUP, "Governor securityCouncil set",
-          "securityCouncil() == 0 with deployer cleared — launch-window vulnerability");
+        fail(
+          GROUP,
+          "Governor securityCouncil set",
+          "securityCouncil() == 0 with deployer cleared — launch-window vulnerability",
+        );
       } else {
-        warn(GROUP, "Governor securityCouncil set",
-          "securityCouncil() == 0 (expected if crowdfund not yet deployed)");
+        warn(
+          GROUP,
+          "Governor securityCouncil set",
+          "securityCouncil() == 0 (expected if crowdfund not yet deployed)",
+        );
       }
     } else {
       pass(GROUP, "Governor securityCouncil set", sc);
     }
   } catch {
-    fail(GROUP, "Governor securityCouncil set", "Error reading securityCouncil");
+    fail(
+      GROUP,
+      "Governor securityCouncil set",
+      "Error reading securityCouncil",
+    );
   }
 }
 
@@ -410,7 +537,11 @@ async function checkYieldFeeWiring(
     if (adapter.toLowerCase() === adapterAddr.toLowerCase()) {
       pass(GROUP, "YieldVault adapter set");
     } else {
-      fail(GROUP, "YieldVault adapter set", `Expected ${adapterAddr}, got ${adapter}`);
+      fail(
+        GROUP,
+        "YieldVault adapter set",
+        `Expected ${adapterAddr}, got ${adapter}`,
+      );
     }
   } catch {
     fail(GROUP, "YieldVault adapter set", "Error reading adapter");
@@ -420,14 +551,24 @@ async function checkYieldFeeWiring(
   if (govManifest?.contracts?.treasury) {
     try {
       const vaultTreasury = await vault.treasury();
-      if (vaultTreasury.toLowerCase() === govManifest.contracts.treasury.toLowerCase()) {
+      if (
+        vaultTreasury.toLowerCase() ===
+        govManifest.contracts.treasury.toLowerCase()
+      ) {
         pass(GROUP, "YieldVault treasury == ArmadaTreasuryGov");
       } else {
-        fail(GROUP, "YieldVault treasury == ArmadaTreasuryGov",
-          `Expected ${govManifest.contracts.treasury}, got ${vaultTreasury}`);
+        fail(
+          GROUP,
+          "YieldVault treasury == ArmadaTreasuryGov",
+          `Expected ${govManifest.contracts.treasury}, got ${vaultTreasury}`,
+        );
       }
     } catch {
-      fail(GROUP, "YieldVault treasury == ArmadaTreasuryGov", "Error reading treasury");
+      fail(
+        GROUP,
+        "YieldVault treasury == ArmadaTreasuryGov",
+        "Error reading treasury",
+      );
     }
   }
 
@@ -435,11 +576,17 @@ async function checkYieldFeeWiring(
   if (feeManifest?.contracts?.feeModuleProxy) {
     try {
       const vaultFeeModule = await vault.feeModule();
-      if (vaultFeeModule.toLowerCase() === feeManifest.contracts.feeModuleProxy.toLowerCase()) {
+      if (
+        vaultFeeModule.toLowerCase() ===
+        feeManifest.contracts.feeModuleProxy.toLowerCase()
+      ) {
         pass(GROUP, "YieldVault feeModule set");
       } else {
-        fail(GROUP, "YieldVault feeModule set",
-          `Expected ${feeManifest.contracts.feeModuleProxy}, got ${vaultFeeModule}`);
+        fail(
+          GROUP,
+          "YieldVault feeModule set",
+          `Expected ${feeManifest.contracts.feeModuleProxy}, got ${vaultFeeModule}`,
+        );
       }
     } catch {
       fail(GROUP, "YieldVault feeModule set", "Error reading feeModule");
@@ -462,8 +609,11 @@ async function checkYieldFeeWiring(
         if (owner.toLowerCase() === timelockAddr.toLowerCase()) {
           pass(GROUP, `${name} owned by timelock`);
         } else {
-          warn(GROUP, `${name} owned by timelock`,
-            `Owner is ${owner} (expected if fee module not yet deployed)`);
+          warn(
+            GROUP,
+            `${name} owned by timelock`,
+            `Owner is ${owner} (expected if fee module not yet deployed)`,
+          );
         }
       } catch {
         fail(GROUP, `${name} owned by timelock`, "Error reading owner");
@@ -474,34 +624,58 @@ async function checkYieldFeeWiring(
   // Adapter authorized in registry
   if (govManifest?.contracts?.adapterRegistry) {
     try {
-      const registry = await ethers.getContractAt("AdapterRegistry", govManifest.contracts.adapterRegistry);
+      const registry = await ethers.getContractAt(
+        "AdapterRegistry",
+        govManifest.contracts.adapterRegistry,
+      );
       const isAuthorized = await registry.authorizedAdapters(adapterAddr);
       if (isAuthorized) {
         pass(GROUP, "Adapter authorized in registry");
       } else {
-        warn(GROUP, "Adapter authorized in registry",
-          "Adapter not authorized (expected if link step not yet run)");
+        warn(
+          GROUP,
+          "Adapter authorized in registry",
+          "Adapter not authorized (expected if link step not yet run)",
+        );
       }
     } catch {
-      fail(GROUP, "Adapter authorized in registry", "Error reading authorizedAdapters");
+      fail(
+        GROUP,
+        "Adapter authorized in registry",
+        "Error reading authorizedAdapters",
+      );
     }
   }
 
   // Revenue counter fee collector
-  if (govManifest?.contracts?.revenueCounter && feeManifest?.contracts?.feeModuleProxy) {
+  if (
+    govManifest?.contracts?.revenueCounter &&
+    feeManifest?.contracts?.feeModuleProxy
+  ) {
     try {
       const revenueCounter = await ethers.getContractAt(
-        "RevenueCounter", govManifest.contracts.revenueCounter
+        "RevenueCounter",
+        govManifest.contracts.revenueCounter,
       );
       const feeCollector = await revenueCounter.feeCollector();
-      if (feeCollector.toLowerCase() === feeManifest.contracts.feeModuleProxy.toLowerCase()) {
+      if (
+        feeCollector.toLowerCase() ===
+        feeManifest.contracts.feeModuleProxy.toLowerCase()
+      ) {
         pass(GROUP, "RevenueCounter feeCollector set");
       } else {
-        warn(GROUP, "RevenueCounter feeCollector set",
-          `feeCollector is ${feeCollector} (expected if fee module not yet deployed)`);
+        warn(
+          GROUP,
+          "RevenueCounter feeCollector set",
+          `feeCollector is ${feeCollector} (expected if fee module not yet deployed)`,
+        );
       }
     } catch {
-      fail(GROUP, "RevenueCounter feeCollector set", "Error reading feeCollector");
+      fail(
+        GROUP,
+        "RevenueCounter feeCollector set",
+        "Error reading feeCollector",
+      );
     }
   }
 }
@@ -510,7 +684,10 @@ async function checkYieldFeeWiring(
 // Check Group 6: ARM Token + Crowdfund
 // ============================================================================
 
-async function checkArmTokenCrowdfund(govManifest: any, crowdfundManifest: any) {
+async function checkArmTokenCrowdfund(
+  govManifest: any,
+  crowdfundManifest: any,
+) {
   const GROUP = "ARM Token + Crowdfund";
   const armTokenAddr = govManifest.contracts.armToken;
   const armToken = await ethers.getContractAt("ArmadaToken", armTokenAddr);
@@ -521,7 +698,11 @@ async function checkArmTokenCrowdfund(govManifest: any, crowdfundManifest: any) 
   if (totalSupply === expected12M) {
     pass(GROUP, "ARM total supply = 12M");
   } else {
-    fail(GROUP, "ARM total supply = 12M", `Actual: ${ethers.formatUnits(totalSupply, 18)}`);
+    fail(
+      GROUP,
+      "ARM total supply = 12M",
+      `Actual: ${ethers.formatUnits(totalSupply, 18)}`,
+    );
   }
 
   // Deployer balance should be 0
@@ -529,13 +710,19 @@ async function checkArmTokenCrowdfund(govManifest: any, crowdfundManifest: any) 
   if (deployerBalance === 0n) {
     pass(GROUP, "Deployer ARM balance = 0");
   } else {
-    warn(GROUP, "Deployer ARM balance = 0",
-      `Deployer holds ${ethers.formatUnits(deployerBalance, 18)} ARM (expected if crowdfund not yet deployed)`);
+    warn(
+      GROUP,
+      "Deployer ARM balance = 0",
+      `Deployer holds ${ethers.formatUnits(deployerBalance, 18)} ARM (expected if crowdfund not yet deployed)`,
+    );
   }
 
   // Crowdfund ARM loaded
   try {
-    const crowdfund = await ethers.getContractAt("ArmadaCrowdfund", crowdfundManifest.contracts.crowdfund);
+    const crowdfund = await ethers.getContractAt(
+      "ArmadaCrowdfund",
+      crowdfundManifest.contracts.crowdfund,
+    );
     const armLoaded = await crowdfund.armLoaded();
     if (armLoaded) {
       pass(GROUP, "Crowdfund ARM loaded");
@@ -548,13 +735,21 @@ async function checkArmTokenCrowdfund(govManifest: any, crowdfundManifest: any) 
 
   // Treasury balance
   if (govManifest.config?.treasuryAllocation) {
-    const treasuryBalance = await armToken.balanceOf(govManifest.contracts.treasury);
-    const expectedTreasury = ethers.parseUnits(govManifest.config.treasuryAllocation, 18);
+    const treasuryBalance = await armToken.balanceOf(
+      govManifest.contracts.treasury,
+    );
+    const expectedTreasury = ethers.parseUnits(
+      govManifest.config.treasuryAllocation,
+      18,
+    );
     if (treasuryBalance === expectedTreasury) {
       pass(GROUP, "Treasury ARM allocation correct");
     } else {
-      warn(GROUP, "Treasury ARM allocation correct",
-        `Expected ${govManifest.config.treasuryAllocation}, got ${ethers.formatUnits(treasuryBalance, 18)}`);
+      warn(
+        GROUP,
+        "Treasury ARM allocation correct",
+        `Expected ${govManifest.config.treasuryAllocation}, got ${ethers.formatUnits(treasuryBalance, 18)}`,
+      );
     }
   }
 
@@ -566,24 +761,38 @@ async function checkArmTokenCrowdfund(govManifest: any, crowdfundManifest: any) 
     if (whitelistInitialized) {
       pass(GROUP, "ARM token whitelistInitialized");
     } else {
-      fail(GROUP, "ARM token whitelistInitialized",
-        "whitelistInitialized() == false — initWhitelist was never called");
+      fail(
+        GROUP,
+        "ARM token whitelistInitialized",
+        "whitelistInitialized() == false — initWhitelist was never called",
+      );
     }
   } catch {
-    fail(GROUP, "ARM token whitelistInitialized", "Error reading whitelistInitialized");
+    fail(
+      GROUP,
+      "ARM token whitelistInitialized",
+      "Error reading whitelistInitialized",
+    );
   }
 
   try {
-    const delegatorsInitialized = await armToken.authorizedDelegatorsInitialized();
+    const delegatorsInitialized =
+      await armToken.authorizedDelegatorsInitialized();
     if (delegatorsInitialized) {
       pass(GROUP, "ARM token authorizedDelegatorsInitialized");
     } else {
-      fail(GROUP, "ARM token authorizedDelegatorsInitialized",
-        "authorizedDelegatorsInitialized() == false — initAuthorizedDelegators was never called");
+      fail(
+        GROUP,
+        "ARM token authorizedDelegatorsInitialized",
+        "authorizedDelegatorsInitialized() == false — initAuthorizedDelegators was never called",
+      );
     }
   } catch {
-    fail(GROUP, "ARM token authorizedDelegatorsInitialized",
-      "Error reading authorizedDelegatorsInitialized");
+    fail(
+      GROUP,
+      "ARM token authorizedDelegatorsInitialized",
+      "Error reading authorizedDelegatorsInitialized",
+    );
   }
 }
 
@@ -596,45 +805,69 @@ async function checkWindDownWiring(govManifest: any) {
   const windDownAddr = govManifest.contracts.windDown;
 
   if (!windDownAddr || windDownAddr === ethers.ZeroAddress) {
-    warn(GROUP, "Wind-down contract deployed",
-      "windDown address is zero — expected if crowdfund not yet deployed");
+    warn(
+      GROUP,
+      "Wind-down contract deployed",
+      "windDown address is zero — expected if crowdfund not yet deployed",
+    );
     return;
   }
 
   // Check windDown on governor
-  const governor = await ethers.getContractAt("ArmadaGovernor", govManifest.contracts.governor);
+  const governor = await ethers.getContractAt(
+    "ArmadaGovernor",
+    govManifest.contracts.governor,
+  );
   try {
     const govWindDown = await governor.windDownContract();
     if (govWindDown.toLowerCase() === windDownAddr.toLowerCase()) {
       pass(GROUP, "WindDown set on Governor");
     } else {
-      fail(GROUP, "WindDown set on Governor", `Expected ${windDownAddr}, got ${govWindDown}`);
+      fail(
+        GROUP,
+        "WindDown set on Governor",
+        `Expected ${windDownAddr}, got ${govWindDown}`,
+      );
     }
   } catch {
     fail(GROUP, "WindDown set on Governor", "Error reading windDownContract");
   }
 
   // Check windDown on ARM token
-  const armToken = await ethers.getContractAt("ArmadaToken", govManifest.contracts.armToken);
+  const armToken = await ethers.getContractAt(
+    "ArmadaToken",
+    govManifest.contracts.armToken,
+  );
   try {
     const tokenWindDown = await armToken.windDownContract();
     if (tokenWindDown.toLowerCase() === windDownAddr.toLowerCase()) {
       pass(GROUP, "WindDown set on ARM token");
     } else {
-      fail(GROUP, "WindDown set on ARM token", `Expected ${windDownAddr}, got ${tokenWindDown}`);
+      fail(
+        GROUP,
+        "WindDown set on ARM token",
+        `Expected ${windDownAddr}, got ${tokenWindDown}`,
+      );
     }
   } catch {
     fail(GROUP, "WindDown set on ARM token", "Error reading windDownContract");
   }
 
   // Check windDown on treasury
-  const treasury = await ethers.getContractAt("ArmadaTreasuryGov", govManifest.contracts.treasury);
+  const treasury = await ethers.getContractAt(
+    "ArmadaTreasuryGov",
+    govManifest.contracts.treasury,
+  );
   try {
     const treasuryWindDown = await treasury.windDownContract();
     if (treasuryWindDown.toLowerCase() === windDownAddr.toLowerCase()) {
       pass(GROUP, "WindDown set on Treasury");
     } else {
-      fail(GROUP, "WindDown set on Treasury", `Expected ${windDownAddr}, got ${treasuryWindDown}`);
+      fail(
+        GROUP,
+        "WindDown set on Treasury",
+        `Expected ${windDownAddr}, got ${treasuryWindDown}`,
+      );
     }
   } catch {
     fail(GROUP, "WindDown set on Treasury", "Error reading windDownContract");
@@ -643,18 +876,26 @@ async function checkWindDownWiring(govManifest: any) {
   // Check windDown on shield pause controller
   if (govManifest.contracts.shieldPauseController) {
     const pause = await ethers.getContractAt(
-      "ShieldPauseController", govManifest.contracts.shieldPauseController
+      "ShieldPauseController",
+      govManifest.contracts.shieldPauseController,
     );
     try {
       const pauseWindDown = await pause.windDownContract();
       if (pauseWindDown.toLowerCase() === windDownAddr.toLowerCase()) {
         pass(GROUP, "WindDown set on ShieldPauseController");
       } else {
-        fail(GROUP, "WindDown set on ShieldPauseController",
-          `Expected ${windDownAddr}, got ${pauseWindDown}`);
+        fail(
+          GROUP,
+          "WindDown set on ShieldPauseController",
+          `Expected ${windDownAddr}, got ${pauseWindDown}`,
+        );
       }
     } catch {
-      fail(GROUP, "WindDown set on ShieldPauseController", "Error reading windDownContract");
+      fail(
+        GROUP,
+        "WindDown set on ShieldPauseController",
+        "Error reading windDownContract",
+      );
     }
   }
 }
@@ -666,7 +907,10 @@ async function checkWindDownWiring(govManifest: any) {
 async function checkTreasuryConfig(govManifest: any, hubCCTP: any | null) {
   const GROUP = "Treasury Config";
   const treasuryAddr = govManifest.contracts.treasury;
-  const treasury = await ethers.getContractAt("ArmadaTreasuryGov", treasuryAddr);
+  const treasury = await ethers.getContractAt(
+    "ArmadaTreasuryGov",
+    treasuryAddr,
+  );
   const armTokenAddr = govManifest.contracts.armToken;
 
   // Token candidates to inspect: USDC (if known), ARM, and ETH sentinel address(0).
@@ -692,8 +936,11 @@ async function checkTreasuryConfig(govManifest: any, hubCCTP: any | null) {
         cfg.limitAbsolute !== 0n ||
         cfg.floorAbsolute !== 0n;
       if (!initialized) {
-        warn(GROUP, `${label} outflow config initialized`,
-          "uninitialized — expected pre-governance, must be set before distribute() works");
+        warn(
+          GROUP,
+          `${label} outflow config initialized`,
+          "uninitialized — expected pre-governance, must be set before distribute() works",
+        );
         continue;
       }
       // Initialized: verify no in-flight pending activation timestamps.
@@ -703,14 +950,24 @@ async function checkTreasuryConfig(govManifest: any, hubCCTP: any | null) {
         pending.pendingLimitBpsActivation !== 0n ||
         pending.pendingLimitAbsoluteActivation !== 0n;
       if (stuckPending) {
-        fail(GROUP, `${label} outflow has no pending activations`,
+        fail(
+          GROUP,
+          `${label} outflow has no pending activations`,
           `pending activations non-zero — windowAct=${pending.pendingWindowDurationActivation} ` +
-          `bpsAct=${pending.pendingLimitBpsActivation} absAct=${pending.pendingLimitAbsoluteActivation}`);
+            `bpsAct=${pending.pendingLimitBpsActivation} absAct=${pending.pendingLimitAbsoluteActivation}`,
+        );
       } else {
-        pass(GROUP, `${label} outflow config initialized + no pending activations`);
+        pass(
+          GROUP,
+          `${label} outflow config initialized + no pending activations`,
+        );
       }
     } catch {
-      fail(GROUP, `${label} outflow config readable`, "Error reading getOutflowConfig");
+      fail(
+        GROUP,
+        `${label} outflow config readable`,
+        "Error reading getOutflowConfig",
+      );
     }
 
     // Steward budget. Same fresh-deploy expectation: empty, seeded via governance.
@@ -718,50 +975,93 @@ async function checkTreasuryConfig(govManifest: any, hubCCTP: any | null) {
     try {
       const budget = await treasury.stewardBudgets(address);
       if (budget.authorized) {
-        warn(GROUP, `${label} steward budget initial state`,
-          `unexpectedly authorized at deploy time — limit=${budget.limit} window=${budget.window}`);
+        warn(
+          GROUP,
+          `${label} steward budget initial state`,
+          `unexpectedly authorized at deploy time — limit=${budget.limit} window=${budget.window}`,
+        );
       } else {
         pass(GROUP, `${label} steward budget unauthorized at deploy`);
       }
     } catch {
-      fail(GROUP, `${label} steward budget readable`, "Error reading stewardBudgets");
+      fail(
+        GROUP,
+        `${label} steward budget readable`,
+        "Error reading stewardBudgets",
+      );
     }
   }
 }
 
-async function checkRevenueReserve(govManifest: any, crowdfundManifest: any | null,
-  config: ReturnType<typeof getNetworkConfig>) {
+async function checkRevenueReserve(
+  govManifest: any,
+  crowdfundManifest: any | null,
+  config: ReturnType<typeof getNetworkConfig>,
+) {
   const GROUP = "Revenue Reserve";
   const c = govManifest.contracts;
-  const mismatch = reserveConfigMismatch(c.revenueReserveDistributor, config.revenueReserve);
+  const mismatch = reserveConfigMismatch(
+    c.revenueReserveDistributor,
+    config.revenueReserve,
+  );
   if (mismatch) {
     fail(GROUP, "Reserve configuration matches deployment", mismatch);
     return;
   }
   if (!c.revenueReserveDistributor || !config.revenueReserve) return;
-  if (!crowdfundManifest || !c.redemption || !c.windDown ||
-      c.redemption === ethers.ZeroAddress || c.windDown === ethers.ZeroAddress) {
-    warn(GROUP, "Post-funding integration", "Crowdfund or redemption/wind-down deployment incomplete");
+  if (
+    !crowdfundManifest ||
+    !c.redemption ||
+    !c.windDown ||
+    c.redemption === ethers.ZeroAddress ||
+    c.windDown === ethers.ZeroAddress
+  ) {
+    warn(
+      GROUP,
+      "Post-funding integration",
+      "Crowdfund or redemption/wind-down deployment incomplete",
+    );
     return;
   }
   if (!govManifest.revenueLockConstructorArgs) {
-    fail(GROUP, "Post-funding integration", "RevenueLock constructor provenance missing");
+    fail(
+      GROUP,
+      "Post-funding integration",
+      "RevenueLock constructor provenance missing",
+    );
     return;
   }
   try {
     const cap = ethers.parseUnits(config.revenueReserve.amount, 18);
-    await assertCreationProvenance("RevenueLock", c.revenueLock,
-      govManifest.revenueLockDeploymentTransaction, govManifest.revenueLockConstructorArgs, govManifest.deployer);
-    await assertCreationProvenance("RevenueReserveDistributor", c.revenueReserveDistributor,
+    await assertCreationProvenance(
+      "RevenueLock",
+      c.revenueLock,
+      govManifest.revenueLockDeploymentTransaction,
+      govManifest.revenueLockConstructorArgs,
+      govManifest.deployer,
+    );
+    await assertCreationProvenance(
+      "RevenueReserveDistributor",
+      c.revenueReserveDistributor,
       govManifest.revenueReserveDistributorDeploymentTransaction,
-      [c.armToken, config.revenueReserve.allocator, cap], govManifest.deployer);
+      [c.armToken, config.revenueReserve.allocator, cap],
+      govManifest.deployer,
+    );
     pass(GROUP, "Creation provenance");
     await assertReservePostFunding({
-      distributorAddress: c.revenueReserveDistributor, allocator: config.revenueReserve.allocator,
-      reserveCap: cap, revenueLockAllocation: ethers.parseUnits(config.armDistribution.revenueLock, 18),
-      directBeneficiaries: config.revenueLockBeneficiaries, armTokenAddress: c.armToken,
-      revenueLockAddress: c.revenueLock, governorAddress: c.governor,
-      windDownAddress: c.windDown, redemptionAddress: c.redemption,
+      distributorAddress: c.revenueReserveDistributor,
+      allocator: config.revenueReserve.allocator,
+      reserveCap: cap,
+      revenueLockAllocation: ethers.parseUnits(
+        config.armDistribution.revenueLock,
+        18,
+      ),
+      directBeneficiaries: config.revenueLockBeneficiaries,
+      armTokenAddress: c.armToken,
+      revenueLockAddress: c.revenueLock,
+      governorAddress: c.governor,
+      windDownAddress: c.windDown,
+      redemptionAddress: c.redemption,
     });
     pass(GROUP, "Post-funding integration and redemption/wind-down binding");
   } catch (error) {
@@ -778,16 +1078,26 @@ async function checkRevenueReserve(govManifest: any, crowdfundManifest: any | nu
  * config and the manifests. Runs with or without a revenue reserve (the reserve group adds
  * its own checks on top).
  */
-async function checkLaunchValues(govManifest: any, crowdfundManifest: any,
-  config: ReturnType<typeof getNetworkConfig>) {
+async function checkLaunchValues(
+  govManifest: any,
+  crowdfundManifest: any,
+  config: ReturnType<typeof getNetworkConfig>,
+) {
   const GROUP = "Launch Values";
   const c = govManifest.contracts;
   if (!c.windDown || c.windDown === ethers.ZeroAddress) {
-    warn(GROUP, "Wind-down deployed", "windDown missing from governance manifest — skipping group");
+    warn(
+      GROUP,
+      "Wind-down deployed",
+      "windDown missing from governance manifest — skipping group",
+    );
     return;
   }
   const crowdfundAddr: string = crowdfundManifest.contracts.crowdfund;
-  const crowdfund = await ethers.getContractAt("ArmadaCrowdfund", crowdfundAddr);
+  const crowdfund = await ethers.getContractAt(
+    "ArmadaCrowdfund",
+    crowdfundAddr,
+  );
   const governor = await ethers.getContractAt("ArmadaGovernor", c.governor);
   const armToken = await ethers.getContractAt("ArmadaToken", c.armToken);
   const treasury = await ethers.getContractAt("ArmadaTreasuryGov", c.treasury);
@@ -797,53 +1107,155 @@ async function checkLaunchValues(govManifest: any, crowdfundManifest: any,
 
   // Crowdfund immutables. Local deploys fall back to the deployer as launch team and an
   // Anvil signer as security council, so those compare against config only when it is set.
-  await expectOnChain(GROUP, "Crowdfund usdc", () => crowdfund.usdc(), usdcAddr);
-  await expectOnChain(GROUP, "Crowdfund armToken", () => crowdfund.armToken(), c.armToken);
-  await expectOnChain(GROUP, "Crowdfund treasury", () => crowdfund.treasury(), c.treasury);
-  await expectOnChain(GROUP, "Crowdfund launchTeam",
-    () => crowdfund.launchTeam(), config.launchTeamAddress || govManifest.deployer);
-  await expectOnChain(GROUP, "Crowdfund securityCouncil = governor securityCouncil",
-    () => crowdfund.securityCouncil(), await governor.securityCouncil());
+  await expectOnChain(
+    GROUP,
+    "Crowdfund usdc",
+    () => crowdfund.usdc(),
+    usdcAddr,
+  );
+  await expectOnChain(
+    GROUP,
+    "Crowdfund armToken",
+    () => crowdfund.armToken(),
+    c.armToken,
+  );
+  await expectOnChain(
+    GROUP,
+    "Crowdfund treasury",
+    () => crowdfund.treasury(),
+    c.treasury,
+  );
+  await expectOnChain(
+    GROUP,
+    "Crowdfund launchTeam",
+    () => crowdfund.launchTeam(),
+    config.launchTeamAddress || govManifest.deployer,
+  );
+  await expectOnChain(
+    GROUP,
+    "Crowdfund securityCouncil = governor securityCouncil",
+    () => crowdfund.securityCouncil(),
+    await governor.securityCouncil(),
+  );
   if (config.securityCouncilAddress) {
-    await expectOnChain(GROUP, "Crowdfund securityCouncil = config",
-      () => crowdfund.securityCouncil(), config.securityCouncilAddress);
+    await expectOnChain(
+      GROUP,
+      "Crowdfund securityCouncil = config",
+      () => crowdfund.securityCouncil(),
+      config.securityCouncilAddress,
+    );
   }
   if (config.crowdfundOpenTime) {
-    await expectOnChain(GROUP, `Crowdfund windowStart = ${config.crowdfundOpenTime}`,
-      () => crowdfund.windowStart(), Date.parse(config.crowdfundOpenTime) / 1000);
+    await expectOnChain(
+      GROUP,
+      `Crowdfund windowStart = ${config.crowdfundOpenTime}`,
+      () => crowdfund.windowStart(),
+      Date.parse(config.crowdfundOpenTime) / 1000,
+    );
   } else {
     const start = Number(await crowdfund.windowStart());
-    warn(GROUP, "Crowdfund windowStart", `CROWDFUND_OPEN_TIME not set — on-chain ${start} (${new Date(start * 1000).toISOString()})`);
+    warn(
+      GROUP,
+      "Crowdfund windowStart",
+      `CROWDFUND_OPEN_TIME not set — on-chain ${start} (${new Date(start * 1000).toISOString()})`,
+    );
   }
 
   // Quorum exclusions: non-voting custody must be excluded exactly once.
   try {
     const excluded: string[] = await governor.getExcludedFromQuorum();
-    for (const [label, address] of [["crowdfund", crowdfundAddr], ["RevenueLock", c.revenueLock]]) {
-      const count = excluded.filter((e) => e.toLowerCase() === address.toLowerCase()).length;
+    for (const [label, address] of [
+      ["crowdfund", crowdfundAddr],
+      ["RevenueLock", c.revenueLock],
+    ]) {
+      const count = excluded.filter(
+        (e) => e.toLowerCase() === address.toLowerCase(),
+      ).length;
       if (count === 1) pass(GROUP, `${label} excluded from quorum`);
-      else fail(GROUP, `${label} excluded from quorum`, `found ${count} times in getExcludedFromQuorum()`);
+      else
+        fail(
+          GROUP,
+          `${label} excluded from quorum`,
+          `found ${count} times in getExcludedFromQuorum()`,
+        );
     }
   } catch (error) {
-    fail(GROUP, "Quorum exclusions readable", `error reading: ${(error as Error).message}`);
+    fail(
+      GROUP,
+      "Quorum exclusions readable",
+      `error reading: ${(error as Error).message}`,
+    );
   }
 
   // Wind-down bindings in both directions, and its frozen values.
   const counterAddr: string = await lock.revenueCounter();
   const counter = await ethers.getContractAt("RevenueCounter", counterAddr);
-  await expectOnChain(GROUP, "RevenueLock → windDown", () => lock.windDownContract(), c.windDown);
-  await expectOnChain(GROUP, "RevenueCounter → windDown", () => counter.windDownContract(), c.windDown);
-  await expectOnChain(GROUP, "windDown → RevenueLock", () => windDown.revenueLock(), c.revenueLock);
-  await expectOnChain(GROUP, "windDown → RevenueCounter", () => windDown.revenueCounter(), counterAddr);
-  await expectOnChain(GROUP, "windDown → armToken", () => windDown.armToken(), c.armToken);
-  await expectOnChain(GROUP, "windDown → governor", () => windDown.governor(), c.governor);
-  await expectOnChain(GROUP, "windDown → treasury", () => windDown.treasury(), c.treasury);
-  await expectOnChain(GROUP, "windDown → redemption", () => windDown.redemptionContract(), c.redemption);
-  await expectOnChain(GROUP, "windDown → timelock", () => windDown.timelock(), c.timelockController);
-  await expectOnChain(GROUP, `windDown deadline = ${config.windDownDeadline}`,
-    () => windDown.windDownDeadline(), Math.floor(new Date(config.windDownDeadline).getTime() / 1000));
-  await expectOnChain(GROUP, `windDown revenueThreshold = $${config.windDownRevenueThreshold}`,
-    () => windDown.revenueThreshold(), ethers.parseUnits(config.windDownRevenueThreshold, 18));
+  await expectOnChain(
+    GROUP,
+    "RevenueLock → windDown",
+    () => lock.windDownContract(),
+    c.windDown,
+  );
+  await expectOnChain(
+    GROUP,
+    "RevenueCounter → windDown",
+    () => counter.windDownContract(),
+    c.windDown,
+  );
+  await expectOnChain(
+    GROUP,
+    "windDown → RevenueLock",
+    () => windDown.revenueLock(),
+    c.revenueLock,
+  );
+  await expectOnChain(
+    GROUP,
+    "windDown → RevenueCounter",
+    () => windDown.revenueCounter(),
+    counterAddr,
+  );
+  await expectOnChain(
+    GROUP,
+    "windDown → armToken",
+    () => windDown.armToken(),
+    c.armToken,
+  );
+  await expectOnChain(
+    GROUP,
+    "windDown → governor",
+    () => windDown.governor(),
+    c.governor,
+  );
+  await expectOnChain(
+    GROUP,
+    "windDown → treasury",
+    () => windDown.treasury(),
+    c.treasury,
+  );
+  await expectOnChain(
+    GROUP,
+    "windDown → redemption",
+    () => windDown.redemptionContract(),
+    c.redemption,
+  );
+  await expectOnChain(
+    GROUP,
+    "windDown → timelock",
+    () => windDown.timelock(),
+    c.timelockController,
+  );
+  await expectOnChain(
+    GROUP,
+    `windDown deadline = ${config.windDownDeadline}`,
+    () => windDown.windDownDeadline(),
+    Math.floor(new Date(config.windDownDeadline).getTime() / 1000),
+  );
+  await expectOnChain(
+    GROUP,
+    `windDown revenueThreshold = $${config.windDownRevenueThreshold}`,
+    () => windDown.revenueThreshold(),
+    ethers.parseUnits(config.windDownRevenueThreshold, 18),
+  );
 
   // Treasury outflow limits: on-chain values must equal the configured (spec) values.
   for (const [label, address, expected] of [
@@ -851,42 +1263,93 @@ async function checkLaunchValues(govManifest: any, crowdfundManifest: any,
     ["ARM", c.armToken, config.outflowConfig.arm],
     ["ETH", ethers.ZeroAddress, config.outflowConfig.eth],
   ] as const) {
-    await expectOnChain(GROUP, `${label} outflow limits (window, bps, absolute, floor)`, async () => {
-      const cfg = await treasury.getOutflowConfig(address);
-      return [cfg.windowDuration, cfg.limitBps, cfg.limitAbsolute, cfg.floorAbsolute].join(", ");
-    }, [expected.windowDuration, expected.limitBps, expected.limitAbsolute, expected.floorAbsolute].join(", "));
+    await expectOnChain(
+      GROUP,
+      `${label} outflow limits (window, bps, absolute, floor)`,
+      async () => {
+        const cfg = await treasury.getOutflowConfig(address);
+        return [
+          cfg.windowDuration,
+          cfg.limitBps,
+          cfg.limitAbsolute,
+          cfg.floorAbsolute,
+        ].join(", ");
+      },
+      [
+        expected.windowDuration,
+        expected.limitBps,
+        expected.limitAbsolute,
+        expected.floorAbsolute,
+      ].join(", "),
+    );
   }
 
   // Initial steward + USDC steward budget seeded at deploy (#221, #222).
   if (config.initialSteward) {
     try {
-      for (const check of await initialStewardChecks(config.initialSteward,
-        { steward: c.steward, treasury: c.treasury, usdc: usdcAddr })) {
+      for (const check of await initialStewardChecks(config.initialSteward, {
+        steward: c.steward,
+        treasury: c.treasury,
+        usdc: usdcAddr,
+      })) {
         results.push({ group: GROUP, ...check });
       }
     } catch (error) {
-      fail(GROUP, "Initial steward + USDC steward budget readable", (error as Error).message);
+      fail(
+        GROUP,
+        "Initial steward + USDC steward budget readable",
+        (error as Error).message,
+      );
     }
   }
 
   // RevenueLock: activated, rate cap, and (without a reserve) allocation + schedule. The
   // reserve group verifies allocation and schedule itself when a reserve is configured.
-  await expectOnChain(GROUP, "RevenueLock activated", () => lock.activated(), true);
-  await expectOnChain(GROUP, `RevenueLock MAX_REVENUE_INCREASE_PER_DAY = $${config.revenueLockMaxIncreasePerDayUsd}/day`,
-    () => lock.MAX_REVENUE_INCREASE_PER_DAY(), ethers.parseUnits(config.revenueLockMaxIncreasePerDayUsd, 18));
+  await expectOnChain(
+    GROUP,
+    "RevenueLock activated",
+    () => lock.activated(),
+    true,
+  );
+  await expectOnChain(
+    GROUP,
+    `RevenueLock MAX_REVENUE_INCREASE_PER_DAY = $${config.revenueLockMaxIncreasePerDayUsd}/day`,
+    () => lock.MAX_REVENUE_INCREASE_PER_DAY(),
+    ethers.parseUnits(config.revenueLockMaxIncreasePerDayUsd, 18),
+  );
   if (!config.revenueReserve) {
     try {
-      await assertRevenueLockAllocation(c.revenueLock, ethers.parseUnits(config.armDistribution.revenueLock, 18));
-      await assertRevenueLockSchedule(c.revenueLock, config.revenueLockBeneficiaries);
+      await assertRevenueLockAllocation(
+        c.revenueLock,
+        ethers.parseUnits(config.armDistribution.revenueLock, 18),
+      );
+      await assertRevenueLockSchedule(
+        c.revenueLock,
+        config.revenueLockBeneficiaries,
+      );
       pass(GROUP, "RevenueLock allocation + beneficiary schedule");
     } catch (error) {
-      fail(GROUP, "RevenueLock allocation + beneficiary schedule", (error as Error).message);
+      fail(
+        GROUP,
+        "RevenueLock allocation + beneficiary schedule",
+        (error as Error).message,
+      );
     }
   }
 
   // ARM token: the treasury cannot delegate, and transfers stay locked until governance.
-  await expectOnChain(GROUP, "ARM noDelegation(treasury)", () => armToken.noDelegation(c.treasury), true);
-  await expectOnChain(GROUP, "ARM transferable = false", () => armToken.transferable(), false);
+  await expectOnChain(
+    GROUP,
+    "ARM noDelegation(treasury)",
+    () => armToken.noDelegation(c.treasury),
+    true,
+  );
+  await expectOnChain(
+    GROUP,
+    "ARM transferable = false",
+    () => armToken.transferable(),
+    false,
+  );
 }
 
 // ============================================================================
@@ -903,7 +1366,9 @@ async function main() {
   console.log(`CCTP Mode: ${config.cctpMode}`);
   console.log(`Scope: ${launch1 ? "Launch 1" : "full"}\n`);
   if (launch1) {
-    console.log(`Launch 2 components not checked (not part of the Launch 1 deploy): ${LAUNCH2_GROUPS.join(", ")}\n`);
+    console.log(
+      `Launch 2 components not checked (not part of the Launch 1 deploy): ${LAUNCH2_GROUPS.join(", ")}\n`,
+    );
   }
 
   // Load manifests
@@ -917,9 +1382,13 @@ async function main() {
 
   const hubCCTP = loadOrWarn("CCTP Wiring", hubCCTPFile);
   // A Launch 1 run does not load the Launch 2 manifests, so their groups never run.
-  const hubPool = launch1 ? null : loadOrWarn("SNARK Verification", hubPoolFile);
+  const hubPool = launch1
+    ? null
+    : loadOrWarn("SNARK Verification", hubPoolFile);
   const govManifest = loadOrWarn("Governance Wiring", govFile);
-  const yieldManifest = launch1 ? null : loadOrWarn("Yield + Fee Wiring", yieldFile);
+  const yieldManifest = launch1
+    ? null
+    : loadOrWarn("Yield + Fee Wiring", yieldFile);
   const crowdfundManifest = loadOrWarn("ARM Token + Crowdfund", crowdfundFile);
   const feeManifest = launch1 ? null : loadDeployment(feeFile); // Soft load — no group-level warn
 
@@ -933,19 +1402,36 @@ async function main() {
   }
 
   if (hubPool) {
-    await checkPrivacyPoolWiring(hubPool, govManifest, yieldManifest, feeManifest);
+    await checkPrivacyPoolWiring(
+      hubPool,
+      govManifest,
+      yieldManifest,
+      feeManifest,
+    );
   }
 
   if (govManifest) {
     await checkGovernanceWiring(govManifest);
     if (config.hardenTimelock && crowdfundManifest) {
       try {
-        const unexpected = await timelockUnexpectedRoleHolders(govManifest.contracts.timelockController,
-          govManifest.deployBlock, govManifest.contracts.governor);
-        if (unexpected.length) fail("Governance Wiring", "No unexpected timelock role holders", unexpected.join(", "));
+        const unexpected = await timelockUnexpectedRoleHolders(
+          govManifest.contracts.timelockController,
+          govManifest.deployBlock,
+          govManifest.contracts.governor,
+        );
+        if (unexpected.length)
+          fail(
+            "Governance Wiring",
+            "No unexpected timelock role holders",
+            unexpected.join(", "),
+          );
         else pass("Governance Wiring", "No unexpected timelock role holders");
       } catch (error) {
-        fail("Governance Wiring", "Timelock role event scan complete", String(error));
+        fail(
+          "Governance Wiring",
+          "Timelock role event scan complete",
+          String(error),
+        );
       }
     }
     await checkWindDownWiring(govManifest);
@@ -967,8 +1453,8 @@ async function main() {
   console.log("  VERIFICATION RESULTS");
   console.log("=".repeat(90));
 
-  const maxGroup = Math.max(...results.map(r => r.group.length));
-  const maxCheck = Math.max(...results.map(r => r.check.length));
+  const maxGroup = Math.max(...results.map((r) => r.group.length));
+  const maxCheck = Math.max(...results.map((r) => r.check.length));
 
   for (const r of results) {
     const icon = r.status === "PASS" ? "✓" : r.status === "WARN" ? "⚠" : "✗";
@@ -976,15 +1462,17 @@ async function main() {
     const line = `  ${r.group.padEnd(maxGroup)}  ${r.check.padEnd(maxCheck)}  ${statusStr}`;
     console.log(line);
     if (r.detail && r.status !== "PASS") {
-      console.log(`  ${"".padEnd(maxGroup)}  ${"".padEnd(maxCheck)}    → ${r.detail}`);
+      console.log(
+        `  ${"".padEnd(maxGroup)}  ${"".padEnd(maxCheck)}    → ${r.detail}`,
+      );
     }
   }
 
   console.log("=".repeat(90));
 
-  const passes = results.filter(r => r.status === "PASS").length;
-  const warns = results.filter(r => r.status === "WARN").length;
-  const fails = results.filter(r => r.status === "FAIL").length;
+  const passes = results.filter((r) => r.status === "PASS").length;
+  const warns = results.filter((r) => r.status === "WARN").length;
+  const fails = results.filter((r) => r.status === "FAIL").length;
 
   console.log(`\n  ${passes} passed, ${warns} warnings, ${fails} failed\n`);
 

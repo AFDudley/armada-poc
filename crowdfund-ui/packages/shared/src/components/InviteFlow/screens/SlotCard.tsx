@@ -1,67 +1,67 @@
 // ABOUTME: Ported from the armada-crowdfund mockup (InviteFlow/screens/SlotCard.tsx).
 // ABOUTME: Extended with an optional `resolveEns` prop for real ENS resolution; without it ENS input fails closed (showcase passes `demoResolveEns`).
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { ZeroAddress } from 'ethers'
-import styles from './SlotCard.module.css'
-import { Button } from '@armada/ui'
-import { Tag } from '@armada/ui'
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ZeroAddress } from "ethers";
+import styles from "./SlotCard.module.css";
+import { Button } from "@armada/ui";
+import { Tag } from "@armada/ui";
 import {
   ADDRESS_INPUT_MAX_LENGTH,
   isValidEnsName,
   sanitizeAddressInput,
   tryGetChecksumAddress,
-} from '../../../lib/addressInput'
-import { INVITE_METHOD_PICKER_UX } from '../../../lib/inviteUx'
-import { MOBILE_LAYOUT_MAX_WIDTH_PX } from '../../../lib/viewportBreakpoints'
+} from "../../../lib/addressInput";
+import { INVITE_METHOD_PICKER_UX } from "../../../lib/inviteUx";
+import { MOBILE_LAYOUT_MAX_WIDTH_PX } from "../../../lib/viewportBreakpoints";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type SlotStatus =
-  | 'empty'
-  | 'link-active'
-  | 'onchain-pending'
-  | 'redeemed'
-  | 'expired'
-  | 'revoked'
-type ExpandedAction = 'link' | 'onchain' | null
-type EnsState = 'idle' | 'resolving' | 'resolved' | 'error'
+  | "empty"
+  | "link-active"
+  | "onchain-pending"
+  | "redeemed"
+  | "expired"
+  | "revoked";
+type ExpandedAction = "link" | "onchain" | null;
+type EnsState = "idle" | "resolving" | "resolved" | "error";
 
 export interface SlotData {
-  id: number
-  status: SlotStatus
-  link?: string
-  expiresAt?: Date
-  invitedAddress?: string
+  id: number;
+  status: SlotStatus;
+  link?: string;
+  expiresAt?: Date;
+  invitedAddress?: string;
   /** ENS name for `invitedAddress` — populated either from the forward lookup
    *  at invite time (user typed `alice.eth`) or from a reverse lookup once
    *  the on-chain invitee address resolves. Optional; falls back to truncated
    *  address when absent. */
-  ensName?: string
-  redeemedBy?: string
+  ensName?: string;
+  redeemedBy?: string;
   /** Reverse-resolved ENS name for `redeemedBy`. Optional; falls back to
    *  truncated address when absent. */
-  redeemedEnsName?: string
+  redeemedEnsName?: string;
   /** True when the invitee is the connected wallet itself (a self-invite to the
    *  next hop) — the row reads "Self-invited" instead of "Invited". */
-  isSelf?: boolean
+  isSelf?: boolean;
   /** When the invitee joined / redeemed (shown as “Joined on …”). */
-  joinedAt?: Date
+  joinedAt?: Date;
   /** When an onchain address invite was issued. */
-  invitedAt?: Date
+  invitedAt?: Date;
   /** When a link expired or was revoked. */
-  closedAt?: Date
+  closedAt?: Date;
   /**
    * Hop the invitee joins at (1 = Hop-1, 2 = Hop-2).
    * Prefer 1 | 2 for new invites; 0 kept for legacy showcase fixtures.
    */
-  inviteeHop?: 0 | 1 | 2
+  inviteeHop?: 0 | 1 | 2;
   /**
    * When true, invite counts toward allowance but stays off the sent list
    * until the create confirmation is dismissed (Done / close).
    */
-  hideFromList?: boolean
+  hideFromList?: boolean;
 }
 
 /**
@@ -69,72 +69,76 @@ export interface SlotData {
  * a fail-closed "ENS lookup unavailable" error — an invite never goes to a
  * guessed address. Showcase surfaces pass `demoResolveEns` instead.
  */
-export type SlotCardEnsResult =
-  | { address: string }
-  | { error: string }
+export type SlotCardEnsResult = { address: string } | { error: string };
 
 interface SlotCardProps {
-  slot: SlotData
-  onGenerateLink: (slotId: number) => Promise<
-    | void
-    | { id: number; link: string; expiresAt: Date; nonce?: number }
-  >
-  onCopy: (slotId: number, link: string) => void
-  onRevoke: (slotId: number) => void
-  onInviteOnchain: (slotId: number, address: string, ensName?: string) => Promise<void>
-  copied?: boolean
-  loading?: boolean
+  slot: SlotData;
+  onGenerateLink: (slotId: number) => Promise<void | {
+    id: number;
+    link: string;
+    expiresAt: Date;
+    nonce?: number;
+  }>;
+  onCopy: (slotId: number, link: string) => void;
+  onRevoke: (slotId: number) => void;
+  onInviteOnchain: (
+    slotId: number,
+    address: string,
+    ensName?: string,
+  ) => Promise<void>;
+  copied?: boolean;
+  loading?: boolean;
   /** Showcase / static demos — start with link or onchain panel open (legacy UX only). */
-  defaultExpandedAction?: Exclude<ExpandedAction, null>
+  defaultExpandedAction?: Exclude<ExpandedAction, null>;
   /**
    * Controlled ENS resolver. Called when the user types an ENS-looking input.
    * Return `{ address }` on success or `{ error }` on failure. Omit and ENS
    * input fails closed (showcase surfaces pass `demoResolveEns`).
    */
-  resolveEns?: (input: string) => Promise<SlotCardEnsResult>
+  resolveEns?: (input: string) => Promise<SlotCardEnsResult>;
   /** Wallet is on a chain other than the hub. Empty slots replace the invite /
    *  create-link buttons with a single "Switch network" action so the user
    *  can't start a chain operation against the wrong network. */
-  isWrongNetwork?: boolean
+  isWrongNetwork?: boolean;
   /** Open the chain-switch affordance (RainbowKit chain modal). */
-  onSwitchNetwork?: () => void
+  onSwitchNetwork?: () => void;
   /**
    * Method-picker UX: empty slots show a single Invite button. Called with the
    * slot id and the button element (anchor for the desktop menu).
    */
-  onInviteClick?: (slotId: number, anchor: HTMLElement) => void
-  invitePickerOpen?: boolean
-  onInviteButtonRef?: (slotId: number, el: HTMLButtonElement | null) => void
+  onInviteClick?: (slotId: number, anchor: HTMLElement) => void;
+  invitePickerOpen?: boolean;
+  onInviteButtonRef?: (slotId: number, el: HTMLButtonElement | null) => void;
   /** Redeemed slots: open crowdfund with this invitee selected. */
-  onViewRedeemed?: (address: string) => void
+  onViewRedeemed?: (address: string) => void;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function formatExpiry(date: Date): string {
-  const diffDays = Math.ceil((date.getTime() - Date.now()) / 86400000)
-  if (diffDays <= 0) return 'Expired'
-  if (diffDays === 1) return 'Expires tomorrow'
-  return `Expires in ${diffDays} days`
+  const diffDays = Math.ceil((date.getTime() - Date.now()) / 86400000);
+  if (diffDays <= 0) return "Expired";
+  if (diffDays === 1) return "Expires tomorrow";
+  return `Expires in ${diffDays} days`;
 }
 
 function formatJoinedOn(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 const INVITEE_HOP_META: Record<0 | 1 | 2, string> = {
-  0: 'Hop-0',
-  1: 'Hop-1',
-  2: 'Hop-2',
-}
+  0: "Hop-0",
+  1: "Hop-1",
+  2: "Hop-2",
+};
 
 export function truncateAddress(addr: string): string {
-  if (addr.length <= 12) return addr
-  return addr.slice(0, 6) + '…' + addr.slice(-4)
+  if (addr.length <= 12) return addr;
+  return addr.slice(0, 6) + "…" + addr.slice(-4);
 }
 
 /** Loose ENS prefilter — drives the "should we kick off resolution?" branch
@@ -142,7 +146,7 @@ export function truncateAddress(addr: string): string {
  * `isValidEnsName`; this looser check still treats partial typing like
  * "alice.et" as not-yet-ENS. */
 function isEnsCandidate(val: string): boolean {
-  return val.endsWith('.eth') && val.length > 4
+  return val.endsWith(".eth") && val.length > 4;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -164,236 +168,240 @@ export default function SlotCard({
   onInviteButtonRef,
   onViewRedeemed,
 }: SlotCardProps) {
-  const useMethodPicker = INVITE_METHOD_PICKER_UX && Boolean(onInviteClick) && !isWrongNetwork
-  const inviteBtnRef = useRef<HTMLButtonElement>(null)
+  const useMethodPicker =
+    INVITE_METHOD_PICKER_UX && Boolean(onInviteClick) && !isWrongNetwork;
+  const inviteBtnRef = useRef<HTMLButtonElement>(null);
   const [expandedAction, setExpandedAction] = useState<ExpandedAction>(
-    slot.status === 'empty' && !useMethodPicker ? (defaultExpandedAction ?? null) : null
-  )
-  const [addressInput, setAddressInput] = useState('')
+    slot.status === "empty" && !useMethodPicker
+      ? (defaultExpandedAction ?? null)
+      : null,
+  );
+  const [addressInput, setAddressInput] = useState("");
   // Mirror of `addressInput` in a ref so async ENS resolution can race-guard
   // against the user typing more characters while a lookup is in flight.
-  const addressInputRef = useRef(addressInput)
-  addressInputRef.current = addressInput
+  const addressInputRef = useRef(addressInput);
+  addressInputRef.current = addressInput;
 
   useEffect(() => {
-    if (!useMethodPicker || !onInviteButtonRef) return
-    onInviteButtonRef(slot.id, inviteBtnRef.current)
-    return () => onInviteButtonRef(slot.id, null)
-  }, [useMethodPicker, onInviteButtonRef, slot.id])
+    if (!useMethodPicker || !onInviteButtonRef) return;
+    onInviteButtonRef(slot.id, inviteBtnRef.current);
+    return () => onInviteButtonRef(slot.id, null);
+  }, [useMethodPicker, onInviteButtonRef, slot.id]);
 
-  const [ensState, setEnsState] = useState<EnsState>('idle')
+  const [ensState, setEnsState] = useState<EnsState>("idle");
   // No resolver supplied — an ENS name can't be looked up (never guess one).
-  const [ensUnavailable, setEnsUnavailable] = useState(false)
-  const [resolvedAddress, setResolvedAddress] = useState('')
-  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false)
-  const [revokePopoverPos, setRevokePopoverPos] = useState<{ top: number; left: number } | null>(
-    null,
-  )
-  const revokeBtnRef = useRef<HTMLButtonElement>(null)
-  const revokePopoverRef = useRef<HTMLDivElement>(null)
+  const [ensUnavailable, setEnsUnavailable] = useState(false);
+  const [resolvedAddress, setResolvedAddress] = useState("");
+  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
+  const [revokePopoverPos, setRevokePopoverPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const revokeBtnRef = useRef<HTMLButtonElement>(null);
+  const revokePopoverRef = useRef<HTMLDivElement>(null);
 
   const resetInput = () => {
-    setAddressInput('')
-    setEnsState('idle')
-    setResolvedAddress('')
-  }
+    setAddressInput("");
+    setEnsState("idle");
+    setResolvedAddress("");
+  };
 
   const toggleExpand = (action: ExpandedAction) => {
     if (expandedAction === action) {
-      setExpandedAction(null)
-      resetInput()
+      setExpandedAction(null);
+      resetInput();
     } else {
-      setExpandedAction(action)
-      resetInput()
+      setExpandedAction(action);
+      resetInput();
     }
-  }
+  };
 
   const handleAddressChange = async (rawVal: string) => {
     // Trim whitespace + cap length up front so a stray paste can't smuggle
     // characters past the checksum / charset checks below.
-    const val = sanitizeAddressInput(rawVal)
-    setAddressInput(val)
-    setResolvedAddress('')
-    setEnsUnavailable(false)
+    const val = sanitizeAddressInput(rawVal);
+    setAddressInput(val);
+    setResolvedAddress("");
+    setEnsUnavailable(false);
     if (isEnsCandidate(val)) {
       // Strict charset gate before we burn an ENS lookup — uppercase letters,
       // whitespace, IDN / emoji get rejected without an RPC round-trip.
       if (!isValidEnsName(val)) {
-        setEnsState('error')
-        return
+        setEnsState("error");
+        return;
       }
-      setEnsState('resolving')
+      setEnsState("resolving");
       // Controlled mode — delegate to the consumer's real ENS resolver.
       // Race-guard via the input value: if the user kept typing while we
       // were resolving, drop a stale result on the floor.
       if (resolveEns) {
         try {
-          const result = await resolveEns(val)
-          if (val !== addressInputRef.current) return
-          if ('address' in result) {
-            const checksummed = tryGetChecksumAddress(result.address)
+          const result = await resolveEns(val);
+          if (val !== addressInputRef.current) return;
+          if ("address" in result) {
+            const checksummed = tryGetChecksumAddress(result.address);
             // Resolver returned something that isn't a valid address, or the
             // zero address (the contract requires a non-zero invitee) — treat
             // as not-found rather than feeding garbage into the contract.
             if (!checksummed || checksummed === ZeroAddress) {
-              setEnsState('error')
-              return
+              setEnsState("error");
+              return;
             }
-            setResolvedAddress(checksummed)
-            setEnsState('resolved')
+            setResolvedAddress(checksummed);
+            setEnsState("resolved");
           } else {
-            setEnsState('error')
+            setEnsState("error");
           }
         } catch {
-          if (val !== addressInputRef.current) return
-          setEnsState('error')
+          if (val !== addressInputRef.current) return;
+          setEnsState("error");
         }
-        return
+        return;
       }
       // No resolver: fail closed. Showcase surfaces pass `demoResolveEns`
       // explicitly; a live surface must never invite an invented address.
-      setEnsUnavailable(true)
-      setEnsState('error')
+      setEnsUnavailable(true);
+      setEnsState("error");
     } else {
       // Direct 0x… entry — validate checksum (catches EIP-55 typos), keep the
       // canonical casing for the contract call. Reject the zero address.
-      const checksummed = tryGetChecksumAddress(val)
+      const checksummed = tryGetChecksumAddress(val);
       if (checksummed && checksummed !== ZeroAddress) {
-        setEnsState('resolved')
-        setResolvedAddress(checksummed)
+        setEnsState("resolved");
+        setResolvedAddress(checksummed);
       } else if (checksummed === ZeroAddress) {
-        setEnsState('error')
+        setEnsState("error");
       } else {
-        setEnsState('idle')
+        setEnsState("idle");
       }
     }
-  }
+  };
 
   const handleGenerateLink = async () => {
-    await onGenerateLink(slot.id)
-    setExpandedAction(null)
-  }
+    await onGenerateLink(slot.id);
+    setExpandedAction(null);
+  };
 
   const handleInviteOnchain = async () => {
     // Always send the checksummed address downstream. `resolvedAddress` is
     // already checksummed (set by `handleAddressChange`); if the user typed a
     // raw 0x… and we somehow got here without it being populated, normalize
     // the typed value the same way as a defense-in-depth backstop.
-    const address = resolvedAddress || tryGetChecksumAddress(addressInput)
-    if (!address || address === ZeroAddress) return
+    const address = resolvedAddress || tryGetChecksumAddress(addressInput);
+    if (!address || address === ZeroAddress) return;
     await onInviteOnchain(
       slot.id,
       address,
-      isValidEnsName(addressInput) ? addressInput : undefined
-    )
-    setExpandedAction(null)
-    resetInput()
-  }
+      isValidEnsName(addressInput) ? addressInput : undefined,
+    );
+    setExpandedAction(null);
+    resetInput();
+  };
 
   const canSubmitOnchain =
-    ensState === 'resolved' &&
-    (resolvedAddress !== '' || tryGetChecksumAddress(addressInput) !== null)
+    ensState === "resolved" &&
+    (resolvedAddress !== "" || tryGetChecksumAddress(addressInput) !== null);
 
   const updateRevokePopoverPosition = () => {
-    const anchor = revokeBtnRef.current
-    if (!anchor) return
-    const rect = anchor.getBoundingClientRect()
-    const popover = revokePopoverRef.current
-    const popoverHeight = popover?.offsetHeight ?? 120
-    const popoverWidth = popover?.offsetWidth ?? 220
-    const gap = 6
-    const viewportMargin = 20
-    const isMobile = window.matchMedia(`(max-width: ${MOBILE_LAYOUT_MAX_WIDTH_PX}px)`).matches
+    const anchor = revokeBtnRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const popover = revokePopoverRef.current;
+    const popoverHeight = popover?.offsetHeight ?? 120;
+    const popoverWidth = popover?.offsetWidth ?? 220;
+    const gap = 6;
+    const viewportMargin = 20;
+    const isMobile = window.matchMedia(
+      `(max-width: ${MOBILE_LAYOUT_MAX_WIDTH_PX}px)`,
+    ).matches;
 
     if (isMobile) {
-      let left = rect.right - popoverWidth
+      let left = rect.right - popoverWidth;
       left = Math.max(
         viewportMargin,
         Math.min(left, window.innerWidth - popoverWidth - viewportMargin),
-      )
-      let top = rect.top - gap - popoverHeight
+      );
+      let top = rect.top - gap - popoverHeight;
       if (top < viewportMargin) {
-        top = rect.bottom + gap
+        top = rect.bottom + gap;
       }
-      setRevokePopoverPos({ top, left })
-      return
+      setRevokePopoverPos({ top, left });
+      return;
     }
 
-    const top = rect.top - gap - popoverHeight
-    setRevokePopoverPos({ top, left: rect.right })
-  }
+    const top = rect.top - gap - popoverHeight;
+    setRevokePopoverPos({ top, left: rect.right });
+  };
 
   useLayoutEffect(() => {
     if (!revokeConfirmOpen) {
-      setRevokePopoverPos(null)
-      return
+      setRevokePopoverPos(null);
+      return;
     }
-    updateRevokePopoverPosition()
-  }, [revokeConfirmOpen])
+    updateRevokePopoverPosition();
+  }, [revokeConfirmOpen]);
 
   useEffect(() => {
-    if (!revokeConfirmOpen) return
+    if (!revokeConfirmOpen) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setRevokeConfirmOpen(false)
-    }
+      if (e.key === "Escape") setRevokeConfirmOpen(false);
+    };
 
     const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node
-      if (revokeBtnRef.current?.contains(target)) return
-      if (revokePopoverRef.current?.contains(target)) return
-      setRevokeConfirmOpen(false)
-    }
+      const target = e.target as Node;
+      if (revokeBtnRef.current?.contains(target)) return;
+      if (revokePopoverRef.current?.contains(target)) return;
+      setRevokeConfirmOpen(false);
+    };
 
-    const onReposition = () => updateRevokePopoverPosition()
+    const onReposition = () => updateRevokePopoverPosition();
 
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('resize', onReposition)
-    window.addEventListener('scroll', onReposition, true)
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
 
     return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('resize', onReposition)
-      window.removeEventListener('scroll', onReposition, true)
-    }
-  }, [revokeConfirmOpen])
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [revokeConfirmOpen]);
 
   const handleConfirmRevoke = () => {
-    onRevoke(slot.id)
-    setRevokeConfirmOpen(false)
-  }
+    onRevoke(slot.id);
+    setRevokeConfirmOpen(false);
+  };
 
-  const isExpanded = expandedAction !== null
-  const isAvailable = slot.status === 'empty'
+  const isExpanded = expandedAction !== null;
+  const isAvailable = slot.status === "empty";
 
   return (
-    <div
-      className={[
-        styles.card,
-        isExpanded ? styles.expanded : '',
-      ].join(' ')}
-    >
+    <div className={[styles.card, isExpanded ? styles.expanded : ""].join(" ")}>
       {/* ── Main row ── */}
       <div className={styles.row}>
         {/* Badge */}
-        <div className={[styles.badge, isAvailable && styles.badgeAvailable].filter(Boolean).join(' ')}>
+        <div
+          className={[styles.badge, isAvailable && styles.badgeAvailable]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <span className={styles.badgeNumber}>{slot.id}</span>
         </div>
 
         {/* Empty label */}
-        {slot.status === 'empty' && (
+        {slot.status === "empty" && (
           <span className={styles.availableLabel}>Available</span>
         )}
 
         {/* Right content */}
         <div className={styles.right}>
-
           {/* Empty — action buttons. On the wrong network, both invite paths
               need the hub chain, so offer a single "Switch network" action
               (opens the RainbowKit chain modal) instead. */}
-          {slot.status === 'empty' &&
+          {slot.status === "empty" &&
             (isWrongNetwork ? (
               <div className={styles.actions}>
                 <Button
@@ -415,7 +423,7 @@ export default function SlotCard({
                   aria-haspopup="menu"
                   aria-expanded={invitePickerOpen}
                   onClick={(e) => {
-                    if (onInviteClick) onInviteClick(slot.id, e.currentTarget)
+                    if (onInviteClick) onInviteClick(slot.id, e.currentTarget);
                   }}
                 />
               </div>
@@ -426,20 +434,20 @@ export default function SlotCard({
                   size="sm"
                   label="Create link"
                   showIcon={false}
-                  onClick={() => toggleExpand('link')}
+                  onClick={() => toggleExpand("link")}
                 />
                 <Button
                   variant="secondary"
                   size="sm"
                   label="Invite onchain"
                   showIcon={false}
-                  onClick={() => toggleExpand('onchain')}
+                  onClick={() => toggleExpand("onchain")}
                 />
               </div>
             ))}
 
           {/* Link active */}
-          {slot.status === 'link-active' && slot.link && (
+          {slot.status === "link-active" && slot.link && (
             <div className={styles.linkRow}>
               <div className={styles.linkStack}>
                 <span className={styles.linkText}>{slot.link}</span>
@@ -447,8 +455,12 @@ export default function SlotCard({
                   <span className={styles.pendingLabel}>Pending</span>
                   {slot.expiresAt && (
                     <>
-                      <span className={styles.dot} aria-hidden="true">·</span>
-                      <span className={styles.expiry}>{formatExpiry(slot.expiresAt)}</span>
+                      <span className={styles.dot} aria-hidden="true">
+                        ·
+                      </span>
+                      <span className={styles.expiry}>
+                        {formatExpiry(slot.expiresAt)}
+                      </span>
                     </>
                   )}
                 </div>
@@ -459,31 +471,31 @@ export default function SlotCard({
                   onClick={() => onCopy(slot.id, slot.link!)}
                   disabled={loading}
                 >
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? "Copied" : "Copy"}
                 </button>
                 <button
                   ref={revokeBtnRef}
                   type="button"
-                  className={[styles.textBtn, styles.textBtnDanger].join(' ')}
+                  className={[styles.textBtn, styles.textBtnDanger].join(" ")}
                   aria-expanded={revokeConfirmOpen}
                   aria-haspopup="dialog"
                   disabled={loading}
                   onClick={() => {
                     if (revokeConfirmOpen) {
-                      setRevokeConfirmOpen(false)
-                      return
+                      setRevokeConfirmOpen(false);
+                      return;
                     }
-                    setRevokeConfirmOpen(true)
+                    setRevokeConfirmOpen(true);
                   }}
                 >
-                  {loading ? 'Revoking…' : 'Revoke'}
+                  {loading ? "Revoking…" : "Revoke"}
                 </button>
               </div>
             </div>
           )}
 
           {/* Onchain pending */}
-          {slot.status === 'onchain-pending' && slot.invitedAddress && (
+          {slot.status === "onchain-pending" && slot.invitedAddress && (
             <div className={styles.statusRow}>
               <div className={styles.addressStack}>
                 <span className={styles.addressPrimary}>
@@ -495,17 +507,22 @@ export default function SlotCard({
                   </span>
                 )}
               </div>
-              <Tag label={slot.isSelf ? 'Self-invited' : 'Invited'} dot="lavender" />
+              <Tag
+                label={slot.isSelf ? "Self-invited" : "Invited"}
+                dot="lavender"
+              />
             </div>
           )}
 
           {/* Redeemed */}
-          {slot.status === 'redeemed' && (
+          {slot.status === "redeemed" && (
             <div className={styles.statusRow}>
               <div className={styles.addressStack}>
                 <span className={styles.addressPrimaryBright}>
                   {slot.redeemedEnsName ??
-                    (slot.redeemedBy ? truncateAddress(slot.redeemedBy) : 'Link redeemed')}
+                    (slot.redeemedBy
+                      ? truncateAddress(slot.redeemedBy)
+                      : "Link redeemed")}
                 </span>
                 {slot.redeemedEnsName && slot.redeemedBy && (
                   <span className={styles.addressSecondary}>
@@ -515,11 +532,15 @@ export default function SlotCard({
                 {(slot.inviteeHop != null || slot.joinedAt) && (
                   <span className={styles.addressSecondary}>
                     {[
-                      slot.inviteeHop != null ? INVITEE_HOP_META[slot.inviteeHop] : null,
-                      slot.joinedAt ? `Joined on ${formatJoinedOn(slot.joinedAt)}` : null,
+                      slot.inviteeHop != null
+                        ? INVITEE_HOP_META[slot.inviteeHop]
+                        : null,
+                      slot.joinedAt
+                        ? `Joined on ${formatJoinedOn(slot.joinedAt)}`
+                        : null,
                     ]
                       .filter(Boolean)
-                      .join(' • ')}
+                      .join(" • ")}
                   </span>
                 )}
               </div>
@@ -534,86 +555,90 @@ export default function SlotCard({
               ) : null}
             </div>
           )}
-
         </div>
       </div>
 
       {/* ── Expanded: create link ── */}
-      {!useMethodPicker && slot.status === 'empty' && expandedAction === 'link' && (
-        <div className={styles.expandedSection}>
-          <p className={styles.hint}>
-            Your wallet will sign a message to generate the link. No gas required.
-          </p>
-          <div className={styles.expandedAction}>
-            <Button
-              variant="primary"
-              size="sm"
-              label={loading ? 'Generating…' : 'Generate link'}
-              showIcon={false}
-              onClick={handleGenerateLink}
-              disabled={loading}
-            />
+      {!useMethodPicker &&
+        slot.status === "empty" &&
+        expandedAction === "link" && (
+          <div className={styles.expandedSection}>
+            <p className={styles.hint}>
+              Your wallet will sign a message to generate the link. No gas
+              required.
+            </p>
+            <div className={styles.expandedAction}>
+              <Button
+                variant="primary"
+                size="sm"
+                label={loading ? "Generating…" : "Generate link"}
+                showIcon={false}
+                onClick={handleGenerateLink}
+                disabled={loading}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* ── Expanded: invite onchain ── */}
-      {!useMethodPicker && slot.status === 'empty' && expandedAction === 'onchain' && (
-        <div className={styles.expandedSection}>
-          <div className={styles.inputWrapper}>
-            <input
-              type="text"
-              className={[
-                styles.input,
-                ensState === 'error' ? styles.inputError : '',
-                ensState === 'resolved' ? styles.inputResolved : '',
-              ].join(' ')}
-              placeholder="0x… or name.eth"
-              value={addressInput}
-              onChange={e => handleAddressChange(e.target.value)}
-              aria-label="Wallet address or ENS name"
-              spellCheck={false}
-              autoComplete="off"
-              autoCapitalize="off"
-              autoCorrect="off"
-              maxLength={ADDRESS_INPUT_MAX_LENGTH}
-            />
-            {ensState === 'resolving' && (
-              <span className={styles.spinner} aria-label="Resolving ENS" />
-            )}
-            {ensState === 'resolved' &&
-              resolvedAddress &&
-              resolvedAddress !== addressInput && (
-                <span className={styles.inlineResolved}>
-                  {truncateAddress(resolvedAddress)}
-                </span>
+      {!useMethodPicker &&
+        slot.status === "empty" &&
+        expandedAction === "onchain" && (
+          <div className={styles.expandedSection}>
+            <div className={styles.inputWrapper}>
+              <input
+                type="text"
+                className={[
+                  styles.input,
+                  ensState === "error" ? styles.inputError : "",
+                  ensState === "resolved" ? styles.inputResolved : "",
+                ].join(" ")}
+                placeholder="0x… or name.eth"
+                value={addressInput}
+                onChange={(e) => handleAddressChange(e.target.value)}
+                aria-label="Wallet address or ENS name"
+                spellCheck={false}
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                maxLength={ADDRESS_INPUT_MAX_LENGTH}
+              />
+              {ensState === "resolving" && (
+                <span className={styles.spinner} aria-label="Resolving ENS" />
               )}
+              {ensState === "resolved" &&
+                resolvedAddress &&
+                resolvedAddress !== addressInput && (
+                  <span className={styles.inlineResolved}>
+                    {truncateAddress(resolvedAddress)}
+                  </span>
+                )}
+            </div>
+            {ensState === "error" && (
+              <span className={styles.errorMsg}>
+                {tryGetChecksumAddress(addressInput) === ZeroAddress
+                  ? "Can’t invite the zero address."
+                  : ensUnavailable
+                    ? "ENS lookup unavailable — paste the 0x address instead."
+                    : "ENS name not found"}
+              </span>
+            )}
+            <p className={styles.hint}>
+              This sends an onchain transaction. The invitee can then open the
+              crowdfund website and commit. Requires gas.
+            </p>
+            <div className={styles.expandedAction}>
+              <Button
+                variant="primary"
+                size="sm"
+                label={loading ? "Inviting…" : "Send invite"}
+                showIcon={false}
+                onClick={handleInviteOnchain}
+                disabled={!canSubmitOnchain || loading}
+              />
+            </div>
           </div>
-          {ensState === 'error' && (
-            <span className={styles.errorMsg}>
-              {tryGetChecksumAddress(addressInput) === ZeroAddress
-                ? 'Can’t invite the zero address.'
-                : ensUnavailable
-                  ? 'ENS lookup unavailable — paste the 0x address instead.'
-                  : 'ENS name not found'}
-            </span>
-          )}
-          <p className={styles.hint}>
-            This sends an onchain transaction. The invitee can then open the crowdfund
-            website and commit. Requires gas.
-          </p>
-          <div className={styles.expandedAction}>
-            <Button
-              variant="primary"
-              size="sm"
-              label={loading ? 'Inviting…' : 'Send invite'}
-              showIcon={false}
-              onClick={handleInviteOnchain}
-              disabled={!canSubmitOnchain || loading}
-            />
-          </div>
-        </div>
-      )}
+        )}
 
       {revokeConfirmOpen &&
         revokePopoverPos &&
@@ -630,8 +655,8 @@ export default function SlotCard({
               Revoke invite link?
             </p>
             <p className={styles.revokeBody}>
-              This link will stop working. Revoking is an on-chain transaction and costs gas.
-              You can generate a new one anytime.
+              This link will stop working. Revoking is an on-chain transaction
+              and costs gas. You can generate a new one anytime.
             </p>
             <div className={styles.revokeActions}>
               <Button
@@ -655,5 +680,5 @@ export default function SlotCard({
           document.body,
         )}
     </div>
-  )
+  );
 }

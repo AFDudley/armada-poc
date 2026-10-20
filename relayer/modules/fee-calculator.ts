@@ -201,14 +201,31 @@ export class FeeCalculator {
       gasPrice = 1_000_000_000n;
     }
 
-    const transferFee = this.calculateFeeForGas(GAS_ESTIMATES.transfer, gasPrice);
-    const unshieldFee = this.calculateFeeForGas(GAS_ESTIMATES.unshield, gasPrice);
-    const crossContractFee = this.calculateFeeForGas(GAS_ESTIMATES.crossContract, gasPrice);
-    const crossChainShieldFee = this.calculateFeeForGas(GAS_ESTIMATES.crossChainShield, gasPrice);
-    const crossChainUnshieldFee = this.calculateFeeForGas(GAS_ESTIMATES.crossChainUnshield, gasPrice);
+    const transferFee = this.calculateFeeForGas(
+      GAS_ESTIMATES.transfer,
+      gasPrice,
+    );
+    const unshieldFee = this.calculateFeeForGas(
+      GAS_ESTIMATES.unshield,
+      gasPrice,
+    );
+    const crossContractFee = this.calculateFeeForGas(
+      GAS_ESTIMATES.crossContract,
+      gasPrice,
+    );
+    const crossChainShieldFee = this.calculateFeeForGas(
+      GAS_ESTIMATES.crossChainShield,
+      gasPrice,
+    );
+    const crossChainUnshieldFee = this.calculateFeeForGas(
+      GAS_ESTIMATES.crossChainUnshield,
+      gasPrice,
+    );
     // Gasless shield tiers are paid via a shielded fee note that the pool charges its shield fee on,
     // so gross up the gas-reimbursement target to keep the relayer whole (see grossUpForShieldFee).
-    const shieldFee = this.grossUpForShieldFee(this.calculateFeeForGas(GAS_ESTIMATES.shield, gasPrice));
+    const shieldFee = this.grossUpForShieldFee(
+      this.calculateFeeForGas(GAS_ESTIMATES.shield, gasPrice),
+    );
     const shieldXchainFee = this.grossUpForShieldFee(
       this.calculateFeeForGas(GAS_ESTIMATES.shieldXchain, gasPrice),
     );
@@ -222,7 +239,9 @@ export class FeeCalculator {
       ? " (+ ~1-2 bps CCTP fast transfer fee on transfer amount)"
       : "";
     if (cctpFastFeeNote) {
-      console.log(`[fee-calculator chain=${this.chainId}] CCTP fast mode enabled${cctpFastFeeNote}`);
+      console.log(
+        `[fee-calculator chain=${this.chainId}] CCTP fast mode enabled${cctpFastFeeNote}`,
+      );
     }
 
     this.scheduleCounter++;
@@ -276,10 +295,15 @@ export class FeeCalculator {
    * caller (PrivacyRelay) MUST use the returned schedule's fees, not a fresh getCurrentFees().
    */
   getScheduleByCacheId(cacheId: string): FeeSchedule | null {
-    const bufferMs = (this.feeTtlSeconds * 1000 * this.feeVarianceBufferBps) / 10000;
+    const bufferMs =
+      (this.feeTtlSeconds * 1000 * this.feeVarianceBufferBps) / 10000;
     const now = Date.now();
     for (const schedule of [this.currentSchedule, this.previousSchedule]) {
-      if (schedule && schedule.cacheId === cacheId && now < schedule.expiresAt + bufferMs) {
+      if (
+        schedule &&
+        schedule.cacheId === cacheId &&
+        now < schedule.expiresAt + bufferMs
+      ) {
         return schedule;
       }
     }

@@ -37,11 +37,18 @@ import {
   isLocal,
   type ChainRole,
 } from "../config/networks";
-import { createNonceManager, loadDeployment, saveDeployment } from "./deploy-utils";
+import {
+  createNonceManager,
+  loadDeployment,
+  saveDeployment,
+} from "./deploy-utils";
 
 // Load Poseidon bytecode for library deployment
 const poseidonBytecode = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "lib", "poseidon_bytecode.json"), "utf-8")
+  fs.readFileSync(
+    path.join(__dirname, "..", "lib", "poseidon_bytecode.json"),
+    "utf-8",
+  ),
 );
 
 // On fast-block chains (e.g. OP Sepolia) the client initialize() that immediately follows the
@@ -123,7 +130,9 @@ async function deployHub(): Promise<HubDeploymentInfo> {
   const cctpFilename = getCCTPDeploymentFile("hub");
   const cctpDeployment = loadDeployment(cctpFilename);
   if (!cctpDeployment) {
-    throw new Error(`CCTP deployment not found (${cctpFilename}). Run deploy_cctp first.`);
+    throw new Error(
+      `CCTP deployment not found (${cctpFilename}). Run deploy_cctp first.`,
+    );
   }
 
   const usdcAddress = cctpDeployment.contracts.usdc;
@@ -200,7 +209,9 @@ async function deployHub(): Promise<HubDeploymentInfo> {
   const privacyPoolAddress = await privacyPool.getAddress();
   // Capture for the manifest — interface uses this to bound initial event scan.
   const privacyPoolDeployBlock = privacyPoolReceipt!.blockNumber;
-  console.log(`   PrivacyPool: ${privacyPoolAddress} (block ${privacyPoolDeployBlock})`);
+  console.log(
+    `   PrivacyPool: ${privacyPoolAddress} (block ${privacyPoolDeployBlock})`,
+  );
 
   // 7. Resolve treasury address and initialize PrivacyPool
   // Priority: env var > governance manifest (ArmadaTreasuryGov) > deployer (local only).
@@ -216,11 +227,13 @@ async function deployHub(): Promise<HubDeploymentInfo> {
     console.log("   Using ArmadaTreasuryGov from governance deployment");
   } else if (isLocal()) {
     treasuryAddress = deployer.address;
-    console.log("   Warning: no treasury configured, using deployer as treasury (local only)");
+    console.log(
+      "   Warning: no treasury configured, using deployer as treasury (local only)",
+    );
   } else {
     throw new Error(
       "No treasury address available. Deploy governance first, or set TREASURY_ADDRESS in env. " +
-      "The privacy pool treasury is immutable after initialization."
+        "The privacy pool treasury is immutable after initialization.",
     );
   }
   console.log("   Treasury: " + treasuryAddress);
@@ -236,7 +249,7 @@ async function deployHub(): Promise<HubDeploymentInfo> {
     domain,
     deployer.address,
     treasuryAddress,
-    nm.override()
+    nm.override(),
   );
   await initTx.wait();
   console.log("   PrivacyPool initialized (treasury immutable)");
@@ -244,7 +257,11 @@ async function deployHub(): Promise<HubDeploymentInfo> {
   // 8. Deploy CCTPHookRouter
   console.log("\n8. Deploying CCTPHookRouter...");
   const CCTPHookRouter = await ethers.getContractFactory("CCTPHookRouter");
-  const hookRouter = await CCTPHookRouter.deploy(messageTransmitterAddress, tokenMessengerAddress, nm.override());
+  const hookRouter = await CCTPHookRouter.deploy(
+    messageTransmitterAddress,
+    tokenMessengerAddress,
+    nm.override(),
+  );
   await hookRouter.deploymentTransaction()!.wait();
   const hookRouterAddress = await hookRouter.getAddress();
   console.log(`   CCTPHookRouter: ${hookRouterAddress}`);
@@ -254,8 +271,11 @@ async function deployHub(): Promise<HubDeploymentInfo> {
   // omitting this leaves the manager N nonces behind once the load returns and the next
   // override(...) call ends up with a stale nonce.
   console.log("\n9. Loading verification keys...");
-  const { loadVerificationKeys, TESTING_ARTIFACT_CONFIGS } = await import("../lib/artifacts");
-  await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, true, () => nm.override());
+  const { loadVerificationKeys, TESTING_ARTIFACT_CONFIGS } =
+    await import("../lib/artifacts");
+  await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, true, () =>
+    nm.override(),
+  );
 
   // 10. SNARK verification enabled
   console.log("\n10. SNARK verification enabled (testing mode disabled)");
@@ -316,7 +336,9 @@ async function deployClient(role: ChainRole): Promise<ClientDeploymentInfo> {
   const cctpFilename = getCCTPDeploymentFile(role);
   const cctpDeployment = loadDeployment(cctpFilename);
   if (!cctpDeployment) {
-    throw new Error(`CCTP deployment not found (${cctpFilename}). Run deploy_cctp first.`);
+    throw new Error(
+      `CCTP deployment not found (${cctpFilename}). Run deploy_cctp first.`,
+    );
   }
 
   const usdcAddress = cctpDeployment.contracts.usdc;
@@ -347,12 +369,15 @@ async function deployClient(role: ChainRole): Promise<ClientDeploymentInfo> {
 
   // 1. Deploy PrivacyPoolClient
   console.log("1. Deploying PrivacyPoolClient...");
-  const PrivacyPoolClient = await ethers.getContractFactory("PrivacyPoolClient");
+  const PrivacyPoolClient =
+    await ethers.getContractFactory("PrivacyPoolClient");
   const privacyPoolClient = await PrivacyPoolClient.deploy(nm.override());
   const clientReceipt = await privacyPoolClient.deploymentTransaction()!.wait();
   const clientAddress = await privacyPoolClient.getAddress();
   const clientDeployBlock = clientReceipt!.blockNumber;
-  console.log(`   PrivacyPoolClient: ${clientAddress} (block ${clientDeployBlock})`);
+  console.log(
+    `   PrivacyPoolClient: ${clientAddress} (block ${clientDeployBlock})`,
+  );
 
   // 2. Initialize PrivacyPoolClient
   console.log("\n2. Initializing PrivacyPoolClient...");
@@ -364,7 +389,7 @@ async function deployClient(role: ChainRole): Promise<ClientDeploymentInfo> {
     hubDomain,
     hubPoolBytes32,
     deployer.address,
-    { ...nm.override(), gasLimit: CLIENT_INIT_GAS_LIMIT }
+    { ...nm.override(), gasLimit: CLIENT_INIT_GAS_LIMIT },
   );
   await initTx.wait();
   console.log("   PrivacyPoolClient initialized");
@@ -372,7 +397,11 @@ async function deployClient(role: ChainRole): Promise<ClientDeploymentInfo> {
   // 3. Deploy CCTPHookRouter
   console.log("\n3. Deploying CCTPHookRouter...");
   const CCTPHookRouter = await ethers.getContractFactory("CCTPHookRouter");
-  const hookRouter = await CCTPHookRouter.deploy(messageTransmitterAddress, tokenMessengerAddress, nm.override());
+  const hookRouter = await CCTPHookRouter.deploy(
+    messageTransmitterAddress,
+    tokenMessengerAddress,
+    nm.override(),
+  );
   await hookRouter.deploymentTransaction()!.wait();
   const hookRouterAddress = await hookRouter.getAddress();
   console.log(`   CCTPHookRouter: ${hookRouterAddress}`);
@@ -414,7 +443,11 @@ async function main() {
   const role = getChainRole(chainId);
   if (!role) {
     console.error(`Unknown chain ID: ${chainId}`);
-    console.error(`Configured chains: ${getAllChains().map((c) => `${c.role}=${c.chainId}`).join(", ")}`);
+    console.error(
+      `Configured chains: ${getAllChains()
+        .map((c) => `${c.role}=${c.chainId}`)
+        .join(", ")}`,
+    );
     process.exit(1);
   }
 

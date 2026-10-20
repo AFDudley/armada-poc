@@ -1,55 +1,55 @@
 // ABOUTME: EIP-712 invite link creation, encoding, and IndexedDB storage.
 // ABOUTME: Pure functions for invite link lifecycle — no React dependency.
 
-import { tryGetChecksumAddress } from '@armada/crowdfund-shared'
-import { getHubChainId } from '@/config/network'
+import { tryGetChecksumAddress } from "@armada/crowdfund-shared";
+import { getHubChainId } from "@/config/network";
 
 /** Max hop index in the URL — matches `HOP_CONFIGS.length - 1`. Anything
  * outside this band can't represent a real inviter so we reject pre-contract. */
-const MAX_HOP_INDEX = 2
+const MAX_HOP_INDEX = 2;
 
 /** Standard EVM ECDSA signature: 65 bytes (r,s,v) → 130 hex chars + `0x`. */
-const SIGNATURE_HEX_LENGTH = 132
+const SIGNATURE_HEX_LENGTH = 132;
 
 /** Strict non-negative integer parse — rejects `"12abc"`, `""`, scientific
  * notation, leading `+`, etc. that `parseInt` silently accepts. */
 function parseStrictNonNegativeInt(raw: string): number | null {
-  if (!/^\d+$/.test(raw)) return null
-  const n = Number(raw)
-  if (!Number.isSafeInteger(n)) return null
-  return n
+  if (!/^\d+$/.test(raw)) return null;
+  const n = Number(raw);
+  if (!Number.isSafeInteger(n)) return null;
+  return n;
 }
 
 export interface InviteLinkData {
-  inviter: string
-  fromHop: number
-  nonce: number
-  deadline: number
-  signature: string
+  inviter: string;
+  fromHop: number;
+  nonce: number;
+  deadline: number;
+  signature: string;
 }
 
 export interface StoredInviteLink extends InviteLinkData {
-  createdAt: number
-  status: 'pending' | 'redeemed' | 'revoked' | 'expired'
+  createdAt: number;
+  status: "pending" | "redeemed" | "revoked" | "expired";
 }
 
 export function getEIP712Domain(chainId: number, contractAddress: string) {
   return {
-    name: 'ArmadaCrowdfund',
-    version: '1',
+    name: "ArmadaCrowdfund",
+    version: "1",
     chainId,
     verifyingContract: contractAddress,
-  }
+  };
 }
 
 export const INVITE_TYPES = {
   Invite: [
-    { name: 'inviter', type: 'address' },
-    { name: 'fromHop', type: 'uint8' },
-    { name: 'nonce', type: 'uint256' },
-    { name: 'deadline', type: 'uint256' },
+    { name: "inviter", type: "address" },
+    { name: "fromHop", type: "uint8" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
   ],
-}
+};
 
 export function encodeInviteUrl(data: InviteLinkData): string {
   const params = new URLSearchParams({
@@ -58,49 +58,52 @@ export function encodeInviteUrl(data: InviteLinkData): string {
     nonce: String(data.nonce),
     deadline: String(data.deadline),
     sig: data.signature,
-  })
-  const path = `/invite?${params.toString()}`
+  });
+  const path = `/invite?${params.toString()}`;
   // Emit an absolute URL so a pasted link resolves to the current deployment
   // (e.g. https://fund.armada.blue/invite?…) instead of being interpreted
   // as a relative path against whatever destination the user pastes into —
   // most notably the browser address bar, which falls back to `file:///` for
   // a bare leading-slash path.
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return `${window.location.origin}${path}`
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}${path}`;
   }
-  return path
+  return path;
 }
 
-export function decodeInviteUrl(searchParams: URLSearchParams): InviteLinkData | null {
-  const inviterRaw = searchParams.get('inviter')
-  const fromHopStr = searchParams.get('fromHop')
-  const nonceStr = searchParams.get('nonce')
-  const deadlineStr = searchParams.get('deadline')
-  const signatureRaw = searchParams.get('sig')
+export function decodeInviteUrl(
+  searchParams: URLSearchParams,
+): InviteLinkData | null {
+  const inviterRaw = searchParams.get("inviter");
+  const fromHopStr = searchParams.get("fromHop");
+  const nonceStr = searchParams.get("nonce");
+  const deadlineStr = searchParams.get("deadline");
+  const signatureRaw = searchParams.get("sig");
 
-  if (!inviterRaw || !fromHopStr || !nonceStr || !deadlineStr || !signatureRaw) return null
+  if (!inviterRaw || !fromHopStr || !nonceStr || !deadlineStr || !signatureRaw)
+    return null;
 
   // Inviter must be a checksummable address. `tryGetChecksumAddress` covers
   // format (0x + 40 hex) AND EIP-55 checksum so a typoed pasted link gets
   // rejected here instead of as an opaque revert during the contract call.
-  const inviter = tryGetChecksumAddress(inviterRaw.trim())
-  if (!inviter) return null
+  const inviter = tryGetChecksumAddress(inviterRaw.trim());
+  if (!inviter) return null;
 
-  const fromHop = parseStrictNonNegativeInt(fromHopStr)
-  const nonce = parseStrictNonNegativeInt(nonceStr)
-  const deadline = parseStrictNonNegativeInt(deadlineStr)
-  if (fromHop === null || nonce === null || deadline === null) return null
-  if (fromHop > MAX_HOP_INDEX) return null
+  const fromHop = parseStrictNonNegativeInt(fromHopStr);
+  const nonce = parseStrictNonNegativeInt(nonceStr);
+  const deadline = parseStrictNonNegativeInt(deadlineStr);
+  if (fromHop === null || nonce === null || deadline === null) return null;
+  if (fromHop > MAX_HOP_INDEX) return null;
 
   // Signature must be the canonical 65-byte ECDSA hex string. `recoverAddress`
   // downstream would already reject malformed inputs, but rejecting at parse
   // time means a hostile / malformed link doesn't show the user a half-broken
   // landing page before failing.
-  const signature = signatureRaw.trim()
-  if (signature.length !== SIGNATURE_HEX_LENGTH) return null
-  if (!/^0x[a-fA-F0-9]+$/.test(signature)) return null
+  const signature = signatureRaw.trim();
+  if (signature.length !== SIGNATURE_HEX_LENGTH) return null;
+  if (!/^0x[a-fA-F0-9]+$/.test(signature)) return null;
 
-  return { inviter, fromHop, nonce, deadline, signature }
+  return { inviter, fromHop, nonce, deadline, signature };
 }
 
 // IndexedDB helpers. The database is namespaced per chain id so invite links
@@ -108,80 +111,87 @@ export function decodeInviteUrl(searchParams: URLSearchParams): InviteLinkData |
 // another (e.g. mainnet): an invite's EIP-712 signature carries the chain id in its
 // domain separator and fails validation cross-chain, so a stale link would only
 // confuse. Each chain gets its own isolated database.
-const DB_NAME_PREFIX = 'armada-invite-links'
-const STORE_NAME = 'links'
-const DB_VERSION = 1
+const DB_NAME_PREFIX = "armada-invite-links";
+const STORE_NAME = "links";
+const DB_VERSION = 1;
 
 function dbName(): string {
-  return `${DB_NAME_PREFIX}-${getHubChainId()}`
+  return `${DB_NAME_PREFIX}-${getHubChainId()}`;
 }
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(dbName(), DB_VERSION)
+    const request = indexedDB.open(dbName(), DB_VERSION);
     request.onupgradeneeded = () => {
-      const db = request.result
+      const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: ['inviter', 'nonce'] })
-        store.createIndex('inviter', 'inviter', { unique: false })
+        const store = db.createObjectStore(STORE_NAME, {
+          keyPath: ["inviter", "nonce"],
+        });
+        store.createIndex("inviter", "inviter", { unique: false });
       }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 export async function storeInviteLink(link: StoredInviteLink): Promise<void> {
-  const db = await openDB()
+  const db = await openDB();
   // Lowercase the inviter on write so the keyPath + `inviter` index always match
   // the lowercased lookups in getStoredInviteLinks / updateInviteLinkStatus,
   // even if a caller passes a checksummed address.
-  const normalized: StoredInviteLink = { ...link, inviter: link.inviter.toLowerCase() }
+  const normalized: StoredInviteLink = {
+    ...link,
+    inviter: link.inviter.toLowerCase(),
+  };
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    tx.objectStore(STORE_NAME).put(normalized)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(normalized);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
-export async function getStoredInviteLinks(inviter: string): Promise<StoredInviteLink[]> {
-  const db = await openDB()
+export async function getStoredInviteLinks(
+  inviter: string,
+): Promise<StoredInviteLink[]> {
+  const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly')
-    const index = tx.objectStore(STORE_NAME).index('inviter')
-    const request = index.getAll(inviter.toLowerCase())
-    request.onsuccess = () => resolve(request.result as StoredInviteLink[])
-    request.onerror = () => reject(request.error)
-  })
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const index = tx.objectStore(STORE_NAME).index("inviter");
+    const request = index.getAll(inviter.toLowerCase());
+    request.onsuccess = () => resolve(request.result as StoredInviteLink[]);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 export async function updateInviteLinkStatus(
   inviter: string,
   nonce: number,
-  status: StoredInviteLink['status'],
+  status: StoredInviteLink["status"],
 ): Promise<void> {
-  const db = await openDB()
+  const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    const store = tx.objectStore(STORE_NAME)
-    const getRequest = store.get([inviter.toLowerCase(), nonce])
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const getRequest = store.get([inviter.toLowerCase(), nonce]);
     getRequest.onsuccess = () => {
-      const link = getRequest.result as StoredInviteLink | undefined
+      const link = getRequest.result as StoredInviteLink | undefined;
       if (link) {
-        link.status = status
-        store.put(link)
+        link.status = status;
+        store.put(link);
       }
-    }
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /** Block timestamp for signing, falling back to wall-clock when state hasn't
  *  hydrated yet (blockTimestamp === 0) — never sign a 1970-relative deadline. */
 export function effectiveTimestamp(blockTimestamp: number): number {
-  return blockTimestamp > 0 ? blockTimestamp : Math.floor(Date.now() / 1000)
+  return blockTimestamp > 0 ? blockTimestamp : Math.floor(Date.now() / 1000);
 }
 
 /**
@@ -197,14 +207,14 @@ export function classifyStoredLinks(
   blockTimestamp: number,
 ): StoredInviteLink[] {
   return stored.map((link) => {
-    if (redeemedNonces.has(link.nonce) && link.status !== 'revoked') {
-      return { ...link, status: 'redeemed' as const }
+    if (redeemedNonces.has(link.nonce) && link.status !== "revoked") {
+      return { ...link, status: "redeemed" as const };
     }
-    if (link.status === 'pending' && link.deadline < blockTimestamp) {
-      return { ...link, status: 'expired' as const }
+    if (link.status === "pending" && link.deadline < blockTimestamp) {
+      return { ...link, status: "expired" as const };
     }
-    return link
-  })
+    return link;
+  });
 }
 
 /**
@@ -218,11 +228,11 @@ export function classifyStoredLinks(
  * reserved on-chain for direct (non-link) invites.
  */
 export function randomSafeNonce(): number {
-  const buf = new Uint32Array(2)
-  crypto.getRandomValues(buf)
+  const buf = new Uint32Array(2);
+  crypto.getRandomValues(buf);
   // 53-bit value: 21 high bits from buf[0], 32 low bits from buf[1].
-  const n = (buf[0] % 0x20_0000) * 0x1_0000_0000 + buf[1]
-  return n === 0 ? 1 : n
+  const n = (buf[0] % 0x20_0000) * 0x1_0000_0000 + buf[1];
+  return n === 0 ? 1 : n;
 }
 
 /**
@@ -235,8 +245,8 @@ export async function pickInviteNonce(
   isUsedOnChain: (nonce: number) => Promise<boolean>,
 ): Promise<number> {
   for (let attempt = 0; attempt < 5; attempt++) {
-    const candidate = randomSafeNonce()
-    if (!(await isUsedOnChain(candidate))) return candidate
+    const candidate = randomSafeNonce();
+    if (!(await isUsedOnChain(candidate))) return candidate;
   }
-  throw new Error('Could not allocate a free invite nonce')
+  throw new Error("Could not allocate a free invite nonce");
 }

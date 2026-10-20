@@ -13,7 +13,7 @@ export function localWindowEndUnix(
   blockTimestamp: number,
   observedAtMs: number,
 ): number {
-  return Math.round(observedAtMs / 1000) + (windowEnd - blockTimestamp)
+  return Math.round(observedAtMs / 1000) + (windowEnd - blockTimestamp);
 }
 
 /**
@@ -25,6 +25,6 @@ export function commitWindowSecondsLeft(
   windowEnd: number,
   blockTimestamp: number,
 ): number | undefined {
-  if (windowEnd <= 0 || blockTimestamp <= 0) return undefined
-  return Math.max(0, windowEnd - blockTimestamp)
+  if (windowEnd <= 0 || blockTimestamp <= 0) return undefined;
+  return Math.max(0, windowEnd - blockTimestamp);
 }

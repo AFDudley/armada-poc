@@ -1,25 +1,32 @@
 // ABOUTME: Treasury balance display for USDC and ARM tokens with address copy.
 // ABOUTME: Shows balances at both the contract and treasury addresses.
 
-import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { formatUsdc, formatArm, truncateAddress } from '@armada/crowdfund-shared'
-import type { TreasuryBalances } from '@/hooks/useTreasuryBalances'
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  formatUsdc,
+  formatArm,
+  truncateAddress,
+} from "@armada/crowdfund-shared";
+import type { TreasuryBalances } from "@/hooks/useTreasuryBalances";
 
 export interface TreasuryMonitorProps {
-  treasury: TreasuryBalances
-  treasuryAddress: string | null
+  treasury: TreasuryBalances;
+  treasuryAddress: string | null;
 }
 
-export function TreasuryMonitor({ treasury, treasuryAddress }: TreasuryMonitorProps) {
-  const [copied, setCopied] = useState(false)
+export function TreasuryMonitor({
+  treasury,
+  treasuryAddress,
+}: TreasuryMonitorProps) {
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    if (!treasuryAddress) return
-    navigator.clipboard.writeText(treasuryAddress)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
+    if (!treasuryAddress) return;
+    navigator.clipboard.writeText(treasuryAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div className="rounded border border-border p-3 space-y-2">
@@ -27,7 +34,9 @@ export function TreasuryMonitor({ treasury, treasuryAddress }: TreasuryMonitorPr
         <div className="">Treasury Monitor</div>
         {treasuryAddress && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">{truncateAddress(treasuryAddress)}</span>
+            <span className="text-muted-foreground">
+              {truncateAddress(treasuryAddress)}
+            </span>
             <button
               className="text-muted-foreground hover:text-foreground relative inline-block min-w-[32px] text-left"
               onClick={handleCopy}
@@ -78,5 +87,5 @@ export function TreasuryMonitor({ treasury, treasuryAddress }: TreasuryMonitorPr
         </div>
       )}
     </div>
-  )
+  );
 }

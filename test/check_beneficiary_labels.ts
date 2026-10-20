@@ -8,7 +8,10 @@ import * as path from "path";
 
 const ROOT = path.join(__dirname, "..");
 const CHECK = path.join(ROOT, "scripts", "check-beneficiary-labels.sh");
-const MAINNET_FILE = path.join("config", "revenue-lock-beneficiaries-mainnet.json");
+const MAINNET_FILE = path.join(
+  "config",
+  "revenue-lock-beneficiaries-mainnet.json",
+);
 // A made-up name standing in for a real beneficiary label.
 const NAME = "Alice Example";
 
@@ -23,19 +26,32 @@ function beneficiaries(labels: string[]): string {
 }
 
 function neutral(count: number): string[] {
-  return Array.from({ length: count }, (_, i) => `beneficiary ${String(i + 1).padStart(3, "0")}`);
+  return Array.from(
+    { length: count },
+    (_, i) => `beneficiary ${String(i + 1).padStart(3, "0")}`,
+  );
 }
 
 function git(repo: string, ...args: string[]) {
   return spawnSync(
     "git",
-    ["-c", "user.name=test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false", ...args],
-    { cwd: repo, encoding: "utf8" }
+    [
+      "-c",
+      "user.name=test",
+      "-c",
+      "user.email=test@example.com",
+      "-c",
+      "commit.gpgsign=false",
+      ...args,
+    ],
+    { cwd: repo, encoding: "utf8" },
   );
 }
 
 function makeRepo(): string {
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "check-beneficiary-labels-"));
+  const repo = fs.mkdtempSync(
+    path.join(os.tmpdir(), "check-beneficiary-labels-"),
+  );
   git(repo, "init", "-q");
   return repo;
 }
@@ -73,7 +89,11 @@ describe("Pre-commit beneficiary label check", function () {
   // WHY: a label ties a public address to a person; committing it to a public repo is a
   // privacy breach that cannot be undone.
   it("blocks a mainnet list with a name label and reports only the entry number", function () {
-    writeAndStage(repo, MAINNET_FILE, beneficiaries(["beneficiary 001", NAME, "beneficiary 003"]));
+    writeAndStage(
+      repo,
+      MAINNET_FILE,
+      beneficiaries(["beneficiary 001", NAME, "beneficiary 003"]),
+    );
     const result = check(repo, MAINNET_FILE);
     expect(result.status).to.equal(1);
     expect(result.stdout).to.contain("non-neutral label in entries 2");
@@ -119,7 +139,10 @@ describe("Pre-commit beneficiary label check", function () {
 
   // WHY: the committed Sepolia fixtures carry test labels; they are not mainnet lists.
   it("ignores beneficiary lists for other networks", function () {
-    const sepolia = path.join("config", "revenue-lock-beneficiaries-sepolia.json");
+    const sepolia = path.join(
+      "config",
+      "revenue-lock-beneficiaries-sepolia.json",
+    );
     writeAndStage(repo, sepolia, beneficiaries(["test beneficiary1"]));
     const result = check(repo, sepolia);
     expect(result.status).to.equal(0);
@@ -133,10 +156,20 @@ describe("Pre-commit hook refuses a named beneficiary list", function () {
     repo = makeRepo();
     // Install the repo's real hook and the check scripts it calls.
     fs.mkdirSync(path.join(repo, ".githooks"));
-    fs.copyFileSync(path.join(ROOT, ".githooks", "pre-commit"), path.join(repo, ".githooks", "pre-commit"));
+    fs.copyFileSync(
+      path.join(ROOT, ".githooks", "pre-commit"),
+      path.join(repo, ".githooks", "pre-commit"),
+    );
     fs.mkdirSync(path.join(repo, "scripts"));
-    for (const script of ["check-anvil-addresses.sh", "check-secrets.sh", "check-beneficiary-labels.sh"]) {
-      fs.copyFileSync(path.join(ROOT, "scripts", script), path.join(repo, "scripts", script));
+    for (const script of [
+      "check-anvil-addresses.sh",
+      "check-secrets.sh",
+      "check-beneficiary-labels.sh",
+    ]) {
+      fs.copyFileSync(
+        path.join(ROOT, "scripts", script),
+        path.join(repo, "scripts", script),
+      );
     }
     git(repo, "config", "core.hooksPath", ".githooks");
   });
@@ -183,7 +216,9 @@ describe("Pre-commit hook refuses a named beneficiary list", function () {
     git(repo, "rm", "-q", other);
     labels[0] = NAME;
     writeAndStage(repo, MAINNET_FILE, beneficiaries(labels));
-    expect(git(repo, "diff", "--cached", "--name-status").stdout).to.match(/^R\d+/);
+    expect(git(repo, "diff", "--cached", "--name-status").stdout).to.match(
+      /^R\d+/,
+    );
 
     const result = git(repo, "commit", "-q", "-m", "renamed list");
     expect(result.status).to.not.equal(0);

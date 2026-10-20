@@ -35,7 +35,8 @@ interface IMerkleModule {
      * @return treeNum Tree number where commitments will be inserted
      * @return startIndex Starting leaf index within that tree
      */
-    function getInsertionTreeNumberAndStartingIndex(
-        uint256 _newCommitments
-    ) external view returns (uint256 treeNum, uint256 startIndex);
+    function getInsertionTreeNumberAndStartingIndex(uint256 _newCommitments)
+        external
+        view
+        returns (uint256 treeNum, uint256 startIndex);
 }

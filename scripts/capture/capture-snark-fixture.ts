@@ -20,40 +20,82 @@
  * Re-run only when the circuits release or the Transaction / VerifyingKey layout changes.
  */
 
-import { ethers } from 'hardhat';
-import * as fs from 'fs';
-import * as path from 'path';
-import { execSync } from 'child_process';
+import { ethers } from "hardhat";
+import * as fs from "fs";
+import * as path from "path";
+import { execSync } from "child_process";
 
-import { initializeEngine, shutdownEngine, clearDatabase, getEngine } from '../../lib/sdk/init';
-import { createWallet, DEFAULT_ENCRYPTION_KEY } from '../../lib/sdk/wallet';
-import { initializeProver } from '../../lib/sdk/prover';
-import { createShieldRequest, generateShieldPrivateKey } from '../../lib/sdk/shield';
-import { loadNetworkIntoEngine, scanWalletBalances } from '../../lib/sdk/network';
-import { createPrivateTransfer } from '../../lib/sdk/transfer';
-import { getChainById, getRpcUrl } from '../../lib/sdk/chain-config';
-import { isLocal } from '../../config/networks';
-import { loadDeployment } from '../deploy-utils';
+import {
+  initializeEngine,
+  shutdownEngine,
+  clearDatabase,
+  getEngine,
+} from "../../lib/sdk/init";
+import { createWallet, DEFAULT_ENCRYPTION_KEY } from "../../lib/sdk/wallet";
+import { initializeProver } from "../../lib/sdk/prover";
+import {
+  createShieldRequest,
+  generateShieldPrivateKey,
+} from "../../lib/sdk/shield";
+import {
+  loadNetworkIntoEngine,
+  scanWalletBalances,
+} from "../../lib/sdk/network";
+import { createPrivateTransfer } from "../../lib/sdk/transfer";
+import { getChainById, getRpcUrl } from "../../lib/sdk/chain-config";
+import { isLocal } from "../../config/networks";
+import { loadDeployment } from "../deploy-utils";
 
-import { TXIDVersion, POI, POINodeInterface, RailgunWallet } from '@railgun-community/engine';
+import {
+  TXIDVersion,
+  POI,
+  POINodeInterface,
+  RailgunWallet,
+} from "@railgun-community/engine";
 
 class StubPOINodeInterface extends POINodeInterface {
-  isActive(): boolean { return false; }
-  async isRequired(): Promise<boolean> { return false; }
-  async getPOIsPerList(): Promise<Record<string, any>> { return {}; }
-  async getPOIMerkleProofs(): Promise<any[]> { return []; }
-  async validatePOIMerkleroots(): Promise<boolean> { return true; }
-  async submitPOI(): Promise<void> { /* no-op */ }
-  async submitLegacyTransactProofs(): Promise<void> { /* no-op */ }
+  isActive(): boolean {
+    return false;
+  }
+  async isRequired(): Promise<boolean> {
+    return false;
+  }
+  async getPOIsPerList(): Promise<Record<string, any>> {
+    return {};
+  }
+  async getPOIMerkleProofs(): Promise<any[]> {
+    return [];
+  }
+  async validatePOIMerkleroots(): Promise<boolean> {
+    return true;
+  }
+  async submitPOI(): Promise<void> {
+    /* no-op */
+  }
+  async submitLegacyTransactProofs(): Promise<void> {
+    /* no-op */
+  }
 }
 POI.init([], new StubPOINodeInterface());
 
-const OUT = path.join(__dirname, '..', '..', 'test-foundry', 'fixtures', 'snark', 'armada-transfer-1x2.json');
-const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const OUT = path.join(
+  __dirname,
+  "..",
+  "..",
+  "test-foundry",
+  "fixtures",
+  "snark",
+  "armada-transfer-1x2.json",
+);
+const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 /** Deep, mutable, positional copy of a decoded ethers Result (contract calls cannot take frozen Results). */
 function positional(value: any): any {
-  return value !== null && typeof value === 'object' && typeof value.length === 'number' && typeof value !== 'string'
+  return value !== null &&
+    typeof value === "object" &&
+    typeof value.length === "number" &&
+    typeof value !== "string"
     ? Array.from(value, positional)
     : value;
 }
@@ -65,44 +107,75 @@ function g1(p: any) {
 
 /** G2 point (ethers Result with x[2], y[2]) as decimal strings. */
 function g2(p: any) {
-  return { x: [p.x[0].toString(), p.x[1].toString()], y: [p.y[0].toString(), p.y[1].toString()] };
+  return {
+    x: [p.x[0].toString(), p.x[1].toString()],
+    y: [p.y[0].toString(), p.y[1].toString()],
+  };
 }
 
 async function main() {
-  if (!isLocal()) throw new Error('capture-snark-fixture is local-only (source config/local.env)');
+  if (!isLocal())
+    throw new Error(
+      "capture-snark-fixture is local-only (source config/local.env)",
+    );
 
-  const deployments = loadDeployment('privacy-pool-hub.json');
-  if (!deployments) throw new Error('privacy-pool-hub.json not found — run npm run setup first');
+  const deployments = loadDeployment("privacy-pool-hub.json");
+  if (!deployments)
+    throw new Error(
+      "privacy-pool-hub.json not found — run npm run setup first",
+    );
 
   const [, alice] = await ethers.getSigners();
-  const pool = await ethers.getContractAt('PrivacyPool', deployments.contracts.privacyPool);
-  const usdc = await ethers.getContractAt('MockUSDCV2', deployments.cctp.usdc);
+  const pool = await ethers.getContractAt(
+    "PrivacyPool",
+    deployments.contracts.privacyPool,
+  );
+  const usdc = await ethers.getContractAt("MockUSDCV2", deployments.cctp.usdc);
   const usdcAddress = await usdc.getAddress();
-  if (await pool.testingMode()) throw new Error('testing mode is ON — a captured proof would be unchecked');
+  if (await pool.testingMode())
+    throw new Error("testing mode is ON — a captured proof would be unchecked");
 
   // Engine + Armada prover
   clearDatabase();
-  await initializeEngine('snarkfixture');
+  await initializeEngine("snarkfixture");
   const chain = getChainById(deployments.chainId)!;
-  await loadNetworkIntoEngine(chain, await pool.getAddress(), ethers.ZeroAddress, getRpcUrl(chain), deployments.deployBlock ?? 0);
+  await loadNetworkIntoEngine(
+    chain,
+    await pool.getAddress(),
+    ethers.ZeroAddress,
+    getRpcUrl(chain),
+    deployments.deployBlock ?? 0,
+  );
   await initializeProver();
 
   const aliceInfo = await createWallet(DEFAULT_ENCRYPTION_KEY);
   const bobInfo = await createWallet(DEFAULT_ENCRYPTION_KEY);
-  const aliceWallet = getEngine().wallets[aliceInfo.id] as unknown as RailgunWallet;
+  const aliceWallet = getEngine().wallets[
+    aliceInfo.id
+  ] as unknown as RailgunWallet;
 
   // Shield 10 USDC to Alice
-  const amount = ethers.parseUnits('10', 6);
+  const amount = ethers.parseUnits("10", 6);
   const { shieldRequest } = await createShieldRequest(
-    { railgunAddress: aliceInfo.railgunAddress, amount, tokenAddress: usdcAddress },
+    {
+      railgunAddress: aliceInfo.railgunAddress,
+      amount,
+      tokenAddress: usdcAddress,
+    },
     generateShieldPrivateKey(),
   );
   await (await usdc.mint(await alice.getAddress(), amount)).wait();
-  await (await usdc.connect(alice).approve(await pool.getAddress(), amount)).wait();
-  await (await pool.connect(alice).shield([shieldRequest], ethers.ZeroAddress)).wait();
+  await (
+    await usdc.connect(alice).approve(await pool.getAddress(), amount)
+  ).wait();
+  await (
+    await pool.connect(alice).shield([shieldRequest], ethers.ZeroAddress)
+  ).wait();
   await scanWalletBalances(aliceInfo.id, chain);
-  if ((await aliceWallet.TXOs(TXIDVersion.V2_PoseidonMerkle, chain)).length === 0) {
-    throw new Error('shielded note not visible to the wallet');
+  if (
+    (await aliceWallet.TXOs(TXIDVersion.V2_PoseidonMerkle, chain)).length === 0
+  ) {
+    throw new Error("shielded note not visible to the wallet");
   }
 
   // Prove a private transfer (1 nullifier, 2 commitments: recipient + change)
@@ -111,20 +184,32 @@ async function main() {
     chain,
     tokenAddress: usdcAddress,
     recipientAddress: bobInfo.railgunAddress,
-    amount: ethers.parseUnits('3', 6),
+    amount: ethers.parseUnits("3", 6),
     encryptionKey: DEFAULT_ENCRYPTION_KEY,
   });
-  const [txs] = pool.interface.decodeFunctionData('transact', result.contractTransaction.data);
+  const [txs] = pool.interface.decodeFunctionData(
+    "transact",
+    result.contractTransaction.data,
+  );
   const tx = txs[0]; // ethers Result; encoded back as-is below
   const shape = `${tx.nullifiers.length}x${tx.commitments.length}`;
-  if (shape !== '1x2') throw new Error(`expected a 1x2 proof, got ${shape}`);
+  if (shape !== "1x2") throw new Error(`expected a 1x2 proof, got ${shape}`);
 
   // Public inputs, assembled exactly as PrivacyPool.verify does
-  const boundParamsType = pool.interface.getFunction('transact')!.inputs[0].arrayChildren!.components!
-    .find((c) => c.name === 'boundParams')!;
-  const boundParamsHash = BigInt(ethers.keccak256(
-    ethers.AbiCoder.defaultAbiCoder().encode([boundParamsType], [tx.boundParams]),
-  )) % SNARK_SCALAR_FIELD;
+  const boundParamsType = pool.interface
+    .getFunction("transact")!
+    .inputs[0].arrayChildren!.components!.find(
+      (c) => c.name === "boundParams",
+    )!;
+  const boundParamsHash =
+    BigInt(
+      ethers.keccak256(
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          [boundParamsType],
+          [tx.boundParams],
+        ),
+      ),
+    ) % SNARK_SCALAR_FIELD;
   const inputs: bigint[] = [
     BigInt(tx.merkleRoot),
     boundParamsHash,
@@ -133,27 +218,34 @@ async function main() {
   ];
 
   // The same proof must verify on-chain before it becomes a fixture
-  if (!(await pool.verify(positional(tx)))) throw new Error('PrivacyPool.verify returned false for the captured proof');
+  if (!(await pool.verify(positional(tx))))
+    throw new Error("PrivacyPool.verify returned false for the captured proof");
 
   const vk = await pool.getVerificationKey(1, 2);
-  const vkType = pool.interface.getFunction('getVerificationKey')!.outputs[0];
-  const proofType = pool.interface.getFunction('transact')!.inputs[0].arrayChildren!.components!
-    .find((c) => c.name === 'proof')!;
+  const vkType = pool.interface.getFunction("getVerificationKey")!.outputs[0];
+  const proofType = pool.interface
+    .getFunction("transact")!
+    .inputs[0].arrayChildren!.components!.find((c) => c.name === "proof")!;
   const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
-    [vkType, proofType, 'uint256[]'],
+    [vkType, proofType, "uint256[]"],
     [vk, tx.proof, inputs],
   );
-  const txType = pool.interface.getFunction('transact')!.inputs[0].arrayChildren!;
-  const encodedTransaction = ethers.AbiCoder.defaultAbiCoder().encode([txType], [tx]);
+  const txType =
+    pool.interface.getFunction("transact")!.inputs[0].arrayChildren!;
+  const encodedTransaction = ethers.AbiCoder.defaultAbiCoder().encode(
+    [txType],
+    [tx],
+  );
 
-  const circuitsTag = fs.readFileSync(path.join(__dirname, '..', 'fetch-circuits.sh'), 'utf8')
+  const circuitsTag = fs
+    .readFileSync(path.join(__dirname, "..", "fetch-circuits.sh"), "utf8")
     .match(/CIRCUITS_TAG="([^"]+)"/)![1];
   const fixture = {
     description:
-      'Real Armada Groth16 proof of a 1x2 private transfer, with the 1x2 verifying key read from the pool ' +
-      'and public inputs assembled as PrivacyPool.verify does. Verified on-chain (testing mode off) at capture.',
+      "Real Armada Groth16 proof of a 1x2 private transfer, with the 1x2 verifying key read from the pool " +
+      "and public inputs assembled as PrivacyPool.verify does. Verified on-chain (testing mode off) at capture.",
     circuitsRelease: circuitsTag,
-    capturedFromSha: execSync('git rev-parse HEAD').toString().trim(),
+    capturedFromSha: execSync("git rev-parse HEAD").toString().trim(),
     shape,
     publicInputs: inputs.map((x) => x.toString()),
     proof: { a: g1(tx.proof.a), b: g2(tx.proof.b), c: g1(tx.proof.c) },
@@ -168,13 +260,17 @@ async function main() {
     encodedTransaction, // abi.encode(Transaction) — the full proved transaction, for router-level checks
   };
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, JSON.stringify(fixture, null, 2) + '\n');
-  console.log(`Wrote ${path.relative(process.cwd(), OUT)} (${shape}, ${inputs.length} public inputs)`);
+  fs.writeFileSync(OUT, JSON.stringify(fixture, null, 2) + "\n");
+  console.log(
+    `Wrote ${path.relative(process.cwd(), OUT)} (${shape}, ${inputs.length} public inputs)`,
+  );
 
   await shutdownEngine();
 }
 
-main().then(() => process.exit(0)).catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });

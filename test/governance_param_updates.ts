@@ -17,8 +17,13 @@ import { deployGovernorProxy } from "./helpers/deploy-governor";
 
 const ProposalType = { Standard: 0, Extended: 1, VetoRatification: 2 };
 const ProposalState = {
-  Pending: 0, Active: 1, Defeated: 2, Succeeded: 3,
-  Queued: 4, Executed: 5, Canceled: 6,
+  Pending: 0,
+  Active: 1,
+  Defeated: 2,
+  Succeeded: 3,
+  Queued: 4,
+  Executed: 5,
+  Canceled: 6,
 };
 const Vote = { Against: 0, For: 1, Abstain: 2 };
 
@@ -33,9 +38,9 @@ const EXTENDED_EXECUTION_DELAY = SEVEN_DAYS;
 
 const ARM_DECIMALS = 18;
 const TOTAL_SUPPLY = ethers.parseUnits("12000000", ARM_DECIMALS); // must match ArmadaToken.INITIAL_SUPPLY
-const TREASURY_AMOUNT = TOTAL_SUPPLY * 65n / 100n; // 65% to treasury
-const ALICE_AMOUNT = TOTAL_SUPPLY * 20n / 100n;    // 20% to Alice (voter)
-const BOB_AMOUNT = TOTAL_SUPPLY * 15n / 100n;      // 15% to Bob (voter)
+const TREASURY_AMOUNT = (TOTAL_SUPPLY * 65n) / 100n; // 65% to treasury
+const ALICE_AMOUNT = (TOTAL_SUPPLY * 20n) / 100n; // 20% to Alice (voter)
+const BOB_AMOUNT = (TOTAL_SUPPLY * 15n) / 100n; // 15% to Bob (voter)
 // ProposalType enum values
 const ProposalType_Steward = 3;
 
@@ -63,11 +68,11 @@ describe("Governance Parameter Updates", function () {
     targets: string[],
     values: bigint[],
     calldatas: string[],
-    description: string
+    description: string,
   ): Promise<number> {
-    const tx = await governor.connect(proposer).propose(
-      proposalType, targets, values, calldatas, description
-    );
+    const tx = await governor
+      .connect(proposer)
+      .propose(proposalType, targets, values, calldatas, description);
     await tx.wait();
     const proposalId = Number(await governor.proposalCount());
 
@@ -76,11 +81,17 @@ describe("Governance Parameter Updates", function () {
       await governor.connect(v.signer).castVote(proposalId, v.support);
     }
 
-    const votingPeriod = proposalType === ProposalType.Extended ? EXTENDED_VOTING_PERIOD : STANDARD_VOTING_PERIOD;
+    const votingPeriod =
+      proposalType === ProposalType.Extended
+        ? EXTENDED_VOTING_PERIOD
+        : STANDARD_VOTING_PERIOD;
     await time.increase(votingPeriod + 1);
     await governor.queue(proposalId);
 
-    const executionDelay = proposalType === ProposalType.Extended ? EXTENDED_EXECUTION_DELAY : TWO_DAYS;
+    const executionDelay =
+      proposalType === ProposalType.Extended
+        ? EXTENDED_EXECUTION_DELAY
+        : TWO_DAYS;
     await time.increase(executionDelay + 1);
     await governor.execute(proposalId);
 
@@ -95,11 +106,11 @@ describe("Governance Parameter Updates", function () {
     targets: string[],
     values: bigint[],
     calldatas: string[],
-    description: string
+    description: string,
   ): Promise<number> {
-    const tx = await governor.connect(proposer).propose(
-      proposalType, targets, values, calldatas, description
-    );
+    const tx = await governor
+      .connect(proposer)
+      .propose(proposalType, targets, values, calldatas, description);
     await tx.wait();
     const proposalId = Number(await governor.proposalCount());
 
@@ -108,11 +119,17 @@ describe("Governance Parameter Updates", function () {
       await governor.connect(v.signer).castVote(proposalId, v.support);
     }
 
-    const votingPeriod = proposalType === ProposalType.Extended ? EXTENDED_VOTING_PERIOD : STANDARD_VOTING_PERIOD;
+    const votingPeriod =
+      proposalType === ProposalType.Extended
+        ? EXTENDED_VOTING_PERIOD
+        : STANDARD_VOTING_PERIOD;
     await time.increase(votingPeriod + 1);
     await governor.queue(proposalId);
 
-    const executionDelay = proposalType === ProposalType.Extended ? EXTENDED_EXECUTION_DELAY : TWO_DAYS;
+    const executionDelay =
+      proposalType === ProposalType.Extended
+        ? EXTENDED_EXECUTION_DELAY
+        : TWO_DAYS;
     await time.increase(executionDelay + 1);
 
     return proposalId;
@@ -122,9 +139,13 @@ describe("Governance Parameter Updates", function () {
     [deployer, alice, bob, carol] = await ethers.getSigners();
 
     // Deploy TimelockController first (needed by ArmadaToken)
-    const TimelockController = await ethers.getContractFactory("TimelockController");
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
     timelockController = await TimelockController.deploy(
-      TWO_DAYS, [], [], deployer.address
+      TWO_DAYS,
+      [],
+      [],
+      deployer.address,
     );
     await timelockController.waitForDeployment();
     const timelockAddr = await timelockController.getAddress();
@@ -133,7 +154,8 @@ describe("Governance Parameter Updates", function () {
     armToken = await ArmadaToken.deploy(deployer.address, timelockAddr);
     await armToken.waitForDeployment();
 
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
     await treasury.waitForDeployment();
 
@@ -152,13 +174,24 @@ describe("Governance Parameter Updates", function () {
     const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
     const ADMIN_ROLE = await timelockController.TIMELOCK_ADMIN_ROLE();
 
-    await timelockController.grantRole(PROPOSER_ROLE, await governor.getAddress());
-    await timelockController.grantRole(EXECUTOR_ROLE, await governor.getAddress());
+    await timelockController.grantRole(
+      PROPOSER_ROLE,
+      await governor.getAddress(),
+    );
+    await timelockController.grantRole(
+      EXECUTOR_ROLE,
+      await governor.getAddress(),
+    );
     await timelockController.renounceRole(ADMIN_ROLE, deployer.address);
 
     // Configure token: mark treasury as no-delegation, whitelist all participants
     await armToken.initNoDelegation([await treasury.getAddress()]);
-    await armToken.initWhitelist([deployer.address, await treasury.getAddress(), alice.address, bob.address]);
+    await armToken.initWhitelist([
+      deployer.address,
+      await treasury.getAddress(),
+      alice.address,
+      bob.address,
+    ]);
 
     // Distribute ARM tokens
     await armToken.transfer(await treasury.getAddress(), TREASURY_AMOUNT);
@@ -185,7 +218,9 @@ describe("Governance Parameter Updates", function () {
         quorumBps: 2500,
       };
       await expect(
-        governor.connect(alice).setProposalTypeParams(ProposalType.Standard, newParams)
+        governor
+          .connect(alice)
+          .setProposalTypeParams(ProposalType.Standard, newParams),
       ).to.be.revertedWithCustomError(governor, "Gov_NotTimelock");
     });
 
@@ -197,7 +232,9 @@ describe("Governance Parameter Updates", function () {
         quorumBps: 2500,
       };
       await expect(
-        governor.connect(deployer).setProposalTypeParams(ProposalType.Standard, newParams)
+        governor
+          .connect(deployer)
+          .setProposalTypeParams(ProposalType.Standard, newParams),
       ).to.be.revertedWithCustomError(governor, "Gov_NotTimelock");
     });
   });
@@ -213,7 +250,7 @@ describe("Governance Parameter Updates", function () {
     beforeEach(async function () {
       standaloneGovernor = await deployGovernorProxy(
         await armToken.getAddress(),
-        deployer.address,   // deployer acts as timelock
+        deployer.address, // deployer acts as timelock
         await treasury.getAddress(),
       );
     });
@@ -226,8 +263,12 @@ describe("Governance Parameter Updates", function () {
     };
 
     it("accepts valid params within bounds", async function () {
-      await standaloneGovernor.setProposalTypeParams(ProposalType.Standard, validParams);
-      const [delay, period, execDelay, quorum] = await standaloneGovernor.proposalTypeParams(ProposalType.Standard);
+      await standaloneGovernor.setProposalTypeParams(
+        ProposalType.Standard,
+        validParams,
+      );
+      const [delay, period, execDelay, quorum] =
+        await standaloneGovernor.proposalTypeParams(ProposalType.Standard);
       expect(delay).to.equal(validParams.votingDelay);
       expect(period).to.equal(validParams.votingPeriod);
       expect(execDelay).to.equal(validParams.executionDelay);
@@ -241,8 +282,12 @@ describe("Governance Parameter Updates", function () {
         executionDelay: 2 * ONE_DAY,
         quorumBps: 500,
       };
-      await standaloneGovernor.setProposalTypeParams(ProposalType.Standard, minParams);
-      const [delay, period, execDelay, quorum] = await standaloneGovernor.proposalTypeParams(ProposalType.Standard);
+      await standaloneGovernor.setProposalTypeParams(
+        ProposalType.Standard,
+        minParams,
+      );
+      const [delay, period, execDelay, quorum] =
+        await standaloneGovernor.proposalTypeParams(ProposalType.Standard);
       expect(delay).to.equal(minParams.votingDelay);
       expect(period).to.equal(minParams.votingPeriod);
       expect(execDelay).to.equal(minParams.executionDelay);
@@ -256,78 +301,99 @@ describe("Governance Parameter Updates", function () {
         executionDelay: 14 * ONE_DAY,
         quorumBps: 5000,
       };
-      await standaloneGovernor.setProposalTypeParams(ProposalType.Standard, maxParams);
-      const [delay, period, execDelay, quorum] = await standaloneGovernor.proposalTypeParams(ProposalType.Standard);
+      await standaloneGovernor.setProposalTypeParams(
+        ProposalType.Standard,
+        maxParams,
+      );
+      const [delay, period, execDelay, quorum] =
+        await standaloneGovernor.proposalTypeParams(ProposalType.Standard);
       expect(quorum).to.equal(maxParams.quorumBps);
     });
 
     it("rejects votingDelay below minimum", async function () {
       await expect(
         standaloneGovernor.setProposalTypeParams(ProposalType.Standard, {
-          ...validParams, votingDelay: ONE_DAY - 1,
-        })
+          ...validParams,
+          votingDelay: ONE_DAY - 1,
+        }),
       ).to.be.revertedWithCustomError(governor, "Gov_VotingDelayOutOfBounds");
     });
 
     it("rejects votingDelay above maximum", async function () {
       await expect(
         standaloneGovernor.setProposalTypeParams(ProposalType.Standard, {
-          ...validParams, votingDelay: 14 * ONE_DAY + 1,
-        })
+          ...validParams,
+          votingDelay: 14 * ONE_DAY + 1,
+        }),
       ).to.be.revertedWithCustomError(governor, "Gov_VotingDelayOutOfBounds");
     });
 
     it("rejects votingPeriod below minimum", async function () {
       await expect(
         standaloneGovernor.setProposalTypeParams(ProposalType.Standard, {
-          ...validParams, votingPeriod: ONE_DAY - 1,
-        })
+          ...validParams,
+          votingPeriod: ONE_DAY - 1,
+        }),
       ).to.be.revertedWithCustomError(governor, "Gov_VotingPeriodOutOfBounds");
     });
 
     it("rejects votingPeriod above maximum", async function () {
       await expect(
         standaloneGovernor.setProposalTypeParams(ProposalType.Standard, {
-          ...validParams, votingPeriod: 30 * ONE_DAY + 1,
-        })
+          ...validParams,
+          votingPeriod: 30 * ONE_DAY + 1,
+        }),
       ).to.be.revertedWithCustomError(governor, "Gov_VotingPeriodOutOfBounds");
     });
 
     it("rejects executionDelay below minimum", async function () {
       await expect(
         standaloneGovernor.setProposalTypeParams(ProposalType.Standard, {
-          ...validParams, executionDelay: 2 * ONE_DAY - 1,
-        })
-      ).to.be.revertedWithCustomError(governor, "Gov_ExecutionDelayOutOfBounds");
+          ...validParams,
+          executionDelay: 2 * ONE_DAY - 1,
+        }),
+      ).to.be.revertedWithCustomError(
+        governor,
+        "Gov_ExecutionDelayOutOfBounds",
+      );
     });
 
     it("rejects executionDelay above maximum", async function () {
       await expect(
         standaloneGovernor.setProposalTypeParams(ProposalType.Standard, {
-          ...validParams, executionDelay: 14 * ONE_DAY + 1,
-        })
-      ).to.be.revertedWithCustomError(governor, "Gov_ExecutionDelayOutOfBounds");
+          ...validParams,
+          executionDelay: 14 * ONE_DAY + 1,
+        }),
+      ).to.be.revertedWithCustomError(
+        governor,
+        "Gov_ExecutionDelayOutOfBounds",
+      );
     });
 
     it("rejects quorumBps below minimum", async function () {
       await expect(
         standaloneGovernor.setProposalTypeParams(ProposalType.Standard, {
-          ...validParams, quorumBps: 499,
-        })
+          ...validParams,
+          quorumBps: 499,
+        }),
       ).to.be.revertedWithCustomError(governor, "Gov_QuorumBpsOutOfBounds");
     });
 
     it("rejects quorumBps above maximum", async function () {
       await expect(
         standaloneGovernor.setProposalTypeParams(ProposalType.Standard, {
-          ...validParams, quorumBps: 5001,
-        })
+          ...validParams,
+          quorumBps: 5001,
+        }),
       ).to.be.revertedWithCustomError(governor, "Gov_QuorumBpsOutOfBounds");
     });
 
     it("emits ProposalTypeParamsUpdated event", async function () {
       await expect(
-        standaloneGovernor.setProposalTypeParams(ProposalType.Standard, validParams)
+        standaloneGovernor.setProposalTypeParams(
+          ProposalType.Standard,
+          validParams,
+        ),
       ).to.emit(standaloneGovernor, "ProposalTypeParamsUpdated");
     });
   });
@@ -360,7 +426,8 @@ describe("Governance Parameter Updates", function () {
     // divergence would silently weaken the defense. This test is the contract-level
     // CI guard for the mirror.
     it("governor TREASURY_OUTFLOW_ACTIVATION_DELAY matches treasury LIMIT_ACTIVATION_DELAY", async function () {
-      const govDelay = await standaloneGovernor.TREASURY_OUTFLOW_ACTIVATION_DELAY();
+      const govDelay =
+        await standaloneGovernor.TREASURY_OUTFLOW_ACTIVATION_DELAY();
       const treasuryDelay = await treasury.LIMIT_ACTIVATION_DELAY();
       expect(govDelay).to.equal(treasuryDelay);
       expect(govDelay).to.equal(ACTIVATION_DELAY);
@@ -376,8 +443,13 @@ describe("Governance Parameter Updates", function () {
         executionDelay: 7 * ONE_DAY,
         quorumBps: 3000,
       };
-      await standaloneGovernor.setProposalTypeParams(ProposalType.Extended, params);
-      const [, , , quorum] = await standaloneGovernor.proposalTypeParams(ProposalType.Extended);
+      await standaloneGovernor.setProposalTypeParams(
+        ProposalType.Extended,
+        params,
+      );
+      const [, , , quorum] = await standaloneGovernor.proposalTypeParams(
+        ProposalType.Extended,
+      );
       expect(quorum).to.equal(3000);
     });
 
@@ -392,8 +464,11 @@ describe("Governance Parameter Updates", function () {
         quorumBps: 3000,
       };
       await expect(
-        standaloneGovernor.setProposalTypeParams(ProposalType.Extended, params)
-      ).to.be.revertedWithCustomError(standaloneGovernor, "Gov_WouldBreakOutflowDelayInvariant");
+        standaloneGovernor.setProposalTypeParams(ProposalType.Extended, params),
+      ).to.be.revertedWithCustomError(
+        standaloneGovernor,
+        "Gov_WouldBreakOutflowDelayInvariant",
+      );
     });
 
     it("rejects Extended cycle above 24 days", async function () {
@@ -404,8 +479,11 @@ describe("Governance Parameter Updates", function () {
         quorumBps: 3000,
       };
       await expect(
-        standaloneGovernor.setProposalTypeParams(ProposalType.Extended, params)
-      ).to.be.revertedWithCustomError(standaloneGovernor, "Gov_WouldBreakOutflowDelayInvariant");
+        standaloneGovernor.setProposalTypeParams(ProposalType.Extended, params),
+      ).to.be.revertedWithCustomError(
+        standaloneGovernor,
+        "Gov_WouldBreakOutflowDelayInvariant",
+      );
     });
 
     // WHY: Only Extended is gated — Standard proposals cannot execute against
@@ -420,8 +498,13 @@ describe("Governance Parameter Updates", function () {
         executionDelay: 14 * ONE_DAY,
         quorumBps: 2000,
       };
-      await standaloneGovernor.setProposalTypeParams(ProposalType.Standard, params);
-      const [delay] = await standaloneGovernor.proposalTypeParams(ProposalType.Standard);
+      await standaloneGovernor.setProposalTypeParams(
+        ProposalType.Standard,
+        params,
+      );
+      const [delay] = await standaloneGovernor.proposalTypeParams(
+        ProposalType.Standard,
+      );
       expect(delay).to.equal(14 * ONE_DAY);
     });
 
@@ -436,8 +519,11 @@ describe("Governance Parameter Updates", function () {
         quorumBps: 3000,
       };
       await expect(
-        standaloneGovernor.setProposalTypeParams(ProposalType.Extended, params)
-      ).to.be.revertedWithCustomError(standaloneGovernor, "Gov_VotingDelayOutOfBounds");
+        standaloneGovernor.setProposalTypeParams(ProposalType.Extended, params),
+      ).to.be.revertedWithCustomError(
+        standaloneGovernor,
+        "Gov_VotingDelayOutOfBounds",
+      );
     });
   });
 
@@ -452,9 +538,13 @@ describe("Governance Parameter Updates", function () {
 
     beforeEach(async function () {
       // Deploy a timelock where deployer keeps admin for direct control
-      const TimelockController = await ethers.getContractFactory("TimelockController");
+      const TimelockController =
+        await ethers.getContractFactory("TimelockController");
       standaloneTimelock = await TimelockController.deploy(
-        TWO_DAYS, [], [], deployer.address
+        TWO_DAYS,
+        [],
+        [],
+        deployer.address,
       );
       await standaloneTimelock.waitForDeployment();
       const tlAddr = await standaloneTimelock.getAddress();
@@ -468,21 +558,29 @@ describe("Governance Parameter Updates", function () {
       // Grant roles — governor for proposals, deployer for direct schedule/execute in tests
       const PROPOSER_ROLE = await standaloneTimelock.PROPOSER_ROLE();
       const EXECUTOR_ROLE = await standaloneTimelock.EXECUTOR_ROLE();
-      await standaloneTimelock.grantRole(PROPOSER_ROLE, await standaloneGovernor.getAddress());
-      await standaloneTimelock.grantRole(EXECUTOR_ROLE, await standaloneGovernor.getAddress());
+      await standaloneTimelock.grantRole(
+        PROPOSER_ROLE,
+        await standaloneGovernor.getAddress(),
+      );
+      await standaloneTimelock.grantRole(
+        EXECUTOR_ROLE,
+        await standaloneGovernor.getAddress(),
+      );
       await standaloneTimelock.grantRole(PROPOSER_ROLE, deployer.address);
       await standaloneTimelock.grantRole(EXECUTOR_ROLE, deployer.address);
     });
 
     it("quorum uses snapshotted quorumBps, not current params", async function () {
       // Create a proposal with current quorumBps (2000 = 20%)
-      await standaloneGovernor.connect(alice).propose(
-        ProposalType.Standard,
-        [await standaloneGovernor.getAddress()],
-        [0n],
-        [standaloneGovernor.interface.encodeFunctionData("proposalCount")],
-        "Proposal created before param change"
-      );
+      await standaloneGovernor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          [await standaloneGovernor.getAddress()],
+          [0n],
+          [standaloneGovernor.interface.encodeFunctionData("proposalCount")],
+          "Proposal created before param change",
+        );
       const proposalId = Number(await standaloneGovernor.proposalCount());
 
       // Read quorum before param change
@@ -498,20 +596,31 @@ describe("Governance Parameter Updates", function () {
       };
       const calldata = standaloneGovernor.interface.encodeFunctionData(
         "setProposalTypeParams",
-        [ProposalType.Standard, newParams]
+        [ProposalType.Standard, newParams],
       );
 
       const salt = ethers.id("change-quorum");
       await standaloneTimelock.schedule(
-        await standaloneGovernor.getAddress(), 0, calldata, ethers.ZeroHash, salt, TWO_DAYS
+        await standaloneGovernor.getAddress(),
+        0,
+        calldata,
+        ethers.ZeroHash,
+        salt,
+        TWO_DAYS,
       );
       await time.increase(TWO_DAYS + 1);
       await standaloneTimelock.execute(
-        await standaloneGovernor.getAddress(), 0, calldata, ethers.ZeroHash, salt
+        await standaloneGovernor.getAddress(),
+        0,
+        calldata,
+        ethers.ZeroHash,
+        salt,
       );
 
       // Verify params actually changed
-      const [,,, newQuorumBps] = await standaloneGovernor.proposalTypeParams(ProposalType.Standard);
+      const [, , , newQuorumBps] = await standaloneGovernor.proposalTypeParams(
+        ProposalType.Standard,
+      );
       expect(newQuorumBps).to.equal(3000);
 
       // The existing proposal's quorum should still use the snapshotted value (20%)
@@ -534,22 +643,26 @@ describe("Governance Parameter Updates", function () {
       };
       const calldata = governor.interface.encodeFunctionData(
         "setProposalTypeParams",
-        [ProposalType.Standard, newParams]
+        [ProposalType.Standard, newParams],
       );
 
       // setProposalTypeParams is an extended selector, so auto-classification
       // upgrades this to Extended regardless of declared type
       await passProposal(
         alice,
-        [{ signer: alice, support: Vote.For }, { signer: bob, support: Vote.For }],
+        [
+          { signer: alice, support: Vote.For },
+          { signer: bob, support: Vote.For },
+        ],
         ProposalType.Extended,
         [await governor.getAddress()],
         [0n],
         [calldata],
-        "Update Standard timing to 3d/7d/3d and 25% quorum"
+        "Update Standard timing to 3d/7d/3d and 25% quorum",
       );
 
-      const [delay, period, execDelay, quorum] = await governor.proposalTypeParams(ProposalType.Standard);
+      const [delay, period, execDelay, quorum] =
+        await governor.proposalTypeParams(ProposalType.Standard);
       expect(delay).to.equal(newParams.votingDelay);
       expect(period).to.equal(newParams.votingPeriod);
       expect(execDelay).to.equal(newParams.executionDelay);
@@ -565,22 +678,26 @@ describe("Governance Parameter Updates", function () {
       };
       const calldata = governor.interface.encodeFunctionData(
         "setProposalTypeParams",
-        [ProposalType.Extended, newParams]
+        [ProposalType.Extended, newParams],
       );
 
       // setProposalTypeParams is an extended selector, so auto-classification
       // upgrades this to Extended regardless of declared type
       await passProposal(
         alice,
-        [{ signer: alice, support: Vote.For }, { signer: bob, support: Vote.For }],
+        [
+          { signer: alice, support: Vote.For },
+          { signer: bob, support: Vote.For },
+        ],
         ProposalType.Extended,
         [await governor.getAddress()],
         [0n],
         [calldata],
-        "Update Extended timing"
+        "Update Extended timing",
       );
 
-      const [delay, period, execDelay, quorum] = await governor.proposalTypeParams(ProposalType.Extended);
+      const [delay, period, execDelay, quorum] =
+        await governor.proposalTypeParams(ProposalType.Extended);
       expect(delay).to.equal(newParams.votingDelay);
       expect(period).to.equal(newParams.votingPeriod);
       expect(execDelay).to.equal(newParams.executionDelay);
@@ -596,17 +713,19 @@ describe("Governance Parameter Updates", function () {
     it("addStewardBudgetToken is auto-classified as Extended", async function () {
       const calldata = treasury.interface.encodeFunctionData(
         "addStewardBudgetToken",
-        [carol.address, 10000, 30 * ONE_DAY]
+        [carol.address, 10000, 30 * ONE_DAY],
       );
 
       // Propose as Standard — should be auto-upgraded to Extended
-      await governor.connect(alice).propose(
-        ProposalType.Standard,
-        [await treasury.getAddress()],
-        [0n],
-        [calldata],
-        "Add steward budget token"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          [await treasury.getAddress()],
+          [0n],
+          [calldata],
+          "Add steward budget token",
+        );
       const proposalId = await governor.proposalCount();
       const [, proposalType] = await governor.getProposal(proposalId);
       expect(proposalType).to.equal(ProposalType.Extended);
@@ -615,16 +734,18 @@ describe("Governance Parameter Updates", function () {
     it("updateStewardBudgetToken is auto-classified as Extended", async function () {
       const calldata = treasury.interface.encodeFunctionData(
         "updateStewardBudgetToken",
-        [carol.address, 20000, 30 * ONE_DAY]
+        [carol.address, 20000, 30 * ONE_DAY],
       );
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard,
-        [await treasury.getAddress()],
-        [0n],
-        [calldata],
-        "Update steward budget token"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          [await treasury.getAddress()],
+          [0n],
+          [calldata],
+          "Update steward budget token",
+        );
       const proposalId = await governor.proposalCount();
       const [, proposalType] = await governor.getProposal(proposalId);
       expect(proposalType).to.equal(ProposalType.Extended);
@@ -638,16 +759,18 @@ describe("Governance Parameter Updates", function () {
     it("removeStewardBudgetToken stays Standard (always tightening)", async function () {
       const calldata = treasury.interface.encodeFunctionData(
         "removeStewardBudgetToken",
-        [carol.address]
+        [carol.address],
       );
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard,
-        [await treasury.getAddress()],
-        [0n],
-        [calldata],
-        "Remove steward budget token"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          [await treasury.getAddress()],
+          [0n],
+          [calldata],
+          "Remove steward budget token",
+        );
       const proposalId = await governor.proposalCount();
       const [, proposalType] = await governor.getProposal(proposalId);
       expect(proposalType).to.equal(ProposalType.Standard);
@@ -662,7 +785,7 @@ describe("Governance Parameter Updates", function () {
       };
       const calldata = governor.interface.encodeFunctionData(
         "setProposalTypeParams",
-        [ProposalType_Steward, newParams]
+        [ProposalType_Steward, newParams],
       );
 
       // Pass the proposal containing setProposalTypeParams(Steward, ...)
@@ -670,14 +793,19 @@ describe("Governance Parameter Updates", function () {
       await expect(
         passProposal(
           alice,
-          [{ signer: alice, support: Vote.For }, { signer: bob, support: Vote.For }],
+          [
+            { signer: alice, support: Vote.For },
+            { signer: bob, support: Vote.For },
+          ],
           ProposalType.Extended,
           [await governor.getAddress()],
           [0n],
           [calldata],
-          "Try to change Steward params"
-        )
-      ).to.be.revertedWith("TimelockController: underlying transaction reverted");
+          "Try to change Steward params",
+        ),
+      ).to.be.revertedWith(
+        "TimelockController: underlying transaction reverted",
+      );
     });
   });
 });

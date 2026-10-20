@@ -17,35 +17,41 @@
  *   listArtifacts() → [{ nullifiers, commitments }, ...]
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 // ── Path to armada-circuits build output ───────────────────
 // Relative to this file: ../../armada-circuits/build/
-const CIRCUITS_BUILD = path.resolve(__dirname, '../../..', 'armada-circuits', 'build');
+const CIRCUITS_BUILD = path.resolve(
+  __dirname,
+  "../../..",
+  "armada-circuits",
+  "build",
+);
 
 // ── Shapes produced by armada-circuits/scripts/compile.sh ──
-export const ARMADA_SHAPES: Array<{ nullifiers: number; commitments: number }> = [
-  { nullifiers: 1, commitments: 1 },
-  { nullifiers: 1, commitments: 2 },
-  { nullifiers: 1, commitments: 3 },
-  { nullifiers: 2, commitments: 1 },
-  { nullifiers: 2, commitments: 2 },
-  { nullifiers: 2, commitments: 3 },
-  { nullifiers: 3, commitments: 1 },
-  { nullifiers: 3, commitments: 2 },
-  { nullifiers: 3, commitments: 3 },
-  { nullifiers: 4, commitments: 1 },
-  { nullifiers: 4, commitments: 2 },
-  { nullifiers: 4, commitments: 3 },
-  { nullifiers: 5, commitments: 1 },
-  { nullifiers: 5, commitments: 2 },
-  { nullifiers: 6, commitments: 1 },
-  { nullifiers: 6, commitments: 2 },
-  { nullifiers: 7, commitments: 1 },
-  { nullifiers: 8, commitments: 1 },
-  { nullifiers: 8, commitments: 4 },
-];
+export const ARMADA_SHAPES: Array<{ nullifiers: number; commitments: number }> =
+  [
+    { nullifiers: 1, commitments: 1 },
+    { nullifiers: 1, commitments: 2 },
+    { nullifiers: 1, commitments: 3 },
+    { nullifiers: 2, commitments: 1 },
+    { nullifiers: 2, commitments: 2 },
+    { nullifiers: 2, commitments: 3 },
+    { nullifiers: 3, commitments: 1 },
+    { nullifiers: 3, commitments: 2 },
+    { nullifiers: 3, commitments: 3 },
+    { nullifiers: 4, commitments: 1 },
+    { nullifiers: 4, commitments: 2 },
+    { nullifiers: 4, commitments: 3 },
+    { nullifiers: 5, commitments: 1 },
+    { nullifiers: 5, commitments: 2 },
+    { nullifiers: 6, commitments: 1 },
+    { nullifiers: 6, commitments: 2 },
+    { nullifiers: 7, commitments: 1 },
+    { nullifiers: 8, commitments: 1 },
+    { nullifiers: 8, commitments: 4 },
+  ];
 
 // ── Cache ──────────────────────────────────────────────────
 interface CachedArtifact {
@@ -68,7 +74,10 @@ function shapeDir(n: number, m: number): string {
  * Load circuit artifacts for the given shape.
  * Returns { wasm, zkey, vkey } as in-memory bytes/objects.
  */
-export function getArtifact(nullifiers: number, commitments: number): CachedArtifact {
+export function getArtifact(
+  nullifiers: number,
+  commitments: number,
+): CachedArtifact {
   const key = shapeKey(nullifiers, commitments);
 
   const cached = cache.get(key);
@@ -76,20 +85,20 @@ export function getArtifact(nullifiers: number, commitments: number): CachedArti
 
   const dir = shapeDir(nullifiers, commitments);
   const wasmFile = path.join(dir, `main_${key}_js`, `main_${key}.wasm`);
-  const zkeyFile = path.join(dir, 'final.zkey');
-  const vkeyFile = path.join(dir, 'vkey.json');
+  const zkeyFile = path.join(dir, "final.zkey");
+  const vkeyFile = path.join(dir, "vkey.json");
 
   if (!fs.existsSync(zkeyFile)) {
     throw new Error(
       `Armada circuit artifacts not found for shape ${key}. ` +
-      `Run scripts/fetch-circuits.sh to install the pinned release. ` +
-      `Expected: ${zkeyFile}`
+        `Run scripts/fetch-circuits.sh to install the pinned release. ` +
+        `Expected: ${zkeyFile}`,
     );
   }
 
   const wasm = fs.readFileSync(wasmFile);
   const zkey = fs.readFileSync(zkeyFile);
-  const vkey = JSON.parse(fs.readFileSync(vkeyFile, 'utf-8'));
+  const vkey = JSON.parse(fs.readFileSync(vkeyFile, "utf-8"));
 
   const artifact: CachedArtifact = { wasm, zkey, vkey };
   cache.set(key, artifact);
@@ -106,6 +115,9 @@ export function getVKey(nullifiers: number, commitments: number): any {
 /**
  * List all available circuit shapes.
  */
-export function listArtifacts(): Array<{ nullifiers: number; commitments: number }> {
+export function listArtifacts(): Array<{
+  nullifiers: number;
+  commitments: number;
+}> {
   return [...ARMADA_SHAPES];
 }

@@ -8,7 +8,11 @@ import {
   type ChainDeployments,
   type HubDeployments,
 } from "../lib/deployments";
-import { type DeployEnv, type ChainRole, getChainByRole } from "../../../config/networks";
+import {
+  type DeployEnv,
+  type ChainRole,
+  getChainByRole,
+} from "../../../config/networks";
 
 interface DeploymentIssue {
   severity: "error" | "warning";
@@ -41,7 +45,7 @@ interface ComponentSummary {
 function summarizeChain(
   chain: ChainDeployments,
   label: string,
-  issues: DeploymentIssue[]
+  issues: DeploymentIssue[],
 ): ComponentSummary {
   const summary: ComponentSummary = {};
 
@@ -78,7 +82,7 @@ function summarizeChain(
 
 function summarizeHub(
   hub: HubDeployments,
-  issues: DeploymentIssue[]
+  issues: DeploymentIssue[],
 ): ComponentSummary {
   const summary = summarizeChain(hub, "Hub", issues);
 
@@ -115,7 +119,7 @@ function summarizeHub(
 
 function crossReferenceChecks(
   deployments: AllDeployments,
-  issues: DeploymentIssue[]
+  issues: DeploymentIssue[],
 ): void {
   // Check that client pool CCTP references match the CCTP deployment
   for (const chain of deployments.clients) {

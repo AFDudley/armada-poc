@@ -113,7 +113,11 @@ export function scannerConfigForChain(
       confirmationDepth: envIntForChain("CONFIRMATION_DEPTH", chainName, 0),
       maxLogRange: envIntForChain("MAX_LOG_RANGE", chainName, 10_000),
       bootLookbackBlocks: envIntForChain("BOOT_LOOKBACK_BLOCKS", chainName, 0),
-      maxBootLookbackBlocks: envIntForChain("MAX_BOOT_LOOKBACK_BLOCKS", chainName, 100_000),
+      maxBootLookbackBlocks: envIntForChain(
+        "MAX_BOOT_LOOKBACK_BLOCKS",
+        chainName,
+        100_000,
+      ),
       rpcTimeoutMs: envIntForChain("RPC_TIMEOUT_MS", chainName, 10_000),
     };
   }
@@ -126,30 +130,54 @@ export function scannerConfigForChain(
   const isBaseLike = BASE_LIKE_CHAIN_IDS.has(chainId);
   const isArbLike = ARB_LIKE_CHAIN_IDS.has(chainId);
 
-  const defaultLookback = isL1 ? 150 : isBaseLike ? 900 : isArbLike ? 7_200 : 300;
+  const defaultLookback = isL1
+    ? 150
+    : isBaseLike
+      ? 900
+      : isArbLike
+        ? 7_200
+        : 300;
   const defaultMaxLookback = defaultLookback * 10; // 5 hours of headroom at most
   const defaultConfirmation = isL1 ? 6 : 2;
 
   return {
-    confirmationDepth: envIntForChain("CONFIRMATION_DEPTH", chainName, defaultConfirmation),
+    confirmationDepth: envIntForChain(
+      "CONFIRMATION_DEPTH",
+      chainName,
+      defaultConfirmation,
+    ),
     // 1000 blocks is the checkpoint cadence — see RelayerChainConfig.scanner.maxLogRange doc.
     // The bisecting patch handles whatever per-call cap the RPC actually enforces; this value
     // is purely about "how much replay do we accept on a mid-tick failure."
     maxLogRange: envIntForChain("MAX_LOG_RANGE", chainName, 1000),
-    bootLookbackBlocks: envIntForChain("BOOT_LOOKBACK_BLOCKS", chainName, defaultLookback),
-    maxBootLookbackBlocks: envIntForChain("MAX_BOOT_LOOKBACK_BLOCKS", chainName, defaultMaxLookback),
+    bootLookbackBlocks: envIntForChain(
+      "BOOT_LOOKBACK_BLOCKS",
+      chainName,
+      defaultLookback,
+    ),
+    maxBootLookbackBlocks: envIntForChain(
+      "MAX_BOOT_LOOKBACK_BLOCKS",
+      chainName,
+      defaultMaxLookback,
+    ),
     rpcTimeoutMs: envIntForChain("RPC_TIMEOUT_MS", chainName, 10_000),
   };
 }
 
-function envIntForChain(knob: string, chainName: string, fallback: number): number {
+function envIntForChain(
+  knob: string,
+  chainName: string,
+  fallback: number,
+): number {
   const suffix = chainName.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
   const key = `RELAYER_${knob}_${suffix}`;
   const raw = process.env[key];
   if (raw === undefined || raw === "") return fallback;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`Invalid env var ${key}=${raw} — expected non-negative integer`);
+    throw new Error(
+      `Invalid env var ${key}=${raw} — expected non-negative integer`,
+    );
   }
   return parsed;
 }
@@ -157,7 +185,10 @@ function envIntForChain(knob: string, chainName: string, fallback: number): numb
 const netConfig = getNetworkConfig();
 
 // Hub chain configuration
-export const hubChain: ChainConfig = toChainConfig(netConfig.hub, netConfig.env);
+export const hubChain: ChainConfig = toChainConfig(
+  netConfig.hub,
+  netConfig.env,
+);
 
 // Client chains configuration (one entry per configured client, in order)
 export const clientChains: ChainConfig[] = netConfig.clients.map((c) =>
@@ -188,15 +219,18 @@ export const accounts = isLocal()
   ? {
       deployer: {
         address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+        privateKey:
+          "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
       },
       user1: {
         address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-        privateKey: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+        privateKey:
+          "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
       },
       user2: {
         address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
-        privateKey: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
+        privateKey:
+          "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
       },
     }
   : {
@@ -322,7 +356,9 @@ function envInt(key: string, fallback: number): number {
   if (raw === undefined || raw === "") return fallback;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`Invalid env var ${key}=${raw} — expected a non-negative number`);
+    throw new Error(
+      `Invalid env var ${key}=${raw} — expected a non-negative number`,
+    );
   }
   return parsed;
 }

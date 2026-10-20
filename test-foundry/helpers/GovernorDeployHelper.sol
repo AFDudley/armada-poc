@@ -9,18 +9,13 @@ import "../../contracts/governance/ArmadaGovernor.sol";
 
 abstract contract GovernorDeployHelper {
     /// @dev Deploy ArmadaGovernor implementation + ERC1967Proxy and return the proxied instance.
-    function _deployGovernorProxy(
-        address _armToken,
-        address payable _timelock,
-        address _treasury
-    ) internal returns (ArmadaGovernor) {
+    function _deployGovernorProxy(address _armToken, address payable _timelock, address _treasury)
+        internal
+        returns (ArmadaGovernor)
+    {
         ArmadaGovernor impl = new ArmadaGovernor();
-        bytes memory initData = abi.encodeWithSelector(
-            ArmadaGovernor.initialize.selector,
-            _armToken,
-            _timelock,
-            _treasury
-        );
+        bytes memory initData =
+            abi.encodeWithSelector(ArmadaGovernor.initialize.selector, _armToken, _timelock, _treasury);
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         ArmadaGovernor governor = ArmadaGovernor(address(proxy));
 

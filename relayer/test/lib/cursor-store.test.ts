@@ -2,7 +2,14 @@
 // ABOUTME: WHY this exists at all: silent in-memory cursors caused real Sepolia message drops (PR #292 incident); a corrupt or torn-write cursor on disk would reintroduce the same class of failure, so every persistence edge case (missing file, malformed JSON, version mismatch, atomic-write survival) gets explicit coverage.
 
 import { expect } from "chai";
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CursorStore } from "../../lib/cursor-store";
@@ -28,7 +35,10 @@ describe("CursorStore", function () {
 
     it("round-trips a written cursor", async function () {
       const store = new CursorStore(dir);
-      await store.write("hub", { lastProcessedBlock: 12345, updatedAt: 1_700_000_000_000 });
+      await store.write("hub", {
+        lastProcessedBlock: 12345,
+        updatedAt: 1_700_000_000_000,
+      });
       const got = await store.read("hub");
       expect(got).to.deep.equal({
         lastProcessedBlock: 12345,
@@ -65,7 +75,9 @@ describe("CursorStore", function () {
         await store.read("hub");
         expect.fail("should have thrown");
       } catch (err) {
-        expect((err as Error).message).to.match(/missing or invalid version|malformed cursor/);
+        expect((err as Error).message).to.match(
+          /missing or invalid version|malformed cursor/,
+        );
       }
     });
 
@@ -80,7 +92,9 @@ describe("CursorStore", function () {
         await store.read("hub");
         expect.fail("should have thrown");
       } catch (err) {
-        expect((err as Error).message).to.match(/malformed cursor file for chain 'hub'/);
+        expect((err as Error).message).to.match(
+          /malformed cursor file for chain 'hub'/,
+        );
       }
     });
 
@@ -202,7 +216,11 @@ describe("CursorStore", function () {
 
       // Simulate a crash mid-write: write a junk .tmp that never got renamed.
       const tmpPath = join(dir, `cursor-hub.json.${process.pid}.tmp`);
-      await writeFile(tmpPath, '{"lastProcessedBlock": 50000000, "garbage"', "utf8");
+      await writeFile(
+        tmpPath,
+        '{"lastProcessedBlock": 50000000, "garbage"',
+        "utf8",
+      );
 
       const got = await store.read("hub");
       expect(got?.lastProcessedBlock).to.equal(999);
@@ -251,7 +269,9 @@ describe("CursorStore", function () {
 
       try {
         await store.write("hub", { lastProcessedBlock: 100, updatedAt: 1 });
-        expect.fail("should have thrown — destination is a non-empty directory");
+        expect.fail(
+          "should have thrown — destination is a non-empty directory",
+        );
       } catch {
         // expected — rename fails
       }
@@ -259,7 +279,10 @@ describe("CursorStore", function () {
       // The .tmp file MUST be gone (catch branch unlinked it).
       const entries = await readdir(dir);
       const orphanTmps = entries.filter((e) => e.includes(".tmp"));
-      expect(orphanTmps, `unexpected tmp files: ${orphanTmps.join(", ")}`).to.deep.equal([]);
+      expect(
+        orphanTmps,
+        `unexpected tmp files: ${orphanTmps.join(", ")}`,
+      ).to.deep.equal([]);
     });
   });
 

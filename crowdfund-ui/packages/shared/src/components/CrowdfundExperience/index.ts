@@ -1,7 +1,7 @@
 // ABOUTME: Barrel for the CrowdfundExperience page wrapper.
 // ABOUTME: Re-exports the named component plus its prop and view types.
 
-export { CrowdfundExperience } from './CrowdfundExperience'
+export { CrowdfundExperience } from "./CrowdfundExperience";
 export type {
   CrowdfundExperienceProps,
   CrowdfundView,
@@ -10,4 +10,4 @@ export type {
   CrowdfundExperienceLiveData,
   CrowdfundExperienceMyPositionData,
   CrowdfundExperienceHopPosition,
-} from './CrowdfundExperience'
+} from "./CrowdfundExperience";

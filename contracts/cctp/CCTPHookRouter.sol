@@ -38,10 +38,7 @@ contract CCTPHookRouter {
     address public immutable tokenMessenger;
 
     constructor(address _messageTransmitter, address _tokenMessenger) {
-        require(
-            _messageTransmitter != address(0) && _tokenMessenger != address(0),
-            "CCTPHookRouter: zero address"
-        );
+        require(_messageTransmitter != address(0) && _tokenMessenger != address(0), "CCTPHookRouter: zero address");
         messageTransmitter = IMessageTransmitterV2(_messageTransmitter);
         tokenMessenger = _tokenMessenger;
     }
@@ -53,10 +50,7 @@ contract CCTPHookRouter {
      * @param attestation Circle attestation signature(s), or empty for mock
      * @return success Always true on success (reverts on failure)
      */
-    function relayWithHook(
-        bytes calldata message,
-        bytes calldata attestation
-    ) external returns (bool) {
+    function relayWithHook(bytes calldata message, bytes calldata attestation) external returns (bool) {
         // 0. Only burn messages carry minted USDC: anything not addressed to the local
         //    TokenMessenger is a generic message whose body must never reach a pool hook.
         require(
@@ -74,26 +68,14 @@ contract CCTPHookRouter {
         bytes calldata messageBody = MessageV2.getMessageBody(message);
 
         // 3. Get mintRecipient from BurnMessageV2 (the pool contract)
-        address recipient = MessageV2.bytes32ToAddress(
-            BurnMessageV2.getMintRecipient(messageBody)
-        );
+        address recipient = MessageV2.bytes32ToAddress(BurnMessageV2.getMintRecipient(messageBody));
 
         // 4. Dispatch hook based on finality level — matches real CCTP MessageTransmitter behavior
         //    If this reverts, entire tx reverts (no stranded funds)
         if (finality >= CCTPFinality.STANDARD) {
-            IMessageHandlerV2(recipient).handleReceiveFinalizedMessage(
-                sourceDomain,
-                sender,
-                finality,
-                messageBody
-            );
+            IMessageHandlerV2(recipient).handleReceiveFinalizedMessage(sourceDomain, sender, finality, messageBody);
         } else {
-            IMessageHandlerV2(recipient).handleReceiveUnfinalizedMessage(
-                sourceDomain,
-                sender,
-                finality,
-                messageBody
-            );
+            IMessageHandlerV2(recipient).handleReceiveUnfinalizedMessage(sourceDomain, sender, finality, messageBody);
         }
 
         return true;

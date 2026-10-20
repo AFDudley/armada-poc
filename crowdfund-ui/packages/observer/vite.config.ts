@@ -1,70 +1,76 @@
 // ABOUTME: Vite config for the crowdfund observer app.
 // ABOUTME: Read-only visualization — serves deployment files, no write endpoints.
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const pkg = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'),
-)
+  fs.readFileSync(path.resolve(__dirname, "package.json"), "utf-8"),
+);
 
 // Serves deployment JSON files from the project's deployments/ directory
 function serveDeployments() {
   return {
-    name: 'serve-deployments',
+    name: "serve-deployments",
     configureServer(server: any) {
       server.middlewares.use(
-        '/api/deployments',
+        "/api/deployments",
         (req: any, res: any, _next: any) => {
-          const filename = req.url?.replace(/^\//, '') || ''
-          const deploymentsDir = path.resolve(__dirname, '../../../deployments')
-          const filepath = path.resolve(deploymentsDir, filename)
+          const filename = req.url?.replace(/^\//, "") || "";
+          const deploymentsDir = path.resolve(
+            __dirname,
+            "../../../deployments",
+          );
+          const filepath = path.resolve(deploymentsDir, filename);
 
           // Prevent path traversal — resolved path must stay within deployments/
-          if (!filepath.startsWith(deploymentsDir + path.sep) && filepath !== deploymentsDir) {
-            res.statusCode = 403
-            res.end(JSON.stringify({ error: 'Forbidden' }))
-            return
+          if (
+            !filepath.startsWith(deploymentsDir + path.sep) &&
+            filepath !== deploymentsDir
+          ) {
+            res.statusCode = 403;
+            res.end(JSON.stringify({ error: "Forbidden" }));
+            return;
           }
 
           if (fs.existsSync(filepath)) {
-            const content = fs.readFileSync(filepath, 'utf-8')
-            res.setHeader('Content-Type', 'application/json')
-            res.end(content)
+            const content = fs.readFileSync(filepath, "utf-8");
+            res.setHeader("Content-Type", "application/json");
+            res.end(content);
           } else {
-            res.statusCode = 404
-            res.end(JSON.stringify({ error: `Deployment file not found: ${filename}` }))
+            res.statusCode = 404;
+            res.end(
+              JSON.stringify({
+                error: `Deployment file not found: ${filename}`,
+              }),
+            );
           }
         },
-      )
+      );
     },
-  }
+  };
 }
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    serveDeployments(),
-  ],
+  plugins: [react(), tailwindcss(), serveDeployments()],
   define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(pkg.version),
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      "@": path.resolve(__dirname, "src"),
     },
   },
   server: {
     port: 5173,
     fs: {
-      allow: ['../../..'],
+      allow: ["../../.."],
     },
   },
-})
+});

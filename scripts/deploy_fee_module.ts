@@ -33,7 +33,12 @@ import {
   getYieldDeploymentFile,
   isLocal,
 } from "../config/networks";
-import { createNonceManager, loadDeployment, saveDeployment, timelockCall } from "./deploy-utils";
+import {
+  createNonceManager,
+  loadDeployment,
+  saveDeployment,
+  timelockCall,
+} from "./deploy-utils";
 
 async function main() {
   const network = await ethers.provider.getNetwork();
@@ -49,9 +54,18 @@ async function main() {
   const yieldDeployment = loadDeployment(getYieldDeploymentFile());
   const govDeployment = loadDeployment(getGovernanceDeploymentFile());
 
-  if (!poolDeployment) throw new Error(`Privacy pool deployment not found. Deploy privacy pool first.`);
-  if (!yieldDeployment) throw new Error(`Yield deployment not found. Deploy yield contracts first.`);
-  if (!govDeployment) throw new Error(`Governance deployment not found. Deploy governance first.`);
+  if (!poolDeployment)
+    throw new Error(
+      `Privacy pool deployment not found. Deploy privacy pool first.`,
+    );
+  if (!yieldDeployment)
+    throw new Error(
+      `Yield deployment not found. Deploy yield contracts first.`,
+    );
+  if (!govDeployment)
+    throw new Error(
+      `Governance deployment not found. Deploy governance first.`,
+    );
 
   const privacyPoolAddress = poolDeployment.contracts.privacyPool;
   const yieldVaultAddress = yieldDeployment.contracts.armadaYieldVault;
@@ -87,7 +101,9 @@ async function main() {
 
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
   const feeModuleProxy = await ERC1967Proxy.deploy(
-    feeModuleImplAddress, initData, nm.override()
+    feeModuleImplAddress,
+    initData,
+    nm.override(),
   );
   await feeModuleProxy.deploymentTransaction()!.wait();
   const feeModuleProxyAddress = await feeModuleProxy.getAddress();
@@ -95,28 +111,47 @@ async function main() {
 
   // 3. Wire fee module into PrivacyPool (owner-gated — deployer is pool owner)
   console.log("\n--- Wiring fee module into PrivacyPool ---");
-  const privacyPool = await ethers.getContractAt("PrivacyPool", privacyPoolAddress);
-  const setFeeModuleTx1 = await privacyPool.setFeeModule(feeModuleProxyAddress, nm.override());
+  const privacyPool = await ethers.getContractAt(
+    "PrivacyPool",
+    privacyPoolAddress,
+  );
+  const setFeeModuleTx1 = await privacyPool.setFeeModule(
+    feeModuleProxyAddress,
+    nm.override(),
+  );
   await setFeeModuleTx1.wait();
   console.log(`   PrivacyPool.setFeeModule() done`);
 
   // 4. Wire fee module into ArmadaYieldVault (owner-gated — deployer is vault owner)
   console.log("--- Wiring fee module into ArmadaYieldVault ---");
-  const yieldVault = await ethers.getContractAt("ArmadaYieldVault", yieldVaultAddress);
-  const setFeeModuleTx2 = await yieldVault.setFeeModule(feeModuleProxyAddress, nm.override());
+  const yieldVault = await ethers.getContractAt(
+    "ArmadaYieldVault",
+    yieldVaultAddress,
+  );
+  const setFeeModuleTx2 = await yieldVault.setFeeModule(
+    feeModuleProxyAddress,
+    nm.override(),
+  );
   await setFeeModuleTx2.wait();
   console.log(`   ArmadaYieldVault.setFeeModule() done`);
 
   // 5. Update RevenueCounter to use fee module as fee collector (timelock-only)
   if (revenueCounterAddress) {
     console.log("--- Updating RevenueCounter fee collector ---");
-    const revenueCounter = await ethers.getContractAt("RevenueCounter", revenueCounterAddress);
+    const revenueCounter = await ethers.getContractAt(
+      "RevenueCounter",
+      revenueCounterAddress,
+    );
     const setCollectorCalldata = revenueCounter.interface.encodeFunctionData(
-      "setFeeCollector", [feeModuleProxyAddress]
+      "setFeeCollector",
+      [feeModuleProxyAddress],
     );
     await timelockCall(
-      timelockAddress, revenueCounterAddress, setCollectorCalldata,
-      "RevenueCounter.setFeeCollector()", nm
+      timelockAddress,
+      revenueCounterAddress,
+      setCollectorCalldata,
+      "RevenueCounter.setFeeCollector()",
+      nm,
     );
   }
 
@@ -127,10 +162,17 @@ async function main() {
   //    ArmadaTreasuryGov is already owned by the timelock (immutable at deploy time).
   console.log("\n--- Transferring yield contract ownership to timelock ---");
   //    (attach the adapter's own ABI — it carries the custom transferOwnership)
-  const armadaYieldAdapter = await ethers.getContractAt("ArmadaYieldAdapter", yieldDeployment.contracts.armadaYieldAdapter);
-  await (await yieldVault.transferOwnership(timelockAddress, nm.override())).wait();
+  const armadaYieldAdapter = await ethers.getContractAt(
+    "ArmadaYieldAdapter",
+    yieldDeployment.contracts.armadaYieldAdapter,
+  );
+  await (
+    await yieldVault.transferOwnership(timelockAddress, nm.override())
+  ).wait();
   console.log(`   ArmadaYieldVault owner → ${timelockAddress}`);
-  await (await armadaYieldAdapter.transferOwnership(timelockAddress, nm.override())).wait();
+  await (
+    await armadaYieldAdapter.transferOwnership(timelockAddress, nm.override())
+  ).wait();
   console.log(`   ArmadaYieldAdapter owner → ${timelockAddress}`);
 
   // 7. Save to deployment manifest. Use the canonical helper so the suffix is "-sepolia"

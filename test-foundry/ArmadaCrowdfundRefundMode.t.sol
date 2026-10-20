@@ -34,7 +34,7 @@ contract ArmadaCrowdfundRefundModeTest is Test {
             address(armToken),
             treasury,
             admin,
-            admin,  // securityCouncil
+            admin, // securityCouncil
             block.timestamp
         );
 
@@ -226,9 +226,8 @@ contract ArmadaCrowdfundRefundModeTest is Test {
     /// @notice Concentrated hop-0 demand can trigger expansion yet remain below MIN_SALE.
     function test_refundMode_canHappenAfterExpansion() public {
         // Deploy a fresh crowdfund with 100 seeds to reach ELASTIC_TRIGGER
-        ArmadaCrowdfund cf2 = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp
-        );
+        ArmadaCrowdfund cf2 =
+            new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp);
         armToken.transfer(address(cf2), ARM_FUNDING);
         cf2.loadArm();
 

@@ -1,71 +1,83 @@
 // ABOUTME: Shared wallet-confirm list — approve/commit rows with loading/done/error.
 // ABOUTME: Optional Back/Retry when any row is errored; Claim + Participate reuse this.
 
-import { useState, type ReactNode } from 'react'
-import { Button } from '@armada/ui'
-import styles from './WalletConfirmStep.module.css'
+import { useState, type ReactNode } from "react";
+import { Button } from "@armada/ui";
+import styles from "./WalletConfirmStep.module.css";
 
-export type WalletTransactionStatus = 'pending' | 'loading' | 'done' | 'error'
+export type WalletTransactionStatus = "pending" | "loading" | "done" | "error";
 
 export type WalletTransactionItem = {
-  label: string
-  status: WalletTransactionStatus
+  label: string;
+  status: WalletTransactionStatus;
   /** Friendly summary under the label when status is `error`. */
-  errorMessage?: string
+  errorMessage?: string;
   /** Optional raw/full error; shown behind a “Show details” toggle. */
-  errorDetails?: string
+  errorDetails?: string;
   /** Secondary phase copy while loading (e.g. “Confirm in your wallet…”). */
-  phaseLabel?: string
+  phaseLabel?: string;
   /** Tx hash once broadcast. */
-  hash?: string
+  hash?: string;
   /** Block-explorer base URL; with `hash`, renders a short link. */
-  explorerUrl?: string
-}
+  explorerUrl?: string;
+};
 
 const STATUS_LABEL: Record<WalletTransactionStatus, string> = {
-  loading: 'Loading',
-  pending: 'Pending',
-  done: 'Complete',
-  error: 'Error',
-}
+  loading: "Loading",
+  pending: "Pending",
+  done: "Complete",
+  error: "Error",
+};
 
 export interface WalletConfirmStepProps {
   /** Optional — omit when the parent chrome already shows the screen title. */
-  title?: ReactNode
-  transactions: readonly WalletTransactionItem[]
-  footerText?: string
+  title?: ReactNode;
+  transactions: readonly WalletTransactionItem[];
+  footerText?: string;
   /** Shown with Retry when any row is errored. */
-  onBack?: () => void
+  onBack?: () => void;
   /** Shown with Back when any row is errored. */
-  onRetry?: () => void
+  onRetry?: () => void;
 }
 
 export function WalletConfirmStep({
   title,
   transactions,
-  footerText = 'Waiting for wallet confirmation',
+  footerText = "Waiting for wallet confirmation",
   onBack,
   onRetry,
 }: WalletConfirmStepProps) {
-  const [expandedDetails, setExpandedDetails] = useState<Record<number, boolean>>({})
-  const hasError = transactions.some((t) => t.status === 'error')
-  const showErrorActions = hasError && (!!onBack || !!onRetry)
+  const [expandedDetails, setExpandedDetails] = useState<
+    Record<number, boolean>
+  >({});
+  const hasError = transactions.some((t) => t.status === "error");
+  const showErrorActions = hasError && (!!onBack || !!onRetry);
 
   return (
     <div className={styles.root}>
-      <div className={[styles.content, !title && styles.contentNoTitle].filter(Boolean).join(' ')}>
+      <div
+        className={[styles.content, !title && styles.contentNoTitle]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {title ? <h2 className={styles.title}>{title}</h2> : null}
 
-        <div className={styles.txCard} aria-live="polite" aria-label="Transaction status">
+        <div
+          className={styles.txCard}
+          aria-live="polite"
+          aria-label="Transaction status"
+        >
           {transactions.map((tx, i) => (
             <div key={`${tx.label}-${i}`} role="listitem">
-              {i > 0 ? <div className={styles.divider} aria-hidden="true" /> : null}
+              {i > 0 ? (
+                <div className={styles.divider} aria-hidden="true" />
+              ) : null}
               <div className={styles.txRow}>
                 <div className={styles.txMain}>
                   <span className={styles.txLabel}>{tx.label}</span>
-                  {(tx.status === 'loading' && tx.phaseLabel) || tx.hash ? (
+                  {(tx.status === "loading" && tx.phaseLabel) || tx.hash ? (
                     <div className={styles.txMeta}>
-                      {tx.status === 'loading' && tx.phaseLabel ? (
+                      {tx.status === "loading" && tx.phaseLabel ? (
                         <span>{tx.phaseLabel}</span>
                       ) : null}
                       {tx.hash ? (
@@ -77,7 +89,10 @@ export function WalletConfirmStep({
                             rel="noopener noreferrer"
                           >
                             {`${tx.hash.slice(0, 6)}…${tx.hash.slice(-4)}`}
-                            <span className={styles.visuallyHidden}> (opens in a new tab)</span>
+                            <span className={styles.visuallyHidden}>
+                              {" "}
+                              (opens in a new tab)
+                            </span>
                           </a>
                         ) : (
                           <span>{`${tx.hash.slice(0, 6)}…${tx.hash.slice(-4)}`}</span>
@@ -85,10 +100,13 @@ export function WalletConfirmStep({
                       ) : null}
                     </div>
                   ) : null}
-                  {tx.status === 'error' && tx.errorMessage ? (
+                  {tx.status === "error" && tx.errorMessage ? (
                     <div className={styles.errorBlock}>
-                      <div className={styles.errorMessage}>{tx.errorMessage}</div>
-                      {tx.errorDetails && tx.errorDetails !== tx.errorMessage ? (
+                      <div className={styles.errorMessage}>
+                        {tx.errorMessage}
+                      </div>
+                      {tx.errorDetails &&
+                      tx.errorDetails !== tx.errorMessage ? (
                         <>
                           <button
                             type="button"
@@ -101,26 +119,42 @@ export function WalletConfirmStep({
                               }))
                             }
                           >
-                            {expandedDetails[i] ? 'Hide details' : 'Show details'}
+                            {expandedDetails[i]
+                              ? "Hide details"
+                              : "Show details"}
                           </button>
                           {expandedDetails[i] ? (
-                            <pre className={styles.errorDetails}>{tx.errorDetails}</pre>
+                            <pre className={styles.errorDetails}>
+                              {tx.errorDetails}
+                            </pre>
                           ) : null}
                         </>
                       ) : null}
                     </div>
                   ) : null}
                 </div>
-                <div className={styles.txStatus} aria-label={STATUS_LABEL[tx.status]}>
-                  {tx.status === 'loading' ? (
-                    <div className={styles.spinner} role="status" aria-label="Loading" />
+                <div
+                  className={styles.txStatus}
+                  aria-label={STATUS_LABEL[tx.status]}
+                >
+                  {tx.status === "loading" ? (
+                    <div
+                      className={styles.spinner}
+                      role="status"
+                      aria-label="Loading"
+                    />
                   ) : null}
-                  {tx.status === 'pending' ? (
+                  {tx.status === "pending" ? (
                     <div className={styles.circle} aria-hidden="true" />
                   ) : null}
-                  {tx.status === 'done' ? (
+                  {tx.status === "done" ? (
                     <div className={styles.check} aria-hidden="true">
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                      >
                         <path
                           d="M2 6L5 9L10 3"
                           stroke="currentColor"
@@ -131,9 +165,14 @@ export function WalletConfirmStep({
                       </svg>
                     </div>
                   ) : null}
-                  {tx.status === 'error' ? (
+                  {tx.status === "error" ? (
                     <div className={styles.checkError} aria-hidden="true">
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                      >
                         <path
                           d="M3 3L9 9M9 3L3 9"
                           stroke="currentColor"
@@ -143,7 +182,9 @@ export function WalletConfirmStep({
                       </svg>
                     </div>
                   ) : null}
-                  <span className={styles.visuallyHidden}>{STATUS_LABEL[tx.status]}</span>
+                  <span className={styles.visuallyHidden}>
+                    {STATUS_LABEL[tx.status]}
+                  </span>
                 </div>
               </div>
             </div>
@@ -174,11 +215,15 @@ export function WalletConfirmStep({
             ) : null}
           </div>
         ) : (
-          <p className={styles.footerText} aria-live="polite" aria-atomic="true">
-            {hasError ? 'Transaction failed. Go back to retry.' : footerText}
+          <p
+            className={styles.footerText}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {hasError ? "Transaction failed. Go back to retry." : footerText}
           </p>
         )}
       </footer>
     </div>
-  )
+  );
 }

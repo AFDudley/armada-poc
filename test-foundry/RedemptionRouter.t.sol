@@ -13,7 +13,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @dev Mock ERC20 for testing
 contract MockTokenRouter is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
-    function mint(address to, uint256 amount) external { _mint(to, amount); }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
 }
 
 /// @dev Minimal mock of ArmadaWindDown exposing the `triggerTime()` getter that
@@ -21,21 +24,30 @@ contract MockTokenRouter is ERC20 {
 ///      the full wind-down contract and its dependency graph.
 contract MockWindDownRouter {
     uint256 public triggerTime;
-    function setTriggerTime(uint256 _t) external { triggerTime = _t; }
+
+    function setTriggerTime(uint256 _t) external {
+        triggerTime = _t;
+    }
 }
 
 /// @dev Mock of RevenueLock exposing only the `lockedAtWindDown()` view that
 ///      ArmadaRedemption reads.
 contract MockRevenueLockRouter {
     uint256 public lockedAtWindDown;
-    function setLocked(uint256 v) external { lockedAtWindDown = v; }
+
+    function setLocked(uint256 v) external {
+        lockedAtWindDown = v;
+    }
 }
 
 /// @dev Mock of ArmadaCrowdfund exposing only the `armStillOwed()` view that
 ///      ArmadaRedemption reads.
 contract MockCrowdfundRouter {
     uint256 public armStillOwed;
-    function setStillOwed(uint256 v) external { armStillOwed = v; }
+
+    function setStillOwed(uint256 v) external {
+        armStillOwed = v;
+    }
 }
 
 contract RedemptionRouterTest is Test {
@@ -83,12 +95,8 @@ contract RedemptionRouterTest is Test {
         vm.prank(address(windDown));
         armToken.setTransferable(true);
 
-        redemption = new ArmadaRedemption(
-            address(armToken),
-            treasuryAddr,
-            address(revenueLockMock),
-            address(crowdfundMock)
-        );
+        redemption =
+            new ArmadaRedemption(address(armToken), treasuryAddr, address(revenueLockMock), address(crowdfundMock));
 
         // Wire wind-down, simulate trigger, warp past REDEMPTION_DELAY.
         redemption.setWindDown(address(windDown));
@@ -115,11 +123,7 @@ contract RedemptionRouterTest is Test {
 
         // Deploy the router with the full swept list, as the runbook prescribes
         // during the post-trigger window.
-        router = new RedemptionRouter(
-            address(armToken),
-            address(redemption),
-            _sortedPair(address(usdc), address(weth))
-        );
+        router = new RedemptionRouter(address(armToken), address(redemption), _sortedPair(address(usdc), address(weth)));
 
         // Redeemers approve the ROUTER (not the redemption contract) for ARM.
         vm.prank(alice);
@@ -328,9 +332,7 @@ contract RedemptionRouterTest is Test {
     // (no ERC20 assets) must still be routable. The core contract's anyPayout
     // guard is satisfied by the ETH payout alone.
     function test_redeemAll_ethOnlyEmptyTokenList() public {
-        RedemptionRouter ethRouter = new RedemptionRouter(
-            address(armToken), address(redemption), new address[](0)
-        );
+        RedemptionRouter ethRouter = new RedemptionRouter(address(armToken), address(redemption), new address[](0));
         vm.prank(alice);
         armToken.approve(address(ethRouter), type(uint256).max);
 

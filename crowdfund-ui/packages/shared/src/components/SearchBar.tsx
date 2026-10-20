@@ -1,16 +1,16 @@
 // ABOUTME: Debounced search input for filtering tree and table views.
 // ABOUTME: Shared between all views that need address/ENS search.
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from "react";
 
 export interface SearchBarProps {
-  value: string
-  onChange: (query: string) => void
-  placeholder?: string
-  debounceMs?: number
+  value: string;
+  onChange: (query: string) => void;
+  placeholder?: string;
+  debounceMs?: number;
   /** Forwarded to the outer wrapper — useful for inline sizing
    *  (e.g. `flex-1 min-w-[200px]` when the search shares a row with filters). */
-  className?: string
+  className?: string;
 }
 
 /**
@@ -21,40 +21,40 @@ export function SearchBar(props: SearchBarProps) {
   const {
     value,
     onChange,
-    placeholder = 'Search address or ENS...',
+    placeholder = "Search address or ENS...",
     debounceMs = 300,
     className,
-  } = props
-  const [localValue, setLocalValue] = useState(value)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  } = props;
+  const [localValue, setLocalValue] = useState(value);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync external value changes
   useEffect(() => {
-    setLocalValue(value)
-  }, [value])
+    setLocalValue(value);
+  }, [value]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value
-      setLocalValue(newValue)
+      const newValue = e.target.value;
+      setLocalValue(newValue);
 
-      if (timerRef.current) clearTimeout(timerRef.current)
+      if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        onChange(newValue)
-      }, debounceMs)
+        onChange(newValue);
+      }, debounceMs);
     },
     [onChange, debounceMs],
-  )
+  );
 
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [])
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   return (
-    <div className={`relative${className ? ` ${className}` : ''}`}>
+    <div className={`relative${className ? ` ${className}` : ""}`}>
       <svg
         className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
         xmlns="http://www.w3.org/2000/svg"
@@ -78,11 +78,11 @@ export function SearchBar(props: SearchBarProps) {
           // Soft translucent fill over the card surface, bigger radius,
           // and a primary-tinted focus ring + border for a more polished
           // anchor element. Primary substitutes for ChatGPT's literal cyan.
-          'w-full rounded-lg border border-border/60 bg-background/60 py-2 pl-10 pr-3' +
-          'placeholder:text-muted-foreground transition-colors' +
-          'focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/30'
+          "w-full rounded-lg border border-border/60 bg-background/60 py-2 pl-10 pr-3" +
+          "placeholder:text-muted-foreground transition-colors" +
+          "focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
         }
       />
     </div>
-  )
+  );
 }

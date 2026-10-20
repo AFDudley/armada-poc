@@ -13,13 +13,13 @@ import { poseidonHash, initCrypto, SNARK_SCALAR_FIELD } from "./wallet";
 // ============ Constants ============
 
 export const TREE_DEPTH = 16;
-export const TREE_SIZE = 2 ** TREE_DEPTH;  // 65536 leaves
+export const TREE_SIZE = 2 ** TREE_DEPTH; // 65536 leaves
 
 // Zero value (from Railgun contract)
 // ZERO_VALUE = uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD
-export const ZERO_VALUE = BigInt(
-  ethers.hexlify(ethers.keccak256(ethers.toUtf8Bytes("Railgun")))
-) % SNARK_SCALAR_FIELD;
+export const ZERO_VALUE =
+  BigInt(ethers.hexlify(ethers.keccak256(ethers.toUtf8Bytes("Railgun")))) %
+  SNARK_SCALAR_FIELD;
 
 // ============ Types ============
 
@@ -35,7 +35,7 @@ export interface MerkleProof {
 export class MerkleTree {
   private depth: number;
   private zeros: bigint[];
-  private tree: Map<string, bigint>;  // level-index -> hash
+  private tree: Map<string, bigint>; // level-index -> hash
   private leaves: bigint[];
   private nextLeafIndex: number;
 
@@ -129,7 +129,7 @@ export class MerkleTree {
    * Insert multiple leaves
    */
   insertBatch(leaves: bigint[]): number[] {
-    return leaves.map(leaf => this.insert(leaf));
+    return leaves.map((leaf) => this.insert(leaf));
   }
 
   /**
@@ -156,7 +156,7 @@ export class MerkleTree {
       leaf,
       leafIndex,
       pathElements,
-      root: this.root
+      root: this.root,
     };
   }
 
@@ -207,8 +207,10 @@ export class MerkleTree {
     return {
       depth: this.depth,
       nextLeafIndex: this.nextLeafIndex,
-      leaves: this.leaves.map(l => ethers.zeroPadValue(ethers.toBeHex(l), 32)),
-      root: ethers.zeroPadValue(ethers.toBeHex(this.root), 32)
+      leaves: this.leaves.map((l) =>
+        ethers.zeroPadValue(ethers.toBeHex(l), 32),
+      ),
+      root: ethers.zeroPadValue(ethers.toBeHex(this.root), 32),
     };
   }
 
@@ -238,14 +240,15 @@ export class MerkleTree {
 export async function syncTreeFromContract(
   provider: ethers.Provider,
   railgunAddress: string,
-  fromBlock: number = 0
+  fromBlock: number = 0,
 ): Promise<MerkleTree> {
   await initCrypto();
 
   const tree = new MerkleTree();
 
   // Shield event signature
-  const shieldEventSig = "Shield(uint256,uint256,(bytes32,(uint8,address,uint256),uint120)[],(bytes32[3],bytes32)[],uint256[])";
+  const shieldEventSig =
+    "Shield(uint256,uint256,(bytes32,(uint8,address,uint256),uint120)[],(bytes32[3],bytes32)[],uint256[])";
   const shieldTopic = ethers.id(shieldEventSig);
 
   // Fetch all Shield events
@@ -253,17 +256,20 @@ export async function syncTreeFromContract(
     address: railgunAddress,
     topics: [shieldTopic],
     fromBlock,
-    toBlock: "latest"
+    toBlock: "latest",
   });
 
   // Parse and insert commitments
   const iface = new ethers.Interface([
-    "event Shield(uint256 treeNumber, uint256 startPosition, tuple(bytes32 npk, tuple(uint8 tokenType, address tokenAddress, uint256 tokenSubID) token, uint120 value)[] commitments, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey)[] shieldCiphertext, uint256[] fees)"
+    "event Shield(uint256 treeNumber, uint256 startPosition, tuple(bytes32 npk, tuple(uint8 tokenType, address tokenAddress, uint256 tokenSubID) token, uint120 value)[] commitments, tuple(bytes32[3] encryptedBundle, bytes32 shieldKey)[] shieldCiphertext, uint256[] fees)",
   ]);
 
   for (const log of logs) {
     try {
-      const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data });
+      const parsed = iface.parseLog({
+        topics: log.topics as string[],
+        data: log.data,
+      });
       if (!parsed) continue;
 
       const commitments = parsed.args.commitments;
@@ -291,12 +297,12 @@ export async function syncTreeFromContract(
  */
 export async function getOnChainRoot(
   provider: ethers.Provider,
-  railgunAddress: string
+  railgunAddress: string,
 ): Promise<bigint> {
   const contract = new ethers.Contract(
     railgunAddress,
     ["function merkleRoot() view returns (bytes32)"],
-    provider
+    provider,
   );
 
   const root = await contract.merkleRoot();
@@ -308,12 +314,12 @@ export async function getOnChainRoot(
  */
 export async function getOnChainNextLeafIndex(
   provider: ethers.Provider,
-  railgunAddress: string
+  railgunAddress: string,
 ): Promise<number> {
   const contract = new ethers.Contract(
     railgunAddress,
     ["function nextLeafIndex() view returns (uint256)"],
-    provider
+    provider,
   );
 
   return Number(await contract.nextLeafIndex());

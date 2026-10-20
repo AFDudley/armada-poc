@@ -40,13 +40,13 @@ contract MockAaveSpoke {
     // ============ Structs ============
 
     struct Reserve {
-        IERC20 underlying;              // The token (e.g., MockUSDCV2)
-        uint256 totalShares;            // Total shares issued
-        uint256 totalDeposited;         // Total principal deposited (for tracking)
-        uint256 liquidityIndex;         // Current index (RAY precision)
-        uint256 lastUpdateTimestamp;    // Last yield accrual
-        uint256 annualYieldBps;         // APY in basis points (e.g., 500 = 5%)
-        bool mintableYield;             // If true, mint yield on withdrawal
+        IERC20 underlying; // The token (e.g., MockUSDCV2)
+        uint256 totalShares; // Total shares issued
+        uint256 totalDeposited; // Total principal deposited (for tracking)
+        uint256 liquidityIndex; // Current index (RAY precision)
+        uint256 lastUpdateTimestamp; // Last yield accrual
+        uint256 annualYieldBps; // APY in basis points (e.g., 500 = 5%)
+        bool mintableYield; // If true, mint yield on withdrawal
     }
 
     // ============ State ============
@@ -81,11 +81,7 @@ contract MockAaveSpoke {
         uint256 withdrawnAmount
     );
 
-    event ReserveAdded(
-        uint256 indexed reserveId,
-        address indexed underlying,
-        uint256 annualYieldBps
-    );
+    event ReserveAdded(uint256 indexed reserveId, address indexed underlying, uint256 annualYieldBps);
 
     event YieldRateUpdated(uint256 indexed reserveId, uint256 newYieldBps);
 
@@ -113,11 +109,11 @@ contract MockAaveSpoke {
      * @param mintableYield Whether to mint yield tokens on withdrawal
      * @return reserveId The ID of the new reserve
      */
-    function addReserve(
-        address underlying,
-        uint256 annualYieldBps,
-        bool mintableYield
-    ) external onlyOwner returns (uint256 reserveId) {
+    function addReserve(address underlying, uint256 annualYieldBps, bool mintableYield)
+        external
+        onlyOwner
+        returns (uint256 reserveId)
+    {
         reserveId = nextReserveId++;
 
         reserves[reserveId] = Reserve({
@@ -169,11 +165,10 @@ contract MockAaveSpoke {
      * @return shares Amount of shares minted
      * @return supplied Amount of underlying supplied
      */
-    function supply(
-        uint256 reserveId,
-        uint256 amount,
-        address onBehalfOf
-    ) external returns (uint256 shares, uint256 supplied) {
+    function supply(uint256 reserveId, uint256 amount, address onBehalfOf)
+        external
+        returns (uint256 shares, uint256 supplied)
+    {
         Reserve storage reserve = reserves[reserveId];
         require(address(reserve.underlying) != address(0), "MockAaveSpoke: reserve not found");
         require(amount > 0, "MockAaveSpoke: zero amount");
@@ -206,11 +201,10 @@ contract MockAaveSpoke {
      * @return shares Amount of shares burned
      * @return withdrawn Amount of underlying withdrawn
      */
-    function withdraw(
-        uint256 reserveId,
-        uint256 amount,
-        address onBehalfOf
-    ) external returns (uint256 shares, uint256 withdrawn) {
+    function withdraw(uint256 reserveId, uint256 amount, address onBehalfOf)
+        external
+        returns (uint256 shares, uint256 withdrawn)
+    {
         // For simplicity, only allow withdrawing own funds
         require(msg.sender == onBehalfOf, "MockAaveSpoke: can only withdraw own funds");
 
@@ -315,15 +309,19 @@ contract MockAaveSpoke {
      * @notice Get reserve details
      * @param reserveId The reserve to query
      */
-    function getReserveData(uint256 reserveId) external view returns (
-        address underlying,
-        uint256 totalShares,
-        uint256 totalDeposited,
-        uint256 liquidityIndex,
-        uint256 lastUpdateTimestamp,
-        uint256 annualYieldBps,
-        bool mintableYield
-    ) {
+    function getReserveData(uint256 reserveId)
+        external
+        view
+        returns (
+            address underlying,
+            uint256 totalShares,
+            uint256 totalDeposited,
+            uint256 liquidityIndex,
+            uint256 lastUpdateTimestamp,
+            uint256 annualYieldBps,
+            bool mintableYield
+        )
+    {
         Reserve storage reserve = reserves[reserveId];
         return (
             address(reserve.underlying),
@@ -410,11 +408,7 @@ contract MockAaveSpoke {
     /**
      * @notice Get user's assets using current index
      */
-    function _getUserAssets(
-        Reserve storage reserve,
-        address user,
-        uint256 reserveId
-    ) internal view returns (uint256) {
+    function _getUserAssets(Reserve storage reserve, address user, uint256 reserveId) internal view returns (uint256) {
         uint256 currentIndex = _currentIndex(reserve);
         return (userShares[reserveId][user] * currentIndex) / RAY;
     }

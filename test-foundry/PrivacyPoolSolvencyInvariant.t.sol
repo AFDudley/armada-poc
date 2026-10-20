@@ -159,11 +159,8 @@ contract SolvencyHandler is Test {
         Note memory note = notes[i];
         uint120 value = uint120(bound(amountSeed, 1, note.value));
 
-        CommitmentPreimage memory preimage = CommitmentPreimage({
-            npk: bytes32(uint256(uint160(recipient))),
-            token: _erc20(note.token),
-            value: value
-        });
+        CommitmentPreimage memory preimage =
+            CommitmentPreimage({npk: bytes32(uint256(uint160(recipient))), token: _erc20(note.token), value: value});
         Transaction memory txn = _unshieldTransaction(note, preimage, bytes32(0));
 
         if (_transact(txn)) {
@@ -182,13 +179,10 @@ contract SolvencyHandler is Test {
         uint120 value = uint120(bound(amountSeed, 1, note.value));
 
         CommitmentPreimage memory preimage = CommitmentPreimage({
-            npk: bytes32(uint256(uint160(address(pool)))),
-            token: _erc20(note.token),
-            value: value
+            npk: bytes32(uint256(uint160(address(pool)))), token: _erc20(note.token), value: value
         });
-        Transaction memory txn = _unshieldTransaction(
-            note, preimage, CCTPBindingLib.encode(recipient, CLIENT_DOMAIN, 0)
-        );
+        Transaction memory txn =
+            _unshieldTransaction(note, preimage, CCTPBindingLib.encode(recipient, CLIENT_DOMAIN, 0));
 
         try pool.atomicCrossChainUnshield(txn, CLIENT_DOMAIN, recipient, 0, bytes32(0)) {
             // Mirror the pool even if it wrongly accepted a non-USDC note: it burned USDC and
@@ -241,11 +235,8 @@ contract SolvencyHandler is Test {
         uint120 value = uint120(bound(amountSeed, 1, note.value));
         uint256 k = bound(kSeed, 1, 5);
 
-        CommitmentPreimage memory honest = CommitmentPreimage({
-            npk: bytes32(uint256(uint160(recipient))),
-            token: _erc20(note.token),
-            value: value
-        });
+        CommitmentPreimage memory honest =
+            CommitmentPreimage({npk: bytes32(uint256(uint160(recipient))), token: _erc20(note.token), value: value});
         Transaction memory txn = _unshieldTransaction(note, honest, bytes32(0));
         txn.unshieldPreimage.npk = bytes32(uint256(uint160(recipient)) + k * SNARK_SCALAR_FIELD);
 
@@ -266,13 +257,10 @@ contract SolvencyHandler is Test {
         uint120 value = uint120(bound(amountSeed, 1, note.value));
 
         CommitmentPreimage memory preimage = CommitmentPreimage({
-            npk: bytes32(uint256(uint160(address(pool)))),
-            token: _erc20(note.token),
-            value: value
+            npk: bytes32(uint256(uint160(address(pool)))), token: _erc20(note.token), value: value
         });
-        Transaction memory txn = _unshieldTransaction(
-            note, preimage, CCTPBindingLib.encode(recipient, CLIENT_DOMAIN, 0)
-        );
+        Transaction memory txn =
+            _unshieldTransaction(note, preimage, CCTPBindingLib.encode(recipient, CLIENT_DOMAIN, 0));
         if (aliasPool) {
             txn.unshieldPreimage.npk = bytes32(uint256(uint160(address(pool))) + SNARK_SCALAR_FIELD);
         }
@@ -294,13 +282,10 @@ contract SolvencyHandler is Test {
         uint120 value = uint120(bound(amountSeed, 1, note.value));
 
         CommitmentPreimage memory preimage = CommitmentPreimage({
-            npk: bytes32(uint256(uint160(address(pool)))),
-            token: _erc20(note.token),
-            value: value
+            npk: bytes32(uint256(uint160(address(pool)))), token: _erc20(note.token), value: value
         });
-        Transaction memory txn = _unshieldTransaction(
-            note, preimage, CCTPBindingLib.encode(recipient, CLIENT_DOMAIN, 0)
-        );
+        Transaction memory txn =
+            _unshieldTransaction(note, preimage, CCTPBindingLib.encode(recipient, CLIENT_DOMAIN, 0));
 
         try pool.atomicCrossChainUnshield(txn, CLIENT_DOMAIN, address(0xA77AC4E5), 0, bytes32(0)) {
             tamperedAccepted++;
@@ -362,19 +347,16 @@ contract SolvencyHandler is Test {
     }
 
     /// @dev Unshield of `preimage` from `note`; a change commitment is added when value remains.
-    function _unshieldTransaction(
-        Note memory note,
-        CommitmentPreimage memory preimage,
-        bytes32 adaptParams
-    ) internal returns (Transaction memory) {
+    function _unshieldTransaction(Note memory note, CommitmentPreimage memory preimage, bytes32 adaptParams)
+        internal
+        returns (Transaction memory)
+    {
         bool change = preimage.value < note.value;
         bytes32[] memory commitments = new bytes32[](change ? 2 : 1);
         if (change) commitments[0] = keccak256(abi.encode("change", _nonce));
-        commitments[commitments.length - 1] = PoseidonT4.poseidon([
-            preimage.npk,
-            bytes32(uint256(uint160(preimage.token.tokenAddress))),
-            bytes32(uint256(preimage.value))
-        ]);
+        commitments[commitments.length - 1] = PoseidonT4.poseidon(
+            [preimage.npk, bytes32(uint256(uint160(preimage.token.tokenAddress))), bytes32(uint256(preimage.value))]
+        );
         Transaction memory txn = _transaction(commitments, commitments.length - 1, UnshieldType.NORMAL, adaptParams);
         txn.unshieldPreimage = preimage;
         return txn;
@@ -516,8 +498,8 @@ contract PrivacyPoolSolvencyInvariantTest is Test, PoseidonLinker {
     ///         ghost ledger would stay empty and the invariant would pass trivially. Every action must
     ///         be able to succeed here, and the two forbidden ones must be rejected.
     function test_handlerActionsAreLive() public {
-        handler.shield(0, 1_000e6);          // USDC
-        handler.shield(1, 1_000e6);          // other token
+        handler.shield(0, 1_000e6); // USDC
+        handler.shield(1, 1_000e6); // other token
         handler.shieldIn(500e6);
         handler.transfer(0, 400e6);
         handler.unshieldLocal(0, 100e6);

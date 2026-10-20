@@ -1,14 +1,14 @@
 // ABOUTME: Ported from armada-crowdfund MyPosition — hop InvitesCard demo surface.
 // ABOUTME: Header rendering exposed via a `header` slot prop for consuming apps.
 
-import { useMemo, useState } from 'react'
-import styles from './MyPosition.module.css'
-import { Header } from '@armada/ui'
-import { Tag } from '@armada/ui'
-import { InformationCircleIcon } from '@heroicons/react/24/solid'
-import { Tooltip } from '@armada/ui'
-import { InvitesCard } from './InvitesCard'
-import { NodeSphere } from '../NodeSphere/NodeSphere'
+import { useMemo, useState } from "react";
+import styles from "./MyPosition.module.css";
+import { Header } from "@armada/ui";
+import { Tag } from "@armada/ui";
+import { InformationCircleIcon } from "@heroicons/react/24/solid";
+import { Tooltip } from "@armada/ui";
+import { InvitesCard } from "./InvitesCard";
+import { NodeSphere } from "../NodeSphere/NodeSphere";
 import {
   buildInvitePinnedNodes,
   COMMITTED,
@@ -22,52 +22,52 @@ import {
   GRAPH_PARTICIPANTS,
   GRAPH_SEED,
   demoResolveEns,
-} from './myPositionDemo'
-import { createDemoInviteLink } from '../../lib/demoInviteLink'
-import type { InviteeHop } from './inviteModel'
-import type { ReactNode } from 'react'
+} from "./myPositionDemo";
+import { createDemoInviteLink } from "../../lib/demoInviteLink";
+import type { InviteeHop } from "./inviteModel";
+import type { ReactNode } from "react";
 
 export interface MyPositionProps {
   /**
    * Header slot. When provided, replaces the default @armada/ui `<Header>`.
    * Pass `null` to render no header at all.
    */
-  header?: ReactNode
+  header?: ReactNode;
 }
 
 export function MyPosition({ header }: MyPositionProps = {}) {
-  const [copiedId, setCopiedId] = useState<number | null>(null)
-  const [loadingHop, setLoadingHop] = useState<InviteeHop | null>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [loadingHop, setLoadingHop] = useState<InviteeHop | null>(null);
 
   const invitePinnedNodes = useMemo(
     () => buildInvitePinnedNodes(DEMO_SLOTS, DEMO_WALLET, COMMITTED),
     [],
-  )
+  );
 
   const handleGenerateLink = async (hop: InviteeHop) => {
-    setLoadingHop(hop)
-    await new Promise((r) => setTimeout(r, 800))
-    setLoadingHop(null)
-    const expiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+    setLoadingHop(hop);
+    await new Promise((r) => setTimeout(r, 800));
+    setLoadingHop(null);
+    const expiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
     return {
       id: Date.now(),
       link: createDemoInviteLink(`hop-${hop}`),
       expiresAt,
-    }
-  }
+    };
+  };
 
   const handleCopy = (slotId: number, link: string) => {
-    void navigator.clipboard.writeText(link)
-    setCopiedId(slotId)
-    setTimeout(() => setCopiedId(null), 1200)
-  }
+    void navigator.clipboard.writeText(link);
+    setCopiedId(slotId);
+    setTimeout(() => setCopiedId(null), 1200);
+  };
 
-  const handleRevoke = async () => {}
+  const handleRevoke = async () => {};
   const handleInviteOnchain = async (hop: InviteeHop) => {
-    setLoadingHop(hop)
-    await new Promise((r) => setTimeout(r, 800))
-    setLoadingHop(null)
-  }
+    setLoadingHop(hop);
+    await new Promise((r) => setTimeout(r, 800));
+    setLoadingHop(null);
+  };
 
   return (
     <div className={styles.page}>
@@ -114,11 +114,16 @@ export function MyPosition({ header }: MyPositionProps = {}) {
                           className={styles.infoTrigger}
                           aria-label="ARM allocation info"
                         >
-                          <InformationCircleIcon className={styles.infoIcon} aria-hidden />
+                          <InformationCircleIcon
+                            className={styles.infoIcon}
+                            aria-hidden
+                          />
                         </button>
                       </Tooltip>
                     </div>
-                    <p className={styles.statAmountAccent}>{formatArmAllocation()}</p>
+                    <p className={styles.statAmountAccent}>
+                      {formatArmAllocation()}
+                    </p>
                   </div>
                 </div>
 
@@ -130,7 +135,9 @@ export function MyPosition({ header }: MyPositionProps = {}) {
                     />
                   </div>
                   <div className={styles.barLabels}>
-                    <span className={styles.barCaption}>{FILL_PCT}% of hop cap</span>
+                    <span className={styles.barCaption}>
+                      {FILL_PCT}% of hop cap
+                    </span>
                     <span className={styles.barCaption}>Cap $10,000</span>
                   </div>
                 </div>
@@ -149,10 +156,10 @@ export function MyPosition({ header }: MyPositionProps = {}) {
               copiedSlotId={copiedId}
               loadingHop={loadingHop}
               onViewRedeemed={(address) => {
-                const url = new URL('/', window.location.origin)
-                url.searchParams.set('view', 'crowdfund')
-                url.searchParams.set('select', address)
-                window.location.assign(url.toString())
+                const url = new URL("/", window.location.origin);
+                url.searchParams.set("view", "crowdfund");
+                url.searchParams.set("select", address);
+                window.location.assign(url.toString());
               }}
             />
           </div>
@@ -174,5 +181,5 @@ export function MyPosition({ header }: MyPositionProps = {}) {
         </main>
       </div>
     </div>
-  )
+  );
 }

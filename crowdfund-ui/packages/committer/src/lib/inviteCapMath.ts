@@ -11,8 +11,8 @@ export function effectiveInviteCapUsdc(
   currentInvitesReceived: number,
   perSlotCapUsdc: bigint,
 ): bigint {
-  const multiplier = BigInt(Math.max(0, currentInvitesReceived) + 1)
-  return multiplier * perSlotCapUsdc
+  const multiplier = BigInt(Math.max(0, currentInvitesReceived) + 1);
+  return multiplier * perSlotCapUsdc;
 }
 
 /**
@@ -28,5 +28,5 @@ export function isAtInviteCap(
   currentInvitesReceived: number,
   maxInvitesReceived: number,
 ): boolean {
-  return maxInvitesReceived > 0 && currentInvitesReceived >= maxInvitesReceived
+  return maxInvitesReceived > 0 && currentInvitesReceived >= maxInvitesReceived;
 }

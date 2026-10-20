@@ -19,7 +19,10 @@ import * as path from "path";
 import { buildPoseidon } from "circomlibjs";
 
 const poseidonBytecode = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "lib", "poseidon_bytecode.json"), "utf-8")
+  fs.readFileSync(
+    path.join(__dirname, "..", "lib", "poseidon_bytecode.json"),
+    "utf-8",
+  ),
 );
 
 import {
@@ -30,17 +33,24 @@ import { encodeBurnMessageV2 } from "../scripts/contract-vectors/lib/cctp-messag
 
 const DOMAINS = { hub: 100, client: 101 };
 
-const CCTP_BINDING_DOMAIN_TAG = ethers.keccak256(ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"));
+const CCTP_BINDING_DOMAIN_TAG = ethers.keccak256(
+  ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"),
+);
 // CCTPBindingLib.encode(recipient, domain, maxFee) — adaptParams binding for xchain unshield (#364/#378).
-function encodeCctpBinding(recipient: string, domain: number, maxFee: bigint): string {
+function encodeCctpBinding(
+  recipient: string,
+  domain: number,
+  maxFee: bigint,
+): string {
   return ethers.keccak256(
     ethers.AbiCoder.defaultAbiCoder().encode(
       ["bytes32", "address", "uint32", "uint256"],
-      [CCTP_BINDING_DOMAIN_TAG, recipient, domain, maxFee]
-    )
+      [CCTP_BINDING_DOMAIN_TAG, recipient, domain, maxFee],
+    ),
   );
 }
-const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 describe("Privacy Pool Integration Hardening", function () {
   let hubUsdc: Contract;
@@ -92,29 +102,56 @@ describe("Privacy Pool Integration Hardening", function () {
     const MockUSDCV2 = await ethers.getContractFactory("MockUSDCV2");
     hubUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
 
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.hub, relayerAddress);
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
+    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.hub,
+      relayerAddress,
+    );
 
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     hubTokenMessenger = await MockTokenMessengerV2.deploy(
       await hubMessageTransmitter.getAddress(),
       await hubUsdc.getAddress(),
-      DOMAINS.hub
+      DOMAINS.hub,
     );
-    await hubMessageTransmitter.setTokenMessenger(await hubTokenMessenger.getAddress());
+    await hubMessageTransmitter.setTokenMessenger(
+      await hubTokenMessenger.getAddress(),
+    );
     await hubUsdc.addMinter(await hubTokenMessenger.getAddress());
 
     // Deploy Poseidon libraries
-    const poseidonT3Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT3.bytecode });
+    const poseidonT3Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT3.bytecode,
+    });
     const poseidonT3Address = (await poseidonT3Tx.wait())!.contractAddress!;
-    const poseidonT4Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT4.bytecode });
+    const poseidonT4Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT4.bytecode,
+    });
     const poseidonT4Address = (await poseidonT4Tx.wait())!.contractAddress!;
 
     // Deploy modules
-    merkleModule = await (await ethers.getContractFactory("MerkleModule", { libraries: { PoseidonT3: poseidonT3Address } })).deploy();
-    verifierModule = await (await ethers.getContractFactory("VerifierModule")).deploy();
-    shieldModule = await (await ethers.getContractFactory("ShieldModule", { libraries: { PoseidonT4: poseidonT4Address } })).deploy();
-    transactModule = await (await ethers.getContractFactory("TransactModule", { libraries: { PoseidonT4: poseidonT4Address } })).deploy();
+    merkleModule = await (
+      await ethers.getContractFactory("MerkleModule", {
+        libraries: { PoseidonT3: poseidonT3Address },
+      })
+    ).deploy();
+    verifierModule = await (
+      await ethers.getContractFactory("VerifierModule")
+    ).deploy();
+    shieldModule = await (
+      await ethers.getContractFactory("ShieldModule", {
+        libraries: { PoseidonT4: poseidonT4Address },
+      })
+    ).deploy();
+    transactModule = await (
+      await ethers.getContractFactory("TransactModule", {
+        libraries: { PoseidonT4: poseidonT4Address },
+      })
+    ).deploy();
 
     // Deploy PrivacyPool router
     const PrivacyPool = await ethers.getContractFactory("PrivacyPool");
@@ -131,7 +168,7 @@ describe("Privacy Pool Integration Hardening", function () {
       await hubUsdc.getAddress(),
       DOMAINS.hub,
       deployerAddress,
-      deployerAddress
+      deployerAddress,
     );
 
     await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, false);
@@ -141,16 +178,22 @@ describe("Privacy Pool Integration Hardening", function () {
 
     // ──── Deploy Client Chain ────
     clientUsdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
-    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.client, relayerAddress);
+    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.client,
+      relayerAddress,
+    );
     clientTokenMessenger = await MockTokenMessengerV2.deploy(
       await clientMessageTransmitter.getAddress(),
       await clientUsdc.getAddress(),
-      DOMAINS.client
+      DOMAINS.client,
     );
-    await clientMessageTransmitter.setTokenMessenger(await clientTokenMessenger.getAddress());
+    await clientMessageTransmitter.setTokenMessenger(
+      await clientTokenMessenger.getAddress(),
+    );
     await clientUsdc.addMinter(await clientTokenMessenger.getAddress());
 
-    const PrivacyPoolClient = await ethers.getContractFactory("PrivacyPoolClient");
+    const PrivacyPoolClient =
+      await ethers.getContractFactory("PrivacyPoolClient");
     privacyPoolClient = await PrivacyPoolClient.deploy();
     clientAddress = await privacyPoolClient.getAddress();
 
@@ -161,30 +204,54 @@ describe("Privacy Pool Integration Hardening", function () {
       DOMAINS.client,
       DOMAINS.hub,
       ethers.zeroPadValue(privacyPoolAddress, 32),
-      deployerAddress
+      deployerAddress,
     );
 
     // Deploy CCTPHookRouters
     const CCTPHookRouter = await ethers.getContractFactory("CCTPHookRouter");
-    hubHookRouter = await CCTPHookRouter.deploy(await hubMessageTransmitter.getAddress(), await hubTokenMessenger.getAddress());
-    clientHookRouter = await CCTPHookRouter.deploy(await clientMessageTransmitter.getAddress(), await clientTokenMessenger.getAddress());
+    hubHookRouter = await CCTPHookRouter.deploy(
+      await hubMessageTransmitter.getAddress(),
+      await hubTokenMessenger.getAddress(),
+    );
+    clientHookRouter = await CCTPHookRouter.deploy(
+      await clientMessageTransmitter.getAddress(),
+      await clientTokenMessenger.getAddress(),
+    );
 
     // Set hookRouter on contracts
     await privacyPool.setHookRouter(await hubHookRouter.getAddress());
     await privacyPoolClient.setHookRouter(await clientHookRouter.getAddress());
 
     // Pin the destinationCaller (hook router) on-chain for cross-chain shield/unshield
-    await privacyPoolClient.setHubHookRouter(ethers.zeroPadValue(await hubHookRouter.getAddress(), 32));
-    await privacyPool.setRemoteHookRouter(DOMAINS.client, ethers.zeroPadValue(await clientHookRouter.getAddress(), 32));
+    await privacyPoolClient.setHubHookRouter(
+      ethers.zeroPadValue(await hubHookRouter.getAddress(), 32),
+    );
+    await privacyPool.setRemoteHookRouter(
+      DOMAINS.client,
+      ethers.zeroPadValue(await clientHookRouter.getAddress(), 32),
+    );
 
     // Set mock MessageTransmitter relayer to hookRouter (so hookRouter can call receiveMessage)
-    await hubMessageTransmitter.connect(relayer).setRelayer(await hubHookRouter.getAddress());
-    await clientMessageTransmitter.connect(relayer).setRelayer(await clientHookRouter.getAddress());
+    await hubMessageTransmitter
+      .connect(relayer)
+      .setRelayer(await hubHookRouter.getAddress());
+    await clientMessageTransmitter
+      .connect(relayer)
+      .setRelayer(await clientHookRouter.getAddress());
 
     // Link deployments
-    await privacyPool.setRemotePool(DOMAINS.client, ethers.zeroPadValue(clientAddress, 32));
-    await hubTokenMessenger.setRemoteTokenMessenger(DOMAINS.client, ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32));
-    await clientTokenMessenger.setRemoteTokenMessenger(DOMAINS.hub, ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32));
+    await privacyPool.setRemotePool(
+      DOMAINS.client,
+      ethers.zeroPadValue(clientAddress, 32),
+    );
+    await hubTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.client,
+      ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32),
+    );
+    await clientTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.hub,
+      ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32),
+    );
   });
 
   // ═══════════════════════════════════════════════════════════════════
@@ -214,7 +281,11 @@ describe("Privacy Pool Integration Hardening", function () {
     };
   }
 
-  function computeCommitmentHash(npkBigInt: bigint, tokenId: bigint, value: bigint): string {
+  function computeCommitmentHash(
+    npkBigInt: bigint,
+    tokenId: bigint,
+    value: bigint,
+  ): string {
     const hash = poseidon([F.e(npkBigInt), F.e(tokenId), F.e(value)]);
     return ethers.zeroPadValue(ethers.toBeHex(BigInt(F.toString(hash))), 32);
   }
@@ -229,11 +300,19 @@ describe("Privacy Pool Integration Hardening", function () {
     adaptParams?: string;
   }) {
     const unshieldType = opts.unshield ?? 0;
-    const ciphertextCount = opts.ciphertextCount ??
-      (unshieldType !== 0 ? opts.commitments.length - 1 : opts.commitments.length);
+    const ciphertextCount =
+      opts.ciphertextCount ??
+      (unshieldType !== 0
+        ? opts.commitments.length - 1
+        : opts.commitments.length);
 
     const ciphertext = Array.from({ length: ciphertextCount }, () => ({
-      ciphertext: [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash],
+      ciphertext: [
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+      ],
       blindedSenderViewingKey: ethers.ZeroHash,
       blindedReceiverViewingKey: ethers.ZeroHash,
       annotationData: "0x",
@@ -241,7 +320,11 @@ describe("Privacy Pool Integration Hardening", function () {
     }));
 
     return {
-      proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+      proof: {
+        a: { x: 0, y: 0 },
+        b: { x: [0, 0], y: [0, 0] },
+        c: { x: 0, y: 0 },
+      },
       merkleRoot: opts.merkleRoot,
       nullifiers: opts.nullifiers,
       commitments: opts.commitments,
@@ -256,18 +339,31 @@ describe("Privacy Pool Integration Hardening", function () {
       },
       unshieldPreimage: opts.unshieldPreimage ?? {
         npk: ethers.ZeroHash,
-        token: { tokenType: 0, tokenAddress: ethers.ZeroAddress, tokenSubID: 0 },
+        token: {
+          tokenType: 0,
+          tokenAddress: ethers.ZeroAddress,
+          tokenSubID: 0,
+        },
         value: 0,
       },
     };
   }
 
-  async function shieldAndGetRoot(signer: Signer, amount: bigint, npkSeed: string): Promise<string> {
+  async function shieldAndGetRoot(
+    signer: Signer,
+    amount: bigint,
+    npkSeed: string,
+  ): Promise<string> {
     const signerAddr = await signer.getAddress();
     const usdcAddr = await hubUsdc.getAddress();
     await hubUsdc.mint(signerAddr, amount);
     await hubUsdc.connect(signer).approve(privacyPoolAddress, amount);
-    await privacyPool.connect(signer).shield([makeShieldRequest(usdcAddr, amount, npkSeed)], ethers.ZeroAddress);
+    await privacyPool
+      .connect(signer)
+      .shield(
+        [makeShieldRequest(usdcAddr, amount, npkSeed)],
+        ethers.ZeroAddress,
+      );
     return await privacyPool.merkleRoot();
   }
 
@@ -287,7 +383,7 @@ describe("Privacy Pool Integration Hardening", function () {
       await hubUsdc.connect(alice).approve(privacyPoolAddress, totalShield);
 
       const requests = Array.from({ length: SHIELD_COUNT }, (_, i) =>
-        makeShieldRequest(usdcAddr, SHIELD_EACH, `lifecycle-${i}`)
+        makeShieldRequest(usdcAddr, SHIELD_EACH, `lifecycle-${i}`),
       );
       await privacyPool.connect(alice).shield(requests, ethers.ZeroAddress);
 
@@ -296,9 +392,15 @@ describe("Privacy Pool Integration Hardening", function () {
       expect(nextLeaf).to.be.gte(SHIELD_COUNT);
 
       // Step 2: Transact (private transfer — 1 nullifier, 2 new commitments)
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes("lifecycle-null-1"));
-      const newCommit1 = ethers.keccak256(ethers.toUtf8Bytes("lifecycle-commit-1"));
-      const newCommit2 = ethers.keccak256(ethers.toUtf8Bytes("lifecycle-commit-2"));
+      const nullifier = ethers.keccak256(
+        ethers.toUtf8Bytes("lifecycle-null-1"),
+      );
+      const newCommit1 = ethers.keccak256(
+        ethers.toUtf8Bytes("lifecycle-commit-1"),
+      );
+      const newCommit2 = ethers.keccak256(
+        ethers.toUtf8Bytes("lifecycle-commit-2"),
+      );
 
       const txData = makeTransaction({
         merkleRoot: root,
@@ -314,8 +416,14 @@ describe("Privacy Pool Integration Hardening", function () {
       const unshieldValue = ethers.parseUnits("15", 6);
       const npkBigInt = BigInt(bobAddress);
       const tokenId = BigInt(usdcAddr);
-      const unshieldCommitHash = computeCommitmentHash(npkBigInt, tokenId, unshieldValue);
-      const changeCommit = ethers.keccak256(ethers.toUtf8Bytes("lifecycle-change"));
+      const unshieldCommitHash = computeCommitmentHash(
+        npkBigInt,
+        tokenId,
+        unshieldValue,
+      );
+      const changeCommit = ethers.keccak256(
+        ethers.toUtf8Bytes("lifecycle-change"),
+      );
 
       const unshieldTx = makeTransaction({
         merkleRoot: rootAfterTransact,
@@ -353,13 +461,18 @@ describe("Privacy Pool Integration Hardening", function () {
 
       await hubUsdc.mint(aliceAddress, AMOUNT);
       await hubUsdc.connect(alice).approve(privacyPoolAddress, AMOUNT);
-      await privacyPool.connect(alice).shield([makeShieldRequest(usdcAddr, AMOUNT, "fee-test")], ethers.ZeroAddress);
+      await privacyPool
+        .connect(alice)
+        .shield(
+          [makeShieldRequest(usdcAddr, AMOUNT, "fee-test")],
+          ethers.ZeroAddress,
+        );
 
       const treasuryAfter = await hubUsdc.balanceOf(treasuryAddress);
       const poolAfter = await hubUsdc.balanceOf(privacyPoolAddress);
 
       // Shield fee is 50 bps = 0.50%
-      const expectedFee = AMOUNT * 50n / 10000n; // 5 USDC
+      const expectedFee = (AMOUNT * 50n) / 10000n; // 5 USDC
       const expectedBase = AMOUNT - expectedFee; // 995 USDC
 
       expect(treasuryAfter - treasuryBefore).to.equal(expectedFee);
@@ -389,13 +502,28 @@ describe("Privacy Pool Integration Hardening", function () {
       const rootBefore = await privacyPool.merkleRoot();
 
       // All three users shield
-      await privacyPool.connect(alice).shield([makeShieldRequest(usdcAddr, AMOUNT, "concurrent-alice")], ethers.ZeroAddress);
+      await privacyPool
+        .connect(alice)
+        .shield(
+          [makeShieldRequest(usdcAddr, AMOUNT, "concurrent-alice")],
+          ethers.ZeroAddress,
+        );
       const rootAfterAlice = await privacyPool.merkleRoot();
 
-      await privacyPool.connect(bob).shield([makeShieldRequest(usdcAddr, AMOUNT, "concurrent-bob")], ethers.ZeroAddress);
+      await privacyPool
+        .connect(bob)
+        .shield(
+          [makeShieldRequest(usdcAddr, AMOUNT, "concurrent-bob")],
+          ethers.ZeroAddress,
+        );
       const rootAfterBob = await privacyPool.merkleRoot();
 
-      await privacyPool.connect(charlie).shield([makeShieldRequest(usdcAddr, AMOUNT, "concurrent-charlie")], ethers.ZeroAddress);
+      await privacyPool
+        .connect(charlie)
+        .shield(
+          [makeShieldRequest(usdcAddr, AMOUNT, "concurrent-charlie")],
+          ethers.ZeroAddress,
+        );
       const rootAfterCharlie = await privacyPool.merkleRoot();
 
       // Each should produce a unique root
@@ -414,16 +542,26 @@ describe("Privacy Pool Integration Hardening", function () {
       const roots: string[] = [];
 
       // Shield two notes to create two roots
-      const root1 = await shieldAndGetRoot(alice, ethers.parseUnits("10", 6), "multi-root-1");
+      const root1 = await shieldAndGetRoot(
+        alice,
+        ethers.parseUnits("10", 6),
+        "multi-root-1",
+      );
       roots.push(root1);
-      const root2 = await shieldAndGetRoot(bob, ethers.parseUnits("10", 6), "multi-root-2");
+      const root2 = await shieldAndGetRoot(
+        bob,
+        ethers.parseUnits("10", 6),
+        "multi-root-2",
+      );
       roots.push(root2);
 
       // Transact using root1 (older root)
       const tx1 = makeTransaction({
         merkleRoot: root1,
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("multi-root-null-1"))],
-        commitments: [ethers.keccak256(ethers.toUtf8Bytes("multi-root-commit-1"))],
+        commitments: [
+          ethers.keccak256(ethers.toUtf8Bytes("multi-root-commit-1")),
+        ],
       });
       await expect(privacyPool.transact([tx1])).to.not.be.reverted;
 
@@ -431,7 +569,9 @@ describe("Privacy Pool Integration Hardening", function () {
       const tx2 = makeTransaction({
         merkleRoot: root2,
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("multi-root-null-2"))],
-        commitments: [ethers.keccak256(ethers.toUtf8Bytes("multi-root-commit-2"))],
+        commitments: [
+          ethers.keccak256(ethers.toUtf8Bytes("multi-root-commit-2")),
+        ],
       });
       await expect(privacyPool.transact([tx2])).to.not.be.reverted;
     });
@@ -458,9 +598,17 @@ describe("Privacy Pool Integration Hardening", function () {
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("rt-key"));
 
-      const clientTx = await privacyPoolClient.connect(alice).crossChainShield(
-        SHIELD_AMOUNT, 0, 0, npk, encBundle, shieldKey, ethers.ZeroAddress
-      );
+      const clientTx = await privacyPoolClient
+        .connect(alice)
+        .crossChainShield(
+          SHIELD_AMOUNT,
+          0,
+          0,
+          npk,
+          encBundle,
+          shieldKey,
+          ethers.ZeroAddress,
+        );
       const clientReceipt = await clientTx.wait();
 
       // Step 2: Relay to Hub — extract full MessageV2 from MessageSent(bytes) event
@@ -473,7 +621,9 @@ describe("Privacy Pool Integration Hardening", function () {
             encodedMessage = parsed.args.message;
             break;
           }
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
       expect(encodedMessage).to.not.be.undefined;
 
@@ -482,7 +632,7 @@ describe("Privacy Pool Integration Hardening", function () {
       const hubPoolAfter = await hubUsdc.balanceOf(privacyPoolAddress);
 
       // Pool should have received SHIELD_AMOUNT minus shield fee
-      const shieldFee = SHIELD_AMOUNT * 50n / 10000n;
+      const shieldFee = (SHIELD_AMOUNT * 50n) / 10000n;
       expect(hubPoolAfter - hubPoolBefore).to.equal(SHIELD_AMOUNT - shieldFee);
 
       // Step 3: Unshield back to Client via atomicCrossChainUnshield
@@ -491,7 +641,11 @@ describe("Privacy Pool Integration Hardening", function () {
 
       const npkBigInt = BigInt(privacyPoolAddress);
       const tokenId = BigInt(usdcAddr);
-      const unshieldCommitHash = computeCommitmentHash(npkBigInt, tokenId, UNSHIELD_AMOUNT);
+      const unshieldCommitHash = computeCommitmentHash(
+        npkBigInt,
+        tokenId,
+        UNSHIELD_AMOUNT,
+      );
 
       const unshieldTxData = makeTransaction({
         merkleRoot: root,
@@ -507,7 +661,11 @@ describe("Privacy Pool Integration Hardening", function () {
       });
 
       const unshieldTx = await privacyPool.atomicCrossChainUnshield(
-        unshieldTxData, DOMAINS.client, bobAddress, 0, ethers.ZeroHash
+        unshieldTxData,
+        DOMAINS.client,
+        bobAddress,
+        0,
+        ethers.ZeroHash,
       );
       const unshieldReceipt = await unshieldTx.wait();
 
@@ -521,12 +679,16 @@ describe("Privacy Pool Integration Hardening", function () {
             unshieldEncodedMessage = parsed.args.message;
             break;
           }
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
       expect(unshieldEncodedMessage).to.not.be.undefined;
 
       const bobBefore = await clientUsdc.balanceOf(bobAddress);
-      await clientHookRouter.connect(relayer).relayWithHook(unshieldEncodedMessage, "0x");
+      await clientHookRouter
+        .connect(relayer)
+        .relayWithHook(unshieldEncodedMessage, "0x");
       const bobAfter = await clientUsdc.balanceOf(bobAddress);
 
       // Bob should receive the unshield amount on the client chain
@@ -550,24 +712,42 @@ describe("Privacy Pool Integration Hardening", function () {
       junkAddr = await junk.getAddress();
       await junk.mint(aliceAddress, NOTE_VALUE * 2n);
       await junk.connect(alice).approve(privacyPoolAddress, NOTE_VALUE * 2n);
-      await privacyPool.connect(alice).shield(
-        [makeShieldRequest(junkAddr, NOTE_VALUE * 2n, "junk-shield")],
-        ethers.ZeroAddress
-      );
+      await privacyPool
+        .connect(alice)
+        .shield(
+          [makeShieldRequest(junkAddr, NOTE_VALUE * 2n, "junk-shield")],
+          ethers.ZeroAddress,
+        );
       // Make sure the pool also holds USDC that a mismatched burn could take.
       await shieldAndGetRoot(bob, ethers.parseUnits("100", 6), "usdc-backing");
     });
 
-    function xchainUnshieldOf(token: { tokenType: number; tokenAddress: string }, root: string, nullSeed: string) {
-      const tokenId = token.tokenType === 0
-        ? BigInt(token.tokenAddress)
-        : BigInt(ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
-            ["tuple(uint8,address,uint256)"], [[token.tokenType, token.tokenAddress, 0]]
-          ))) % SNARK_SCALAR_FIELD;
+    function xchainUnshieldOf(
+      token: { tokenType: number; tokenAddress: string },
+      root: string,
+      nullSeed: string,
+    ) {
+      const tokenId =
+        token.tokenType === 0
+          ? BigInt(token.tokenAddress)
+          : BigInt(
+              ethers.keccak256(
+                ethers.AbiCoder.defaultAbiCoder().encode(
+                  ["tuple(uint8,address,uint256)"],
+                  [[token.tokenType, token.tokenAddress, 0]],
+                ),
+              ),
+            ) % SNARK_SCALAR_FIELD;
       return makeTransaction({
         merkleRoot: root,
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes(nullSeed))],
-        commitments: [computeCommitmentHash(BigInt(privacyPoolAddress), tokenId, NOTE_VALUE)],
+        commitments: [
+          computeCommitmentHash(
+            BigInt(privacyPoolAddress),
+            tokenId,
+            NOTE_VALUE,
+          ),
+        ],
         unshield: 1,
         adaptParams: encodeCctpBinding(charlieAddress, DOMAINS.client, 0n),
         unshieldPreimage: {
@@ -584,22 +764,42 @@ describe("Privacy Pool Integration Hardening", function () {
       const root = await privacyPool.merkleRoot();
       const poolUsdcBefore = await hubUsdc.balanceOf(privacyPoolAddress);
 
-      const tx = xchainUnshieldOf({ tokenType: 0, tokenAddress: junkAddr }, root, "junk-xchain-null");
+      const tx = xchainUnshieldOf(
+        { tokenType: 0, tokenAddress: junkAddr },
+        root,
+        "junk-xchain-null",
+      );
       await expect(
-        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, charlieAddress, 0, ethers.ZeroHash)
+        privacyPool.atomicCrossChainUnshield(
+          tx,
+          DOMAINS.client,
+          charlieAddress,
+          0,
+          ethers.ZeroHash,
+        ),
       ).to.be.revertedWith("TransactModule: Cross-chain unshield is USDC-only");
 
-      expect(await hubUsdc.balanceOf(privacyPoolAddress)).to.equal(poolUsdcBefore);
+      expect(await hubUsdc.balanceOf(privacyPoolAddress)).to.equal(
+        poolUsdcBefore,
+      );
     });
 
     // WHY: the USDC address alone is not enough — a non-ERC20 note type must not pass either.
     it("rejects a non-ERC20 note that names the USDC address", async function () {
       const root = await privacyPool.merkleRoot();
       const tx = xchainUnshieldOf(
-        { tokenType: 1, tokenAddress: await hubUsdc.getAddress() }, root, "erc721-usdc-null"
+        { tokenType: 1, tokenAddress: await hubUsdc.getAddress() },
+        root,
+        "erc721-usdc-null",
       );
       await expect(
-        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, charlieAddress, 0, ethers.ZeroHash)
+        privacyPool.atomicCrossChainUnshield(
+          tx,
+          DOMAINS.client,
+          charlieAddress,
+          0,
+          ethers.ZeroHash,
+        ),
       ).to.be.revertedWith("TransactModule: Cross-chain unshield is USDC-only");
     });
 
@@ -611,7 +811,13 @@ describe("Privacy Pool Integration Hardening", function () {
       const tx = makeTransaction({
         merkleRoot: root,
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("junk-local-null"))],
-        commitments: [computeCommitmentHash(BigInt(charlieAddress), BigInt(junkAddr), NOTE_VALUE)],
+        commitments: [
+          computeCommitmentHash(
+            BigInt(charlieAddress),
+            BigInt(junkAddr),
+            NOTE_VALUE,
+          ),
+        ],
         unshield: 1,
         unshieldPreimage: {
           npk,
@@ -622,7 +828,9 @@ describe("Privacy Pool Integration Hardening", function () {
 
       const before = await junk.balanceOf(charlieAddress);
       await privacyPool.transact([tx]);
-      expect((await junk.balanceOf(charlieAddress)) - before).to.equal(NOTE_VALUE);
+      expect((await junk.balanceOf(charlieAddress)) - before).to.equal(
+        NOTE_VALUE,
+      );
     });
   });
 
@@ -636,16 +844,32 @@ describe("Privacy Pool Integration Hardening", function () {
 
     before(async function () {
       usdcAddr = await hubUsdc.getAddress();
-      await shieldAndGetRoot(alice, ethers.parseUnits("200", 6), "note-validation-backing");
+      await shieldAndGetRoot(
+        alice,
+        ethers.parseUnits("200", 6),
+        "note-validation-backing",
+      );
     });
 
     // Builds an unshield whose committed hash matches the preimage. Poseidon reduces its
     // inputs mod q, so an npk at or above the field hashes like npk mod q.
-    function unshieldTx(npk: bigint, value: bigint, root: string, nullSeed: string, adaptParams?: string) {
+    function unshieldTx(
+      npk: bigint,
+      value: bigint,
+      root: string,
+      nullSeed: string,
+      adaptParams?: string,
+    ) {
       return makeTransaction({
         merkleRoot: root,
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes(nullSeed))],
-        commitments: [computeCommitmentHash(npk % SNARK_SCALAR_FIELD, BigInt(usdcAddr), value)],
+        commitments: [
+          computeCommitmentHash(
+            npk % SNARK_SCALAR_FIELD,
+            BigInt(usdcAddr),
+            value,
+          ),
+        ],
         unshield: 1,
         adaptParams,
         unshieldPreimage: {
@@ -664,8 +888,11 @@ describe("Privacy Pool Integration Hardening", function () {
       const aliased = BigInt(bobAddress) + SNARK_SCALAR_FIELD;
       const poolBefore = await hubUsdc.balanceOf(privacyPoolAddress);
 
-      await expect(privacyPool.transact([unshieldTx(aliased, VALUE, root, "npk-alias-local")]))
-        .to.be.revertedWith("TransactModule: Invalid Unshield NPK");
+      await expect(
+        privacyPool.transact([
+          unshieldTx(aliased, VALUE, root, "npk-alias-local"),
+        ]),
+      ).to.be.revertedWith("TransactModule: Invalid Unshield NPK");
       expect(await hubUsdc.balanceOf(privacyPoolAddress)).to.equal(poolBefore);
     });
 
@@ -674,18 +901,28 @@ describe("Privacy Pool Integration Hardening", function () {
     it("rejects a cross-chain proof replayed through transact() with an aliased pool npk", async function () {
       const root = await privacyPool.merkleRoot();
       const aliasedPool = BigInt(privacyPoolAddress) + SNARK_SCALAR_FIELD;
-      const tx = unshieldTx(aliasedPool, VALUE, root, "npk-alias-pool",
-        encodeCctpBinding(bobAddress, DOMAINS.client, 0n));
+      const tx = unshieldTx(
+        aliasedPool,
+        VALUE,
+        root,
+        "npk-alias-pool",
+        encodeCctpBinding(bobAddress, DOMAINS.client, 0n),
+      );
 
-      await expect(privacyPool.transact([tx])).to.be.revertedWith("TransactModule: Invalid Unshield NPK");
+      await expect(privacyPool.transact([tx])).to.be.revertedWith(
+        "TransactModule: Invalid Unshield NPK",
+      );
     });
 
     // WHY: a zero-value unshield moves nothing but still emits an Unshield event; upstream
     // rejects it, and so must we.
     it("rejects a zero-value unshield", async function () {
       const root = await privacyPool.merkleRoot();
-      await expect(privacyPool.transact([unshieldTx(BigInt(bobAddress), 0n, root, "zero-value")]))
-        .to.be.revertedWith("TransactModule: Invalid Unshield Value");
+      await expect(
+        privacyPool.transact([
+          unshieldTx(BigInt(bobAddress), 0n, root, "zero-value"),
+        ]),
+      ).to.be.revertedWith("TransactModule: Invalid Unshield Value");
     });
 
     // WHY: the unshield-to-pool guard (#364) assumes every cross-chain proof unshields to the
@@ -693,12 +930,25 @@ describe("Privacy Pool Integration Hardening", function () {
     // could be paid out on the hub instead of the destination chain.
     it("rejects a cross-chain unshield whose npk is not the pool", async function () {
       const root = await privacyPool.merkleRoot();
-      const tx = unshieldTx(BigInt(bobAddress), VALUE, root, "xchain-npk-not-pool",
-        encodeCctpBinding(bobAddress, DOMAINS.client, 0n));
+      const tx = unshieldTx(
+        BigInt(bobAddress),
+        VALUE,
+        root,
+        "xchain-npk-not-pool",
+        encodeCctpBinding(bobAddress, DOMAINS.client, 0n),
+      );
 
       await expect(
-        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, bobAddress, 0, ethers.ZeroHash)
-      ).to.be.revertedWith("TransactModule: Cross-chain unshield must pay the pool");
+        privacyPool.atomicCrossChainUnshield(
+          tx,
+          DOMAINS.client,
+          bobAddress,
+          0,
+          ethers.ZeroHash,
+        ),
+      ).to.be.revertedWith(
+        "TransactModule: Cross-chain unshield must pay the pool",
+      );
     });
 
     // WHY: an ERC-20 note's tokenSubID is not part of its commitment hash, so a submitter could put
@@ -707,25 +957,42 @@ describe("Privacy Pool Integration Hardening", function () {
       const root = await privacyPool.merkleRoot();
       const tx = unshieldTx(BigInt(bobAddress), VALUE, root, "nonzero-subid");
       tx.unshieldPreimage.token.tokenSubID = 7;
-      await expect(privacyPool.transact([tx])).to.be.revertedWith("TransactModule: Invalid Unshield Token");
+      await expect(privacyPool.transact([tx])).to.be.revertedWith(
+        "TransactModule: Invalid Unshield Token",
+      );
     });
 
     // WHY: real CCTP V2 requires maxFee < amount. Accepting maxFee == amount at the pool would only
     // fail inside the burn on a real chain; reject it up front with a clear reason (#610).
     it("rejects a cross-chain unshield whose maxFee equals the amount", async function () {
       const root = await privacyPool.merkleRoot();
-      const tx = unshieldTx(BigInt(privacyPoolAddress), VALUE, root, "maxfee-equals-amount",
-        encodeCctpBinding(bobAddress, DOMAINS.client, VALUE));
+      const tx = unshieldTx(
+        BigInt(privacyPoolAddress),
+        VALUE,
+        root,
+        "maxfee-equals-amount",
+        encodeCctpBinding(bobAddress, DOMAINS.client, VALUE),
+      );
       await expect(
-        privacyPool.atomicCrossChainUnshield(tx, DOMAINS.client, bobAddress, VALUE, ethers.ZeroHash)
+        privacyPool.atomicCrossChainUnshield(
+          tx,
+          DOMAINS.client,
+          bobAddress,
+          VALUE,
+          ethers.ZeroHash,
+        ),
       ).to.be.revertedWith("TransactModule: maxFee must be below amount");
     });
 
     it("still allows a well-formed local unshield", async function () {
       const root = await privacyPool.merkleRoot();
       const before = await hubUsdc.balanceOf(charlieAddress);
-      await privacyPool.transact([unshieldTx(BigInt(charlieAddress), VALUE, root, "valid-local")]);
-      expect((await hubUsdc.balanceOf(charlieAddress)) - before).to.equal(VALUE);
+      await privacyPool.transact([
+        unshieldTx(BigInt(charlieAddress), VALUE, root, "valid-local"),
+      ]);
+      expect((await hubUsdc.balanceOf(charlieAddress)) - before).to.equal(
+        VALUE,
+      );
     });
   });
 
@@ -745,31 +1012,64 @@ describe("Privacy Pool Integration Hardening", function () {
 
     function shieldHookData(npk: string, value: bigint): string {
       const notes = coder.encode(
-        ["tuple(bytes32 npk, uint120 value, bytes32[3] encryptedBundle, bytes32 shieldKey, address integrator)[]"],
-        [[[npk, value, [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash], ethers.ZeroHash, ethers.ZeroAddress]]]
+        [
+          "tuple(bytes32 npk, uint120 value, bytes32[3] encryptedBundle, bytes32 shieldKey, address integrator)[]",
+        ],
+        [
+          [
+            [
+              npk,
+              value,
+              [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash],
+              ethers.ZeroHash,
+              ethers.ZeroAddress,
+            ],
+          ],
+        ],
       );
-      return coder.encode(["tuple(uint8 messageType, bytes data)"], [[0, notes]]);
+      return coder.encode(
+        ["tuple(uint8 messageType, bytes data)"],
+        [[0, notes]],
+      );
     }
 
     function unshieldHookData(recipient: string): string {
-      const data = coder.encode(["tuple(address recipient, bytes32 uniqueNonce)"], [[recipient, ethers.ZeroHash]]);
-      return coder.encode(["tuple(uint8 messageType, bytes data)"], [[1, data]]);
+      const data = coder.encode(
+        ["tuple(address recipient, bytes32 uniqueNonce)"],
+        [[recipient, ethers.ZeroHash]],
+      );
+      return coder.encode(
+        ["tuple(uint8 messageType, bytes data)"],
+        [[1, data]],
+      );
     }
 
     // A generic message (CCTP V2 sendMessage is permissionless) whose body is shaped like a burn.
-    async function sendForged(transmitter: Contract, destDomain: number, destCaller: string, body: string) {
-      const receipt = await (await transmitter.connect(charlie).sendMessage(
-        destDomain,
-        ethers.zeroPadValue(handlerAddress, 32),
-        ethers.zeroPadValue(destCaller, 32),
-        2000,
-        body
-      )).wait();
+    async function sendForged(
+      transmitter: Contract,
+      destDomain: number,
+      destCaller: string,
+      body: string,
+    ) {
+      const receipt = await (
+        await transmitter
+          .connect(charlie)
+          .sendMessage(
+            destDomain,
+            ethers.zeroPadValue(handlerAddress, 32),
+            ethers.zeroPadValue(destCaller, 32),
+            2000,
+            body,
+          )
+      ).wait();
       for (const log of receipt!.logs) {
         try {
           const parsed = transmitter.interface.parseLog(log);
-          if (parsed?.name === "MessageSent") return parsed.args.message as string;
-        } catch { /* skip */ }
+          if (parsed?.name === "MessageSent")
+            return parsed.args.message as string;
+        } catch {
+          /* skip */
+        }
       }
       throw new Error("MessageSent not found");
     }
@@ -789,12 +1089,18 @@ describe("Privacy Pool Integration Hardening", function () {
         expirationBlock: 0n,
         hookData: shieldHookData(validNpk("forged-shield"), amount),
       });
-      const message = await sendForged(clientMessageTransmitter, DOMAINS.hub, await hubHookRouter.getAddress(), body);
+      const message = await sendForged(
+        clientMessageTransmitter,
+        DOMAINS.hub,
+        await hubHookRouter.getAddress(),
+        body,
+      );
 
       const rootBefore = await privacyPool.merkleRoot();
       const usdcBefore = await hubUsdc.balanceOf(privacyPoolAddress);
-      await expect(hubHookRouter.connect(relayer).relayWithHook(message, "0x"))
-        .to.be.revertedWith("CCTPHookRouter: not a burn message");
+      await expect(
+        hubHookRouter.connect(relayer).relayWithHook(message, "0x"),
+      ).to.be.revertedWith("CCTPHookRouter: not a burn message");
       expect(await privacyPool.merkleRoot()).to.equal(rootBefore);
       expect(await hubUsdc.balanceOf(privacyPoolAddress)).to.equal(usdcBefore);
     });
@@ -813,11 +1119,17 @@ describe("Privacy Pool Integration Hardening", function () {
         expirationBlock: 0n,
         hookData: unshieldHookData(charlieAddress),
       });
-      const message = await sendForged(hubMessageTransmitter, DOMAINS.client, await clientHookRouter.getAddress(), body);
+      const message = await sendForged(
+        hubMessageTransmitter,
+        DOMAINS.client,
+        await clientHookRouter.getAddress(),
+        body,
+      );
 
       const before = await clientUsdc.balanceOf(charlieAddress);
-      await expect(clientHookRouter.connect(relayer).relayWithHook(message, "0x"))
-        .to.be.revertedWith("CCTPHookRouter: not a burn message");
+      await expect(
+        clientHookRouter.connect(relayer).relayWithHook(message, "0x"),
+      ).to.be.revertedWith("CCTPHookRouter: not a burn message");
       expect(await clientUsdc.balanceOf(charlieAddress)).to.equal(before);
     });
   });
@@ -834,10 +1146,17 @@ describe("Privacy Pool Integration Hardening", function () {
       await clientUsdc.mint(aliceAddress, amount);
       await clientUsdc.connect(alice).approve(clientAddress, amount);
       await expect(
-        privacyPoolClient.connect(alice).crossChainShield(
-          amount, 0, 0, validNpk("too-big"),
-          [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash], ethers.ZeroHash, ethers.ZeroAddress
-        )
+        privacyPoolClient
+          .connect(alice)
+          .crossChainShield(
+            amount,
+            0,
+            0,
+            validNpk("too-big"),
+            [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash],
+            ethers.ZeroHash,
+            ethers.ZeroAddress,
+          ),
       ).to.be.revertedWith("SafeCast: value doesn't fit in 120 bits");
     });
   });
@@ -848,7 +1167,11 @@ describe("Privacy Pool Integration Hardening", function () {
 
   describe("Batched Mixed Transact", function () {
     it("should process multiple transactions in single call", async function () {
-      const root = await shieldAndGetRoot(alice, ethers.parseUnits("200", 6), "batch-mixed");
+      const root = await shieldAndGetRoot(
+        alice,
+        ethers.parseUnits("200", 6),
+        "batch-mixed",
+      );
 
       // Transaction 1: Pure private transfer (no unshield)
       const tx1 = makeTransaction({
@@ -864,9 +1187,7 @@ describe("Privacy Pool Integration Hardening", function () {
       const tx2 = makeTransaction({
         merkleRoot: root,
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("batch-null-2"))],
-        commitments: [
-          ethers.keccak256(ethers.toUtf8Bytes("batch-commit-2a")),
-        ],
+        commitments: [ethers.keccak256(ethers.toUtf8Bytes("batch-commit-2a"))],
       });
 
       const nextLeafBefore = await privacyPool.nextLeafIndex();
@@ -877,8 +1198,18 @@ describe("Privacy Pool Integration Hardening", function () {
       expect(nextLeafAfter - nextLeafBefore).to.equal(3);
 
       // Both nullifiers should be spent
-      expect(await privacyPool.nullifiers(0, ethers.keccak256(ethers.toUtf8Bytes("batch-null-1")))).to.be.true;
-      expect(await privacyPool.nullifiers(0, ethers.keccak256(ethers.toUtf8Bytes("batch-null-2")))).to.be.true;
+      expect(
+        await privacyPool.nullifiers(
+          0,
+          ethers.keccak256(ethers.toUtf8Bytes("batch-null-1")),
+        ),
+      ).to.be.true;
+      expect(
+        await privacyPool.nullifiers(
+          0,
+          ethers.keccak256(ethers.toUtf8Bytes("batch-null-2")),
+        ),
+      ).to.be.true;
     });
   });
 
@@ -892,7 +1223,11 @@ describe("Privacy Pool Integration Hardening", function () {
 
       // Perform 5 sequential shields, recording each root
       for (let i = 0; i < 5; i++) {
-        const root = await shieldAndGetRoot(alice, ethers.parseUnits("5", 6), `history-${i}`);
+        const root = await shieldAndGetRoot(
+          alice,
+          ethers.parseUnits("5", 6),
+          `history-${i}`,
+        );
         roots.push(root);
       }
 
@@ -906,7 +1241,9 @@ describe("Privacy Pool Integration Hardening", function () {
       const tx = makeTransaction({
         merkleRoot: roots[0], // Use the oldest root
         nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("history-old-null"))],
-        commitments: [ethers.keccak256(ethers.toUtf8Bytes("history-old-commit"))],
+        commitments: [
+          ethers.keccak256(ethers.toUtf8Bytes("history-old-commit")),
+        ],
       });
       await expect(privacyPool.transact([tx])).to.not.be.reverted;
     });

@@ -16,11 +16,21 @@ import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers"
 import { deployGovernorProxy } from "./helpers/deploy-governor";
 
 // Proposal types (must match IArmadaGovernance.sol enum order)
-const ProposalType = { Standard: 0, Extended: 1, VetoRatification: 2, Steward: 3 };
+const ProposalType = {
+  Standard: 0,
+  Extended: 1,
+  VetoRatification: 2,
+  Steward: 3,
+};
 // Proposal states
 const ProposalState = {
-  Pending: 0, Active: 1, Defeated: 2, Succeeded: 3,
-  Queued: 4, Executed: 5, Canceled: 6,
+  Pending: 0,
+  Active: 1,
+  Defeated: 2,
+  Succeeded: 3,
+  Queued: 4,
+  Executed: 5,
+  Canceled: 6,
 };
 // Vote support values
 const Vote = { Against: 0, For: 1, Abstain: 2 };
@@ -58,9 +68,9 @@ describe("Governance Integration", function () {
   // Constants — derived from total supply so tests adapt if supply changes
   const ARM_DECIMALS = 18;
   const TOTAL_SUPPLY = ethers.parseUnits("12000000", ARM_DECIMALS); // must match ArmadaToken.INITIAL_SUPPLY
-  const TREASURY_AMOUNT = TOTAL_SUPPLY * 65n / 100n; // 65% to treasury
-  const ALICE_AMOUNT = TOTAL_SUPPLY * 20n / 100n;    // 20% to Alice (voter)
-  const BOB_AMOUNT = TOTAL_SUPPLY * 15n / 100n;      // 15% to Bob (voter)
+  const TREASURY_AMOUNT = (TOTAL_SUPPLY * 65n) / 100n; // 65% to treasury
+  const ALICE_AMOUNT = (TOTAL_SUPPLY * 20n) / 100n; // 20% to Alice (voter)
+  const BOB_AMOUNT = (TOTAL_SUPPLY * 15n) / 100n; // 15% to Bob (voter)
   const USDC_DECIMALS = 6;
 
   // Helper: mine a block so checkpoint reads work
@@ -76,11 +86,11 @@ describe("Governance Integration", function () {
     targets: string[],
     values: bigint[],
     calldatas: string[],
-    description: string
+    description: string,
   ): Promise<number> {
-    const tx = await governor.connect(proposer).propose(
-      proposalType, targets, values, calldatas, description
-    );
+    const tx = await governor
+      .connect(proposer)
+      .propose(proposalType, targets, values, calldatas, description);
     const receipt = await tx.wait();
     const proposalId = Number(await governor.proposalCount());
 
@@ -93,14 +103,20 @@ describe("Governance Integration", function () {
     }
 
     // Fast-forward past voting period
-    const votingPeriod = proposalType === ProposalType.Extended ? EXTENDED_VOTING_PERIOD : STANDARD_VOTING_PERIOD;
+    const votingPeriod =
+      proposalType === ProposalType.Extended
+        ? EXTENDED_VOTING_PERIOD
+        : STANDARD_VOTING_PERIOD;
     await time.increase(votingPeriod + 1);
 
     // Queue
     await governor.queue(proposalId);
 
     // Fast-forward past execution delay
-    const executionDelay = proposalType === ProposalType.Extended ? EXTENDED_EXECUTION_DELAY : STANDARD_EXECUTION_DELAY;
+    const executionDelay =
+      proposalType === ProposalType.Extended
+        ? EXTENDED_EXECUTION_DELAY
+        : STANDARD_EXECUTION_DELAY;
     await time.increase(executionDelay + 1);
 
     // Execute
@@ -113,12 +129,13 @@ describe("Governance Integration", function () {
     [deployer, alice, bob, carol, dave] = await ethers.getSigners();
 
     // 1. Deploy TimelockController (minDelay = 2 days, deployer as temp admin)
-    const TimelockController = await ethers.getContractFactory("TimelockController");
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
     timelockController = await TimelockController.deploy(
       TWO_DAYS,
       [], // proposers (added later)
       [], // executors (added later)
-      deployer.address // admin
+      deployer.address, // admin
     );
     await timelockController.waitForDeployment();
     const timelockAddr = await timelockController.getAddress();
@@ -129,7 +146,8 @@ describe("Governance Integration", function () {
     await armToken.waitForDeployment();
 
     // 3. Deploy ArmadaTreasuryGov (owned by timelock)
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
     await treasury.waitForDeployment();
 
@@ -162,8 +180,14 @@ describe("Governance Integration", function () {
     const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
     const ADMIN_ROLE = await timelockController.TIMELOCK_ADMIN_ROLE();
 
-    await timelockController.grantRole(PROPOSER_ROLE, await governor.getAddress());
-    await timelockController.grantRole(EXECUTOR_ROLE, await governor.getAddress());
+    await timelockController.grantRole(
+      PROPOSER_ROLE,
+      await governor.getAddress(),
+    );
+    await timelockController.grantRole(
+      EXECUTOR_ROLE,
+      await governor.getAddress(),
+    );
 
     // 8. Deploy mock USDC (needed before outflow config)
     const MockUSDCV2 = await ethers.getContractFactory("MockUSDCV2");
@@ -174,7 +198,10 @@ describe("Governance Integration", function () {
     await armToken.transfer(await treasury.getAddress(), TREASURY_AMOUNT);
     await armToken.transfer(alice.address, ALICE_AMOUNT);
     await armToken.transfer(bob.address, BOB_AMOUNT);
-    await usdc.mint(await treasury.getAddress(), ethers.parseUnits("100000", USDC_DECIMALS));
+    await usdc.mint(
+      await treasury.getAddress(),
+      ethers.parseUnits("100000", USDC_DECIMALS),
+    );
 
     // 10. Initialize outflow configs via timelock (deployer still has admin role)
     //     Grant deployer temporary proposer+executor to schedule outflow config calls.
@@ -191,17 +218,38 @@ describe("Governance Integration", function () {
     const values = [0n, 0n];
     const calldatas = [
       iface.encodeFunctionData("initOutflowConfig", [
-        usdcAddr, THIRTY_DAYS, 5000, ethers.parseUnits("100000", USDC_DECIMALS), ethers.parseUnits("1000", USDC_DECIMALS),
+        usdcAddr,
+        THIRTY_DAYS,
+        5000,
+        ethers.parseUnits("100000", USDC_DECIMALS),
+        ethers.parseUnits("1000", USDC_DECIMALS),
       ]),
       iface.encodeFunctionData("initOutflowConfig", [
-        armAddr, THIRTY_DAYS, 5000, TREASURY_AMOUNT, ethers.parseUnits("1000", ARM_DECIMALS),
+        armAddr,
+        THIRTY_DAYS,
+        5000,
+        TREASURY_AMOUNT,
+        ethers.parseUnits("1000", ARM_DECIMALS),
       ]),
     ];
     const salt = ethers.id("outflow-config-setup");
 
-    await timelockController.scheduleBatch(targets, values, calldatas, ethers.ZeroHash, salt, TWO_DAYS);
+    await timelockController.scheduleBatch(
+      targets,
+      values,
+      calldatas,
+      ethers.ZeroHash,
+      salt,
+      TWO_DAYS,
+    );
     await time.increase(TWO_DAYS + 1);
-    await timelockController.executeBatch(targets, values, calldatas, ethers.ZeroHash, salt);
+    await timelockController.executeBatch(
+      targets,
+      values,
+      calldatas,
+      ethers.ZeroHash,
+      salt,
+    );
 
     // Revoke deployer's temporary roles
     await timelockController.revokeRole(PROPOSER_ROLE, deployer.address);
@@ -228,7 +276,9 @@ describe("Governance Integration", function () {
     });
 
     it("should have correct distribution", async function () {
-      expect(await armToken.balanceOf(await treasury.getAddress())).to.equal(TREASURY_AMOUNT);
+      expect(await armToken.balanceOf(await treasury.getAddress())).to.equal(
+        TREASURY_AMOUNT,
+      );
       // Alice and Bob hold tokens directly
       expect(await armToken.balanceOf(alice.address)).to.equal(ALICE_AMOUNT);
       expect(await armToken.balanceOf(bob.address)).to.equal(BOB_AMOUNT);
@@ -246,14 +296,21 @@ describe("Governance Integration", function () {
 
       // Carol is not whitelisted. Give carol some ARM via alice (whitelisted sender).
       // Then verify carol (non-whitelisted sender) cannot transfer to dave (non-whitelisted receiver).
-      await armToken.connect(alice).transfer(carol.address, ethers.parseUnits("1000", ARM_DECIMALS));
+      await armToken
+        .connect(alice)
+        .transfer(carol.address, ethers.parseUnits("1000", ARM_DECIMALS));
       await expect(
-        armToken.connect(carol).transfer(dave.address, ethers.parseUnits("100", ARM_DECIMALS))
+        armToken
+          .connect(carol)
+          .transfer(dave.address, ethers.parseUnits("100", ARM_DECIMALS)),
       ).to.be.revertedWith("ArmadaToken: transfers restricted");
 
       // Create a governance proposal to call setTransferable(true) on the ARM token
       const armTokenAddr = await armToken.getAddress();
-      const calldata = armToken.interface.encodeFunctionData("setTransferable", [true]);
+      const calldata = armToken.interface.encodeFunctionData(
+        "setTransferable",
+        [true],
+      );
 
       // Wind-down contract must be set for setTransferable to work
       const [, , , , , windDown] = await ethers.getSigners();
@@ -262,12 +319,15 @@ describe("Governance Integration", function () {
       // setTransferable is Extended-classified (one-way, irreversible)
       await passProposal(
         alice,
-        [{ signer: alice, support: Vote.For }, { signer: bob, support: Vote.For }],
+        [
+          { signer: alice, support: Vote.For },
+          { signer: bob, support: Vote.For },
+        ],
         ProposalType.Extended,
         [armTokenAddr],
         [0n],
         [calldata],
-        "Enable ARM token transfers"
+        "Enable ARM token transfers",
       );
 
       // Transfers are now enabled
@@ -275,17 +335,28 @@ describe("Governance Integration", function () {
 
       // Non-whitelisted sender to non-whitelisted receiver now succeeds
       await expect(
-        armToken.connect(carol).transfer(dave.address, ethers.parseUnits("100", ARM_DECIMALS))
+        armToken
+          .connect(carol)
+          .transfer(dave.address, ethers.parseUnits("100", ARM_DECIMALS)),
       ).to.not.be.reverted;
     });
 
     // WHY: enabling transfers is one-way and irreversible, so it must take the Extended bar even
     // when the proposer declares Standard.
     it("classifies a Standard-declared setTransferable proposal as Extended", async function () {
-      const calldata = armToken.interface.encodeFunctionData("setTransferable", [true]);
-      await governor.connect(alice).propose(
-        ProposalType.Standard, [await armToken.getAddress()], [0n], [calldata], "Enable ARM token transfers"
+      const calldata = armToken.interface.encodeFunctionData(
+        "setTransferable",
+        [true],
       );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          [await armToken.getAddress()],
+          [0n],
+          [calldata],
+          "Enable ARM token transfers",
+        );
       const [, proposalType] = await governor.getProposal(1);
       expect(proposalType).to.equal(ProposalType.Extended);
     });
@@ -299,14 +370,23 @@ describe("Governance Integration", function () {
     it("should create proposal with sufficient voting power", async function () {
       const targets = [await treasury.getAddress()];
       const values = [0n];
-      const calldatas = [treasury.interface.encodeFunctionData("distribute", [
-        await armToken.getAddress(), carol.address, ethers.parseUnits("100", ARM_DECIMALS)
-      ])];
+      const calldatas = [
+        treasury.interface.encodeFunctionData("distribute", [
+          await armToken.getAddress(),
+          carol.address,
+          ethers.parseUnits("100", ARM_DECIMALS),
+        ]),
+      ];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas,
-        "Test parameter change"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Test parameter change",
+        );
 
       expect(await governor.proposalCount()).to.equal(1);
       expect(await governor.state(1)).to.equal(ProposalState.Pending);
@@ -319,22 +399,38 @@ describe("Governance Integration", function () {
       const calldatas = ["0x"];
 
       await expect(
-        governor.connect(carol).propose(
-          ProposalType.Standard, targets, values, calldatas, "Should fail"
-        )
+        governor
+          .connect(carol)
+          .propose(
+            ProposalType.Standard,
+            targets,
+            values,
+            calldatas,
+            "Should fail",
+          ),
       ).to.be.revertedWithCustomError(governor, "Gov_BelowProposalThreshold");
     });
 
     it("should transition Pending → Active → Succeeded", async function () {
       const targets = [await treasury.getAddress()];
       const values = [0n];
-      const calldatas = [treasury.interface.encodeFunctionData("distribute", [
-        await armToken.getAddress(), carol.address, ethers.parseUnits("100", ARM_DECIMALS)
-      ])];
+      const calldatas = [
+        treasury.interface.encodeFunctionData("distribute", [
+          await armToken.getAddress(),
+          carol.address,
+          ethers.parseUnits("100", ARM_DECIMALS),
+        ]),
+      ];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Lifecycle test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Lifecycle test",
+        );
 
       // Pending
       expect(await governor.state(1)).to.equal(ProposalState.Pending);
@@ -359,9 +455,9 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "No votes"
-      );
+      await governor
+        .connect(alice)
+        .propose(ProposalType.Standard, targets, values, calldatas, "No votes");
 
       await time.increase(TWO_DAYS + 1);
       // Nobody votes
@@ -375,9 +471,15 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Majority against"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Majority against",
+        );
 
       await time.increase(TWO_DAYS + 1);
 
@@ -394,13 +496,23 @@ describe("Governance Integration", function () {
       const distributeAmount = ethers.parseUnits("1000", ARM_DECIMALS);
       const targets = [await treasury.getAddress()];
       const values = [0n];
-      const calldatas = [treasury.interface.encodeFunctionData("distribute", [
-        await armToken.getAddress(), carol.address, distributeAmount
-      ])];
+      const calldatas = [
+        treasury.interface.encodeFunctionData("distribute", [
+          await armToken.getAddress(),
+          carol.address,
+          distributeAmount,
+        ]),
+      ];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Execute test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Execute test",
+        );
 
       await time.increase(TWO_DAYS + 1);
       await governor.connect(alice).castVote(1, Vote.For);
@@ -430,17 +542,27 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Timing test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Timing test",
+        );
 
-      const [,, voteStart, voteEnd] = await governor.getProposal(1);
-      const blockTimestamp = (await ethers.provider.getBlock("latest"))!.timestamp;
+      const [, , voteStart, voteEnd] = await governor.getProposal(1);
+      const blockTimestamp = (await ethers.provider.getBlock("latest"))!
+        .timestamp;
 
       // voteStart should be ~2 days from now
       expect(Number(voteStart) - blockTimestamp).to.be.closeTo(TWO_DAYS, 5);
       // voteEnd should be ~9 days from now (2d delay + 7d period)
-      expect(Number(voteEnd) - blockTimestamp).to.be.closeTo(TWO_DAYS + STANDARD_VOTING_PERIOD, 5);
+      expect(Number(voteEnd) - blockTimestamp).to.be.closeTo(
+        TWO_DAYS + STANDARD_VOTING_PERIOD,
+        5,
+      );
     });
   });
 
@@ -453,15 +575,25 @@ describe("Governance Integration", function () {
       const payAmount = ethers.parseUnits("500", USDC_DECIMALS);
       const targets = [await treasury.getAddress()];
       const values = [0n];
-      const calldatas = [treasury.interface.encodeFunctionData("distribute", [
-        await usdc.getAddress(), carol.address, payAmount
-      ])];
+      const calldatas = [
+        treasury.interface.encodeFunctionData("distribute", [
+          await usdc.getAddress(),
+          carol.address,
+          payAmount,
+        ]),
+      ];
 
       await passProposal(
         alice,
-        [{ signer: alice, support: Vote.For }, { signer: bob, support: Vote.For }],
-        ProposalType.Standard, targets, values, calldatas,
-        "Pay Carol 500 USDC"
+        [
+          { signer: alice, support: Vote.For },
+          { signer: bob, support: Vote.For },
+        ],
+        ProposalType.Standard,
+        targets,
+        values,
+        calldatas,
+        "Pay Carol 500 USDC",
       );
 
       expect(await usdc.balanceOf(carol.address)).to.equal(payAmount);
@@ -475,9 +607,15 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Quorum test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Quorum test",
+        );
 
       await time.increase(TWO_DAYS + 1);
       await governor.connect(alice).castVote(1, Vote.For);
@@ -496,9 +634,15 @@ describe("Governance Integration", function () {
       const targets = [await treasury.getAddress()];
       const values = [0n];
       const calldatas = ["0x"];
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Quorum calc test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Quorum calc test",
+        );
 
       const actualQuorum = await governor.quorum(1);
       expect(actualQuorum).to.equal(expectedQuorum);
@@ -513,9 +657,15 @@ describe("Governance Integration", function () {
       const targets = [await treasury.getAddress()];
       const values = [0n];
       const calldatas = ["0x"];
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Quorum floor test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Quorum floor test",
+        );
 
       const QUORUM_FLOOR = ethers.parseUnits("200000", ARM_DECIMALS);
       const actualQuorum = await governor.quorum(1);
@@ -528,9 +678,15 @@ describe("Governance Integration", function () {
       const targets = [await treasury.getAddress()];
       const values = [0n];
       const calldatas = ["0x"];
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Percentage quorum test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Percentage quorum test",
+        );
 
       const expectedEligible = TOTAL_SUPPLY - TREASURY_AMOUNT;
       const expectedQuorum = (expectedEligible * 2000n) / 10000n;
@@ -548,9 +704,15 @@ describe("Governance Integration", function () {
       const targets = [await treasury.getAddress()];
       const values = [0n];
       const calldatas = ["0x"];
-      await governor.connect(alice).propose(
-        ProposalType.Extended, targets, values, calldatas, "Extended quorum floor test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Extended,
+          targets,
+          values,
+          calldatas,
+          "Extended quorum floor test",
+        );
 
       const QUORUM_FLOOR = ethers.parseUnits("200000", ARM_DECIMALS);
       expect(await governor.quorum(1)).to.equal(QUORUM_FLOOR);
@@ -563,19 +725,25 @@ describe("Governance Integration", function () {
 
   describe("Proposal Lifecycle - Extended", function () {
     it("should elect steward via proposal with extended timing", async function () {
-      const targets = [
-        await stewardContract.getAddress(),
-      ];
+      const targets = [await stewardContract.getAddress()];
       const values = [0n];
       const calldatas = [
-        stewardContract.interface.encodeFunctionData("electSteward", [dave.address]),
+        stewardContract.interface.encodeFunctionData("electSteward", [
+          dave.address,
+        ]),
       ];
 
       await passProposal(
         alice,
-        [{ signer: alice, support: Vote.For }, { signer: bob, support: Vote.For }],
-        ProposalType.Extended, targets, values, calldatas,
-        "Elect Dave as steward"
+        [
+          { signer: alice, support: Vote.For },
+          { signer: bob, support: Vote.For },
+        ],
+        ProposalType.Extended,
+        targets,
+        values,
+        calldatas,
+        "Elect Dave as steward",
       );
 
       expect(await stewardContract.currentSteward()).to.equal(dave.address);
@@ -588,14 +756,23 @@ describe("Governance Integration", function () {
       const targets = [await stewardContract.getAddress()];
       const values = [0n];
       const calldatas = [
-        stewardContract.interface.encodeFunctionData("electSteward", [dave.address]),
+        stewardContract.interface.encodeFunctionData("electSteward", [
+          dave.address,
+        ]),
       ];
 
-      await governor.connect(alice).propose(
-        ProposalType.Extended, targets, values, calldatas, "30% quorum test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Extended,
+          targets,
+          values,
+          calldatas,
+          "30% quorum test",
+        );
 
-      const expectedQuorum = ((TOTAL_SUPPLY - TREASURY_AMOUNT) * 3000n) / 10000n;
+      const expectedQuorum =
+        ((TOTAL_SUPPLY - TREASURY_AMOUNT) * 3000n) / 10000n;
       expect(await governor.quorum(1)).to.equal(expectedQuorum);
     });
 
@@ -603,18 +780,30 @@ describe("Governance Integration", function () {
       const targets = [await stewardContract.getAddress()];
       const values = [0n];
       const calldatas = [
-        stewardContract.interface.encodeFunctionData("electSteward", [dave.address]),
+        stewardContract.interface.encodeFunctionData("electSteward", [
+          dave.address,
+        ]),
       ];
 
-      await governor.connect(alice).propose(
-        ProposalType.Extended, targets, values, calldatas, "Extended timing"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Extended,
+          targets,
+          values,
+          calldatas,
+          "Extended timing",
+        );
 
-      const [,, voteStart, voteEnd] = await governor.getProposal(1);
-      const blockTimestamp = (await ethers.provider.getBlock("latest"))!.timestamp;
+      const [, , voteStart, voteEnd] = await governor.getProposal(1);
+      const blockTimestamp = (await ethers.provider.getBlock("latest"))!
+        .timestamp;
 
       expect(Number(voteStart) - blockTimestamp).to.be.closeTo(TWO_DAYS, 5);
-      expect(Number(voteEnd) - Number(voteStart)).to.be.closeTo(EXTENDED_VOTING_PERIOD, 5);
+      expect(Number(voteEnd) - Number(voteStart)).to.be.closeTo(
+        EXTENDED_VOTING_PERIOD,
+        5,
+      );
     });
   });
 
@@ -630,32 +819,51 @@ describe("Governance Integration", function () {
       const targets = [await stewardContract.getAddress()];
       const values = [0n];
       const calldatas = [
-        stewardContract.interface.encodeFunctionData("electSteward", [dave.address]),
-      ];
-
-      await passProposal(
-        alice,
-        [{ signer: alice, support: Vote.For }, { signer: bob, support: Vote.For }],
-        ProposalType.Extended, targets, values, calldatas,
-        "Elect Dave"
-      );
-    }
-
-    // Helper: set up steward budget for USDC on treasury (via governance)
-    async function setupStewardBudget(budgetLimit: bigint, budgetWindow: number) {
-      const targets = [await treasury.getAddress()];
-      const values = [0n];
-      const calldatas = [
-        treasury.interface.encodeFunctionData("addStewardBudgetToken", [
-          await usdc.getAddress(), budgetLimit, budgetWindow
+        stewardContract.interface.encodeFunctionData("electSteward", [
+          dave.address,
         ]),
       ];
 
       await passProposal(
         alice,
-        [{ signer: alice, support: Vote.For }, { signer: bob, support: Vote.For }],
-        ProposalType.Extended, targets, values, calldatas,
-        "Add USDC steward budget"
+        [
+          { signer: alice, support: Vote.For },
+          { signer: bob, support: Vote.For },
+        ],
+        ProposalType.Extended,
+        targets,
+        values,
+        calldatas,
+        "Elect Dave",
+      );
+    }
+
+    // Helper: set up steward budget for USDC on treasury (via governance)
+    async function setupStewardBudget(
+      budgetLimit: bigint,
+      budgetWindow: number,
+    ) {
+      const targets = [await treasury.getAddress()];
+      const values = [0n];
+      const calldatas = [
+        treasury.interface.encodeFunctionData("addStewardBudgetToken", [
+          await usdc.getAddress(),
+          budgetLimit,
+          budgetWindow,
+        ]),
+      ];
+
+      await passProposal(
+        alice,
+        [
+          { signer: alice, support: Vote.For },
+          { signer: bob, support: Vote.For },
+        ],
+        ProposalType.Extended,
+        targets,
+        values,
+        calldatas,
+        "Add USDC steward budget",
       );
     }
 
@@ -665,11 +873,11 @@ describe("Governance Integration", function () {
       token: string,
       recipient: string,
       amount: bigint,
-      description: string
+      description: string,
     ): Promise<number> {
-      await governor.connect(stewardSigner).proposeStewardSpend(
-        [token], [recipient], [amount], description
-      );
+      await governor
+        .connect(stewardSigner)
+        .proposeStewardSpend([token], [recipient], [amount], description);
       const proposalId = Number(await governor.proposalCount());
 
       // Steward proposals have 0 voting delay, 7d voting period
@@ -698,8 +906,10 @@ describe("Governance Integration", function () {
 
       await passStewardSpend(
         dave,
-        await usdc.getAddress(), carol.address, spendAmount,
-        "Steward spend: 500 USDC to Carol"
+        await usdc.getAddress(),
+        carol.address,
+        spendAmount,
+        "Steward spend: 500 USDC to Carol",
       );
 
       expect(await usdc.balanceOf(carol.address)).to.equal(spendAmount);
@@ -715,11 +925,14 @@ describe("Governance Integration", function () {
 
       // Steward tries to propose via governor — should fail
       await expect(
-        governor.connect(dave).proposeStewardSpend(
-          [await usdc.getAddress()], [carol.address],
-          [ethers.parseUnits("10", USDC_DECIMALS)],
-          "Late steward spend"
-        )
+        governor
+          .connect(dave)
+          .proposeStewardSpend(
+            [await usdc.getAddress()],
+            [carol.address],
+            [ethers.parseUnits("10", USDC_DECIMALS)],
+            "Late steward spend",
+          ),
       ).to.be.revertedWithCustomError(governor, "Gov_StewardNotActive");
     });
 
@@ -728,11 +941,14 @@ describe("Governance Integration", function () {
 
       // Alice is not the steward
       await expect(
-        governor.connect(alice).proposeStewardSpend(
-          [await usdc.getAddress()], [carol.address],
-          [ethers.parseUnits("10", USDC_DECIMALS)],
-          "Unauthorized steward spend"
-        )
+        governor
+          .connect(alice)
+          .proposeStewardSpend(
+            [await usdc.getAddress()],
+            [carol.address],
+            [ethers.parseUnits("10", USDC_DECIMALS)],
+            "Unauthorized steward spend",
+          ),
       ).to.be.revertedWithCustomError(governor, "Gov_NotCurrentSteward");
     });
 
@@ -745,28 +961,37 @@ describe("Governance Integration", function () {
       const spendAmount = ethers.parseUnits("100", USDC_DECIMALS);
 
       // Submit steward proposal
-      await governor.connect(dave).proposeStewardSpend(
-        [await usdc.getAddress()], [carol.address], [spendAmount],
-        "Pass by default test"
-      );
+      await governor
+        .connect(dave)
+        .proposeStewardSpend(
+          [await usdc.getAddress()],
+          [carol.address],
+          [spendAmount],
+          "Pass by default test",
+        );
       const proposalId = Number(await governor.proposalCount());
 
       // Wait past voting period with NO votes
       await time.increase(SEVEN_DAYS + 1);
 
       // Should be Succeeded (pass-by-default)
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
     });
 
     it("should defeat steward proposal when quorum met and majority against", async function () {
       await electDaveSteward();
 
       // Submit steward proposal
-      await governor.connect(dave).proposeStewardSpend(
-        [await usdc.getAddress()], [carol.address],
-        [ethers.parseUnits("10", USDC_DECIMALS)],
-        "Community rejects this"
-      );
+      await governor
+        .connect(dave)
+        .proposeStewardSpend(
+          [await usdc.getAddress()],
+          [carol.address],
+          [ethers.parseUnits("10", USDC_DECIMALS)],
+          "Community rejects this",
+        );
       const proposalId = Number(await governor.proposalCount());
 
       // Steward proposals have 0 voting delay, so voting is open immediately
@@ -786,11 +1011,14 @@ describe("Governance Integration", function () {
 
       // Steward tries to pay themselves
       await expect(
-        governor.connect(dave).proposeStewardSpend(
-          [await usdc.getAddress()], [dave.address],
-          [ethers.parseUnits("100", USDC_DECIMALS)],
-          "Pay myself"
-        )
+        governor
+          .connect(dave)
+          .proposeStewardSpend(
+            [await usdc.getAddress()],
+            [dave.address],
+            [ethers.parseUnits("100", USDC_DECIMALS)],
+            "Pay myself",
+          ),
       ).to.be.revertedWithCustomError(governor, "Gov_SelfPaymentNotAllowed");
     });
   });
@@ -811,9 +1039,15 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Vote test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Vote test",
+        );
 
       await time.increase(TWO_DAYS + 1);
 
@@ -821,7 +1055,8 @@ describe("Governance Integration", function () {
       await governor.connect(bob).castVote(1, Vote.Against);
       await governor.connect(carol).castVote(1, Vote.Abstain);
 
-      const [,,,,forVotes, againstVotes, abstainVotes] = await governor.getProposal(1);
+      const [, , , , forVotes, againstVotes, abstainVotes] =
+        await governor.getProposal(1);
       // Alice transferred carolAmount away, so her voting power is reduced
       expect(forVotes).to.equal(ALICE_AMOUNT - carolAmount);
       expect(againstVotes).to.equal(BOB_AMOUNT);
@@ -833,15 +1068,21 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "No power test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "No power test",
+        );
 
       await time.increase(TWO_DAYS + 1);
 
       // Carol has no delegated tokens
       await expect(
-        governor.connect(carol).castVote(1, Vote.For)
+        governor.connect(carol).castVote(1, Vote.For),
       ).to.be.revertedWithCustomError(governor, "Gov_NoVotingPower");
     });
 
@@ -850,14 +1091,20 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Vote switch test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Vote switch test",
+        );
 
       await time.increase(TWO_DAYS + 1);
       await governor.connect(alice).castVote(1, Vote.For);
 
-      let [,,,,forVotes, againstVotes] = await governor.getProposal(1);
+      let [, , , , forVotes, againstVotes] = await governor.getProposal(1);
       expect(forVotes).to.equal(ALICE_AMOUNT);
       expect(againstVotes).to.equal(0n);
 
@@ -866,11 +1113,13 @@ describe("Governance Integration", function () {
         .to.emit(governor, "VoteChanged")
         .withArgs(alice.address, 1, Vote.For, Vote.Against, ALICE_AMOUNT);
 
-      [,,,,forVotes, againstVotes] = await governor.getProposal(1);
+      [, , , , forVotes, againstVotes] = await governor.getProposal(1);
       expect(forVotes).to.equal(0n);
       expect(againstVotes).to.equal(ALICE_AMOUNT);
       expect(await governor.hasVoted(1, alice.address)).to.be.true;
-      expect(await governor.voteChoice(1, alice.address)).to.equal(Vote.Against);
+      expect(await governor.voteChoice(1, alice.address)).to.equal(
+        Vote.Against,
+      );
     });
 
     it("should allow vote switching from Against to Abstain", async function () {
@@ -878,15 +1127,22 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Switch test 2"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Switch test 2",
+        );
 
       await time.increase(TWO_DAYS + 1);
       await governor.connect(alice).castVote(1, Vote.Against);
       await governor.connect(alice).castVote(1, Vote.Abstain);
 
-      const [,,,,forVotes, againstVotes, abstainVotes] = await governor.getProposal(1);
+      const [, , , , forVotes, againstVotes, abstainVotes] =
+        await governor.getProposal(1);
       expect(forVotes).to.equal(0n);
       expect(againstVotes).to.equal(0n);
       expect(abstainVotes).to.equal(ALICE_AMOUNT);
@@ -897,15 +1153,21 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Same vote test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Same vote test",
+        );
 
       await time.increase(TWO_DAYS + 1);
       await governor.connect(alice).castVote(1, Vote.For);
 
       await expect(
-        governor.connect(alice).castVote(1, Vote.For)
+        governor.connect(alice).castVote(1, Vote.For),
       ).to.be.revertedWithCustomError(governor, "Gov_SameVote");
     });
 
@@ -914,9 +1176,15 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Quorum conservation test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Quorum conservation test",
+        );
 
       await time.increase(TWO_DAYS + 1);
 
@@ -924,13 +1192,15 @@ describe("Governance Integration", function () {
       await governor.connect(alice).castVote(1, Vote.For);
       await governor.connect(bob).castVote(1, Vote.For);
 
-      let [,,,,forVotes, againstVotes, abstainVotes] = await governor.getProposal(1);
+      let [, , , , forVotes, againstVotes, abstainVotes] =
+        await governor.getProposal(1);
       const totalBefore = forVotes + againstVotes + abstainVotes;
 
       // Alice switches to Against
       await governor.connect(alice).castVote(1, Vote.Against);
 
-      [,,,,forVotes, againstVotes, abstainVotes] = await governor.getProposal(1);
+      [, , , , forVotes, againstVotes, abstainVotes] =
+        await governor.getProposal(1);
       const totalAfter = forVotes + againstVotes + abstainVotes;
       expect(totalAfter).to.equal(totalBefore);
     });
@@ -940,9 +1210,15 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Multi-switch test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Multi-switch test",
+        );
 
       await time.increase(TWO_DAYS + 1);
 
@@ -952,7 +1228,8 @@ describe("Governance Integration", function () {
       await governor.connect(alice).castVote(1, Vote.Abstain);
       await governor.connect(alice).castVote(1, Vote.For);
 
-      const [,,,,forVotes, againstVotes, abstainVotes] = await governor.getProposal(1);
+      const [, , , , forVotes, againstVotes, abstainVotes] =
+        await governor.getProposal(1);
       expect(forVotes).to.equal(ALICE_AMOUNT);
       expect(againstVotes).to.equal(0n);
       expect(abstainVotes).to.equal(0n);
@@ -963,9 +1240,15 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Re-delegation test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Re-delegation test",
+        );
 
       await time.increase(TWO_DAYS + 1);
       await governor.connect(alice).castVote(1, Vote.For);
@@ -975,7 +1258,7 @@ describe("Governance Integration", function () {
       expect(await armToken.getVotes(alice.address)).to.equal(0);
 
       // Vote was already recorded with snapshot, so it still counts
-      const [,,,,forVotes] = await governor.getProposal(1);
+      const [, , , , forVotes] = await governor.getProposal(1);
       expect(forVotes).to.equal(ALICE_AMOUNT);
     });
   });
@@ -990,9 +1273,15 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Cancel test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Cancel test",
+        );
 
       await governor.connect(alice).cancel(1);
       expect(await governor.state(1)).to.equal(ProposalState.Canceled);
@@ -1003,12 +1292,18 @@ describe("Governance Integration", function () {
       const values = [0n];
       const calldatas = ["0x"];
 
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Cancel auth test"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Cancel auth test",
+        );
 
       await expect(
-        governor.connect(bob).cancel(1)
+        governor.connect(bob).cancel(1),
       ).to.be.revertedWithCustomError(governor, "Gov_NotProposer");
     });
   });
@@ -1051,9 +1346,15 @@ describe("Governance Integration", function () {
       const calldatas = ["0x"];
 
       await expect(
-        governor.connect(alice).propose(
-          ProposalType.VetoRatification, targets, values, calldatas, "Manual veto test"
-        )
+        governor
+          .connect(alice)
+          .propose(
+            ProposalType.VetoRatification,
+            targets,
+            values,
+            calldatas,
+            "Manual veto test",
+          ),
       ).to.be.revertedWithCustomError(governor, "Gov_AutoCreatedOnly");
     });
 
@@ -1065,17 +1366,26 @@ describe("Governance Integration", function () {
       const timelockAddr = await governor.timelock();
       await ethers.provider.send("hardhat_impersonateAccount", [timelockAddr]);
       // Fund the timelock to send transactions
-      await alice.sendTransaction({ to: timelockAddr, value: ethers.parseEther("1") });
+      await alice.sendTransaction({
+        to: timelockAddr,
+        value: ethers.parseEther("1"),
+      });
       const timelockSigner = await ethers.getSigner(timelockAddr);
 
       await expect(
-        governor.connect(timelockSigner).setProposalTypeParams(
-          ProposalType.VetoRatification,
-          { votingDelay: 0, votingPeriod: SEVEN_DAYS, executionDelay: 0, quorumBps: 2000 }
-        )
+        governor
+          .connect(timelockSigner)
+          .setProposalTypeParams(ProposalType.VetoRatification, {
+            votingDelay: 0,
+            votingPeriod: SEVEN_DAYS,
+            executionDelay: 0,
+            quorumBps: 2000,
+          }),
       ).to.be.revertedWithCustomError(governor, "Gov_ImmutableProposalType");
 
-      await ethers.provider.send("hardhat_stopImpersonatingAccount", [timelockAddr]);
+      await ethers.provider.send("hardhat_stopImpersonatingAccount", [
+        timelockAddr,
+      ]);
     });
   });
 
@@ -1089,14 +1399,24 @@ describe("Governance Integration", function () {
 
       const targets = [await treasury.getAddress()];
       const values = [0n];
-      const calldatas = [treasury.interface.encodeFunctionData("distribute", [
-        await usdc.getAddress(), carol.address, payAmount
-      ])];
+      const calldatas = [
+        treasury.interface.encodeFunctionData("distribute", [
+          await usdc.getAddress(),
+          carol.address,
+          payAmount,
+        ]),
+      ];
 
       // Propose
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, "Pay Carol 2500 USDC"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          "Pay Carol 2500 USDC",
+        );
       expect(await governor.state(1)).to.equal(ProposalState.Pending);
 
       // Wait for voting delay

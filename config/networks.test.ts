@@ -9,9 +9,26 @@ import * as path from "path";
 
 // Env keys the config reads that a test might set — cleared between tests so one case
 // can't leak chain topology into the next (getNetworkConfig caches, so we also re-require).
-const MANAGED_PREFIXES = ["CLIENT_", "HUB_", "CCTP_", "DEPLOY_ENV", "DEPLOYER_PRIVATE_KEY", "DEPLOYER_LEDGER_ADDRESS",
-  "REVENUE_LOCK_", "REVENUE_RESERVE_", "TREASURY_ADDRESS", "SECURITY_COUNCIL_ADDRESS", "LAUNCH_TEAM_ADDRESS",
-  "CCTP_MODE", "WINDDOWN_", "OUTFLOW_", "CROWDFUND_", "HARDEN_TIMELOCK", "INITIAL_STEWARD_", "STEWARD_BUDGET_"];
+const MANAGED_PREFIXES = [
+  "CLIENT_",
+  "HUB_",
+  "CCTP_",
+  "DEPLOY_ENV",
+  "DEPLOYER_PRIVATE_KEY",
+  "DEPLOYER_LEDGER_ADDRESS",
+  "REVENUE_LOCK_",
+  "REVENUE_RESERVE_",
+  "TREASURY_ADDRESS",
+  "SECURITY_COUNCIL_ADDRESS",
+  "LAUNCH_TEAM_ADDRESS",
+  "CCTP_MODE",
+  "WINDDOWN_",
+  "OUTFLOW_",
+  "CROWDFUND_",
+  "HARDEN_TIMELOCK",
+  "INITIAL_STEWARD_",
+  "STEWARD_BUDGET_",
+];
 
 function clearManagedEnv(): void {
   for (const key of Object.keys(process.env)) {
@@ -31,13 +48,19 @@ function freshConfig(env: Record<string, string>) {
   Object.assign(process.env, env);
   const modPath = require.resolve("./networks");
   delete require.cache[modPath];
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+
   return require("./networks") as typeof import("./networks");
 }
 
 // Non-local envs require an explicit revenue-lock config or the builder fails loud before
 // it ever reaches client construction — supply a placeholder so these tests exercise clients.
-const REVENUE_LOCK_JSON = JSON.stringify([{ address: "0x0000000000000000000000000000000000000001", amount: "1", label: "test" }]);
+const REVENUE_LOCK_JSON = JSON.stringify([
+  {
+    address: "0x0000000000000000000000000000000000000001",
+    amount: "1",
+    label: "test",
+  },
+]);
 // INITIAL_STEWARD_ADDRESS is mainnet-required; mainnet cases that isolate another field supply it.
 const TEST_STEWARD = "0x0000000000000000000000000000000000000003";
 // The revenue reserve is required on the launch path (mainnet and hardened Sepolia); cases that
@@ -68,8 +91,18 @@ describe("networks config — N clients", () => {
     const c = getNetworkConfig();
     expect(c.clients).to.have.length(2);
     expect(c.clients.map((x) => x.role)).to.deep.equal(["client1", "client2"]);
-    expect(c.clients[0]).to.include({ chainId: 31338, cctpDomain: 101, deploymentPrefix: "client1", hardhatNetwork: "client1" });
-    expect(c.clients[1]).to.include({ chainId: 31339, cctpDomain: 102, deploymentPrefix: "client2", hardhatNetwork: "client2" });
+    expect(c.clients[0]).to.include({
+      chainId: 31338,
+      cctpDomain: 101,
+      deploymentPrefix: "client1",
+      hardhatNetwork: "client1",
+    });
+    expect(c.clients[1]).to.include({
+      chainId: 31339,
+      cctpDomain: 102,
+      deploymentPrefix: "client2",
+      hardhatNetwork: "client2",
+    });
   });
 
   it("getAllChains lists the hub first, then clients in order", () => {
@@ -85,25 +118,54 @@ describe("networks config — N clients", () => {
     // arbitrary-length client list, not a fixed two.
     const { getNetworkConfig, getClientChains } = freshConfig({
       ...SEPOLIA_BASE,
-      HUB_CHAIN_ID: "11155111", HUB_CCTP_DOMAIN: "0",
+      HUB_CHAIN_ID: "11155111",
+      HUB_CCTP_DOMAIN: "0",
       CLIENT_COUNT: "3",
-      CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "11155420", CLIENT_1_CCTP_DOMAIN: "2", CLIENT_1_USDC: "0xc1",
-      CLIENT_2_RPC: "https://c2", CLIENT_2_CHAIN_ID: "998", CLIENT_2_CCTP_DOMAIN: "19", CLIENT_2_USDC: "0xc2",
-      CLIENT_3_RPC: "https://c3", CLIENT_3_CHAIN_ID: "84532", CLIENT_3_CCTP_DOMAIN: "6", CLIENT_3_USDC: "0xc3",
+      CLIENT_1_RPC: "https://c1",
+      CLIENT_1_CHAIN_ID: "11155420",
+      CLIENT_1_CCTP_DOMAIN: "2",
+      CLIENT_1_USDC: "0xc1",
+      CLIENT_2_RPC: "https://c2",
+      CLIENT_2_CHAIN_ID: "998",
+      CLIENT_2_CCTP_DOMAIN: "19",
+      CLIENT_2_USDC: "0xc2",
+      CLIENT_3_RPC: "https://c3",
+      CLIENT_3_CHAIN_ID: "84532",
+      CLIENT_3_CCTP_DOMAIN: "6",
+      CLIENT_3_USDC: "0xc3",
     });
     expect(getNetworkConfig().clients).to.have.length(3);
-    expect(getClientChains().map((c) => c.role)).to.deep.equal(["client1", "client2", "client3"]);
-    expect(getClientChains()[2]).to.include({ chainId: 84532, cctpDomain: 6, hardhatNetwork: "sepoliaClient3" });
+    expect(getClientChains().map((c) => c.role)).to.deep.equal([
+      "client1",
+      "client2",
+      "client3",
+    ]);
+    expect(getClientChains()[2]).to.include({
+      chainId: 84532,
+      cctpDomain: 6,
+      hardhatNetwork: "sepoliaClient3",
+    });
   });
 
   it("resolves chains by role, chainId, and CCTP domain", () => {
     // WHY: the deploy/link/relayer code all cross-reference by these three keys; a wrong lookup
     // silently wires the wrong remote pool.
-    const { getChainByRole, getChainRole, getChainByDomain, getChainByChainId } = freshConfig({
-      ...SEPOLIA_BASE, HUB_CHAIN_ID: "11155111", HUB_CCTP_DOMAIN: "0",
+    const {
+      getChainByRole,
+      getChainRole,
+      getChainByDomain,
+      getChainByChainId,
+    } = freshConfig({
+      ...SEPOLIA_BASE,
+      HUB_CHAIN_ID: "11155111",
+      HUB_CCTP_DOMAIN: "0",
       CLIENT_COUNT: "2",
-      CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "11155420", CLIENT_1_CCTP_DOMAIN: "2",
-      CLIENT_2_RPC: "https://c2", CLIENT_2_CHAIN_ID: "998", CLIENT_2_CCTP_DOMAIN: "19",
+      CLIENT_1_RPC: "https://c1",
+      CLIENT_1_CHAIN_ID: "11155420",
+      CLIENT_1_CCTP_DOMAIN: "2",
+      CLIENT_2_RPC: "https://c2",
+      CLIENT_2_CHAIN_ID: "998",
+      CLIENT_2_CCTP_DOMAIN: "19",
     });
     expect(getChainByRole("client2").chainId).to.equal(998);
     expect(getChainRole(11155420)).to.equal("client1");
@@ -117,13 +179,24 @@ describe("networks config — N clients", () => {
     // USDC differs per chain — a client must get shared infra + its own token, never another
     // chain's USDC.
     const { getCCTPAddresses } = freshConfig({
-      ...SEPOLIA_BASE, HUB_CHAIN_ID: "11155111", HUB_CCTP_DOMAIN: "0", HUB_USDC: "0xhub",
-      CCTP_TOKEN_MESSENGER: "0xmsgr", CCTP_MESSAGE_TRANSMITTER: "0xxmit", CCTP_TOKEN_MINTER: "0xmint",
+      ...SEPOLIA_BASE,
+      HUB_CHAIN_ID: "11155111",
+      HUB_CCTP_DOMAIN: "0",
+      HUB_USDC: "0xhub",
+      CCTP_TOKEN_MESSENGER: "0xmsgr",
+      CCTP_MESSAGE_TRANSMITTER: "0xxmit",
+      CCTP_TOKEN_MINTER: "0xmint",
       CLIENT_COUNT: "1",
-      CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "11155420", CLIENT_1_CCTP_DOMAIN: "2", CLIENT_1_USDC: "0xc1usdc",
+      CLIENT_1_RPC: "https://c1",
+      CLIENT_1_CHAIN_ID: "11155420",
+      CLIENT_1_CCTP_DOMAIN: "2",
+      CLIENT_1_USDC: "0xc1usdc",
     });
     expect(getCCTPAddresses("client1")).to.deep.equal({
-      tokenMessenger: "0xmsgr", messageTransmitter: "0xxmit", tokenMinter: "0xmint", usdc: "0xc1usdc",
+      tokenMessenger: "0xmsgr",
+      messageTransmitter: "0xxmit",
+      tokenMinter: "0xmint",
+      usdc: "0xc1usdc",
     });
     expect(getCCTPAddresses("hub").usdc).to.equal("0xhub");
   });
@@ -131,18 +204,25 @@ describe("networks config — N clients", () => {
   it("throws when CLIENT_COUNT is 0", () => {
     // WHY: a hub-and-spoke deployment with no spokes is a misconfiguration; fail loud rather
     // than produce an empty client list that silently no-ops the link step.
-    expect(() => freshConfig({ ...SEPOLIA_BASE, CLIENT_COUNT: "0" }).getNetworkConfig()).to.throw(/CLIENT_COUNT/);
+    expect(() =>
+      freshConfig({ ...SEPOLIA_BASE, CLIENT_COUNT: "0" }).getNetworkConfig(),
+    ).to.throw(/CLIENT_COUNT/);
   });
 
   it("throws when a non-local client is missing required env", () => {
     // WHY: on testnet/mainnet there are no safe defaults for a client's RPC/chainId/domain —
     // a missing var must fail loud, not fall back to localhost.
-    expect(() => freshConfig({
-      ...SEPOLIA_BASE, HUB_CHAIN_ID: "11155111", HUB_CCTP_DOMAIN: "0",
-      CLIENT_COUNT: "1",
-      // CLIENT_1_RPC intentionally omitted
-      CLIENT_1_CHAIN_ID: "11155420", CLIENT_1_CCTP_DOMAIN: "2",
-    }).getNetworkConfig()).to.throw(/CLIENT_1_RPC/);
+    expect(() =>
+      freshConfig({
+        ...SEPOLIA_BASE,
+        HUB_CHAIN_ID: "11155111",
+        HUB_CCTP_DOMAIN: "0",
+        CLIENT_COUNT: "1",
+        // CLIENT_1_RPC intentionally omitted
+        CLIENT_1_CHAIN_ID: "11155420",
+        CLIENT_1_CCTP_DOMAIN: "2",
+      }).getNetworkConfig(),
+    ).to.throw(/CLIENT_1_RPC/);
   });
 });
 
@@ -153,47 +233,68 @@ describe("deployer signer", () => {
   });
   const LEDGER = "0x00000000000000000000000000000000000000Ab";
   const ONE_CLIENT = {
-    HUB_CHAIN_ID: "11155111", HUB_CCTP_DOMAIN: "0", CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "11155420", CLIENT_1_CCTP_DOMAIN: "2",
+    HUB_CHAIN_ID: "11155111",
+    HUB_CCTP_DOMAIN: "0",
+    CLIENT_COUNT: "1",
+    CLIENT_1_RPC: "https://c1",
+    CLIENT_1_CHAIN_ID: "11155420",
+    CLIENT_1_CCTP_DOMAIN: "2",
   };
-  const { DEPLOYER_PRIVATE_KEY: _key, ...SEPOLIA_NO_KEY } = { ...SEPOLIA_BASE, ...ONE_CLIENT };
+  const { DEPLOYER_PRIVATE_KEY: _key, ...SEPOLIA_NO_KEY } = {
+    ...SEPOLIA_BASE,
+    ...ONE_CLIENT,
+  };
 
   // WHY: a Ledger deploy supplies no private key; the address alone satisfies the live-network
   // signer requirement, and no key may leak through for scripts that build a Wallet from it.
   it("accepts DEPLOYER_LEDGER_ADDRESS in place of DEPLOYER_PRIVATE_KEY", () => {
-    const c = freshConfig({ ...SEPOLIA_NO_KEY, DEPLOYER_LEDGER_ADDRESS: LEDGER }).getNetworkConfig();
+    const c = freshConfig({
+      ...SEPOLIA_NO_KEY,
+      DEPLOYER_LEDGER_ADDRESS: LEDGER,
+    }).getNetworkConfig();
     expect(c.deployerLedgerAddress).to.equal(LEDGER);
     expect(c.deployerPrivateKey).to.equal("");
   });
 
   // WHY: a live deploy with no signer must fail at config load, naming both options.
   it("requires a key or a Ledger address on live networks", () => {
-    expect(() => freshConfig(SEPOLIA_NO_KEY).getNetworkConfig())
-      .to.throw(/DEPLOYER_PRIVATE_KEY or DEPLOYER_LEDGER_ADDRESS/);
+    expect(() => freshConfig(SEPOLIA_NO_KEY).getNetworkConfig()).to.throw(
+      /DEPLOYER_PRIVATE_KEY or DEPLOYER_LEDGER_ADDRESS/,
+    );
   });
 
   // WHY: with both set Hardhat would sign with the key, not the Ledger the operator expects.
   it("refuses both a key and a Ledger address", () => {
-    expect(() => freshConfig({ ...SEPOLIA_BASE, DEPLOYER_LEDGER_ADDRESS: LEDGER }).getNetworkConfig())
-      .to.throw(/not both/);
+    expect(() =>
+      freshConfig({
+        ...SEPOLIA_BASE,
+        DEPLOYER_LEDGER_ADDRESS: LEDGER,
+      }).getNetworkConfig(),
+    ).to.throw(/not both/);
   });
 
   // WHY: the key path is unchanged; deployerLedgerAddress stays unset.
   it("keeps the private-key path unchanged", () => {
-    const c = freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig();
+    const c = freshConfig({
+      ...SEPOLIA_BASE,
+      ...ONE_CLIENT,
+    }).getNetworkConfig();
     expect(c.deployerPrivateKey).to.equal(SEPOLIA_BASE.DEPLOYER_PRIVATE_KEY);
     expect(c.deployerLedgerAddress).to.equal(undefined);
   });
 });
-
 
 describe("reserve configuration", () => {
   afterEach(clearManagedEnv);
 
   // WHY: An omitted half of the reserve configuration must not silently disable its deployment.
   it("requires allocator and amount together", () => {
-    for (const env of [{ REVENUE_RESERVE_ALLOCATOR: "0x0000000000000000000000000000000000000001" },
-      { REVENUE_RESERVE_AMOUNT: "360000" }] as Record<string, string>[]) {
+    for (const env of [
+      {
+        REVENUE_RESERVE_ALLOCATOR: "0x0000000000000000000000000000000000000001",
+      },
+      { REVENUE_RESERVE_AMOUNT: "360000" },
+    ] as Record<string, string>[]) {
       const { getNetworkConfig } = freshConfig({ DEPLOY_ENV: "local", ...env });
       expect(() => getNetworkConfig()).to.throw("Set both REVENUE_RESERVE");
     }
@@ -202,20 +303,34 @@ describe("reserve configuration", () => {
   // WHY: The scripts must receive exactly the configured cap without changing any direct allocations.
   it("retains an explicit reserve and defaults to none", () => {
     const allocator = "0x0000000000000000000000000000000000000001";
-    const configured = freshConfig({ DEPLOY_ENV: "local", REVENUE_RESERVE_ALLOCATOR: allocator,
-      REVENUE_RESERVE_AMOUNT: "360000" }).getNetworkConfig();
-    expect(configured.revenueReserve).to.deep.equal({ allocator, amount: "360000" });
-    expect(freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().revenueReserve).to.equal(undefined);
+    const configured = freshConfig({
+      DEPLOY_ENV: "local",
+      REVENUE_RESERVE_ALLOCATOR: allocator,
+      REVENUE_RESERVE_AMOUNT: "360000",
+    }).getNetworkConfig();
+    expect(configured.revenueReserve).to.deep.equal({
+      allocator,
+      amount: "360000",
+    });
+    expect(
+      freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().revenueReserve,
+    ).to.equal(undefined);
   });
 
   const ONE_CLIENT = {
     CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "8453", CLIENT_1_CCTP_DOMAIN: "6",
+    CLIENT_1_RPC: "https://c1",
+    CLIENT_1_CHAIN_ID: "8453",
+    CLIENT_1_CCTP_DOMAIN: "6",
   };
   const MAINNET_BASE = {
-    ...SEPOLIA_BASE, ...ONE_CLIENT, DEPLOY_ENV: "mainnet", CCTP_MODE: "real",
+    ...SEPOLIA_BASE,
+    ...ONE_CLIENT,
+    DEPLOY_ENV: "mainnet",
+    CCTP_MODE: "real",
     INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
-    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z", CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
+    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
     WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
@@ -223,40 +338,67 @@ describe("reserve configuration", () => {
   // A mainnet run that left both unset would deploy a lock without the reserve, so the
   // config must refuse to build (#582).
   it("requires the reserve on mainnet", () => {
-    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig())
-      .to.throw(/REVENUE_RESERVE_ALLOCATOR and REVENUE_RESERVE_AMOUNT are required/);
+    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(
+      /REVENUE_RESERVE_ALLOCATOR and REVENUE_RESERVE_AMOUNT are required/,
+    );
   });
 
   // WHY: the hardened Sepolia run rehearses the mainnet launch path, so it must deploy the
   // reserve too, or the rehearsal skips the distributor and its funding checks.
   it("requires the reserve on a hardened Sepolia rehearsal", () => {
-    expect(() => freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT, HARDEN_TIMELOCK: "true" }).getNetworkConfig())
-      .to.throw(/REVENUE_RESERVE_ALLOCATOR and REVENUE_RESERVE_AMOUNT are required/);
+    expect(() =>
+      freshConfig({
+        ...SEPOLIA_BASE,
+        ...ONE_CLIENT,
+        HARDEN_TIMELOCK: "true",
+      }).getNetworkConfig(),
+    ).to.throw(
+      /REVENUE_RESERVE_ALLOCATOR and REVENUE_RESERVE_AMOUNT are required/,
+    );
   });
 
   // WHY: Sepolia ops deploys and local stacks (including local harden tests) keep the
   // direct-only lock without a vetted Safe.
   it("keeps the reserve optional on unhardened Sepolia and on local", () => {
-    expect(freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig().revenueReserve).to.equal(undefined);
-    expect(freshConfig({ DEPLOY_ENV: "local", HARDEN_TIMELOCK: "true" }).getNetworkConfig().revenueReserve)
-      .to.equal(undefined);
+    expect(
+      freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig()
+        .revenueReserve,
+    ).to.equal(undefined);
+    expect(
+      freshConfig({
+        DEPLOY_ENV: "local",
+        HARDEN_TIMELOCK: "true",
+      }).getNetworkConfig().revenueReserve,
+    ).to.equal(undefined);
   });
 
   // WHY: the configured mainnet allocator and cap must reach the deploy scripts unchanged.
   it("uses the explicit reserve on mainnet", () => {
-    const c = freshConfig({ ...MAINNET_BASE, ...TEST_RESERVE }).getNetworkConfig();
+    const c = freshConfig({
+      ...MAINNET_BASE,
+      ...TEST_RESERVE,
+    }).getNetworkConfig();
     expect(c.revenueReserve).to.deep.equal({
-      allocator: TEST_RESERVE.REVENUE_RESERVE_ALLOCATOR, amount: TEST_RESERVE.REVENUE_RESERVE_AMOUNT,
+      allocator: TEST_RESERVE.REVENUE_RESERVE_ALLOCATOR,
+      amount: TEST_RESERVE.REVENUE_RESERVE_AMOUNT,
     });
   });
 
   // WHY: The committed Sepolia schedule must exhaust the lock budget in either
   // mode; the previous 200 ARM file would strand 2,399,800 ARM on activation.
   it("pins fresh Sepolia beneficiary totals for direct and reserve rehearsals", () => {
-    const total = (file: string) => (JSON.parse(fs.readFileSync(path.join(__dirname, file), "utf8")) as
-      { amount: string }[]).reduce((sum, row) => sum + BigInt(row.amount), 0n);
-    expect(total("revenue-lock-beneficiaries-sepolia.json")).to.equal(2_400_000n);
-    expect(total("revenue-lock-beneficiaries-sepolia-reserve.json") + 360_000n).to.equal(2_400_000n);
+    const total = (file: string) =>
+      (
+        JSON.parse(fs.readFileSync(path.join(__dirname, file), "utf8")) as {
+          amount: string;
+        }[]
+      ).reduce((sum, row) => sum + BigInt(row.amount), 0n);
+    expect(total("revenue-lock-beneficiaries-sepolia.json")).to.equal(
+      2_400_000n,
+    );
+    expect(
+      total("revenue-lock-beneficiaries-sepolia-reserve.json") + 360_000n,
+    ).to.equal(2_400_000n);
   });
 });
 
@@ -269,34 +411,49 @@ describe("wind-down deadline", () => {
   // Non-local envs must pass the client builder before the wind-down field is read.
   const ONE_CLIENT = {
     CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "8453", CLIENT_1_CCTP_DOMAIN: "6",
+    CLIENT_1_RPC: "https://c1",
+    CLIENT_1_CHAIN_ID: "8453",
+    CLIENT_1_CCTP_DOMAIN: "6",
   };
   // CROWDFUND_OPEN_TIME is also mainnet-required; set it so these cases isolate the deadline.
   const MAINNET_BASE = {
-    ...SEPOLIA_BASE, ...ONE_CLIENT, DEPLOY_ENV: "mainnet", CCTP_MODE: "real",
-    INITIAL_STEWARD_ADDRESS: TEST_STEWARD, ...TEST_RESERVE,
-    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z", WINDDOWN_REVENUE_THRESHOLD: "10000",
+    ...SEPOLIA_BASE,
+    ...ONE_CLIENT,
+    DEPLOY_ENV: "mainnet",
+    CCTP_MODE: "real",
+    INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+    ...TEST_RESERVE,
+    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
   // WHY: the deadline arms a permissionless, terminal wind-down and is fixed at the
   // crowdfund deploy; a mainnet deploy must never pick it up from a silent default.
   it("requires WINDDOWN_DEADLINE on mainnet", () => {
-    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(/WINDDOWN_DEADLINE/);
+    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(
+      /WINDDOWN_DEADLINE/,
+    );
   });
 
   // WHY: an explicitly chosen mainnet deadline must reach the deploy script unchanged.
   it("uses the explicit WINDDOWN_DEADLINE on mainnet", () => {
-    const c = freshConfig({ ...MAINNET_BASE, WINDDOWN_DEADLINE: "2028-06-30T00:00:00Z" }).getNetworkConfig();
+    const c = freshConfig({
+      ...MAINNET_BASE,
+      WINDDOWN_DEADLINE: "2028-06-30T00:00:00Z",
+    }).getNetworkConfig();
     expect(c.windDownDeadline).to.equal("2028-06-30T00:00:00Z");
   });
 
   // WHY: local and testnet deploys keep working with no wind-down env set; the default sits
   // well clear of the constructor's "deadline in past" check.
   it("defaults local and Sepolia to 2027-12-31", () => {
-    expect(freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().windDownDeadline)
-      .to.equal("2027-12-31T00:00:00Z");
-    expect(freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig().windDownDeadline)
-      .to.equal("2027-12-31T00:00:00Z");
+    expect(
+      freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().windDownDeadline,
+    ).to.equal("2027-12-31T00:00:00Z");
+    expect(
+      freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig()
+        .windDownDeadline,
+    ).to.equal("2027-12-31T00:00:00Z");
   });
 });
 
@@ -308,33 +465,49 @@ describe("wind-down revenue threshold", () => {
 
   const ONE_CLIENT = {
     CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "8453", CLIENT_1_CCTP_DOMAIN: "6",
+    CLIENT_1_RPC: "https://c1",
+    CLIENT_1_CHAIN_ID: "8453",
+    CLIENT_1_CCTP_DOMAIN: "6",
   };
   const MAINNET_BASE = {
-    ...SEPOLIA_BASE, ...ONE_CLIENT, DEPLOY_ENV: "mainnet", CCTP_MODE: "real",
-    INITIAL_STEWARD_ADDRESS: TEST_STEWARD, ...TEST_RESERVE,
-    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z", CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    ...SEPOLIA_BASE,
+    ...ONE_CLIENT,
+    DEPLOY_ENV: "mainnet",
+    CCTP_MODE: "real",
+    INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+    ...TEST_RESERVE,
+    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
+    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
   };
 
   // WHY: once the deadline passes, recognized revenue below the threshold lets anyone
   // trigger the terminal wind-down; like the deadline, it must be chosen deliberately on
   // mainnet, never picked up from a silent default.
   it("requires WINDDOWN_REVENUE_THRESHOLD on mainnet", () => {
-    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(/WINDDOWN_REVENUE_THRESHOLD/);
+    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(
+      /WINDDOWN_REVENUE_THRESHOLD/,
+    );
   });
 
   // WHY: an explicitly chosen mainnet threshold must reach the deploy script unchanged.
   it("uses the explicit WINDDOWN_REVENUE_THRESHOLD on mainnet", () => {
-    const c = freshConfig({ ...MAINNET_BASE, WINDDOWN_REVENUE_THRESHOLD: "25000" }).getNetworkConfig();
+    const c = freshConfig({
+      ...MAINNET_BASE,
+      WINDDOWN_REVENUE_THRESHOLD: "25000",
+    }).getNetworkConfig();
     expect(c.windDownRevenueThreshold).to.equal("25000");
   });
 
   // WHY: local and testnet deploys keep working with no wind-down env set.
   it("defaults local and Sepolia to 10000", () => {
-    expect(freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().windDownRevenueThreshold)
-      .to.equal("10000");
-    expect(freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig().windDownRevenueThreshold)
-      .to.equal("10000");
+    expect(
+      freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig()
+        .windDownRevenueThreshold,
+    ).to.equal("10000");
+    expect(
+      freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig()
+        .windDownRevenueThreshold,
+    ).to.equal("10000");
   });
 });
 
@@ -346,23 +519,35 @@ describe("crowdfund open time", () => {
 
   const ONE_CLIENT = {
     CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "8453", CLIENT_1_CCTP_DOMAIN: "6",
+    CLIENT_1_RPC: "https://c1",
+    CLIENT_1_CHAIN_ID: "8453",
+    CLIENT_1_CCTP_DOMAIN: "6",
   };
   const MAINNET_BASE = {
-    ...SEPOLIA_BASE, ...ONE_CLIENT, DEPLOY_ENV: "mainnet", CCTP_MODE: "real",
-    INITIAL_STEWARD_ADDRESS: TEST_STEWARD, ...TEST_RESERVE,
-    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z", WINDDOWN_REVENUE_THRESHOLD: "10000",
+    ...SEPOLIA_BASE,
+    ...ONE_CLIENT,
+    DEPLOY_ENV: "mainnet",
+    CCTP_MODE: "real",
+    INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+    ...TEST_RESERVE,
+    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
+    WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
   // WHY: windowStart is immutable and the launch is announced for a fixed time; a mainnet
   // deploy must never fall back to a relative delay that drifts with deploy duration.
   it("requires CROWDFUND_OPEN_TIME on mainnet", () => {
-    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(/CROWDFUND_OPEN_TIME/);
+    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(
+      /CROWDFUND_OPEN_TIME/,
+    );
   });
 
   // WHY: the announced open time must reach the deploy script unchanged.
   it("uses the explicit CROWDFUND_OPEN_TIME on mainnet", () => {
-    const c = freshConfig({ ...MAINNET_BASE, CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z" }).getNetworkConfig();
+    const c = freshConfig({
+      ...MAINNET_BASE,
+      CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    }).getNetworkConfig();
     expect(c.crowdfundOpenTime).to.equal("2026-10-08T17:00:00Z");
   });
 
@@ -372,25 +557,40 @@ describe("crowdfund open time", () => {
     const local = freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig();
     expect(local.crowdfundOpenTime).to.equal(undefined);
     expect(local.crowdfundOpenDelay).to.equal(600);
-    const sepolia = freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT, CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z" })
-      .getNetworkConfig();
+    const sepolia = freshConfig({
+      ...SEPOLIA_BASE,
+      ...ONE_CLIENT,
+      CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    }).getNetworkConfig();
     expect(sepolia.crowdfundOpenTime).to.equal("2026-10-08T17:00:00Z");
   });
 
   // WHY: the lead override must reach the orchestrator verbatim so its validation (whole
   // seconds, 1h floor) sees exactly what the operator wrote.
   it("passes the open-time lead override through unparsed", () => {
-    const c = freshConfig({ ...MAINNET_BASE, CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-      CROWDFUND_OPEN_MIN_LEAD_SECONDS: "3600" }).getNetworkConfig();
+    const c = freshConfig({
+      ...MAINNET_BASE,
+      CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+      CROWDFUND_OPEN_MIN_LEAD_SECONDS: "3600",
+    }).getNetworkConfig();
     expect(c.crowdfundOpenMinLead).to.equal("3600");
   });
 
   // WHY: unset or empty must mean "no override", so the 6h default applies.
   it("leaves the open-time lead override unset when absent or empty", () => {
-    const base = { ...MAINNET_BASE, CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z" };
-    expect(freshConfig(base).getNetworkConfig().crowdfundOpenMinLead).to.equal(undefined);
-    expect(freshConfig({ ...base, CROWDFUND_OPEN_MIN_LEAD_SECONDS: "" }).getNetworkConfig().crowdfundOpenMinLead)
-      .to.equal(undefined);
+    const base = {
+      ...MAINNET_BASE,
+      CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    };
+    expect(freshConfig(base).getNetworkConfig().crowdfundOpenMinLead).to.equal(
+      undefined,
+    );
+    expect(
+      freshConfig({
+        ...base,
+        CROWDFUND_OPEN_MIN_LEAD_SECONDS: "",
+      }).getNetworkConfig().crowdfundOpenMinLead,
+    ).to.equal(undefined);
   });
 });
 
@@ -402,12 +602,19 @@ describe("privacy pool treasury override", () => {
 
   const ONE_CLIENT = {
     CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "8453", CLIENT_1_CCTP_DOMAIN: "6",
+    CLIENT_1_RPC: "https://c1",
+    CLIENT_1_CHAIN_ID: "8453",
+    CLIENT_1_CCTP_DOMAIN: "6",
   };
   const MAINNET_BASE = {
-    ...SEPOLIA_BASE, ...ONE_CLIENT, DEPLOY_ENV: "mainnet", CCTP_MODE: "real",
-    INITIAL_STEWARD_ADDRESS: TEST_STEWARD, ...TEST_RESERVE,
-    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z", CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    ...SEPOLIA_BASE,
+    ...ONE_CLIENT,
+    DEPLOY_ENV: "mainnet",
+    CCTP_MODE: "real",
+    INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+    ...TEST_RESERVE,
+    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
+    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
     WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
   const OVERRIDE = "0x0000000000000000000000000000000000000002";
@@ -416,25 +623,41 @@ describe("privacy pool treasury override", () => {
   // governance treasury; an override would divert all protocol fees outside governance
   // control for good, so the config must refuse it before any deploy step runs.
   it("refuses TREASURY_ADDRESS on mainnet", () => {
-    expect(() => freshConfig({ ...MAINNET_BASE, TREASURY_ADDRESS: OVERRIDE }).getNetworkConfig())
-      .to.throw(/TREASURY_ADDRESS/);
+    expect(() =>
+      freshConfig({
+        ...MAINNET_BASE,
+        TREASURY_ADDRESS: OVERRIDE,
+      }).getNetworkConfig(),
+    ).to.throw(/TREASURY_ADDRESS/);
   });
 
   // WHY: an `export TREASURY_ADDRESS=` left blank (or whitespace) in an env file is not an
   // override and must not block a mainnet deploy.
   it("treats a blank TREASURY_ADDRESS on mainnet as unset", () => {
     for (const blank of ["", "  "]) {
-      const c = freshConfig({ ...MAINNET_BASE, TREASURY_ADDRESS: blank }).getNetworkConfig();
+      const c = freshConfig({
+        ...MAINNET_BASE,
+        TREASURY_ADDRESS: blank,
+      }).getNetworkConfig();
       expect(c.treasuryAddress).to.equal("");
     }
   });
 
   // WHY: local and Sepolia keep the override (Sepolia sets one in sepolia.env).
   it("keeps the override on local and Sepolia", () => {
-    expect(freshConfig({ DEPLOY_ENV: "local", TREASURY_ADDRESS: OVERRIDE }).getNetworkConfig().treasuryAddress)
-      .to.equal(OVERRIDE);
-    expect(freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT, TREASURY_ADDRESS: OVERRIDE }).getNetworkConfig()
-      .treasuryAddress).to.equal(OVERRIDE);
+    expect(
+      freshConfig({
+        DEPLOY_ENV: "local",
+        TREASURY_ADDRESS: OVERRIDE,
+      }).getNetworkConfig().treasuryAddress,
+    ).to.equal(OVERRIDE);
+    expect(
+      freshConfig({
+        ...SEPOLIA_BASE,
+        ...ONE_CLIENT,
+        TREASURY_ADDRESS: OVERRIDE,
+      }).getNetworkConfig().treasuryAddress,
+    ).to.equal(OVERRIDE);
   });
 });
 
@@ -445,11 +668,17 @@ describe("timelock harden profile", () => {
   });
 
   const MAINNET_BASE = {
-    ...SEPOLIA_BASE, CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "8453", CLIENT_1_CCTP_DOMAIN: "6",
-    DEPLOY_ENV: "mainnet", CCTP_MODE: "real",
-    INITIAL_STEWARD_ADDRESS: TEST_STEWARD, ...TEST_RESERVE,
-    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z", CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    ...SEPOLIA_BASE,
+    CLIENT_COUNT: "1",
+    CLIENT_1_RPC: "https://c1",
+    CLIENT_1_CHAIN_ID: "8453",
+    CLIENT_1_CCTP_DOMAIN: "6",
+    DEPLOY_ENV: "mainnet",
+    CCTP_MODE: "real",
+    INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+    ...TEST_RESERVE,
+    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
+    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
     WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
@@ -458,25 +687,44 @@ describe("timelock harden profile", () => {
   // interrupted launch. Mainnet must refuse before any step runs, not warn.
   it("refuses HARDEN_TIMELOCK=false on mainnet", () => {
     for (const off of ["false", "0"]) {
-      expect(() => freshConfig({ ...MAINNET_BASE, HARDEN_TIMELOCK: off }).getNetworkConfig())
-        .to.throw(/HARDEN_TIMELOCK/);
+      expect(() =>
+        freshConfig({
+          ...MAINNET_BASE,
+          HARDEN_TIMELOCK: off,
+        }).getNetworkConfig(),
+      ).to.throw(/HARDEN_TIMELOCK/);
     }
   });
 
   // WHY: mainnet hardens by default, so leaving the variable unset must still deploy.
   it("hardens mainnet when HARDEN_TIMELOCK is unset or true", () => {
-    expect(freshConfig(MAINNET_BASE).getNetworkConfig().hardenTimelock).to.equal(true);
-    expect(freshConfig({ ...MAINNET_BASE, HARDEN_TIMELOCK: "true" }).getNetworkConfig().hardenTimelock)
-      .to.equal(true);
+    expect(
+      freshConfig(MAINNET_BASE).getNetworkConfig().hardenTimelock,
+    ).to.equal(true);
+    expect(
+      freshConfig({
+        ...MAINNET_BASE,
+        HARDEN_TIMELOCK: "true",
+      }).getNetworkConfig().hardenTimelock,
+    ).to.equal(true);
   });
 
   // WHY: local and Sepolia ops deploys keep the deployer's timelock roles; only the #319
   // dry-run opts in to hardening there.
   it("keeps hardening opt-in on local and Sepolia", () => {
-    expect(freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().hardenTimelock).to.equal(false);
-    expect(freshConfig({ ...SEPOLIA_BASE, CLIENT_COUNT: "1", CLIENT_1_RPC: "https://c1",
-      CLIENT_1_CHAIN_ID: "84532", CLIENT_1_CCTP_DOMAIN: "6", HARDEN_TIMELOCK: "false" })
-      .getNetworkConfig().hardenTimelock).to.equal(false);
+    expect(
+      freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().hardenTimelock,
+    ).to.equal(false);
+    expect(
+      freshConfig({
+        ...SEPOLIA_BASE,
+        CLIENT_COUNT: "1",
+        CLIENT_1_RPC: "https://c1",
+        CLIENT_1_CHAIN_ID: "84532",
+        CLIENT_1_CCTP_DOMAIN: "6",
+        HARDEN_TIMELOCK: "false",
+      }).getNetworkConfig().hardenTimelock,
+    ).to.equal(false);
   });
 });
 
@@ -492,18 +740,32 @@ describe("RevenueLock max revenue increase per day", () => {
 
   // WHY: an explicitly configured cap must reach the deploy scripts unchanged.
   it("uses an explicit REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD", () => {
-    const c = freshConfig({ DEPLOY_ENV: "local", REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD: "5000" })
-      .getNetworkConfig();
+    const c = freshConfig({
+      DEPLOY_ENV: "local",
+      REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD: "5000",
+    }).getNetworkConfig();
     expect(c.revenueLockMaxIncreasePerDayUsd).to.equal("5000");
   });
 
   // WHY: the value is whole USD, scaled to 18 decimals at deploy. A pre-scaled entry (10000e18)
   // or one above the $1M full-unlock milestone disables the cap, and zero freezes every unlock;
   // RevenueLock has no setter, so these must fail before deploy rather than on-chain.
-  for (const bad of ["0", "10000.5", "1e22", "10000000000000000000000", "1000001", "-10000", "$10000"]) {
+  for (const bad of [
+    "0",
+    "10000.5",
+    "1e22",
+    "10000000000000000000000",
+    "1000001",
+    "-10000",
+    "$10000",
+  ]) {
     it(`rejects "${bad}"`, () => {
-      expect(() => freshConfig({ DEPLOY_ENV: "local", REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD: bad })
-        .getNetworkConfig()).to.throw(/REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD/);
+      expect(() =>
+        freshConfig({
+          DEPLOY_ENV: "local",
+          REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD: bad,
+        }).getNetworkConfig(),
+      ).to.throw(/REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD/);
     });
   }
 });
@@ -511,13 +773,25 @@ describe("RevenueLock max revenue increase per day", () => {
 // GOVERNANCE.md §Treasury Outflow Limits: 30-day rolling window; limit is the greater of the
 // absolute amount and the percentage of treasury balance; no floor (it is fixed at deploy).
 const SPEC_OUTFLOW = {
-  usdc: { windowDuration: 30 * 86400, limitBps: 1000, limitAbsolute: "100000000000", floorAbsolute: "0" },
+  usdc: {
+    windowDuration: 30 * 86400,
+    limitBps: 1000,
+    limitAbsolute: "100000000000",
+    floorAbsolute: "0",
+  },
   arm: {
-    windowDuration: 30 * 86400, limitBps: 300,
-    limitAbsolute: "250000000000000000000000", floorAbsolute: "0",
+    windowDuration: 30 * 86400,
+    limitBps: 300,
+    limitAbsolute: "250000000000000000000000",
+    floorAbsolute: "0",
   },
   // USDC pattern: 30-day window, 10%, 25 ETH absolute (~$100k), no floor.
-  eth: { windowDuration: 30 * 86400, limitBps: 1000, limitAbsolute: "25000000000000000000", floorAbsolute: "0" },
+  eth: {
+    windowDuration: 30 * 86400,
+    limitBps: 1000,
+    limitAbsolute: "25000000000000000000",
+    floorAbsolute: "0",
+  },
 };
 
 describe("treasury outflow limits", () => {
@@ -539,69 +813,117 @@ describe("initial steward and USDC steward budget", () => {
 
   const ONE_CLIENT = {
     CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1", CLIENT_1_CHAIN_ID: "8453", CLIENT_1_CCTP_DOMAIN: "6",
+    CLIENT_1_RPC: "https://c1",
+    CLIENT_1_CHAIN_ID: "8453",
+    CLIENT_1_CCTP_DOMAIN: "6",
   };
   const MAINNET_BASE = {
-    ...SEPOLIA_BASE, ...ONE_CLIENT, DEPLOY_ENV: "mainnet", CCTP_MODE: "real", ...TEST_RESERVE,
-    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z", CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
+    ...SEPOLIA_BASE,
+    ...ONE_CLIENT,
+    DEPLOY_ENV: "mainnet",
+    CCTP_MODE: "real",
+    ...TEST_RESERVE,
+    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
+    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
     WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
   // WHY: the steward is elected and funded at deploy only when explicitly configured; local
   // and Sepolia stacks without INITIAL_STEWARD_ADDRESS keep the governance-elected path.
   it("defaults local and Sepolia to no initial steward", () => {
-    expect(freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().initialSteward).to.equal(undefined);
-    expect(freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig().initialSteward).to.equal(undefined);
+    expect(
+      freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().initialSteward,
+    ).to.equal(undefined);
+    expect(
+      freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig()
+        .initialSteward,
+    ).to.equal(undefined);
   });
 
   // WHY: GOVERNANCE.md §Treasury Steward sets the launch budget at $60,000 per rolling 30 days;
   // a configured steward must get exactly that budget when the budget env is omitted.
   it("defaults the budget to the $60,000 / 30-day spec value", () => {
-    const c = freshConfig({ DEPLOY_ENV: "local", INITIAL_STEWARD_ADDRESS: TEST_STEWARD }).getNetworkConfig();
-    expect(c.initialSteward).to.deep.equal({ address: TEST_STEWARD, budgetUsdc: "60000", budgetWindow: 2592000 });
+    const c = freshConfig({
+      DEPLOY_ENV: "local",
+      INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+    }).getNetworkConfig();
+    expect(c.initialSteward).to.deep.equal({
+      address: TEST_STEWARD,
+      budgetUsdc: "60000",
+      budgetWindow: 2592000,
+    });
   });
 
   // WHY: explicitly configured values must reach the deploy scripts unchanged.
   it("uses an explicit budget and window", () => {
     const c = freshConfig({
-      DEPLOY_ENV: "local", INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
-      STEWARD_BUDGET_USDC: "25000", STEWARD_BUDGET_WINDOW: "604800",
+      DEPLOY_ENV: "local",
+      INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+      STEWARD_BUDGET_USDC: "25000",
+      STEWARD_BUDGET_WINDOW: "604800",
     }).getNetworkConfig();
-    expect(c.initialSteward).to.deep.equal({ address: TEST_STEWARD, budgetUsdc: "25000", budgetWindow: 604800 });
+    expect(c.initialSteward).to.deep.equal({
+      address: TEST_STEWARD,
+      budgetUsdc: "25000",
+      budgetWindow: 604800,
+    });
   });
 
   // WHY: the launch elects the steward at deploy; a mainnet run that forgot the address would
   // silently skip the election and the budget, so the config must refuse to build.
   it("requires INITIAL_STEWARD_ADDRESS on mainnet", () => {
-    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(/INITIAL_STEWARD_ADDRESS/);
+    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(
+      /INITIAL_STEWARD_ADDRESS/,
+    );
   });
 
   // WHY: a budget without a steward is spending authority nobody can use, and almost always
   // means the address was dropped from the env by mistake.
   for (const key of ["STEWARD_BUDGET_USDC", "STEWARD_BUDGET_WINDOW"]) {
     it(`refuses ${key} without INITIAL_STEWARD_ADDRESS`, () => {
-      expect(() => freshConfig({ DEPLOY_ENV: "local", [key]: "60000" }).getNetworkConfig())
-        .to.throw(/STEWARD_BUDGET_\* is set but INITIAL_STEWARD_ADDRESS is not/);
+      expect(() =>
+        freshConfig({ DEPLOY_ENV: "local", [key]: "60000" }).getNetworkConfig(),
+      ).to.throw(/STEWARD_BUDGET_\* is set but INITIAL_STEWARD_ADDRESS is not/);
     });
   }
 
   // WHY: the steward address is a deploy input with no later setter short of an Extended
   // governance proposal; a malformed or zero address must fail before any transaction.
-  for (const bad of ["0x123", "not-an-address", "0x0000000000000000000000000000000000000000"]) {
+  for (const bad of [
+    "0x123",
+    "not-an-address",
+    "0x0000000000000000000000000000000000000000",
+  ]) {
     it(`rejects the steward address "${bad}"`, () => {
-      expect(() => freshConfig({ DEPLOY_ENV: "local", INITIAL_STEWARD_ADDRESS: bad }).getNetworkConfig())
-        .to.throw(/INITIAL_STEWARD_ADDRESS/);
+      expect(() =>
+        freshConfig({
+          DEPLOY_ENV: "local",
+          INITIAL_STEWARD_ADDRESS: bad,
+        }).getNetworkConfig(),
+      ).to.throw(/INITIAL_STEWARD_ADDRESS/);
     });
   }
 
   // WHY: the budget is whole USD, scaled by USDC's 6 decimals at deploy. A pre-scaled entry
   // (60000000000) or anything above the $100,000 USDC outflow absolute limit is a units mistake
   // that would hand the steward a far larger budget than the spec; zero is no budget at all.
-  for (const bad of ["0", "60000.5", "6e4", "60000000000", "100001", "-60000", "$60000"]) {
+  for (const bad of [
+    "0",
+    "60000.5",
+    "6e4",
+    "60000000000",
+    "100001",
+    "-60000",
+    "$60000",
+  ]) {
     it(`rejects the budget "${bad}"`, () => {
-      expect(() => freshConfig({
-        DEPLOY_ENV: "local", INITIAL_STEWARD_ADDRESS: TEST_STEWARD, STEWARD_BUDGET_USDC: bad,
-      }).getNetworkConfig()).to.throw(/STEWARD_BUDGET_USDC/);
+      expect(() =>
+        freshConfig({
+          DEPLOY_ENV: "local",
+          INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+          STEWARD_BUDGET_USDC: bad,
+        }).getNetworkConfig(),
+      ).to.throw(/STEWARD_BUDGET_USDC/);
     });
   }
 
@@ -609,9 +931,13 @@ describe("initial steward and USDC steward budget", () => {
   // revert from landing mid-deploy after one-shot initializers are spent.
   for (const bad of ["0", "86399", "30d", "2592000.5"]) {
     it(`rejects the window "${bad}"`, () => {
-      expect(() => freshConfig({
-        DEPLOY_ENV: "local", INITIAL_STEWARD_ADDRESS: TEST_STEWARD, STEWARD_BUDGET_WINDOW: bad,
-      }).getNetworkConfig()).to.throw(/STEWARD_BUDGET_WINDOW/);
+      expect(() =>
+        freshConfig({
+          DEPLOY_ENV: "local",
+          INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+          STEWARD_BUDGET_WINDOW: bad,
+        }).getNetworkConfig(),
+      ).to.throw(/STEWARD_BUDGET_WINDOW/);
     });
   }
 });
@@ -620,7 +946,9 @@ describe("committed mainnet.env", () => {
   /** Read the `export KEY=VALUE` lines of a committed env template (comments ignored). */
   function readEnvTemplate(file: string): Record<string, string> {
     const vars: Record<string, string> = {};
-    for (const line of fs.readFileSync(path.join(__dirname, file), "utf8").split("\n")) {
+    for (const line of fs
+      .readFileSync(path.join(__dirname, file), "utf8")
+      .split("\n")) {
       const m = line.match(/^export ([A-Z0-9_]+)=(.*)$/);
       if (m) vars[m[1]] = m[2];
     }
@@ -650,7 +978,8 @@ describe("committed mainnet.env", () => {
       REVENUE_LOCK_BENEFICIARIES_FILE: "",
       REVENUE_LOCK_BENEFICIARIES_JSON: REVENUE_LOCK_JSON,
       CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-      INITIAL_STEWARD_ADDRESS: TEST_STEWARD, ...TEST_RESERVE,
+      INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+      ...TEST_RESERVE,
     });
     expect(() => validateCCTPConfig("hub")).to.not.throw();
   });
@@ -682,7 +1011,8 @@ describe("committed mainnet.env", () => {
       REVENUE_LOCK_BENEFICIARIES_FILE: "",
       REVENUE_LOCK_BENEFICIARIES_JSON: REVENUE_LOCK_JSON,
       CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-      INITIAL_STEWARD_ADDRESS: TEST_STEWARD, ...TEST_RESERVE,
+      INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
+      ...TEST_RESERVE,
     }).getNetworkConfig();
     expect(c.outflowConfig).to.deep.equal(SPEC_OUTFLOW);
   });
@@ -707,15 +1037,39 @@ describe("env templates keep a private RPC from secrets.env", () => {
    * would have done) and return the resulting values of `keys`. Runs from a temp dir holding
    * only the template, so a developer's real config/secrets.env is never sourced.
    */
-  function sourceTemplate(file: string, preset: Record<string, string>, keys: string[]): Record<string, string> {
+  function sourceTemplate(
+    file: string,
+    preset: Record<string, string>,
+    keys: string[],
+  ): Record<string, string> {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "env-template-"));
     try {
       fs.mkdirSync(path.join(dir, "config"));
-      fs.copyFileSync(path.join(__dirname, file), path.join(dir, "config", file));
-      const script = `source config/${file} >/dev/null; ` + keys.map((k) => `echo "${k}=$${k}"`).join("; ");
-      const env: Record<string, string> = { PATH: process.env.PATH ?? "", ...preset };
-      const out = execFileSync("bash", ["-c", script], { cwd: dir, env, encoding: "utf8" });
-      return Object.fromEntries(out.trim().split("\n").map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]));
+      fs.copyFileSync(
+        path.join(__dirname, file),
+        path.join(dir, "config", file),
+      );
+      const script =
+        `source config/${file} >/dev/null; ` +
+        keys.map((k) => `echo "${k}=$${k}"`).join("; ");
+      const env: Record<string, string> = {
+        PATH: process.env.PATH ?? "",
+        ...preset,
+      };
+      const out = execFileSync("bash", ["-c", script], {
+        cwd: dir,
+        env,
+        encoding: "utf8",
+      });
+      return Object.fromEntries(
+        out
+          .trim()
+          .split("\n")
+          .map((l) => [
+            l.slice(0, l.indexOf("=")),
+            l.slice(l.indexOf("=") + 1),
+          ]),
+      );
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -728,7 +1082,9 @@ describe("env templates keep a private RPC from secrets.env", () => {
     // afterwards silently replaced the operator's private (keyed) RPC, so the mainnet deploy
     // ran over the rate-limited public endpoint (#556).
     it(`${file} keeps RPC URLs that were already set`, () => {
-      const preset = Object.fromEntries(RPC_KEYS.map((k) => [k, `https://private.example/${k}`]));
+      const preset = Object.fromEntries(
+        RPC_KEYS.map((k) => [k, `https://private.example/${k}`]),
+      );
       expect(sourceTemplate(file, preset, RPC_KEYS)).to.deep.equal(preset);
     });
 
@@ -739,4 +1095,3 @@ describe("env templates keep a private RPC from secrets.env", () => {
     });
   }
 });
-

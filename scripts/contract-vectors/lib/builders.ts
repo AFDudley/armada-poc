@@ -31,7 +31,11 @@ export async function initPoseidon(): Promise<void> {
  * commitmentHash(preimage) = PoseidonT4([npk, tokenID, value])  (spec §2.2).
  * Used to build the unshield-output commitment (spec §8.3 check 6).
  */
-export function commitmentHash(npk: string, tokenAddress: string, value: bigint): string {
+export function commitmentHash(
+  npk: string,
+  tokenAddress: string,
+  value: bigint,
+): string {
   if (!poseidonInstance) throw new Error("initPoseidon() not called");
   const tokenId = BigInt(tokenAddress); // ERC20 tokenID = uint256(uint160(token))
   const h = poseidonInstance([BigInt(npk), tokenId, value]);
@@ -55,7 +59,7 @@ export function makeShieldRequest(
   seed: string,
   token: TokenDataStruct,
   value: bigint,
-  npk?: string
+  npk?: string,
 ) {
   return {
     preimage: {
@@ -64,7 +68,11 @@ export function makeShieldRequest(
       value,
     },
     ciphertext: {
-      encryptedBundle: [d32(`${seed}:eb0`), d32(`${seed}:eb1`), d32(`${seed}:eb2`)],
+      encryptedBundle: [
+        d32(`${seed}:eb0`),
+        d32(`${seed}:eb1`),
+        d32(`${seed}:eb2`),
+      ],
       shieldKey: d32(`${seed}:sk`),
     },
   };
@@ -128,24 +136,27 @@ export function makeTransaction(spec: TransactionSpec) {
   const unshield = spec.unshield ?? 0;
   const nullifiers =
     spec.nullifiers ??
-    Array.from({ length: spec.nullifierCount }, (_, i) => d32Field(`${spec.seed}:n${i}`));
+    Array.from({ length: spec.nullifierCount }, (_, i) =>
+      d32Field(`${spec.seed}:n${i}`),
+    );
 
   let commitments: string[];
   if (spec.commitments) {
     commitments = spec.commitments;
   } else {
     commitments = Array.from({ length: spec.commitmentCount }, (_, i) =>
-      d32Field(`${spec.seed}:c${i}`)
+      d32Field(`${spec.seed}:c${i}`),
     );
     if (unshield !== 0) {
-      if (!spec.unshieldPreimage) throw new Error("unshield tx requires unshieldPreimage");
+      if (!spec.unshieldPreimage)
+        throw new Error("unshield tx requires unshieldPreimage");
       const up = spec.unshieldPreimage;
       // For REDIRECT the hash binds msg.sender instead of the preimage npk —
       // the caller passes the already-substituted npk in that case.
       commitments[commitments.length - 1] = commitmentHash(
         up.npk,
         up.token.tokenAddress,
-        up.value
+        up.value,
       );
     }
   }
@@ -153,7 +164,7 @@ export function makeTransaction(spec: TransactionSpec) {
   const ciphertextCount =
     unshield !== 0 ? spec.commitmentCount - 1 : spec.commitmentCount;
   const commitmentCiphertext = Array.from({ length: ciphertextCount }, (_, i) =>
-    makeCiphertext(spec.seed, i)
+    makeCiphertext(spec.seed, i),
   );
 
   return {
@@ -192,11 +203,15 @@ const PERMIT_TYPES = {
 
 export async function signPermit(
   signer: Signer,
-  usdc: { name(): Promise<string>; nonces(owner: string): Promise<bigint>; getAddress(): Promise<string> },
+  usdc: {
+    name(): Promise<string>;
+    nonces(owner: string): Promise<bigint>;
+    getAddress(): Promise<string>;
+  },
   spender: string,
   value: bigint,
   deadline: bigint,
-  chainId: number
+  chainId: number,
 ): Promise<{ v: number; r: string; s: string }> {
   const domain = {
     name: await usdc.name(),

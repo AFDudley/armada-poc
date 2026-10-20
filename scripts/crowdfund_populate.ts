@@ -26,9 +26,9 @@ import { getCrowdfundDeploymentFile } from "../config/networks";
 
 const THREE_WEEKS = 21 * 86400;
 
-const SEED_CAP = 15_000;  // $15,000 per seed
-const HOP1_CAP = 4_000;   // $4,000 per hop-1
-const HOP2_CAP = 1_000;   // $1,000 per hop-2
+const SEED_CAP = 15_000; // $15,000 per seed
+const HOP1_CAP = 4_000; // $4,000 per hop-1
+const HOP2_CAP = 1_000; // $1,000 per hop-2
 
 const BATCH_SIZE = 20;
 const SEED_BATCH_SIZE = 50; // for addSeeds() calls
@@ -58,7 +58,7 @@ function loadDeployment(): Deployment {
   if (!fs.existsSync(filePath)) {
     throw new Error(
       `Deployment file not found: ${filePath}\n` +
-      `Run 'npm run setup' first to deploy contracts.`
+        `Run 'npm run setup' first to deploy contracts.`,
     );
   }
 
@@ -85,11 +85,11 @@ async function main() {
   // Get contracts
   const crowdfund = await ethers.getContractAt(
     "ArmadaCrowdfund",
-    deployment.contracts.crowdfund
+    deployment.contracts.crowdfund,
   );
   const usdc = await ethers.getContractAt(
     "MockUSDCV2",
-    deployment.contracts.usdc
+    deployment.contracts.usdc,
   );
 
   // Check phase
@@ -98,7 +98,7 @@ async function main() {
   if (phase !== 0) {
     throw new Error(
       `Contract is in ${PhaseNames[phase]} phase (expected ACTIVE).\n` +
-      `Redeploy with 'npm run chains && npm run setup' for a fresh contract.`
+        `Redeploy with 'npm run chains && npm run setup' for a fresh contract.`,
     );
   }
   log("PHASE", `Current phase: ${PhaseNames[phase]}`);
@@ -116,9 +116,9 @@ async function main() {
   const availableSigners = signers.slice(11);
 
   // UI accounts — these match the predefined addresses in the UI dropdown
-  const uiSeeds = signers.slice(1, 4);     // Seed A/B/C
-  const uiHop1  = signers.slice(4, 7);     // Hop-1 A/B/C
-  const uiHop2  = signers.slice(7, 10);    // Hop-2 A/B/C
+  const uiSeeds = signers.slice(1, 4); // Seed A/B/C
+  const uiHop1 = signers.slice(4, 7); // Hop-1 A/B/C
+  const uiHop2 = signers.slice(7, 10); // Hop-2 A/B/C
 
   // Calculate participant counts
   let seedCount: number;
@@ -151,29 +151,48 @@ async function main() {
   let hop2Signers: typeof seedSigners = [];
   if (includeHops) {
     // UI hop-1 accounts (3) + generated hop-1 for the remainder
-    const generatedHop1 = availableSigners.slice(seedCount, seedCount + hop1Count - uiHop1.length);
+    const generatedHop1 = availableSigners.slice(
+      seedCount,
+      seedCount + hop1Count - uiHop1.length,
+    );
     hop1Signers = [...uiHop1, ...generatedHop1];
 
     // UI hop-2 accounts (3) + generated hop-2 for the remainder
     const genHop2Start = seedCount + hop1Count - uiHop1.length;
-    const generatedHop2 = availableSigners.slice(genHop2Start, genHop2Start + hop2Count - uiHop2.length);
+    const generatedHop2 = availableSigners.slice(
+      genHop2Start,
+      genHop2Start + hop2Count - uiHop2.length,
+    );
     hop2Signers = [...uiHop2, ...generatedHop2];
   }
 
   // Ensure we have enough signers
-  const totalParticipants = seedCount + Math.max(0, hop1Count - uiHop1.length) + Math.max(0, hop2Count - uiHop2.length);
+  const totalParticipants =
+    seedCount +
+    Math.max(0, hop1Count - uiHop1.length) +
+    Math.max(0, hop2Count - uiHop2.length);
   if (totalParticipants > availableSigners.length) {
     throw new Error(
       `Need ${totalParticipants} signers but only ${availableSigners.length} available.\n` +
-      `Reduce TARGET or increase hardhat accounts count.`
+        `Reduce TARGET or increase hardhat accounts count.`,
     );
   }
 
-  const expectedTotal = (seedCount * SEED_CAP) + (hop1Count * HOP1_CAP) + (hop2Count * HOP2_CAP);
-  log("PLAN", `Seeds: ${seedCount} × $${SEED_CAP.toLocaleString()} = $${(seedCount * SEED_CAP).toLocaleString()}`);
+  const expectedTotal =
+    seedCount * SEED_CAP + hop1Count * HOP1_CAP + hop2Count * HOP2_CAP;
+  log(
+    "PLAN",
+    `Seeds: ${seedCount} × $${SEED_CAP.toLocaleString()} = $${(seedCount * SEED_CAP).toLocaleString()}`,
+  );
   if (includeHops) {
-    log("PLAN", `Hop-1: ${hop1Count} × $${HOP1_CAP.toLocaleString()} = $${(hop1Count * HOP1_CAP).toLocaleString()}`);
-    log("PLAN", `Hop-2: ${hop2Count} × $${HOP2_CAP.toLocaleString()} = $${(hop2Count * HOP2_CAP).toLocaleString()}`);
+    log(
+      "PLAN",
+      `Hop-1: ${hop1Count} × $${HOP1_CAP.toLocaleString()} = $${(hop1Count * HOP1_CAP).toLocaleString()}`,
+    );
+    log(
+      "PLAN",
+      `Hop-2: ${hop2Count} × $${HOP2_CAP.toLocaleString()} = $${(hop2Count * HOP2_CAP).toLocaleString()}`,
+    );
   }
   log("PLAN", `Expected total: $${expectedTotal.toLocaleString()}`);
   console.log("");
@@ -184,33 +203,50 @@ async function main() {
   console.log("-".repeat(70));
   log("FUND", "Sending ETH to participant signers for gas...");
   const ethPerParticipant = ethers.parseEther("1");
-  const allParticipants = [...uiSeeds, ...seedSigners, ...hop1Signers, ...hop2Signers];
+  const allParticipants = [
+    ...uiSeeds,
+    ...seedSigners,
+    ...hop1Signers,
+    ...hop2Signers,
+  ];
   for (let i = 0; i < allParticipants.length; i += BATCH_SIZE) {
     const batch = allParticipants.slice(i, i + BATCH_SIZE);
     for (const p of batch) {
-      const tx = await deployer.sendTransaction({ to: p.address, value: ethPerParticipant });
+      const tx = await deployer.sendTransaction({
+        to: p.address,
+        value: ethPerParticipant,
+      });
       await tx.wait();
     }
-    log("FUND", `  ${Math.min(i + BATCH_SIZE, allParticipants.length)}/${allParticipants.length} funded`);
+    log(
+      "FUND",
+      `  ${Math.min(i + BATCH_SIZE, allParticipants.length)}/${allParticipants.length} funded`,
+    );
   }
 
   // ============ ADD SEEDS ============
   console.log("-".repeat(70));
 
   // Add UI seed accounts first (signers[1-3]) so they can test claiming via UI
-  const uiSeedAddresses = uiSeeds.map(s => s.address);
+  const uiSeedAddresses = uiSeeds.map((s) => s.address);
   const uiSeedTx = await crowdfund.addSeeds(uiSeedAddresses);
   await uiSeedTx.wait();
-  log("SEEDS", `Added ${uiSeedAddresses.length} UI seed accounts (for UI testing)`);
+  log(
+    "SEEDS",
+    `Added ${uiSeedAddresses.length} UI seed accounts (for UI testing)`,
+  );
 
   // Add generated seed addresses
   log("SEEDS", `Adding ${seedCount} generated seed addresses...`);
-  const seedAddresses = seedSigners.map(s => s.address);
+  const seedAddresses = seedSigners.map((s) => s.address);
   for (let i = 0; i < seedAddresses.length; i += SEED_BATCH_SIZE) {
     const batch = seedAddresses.slice(i, i + SEED_BATCH_SIZE);
     const tx = await crowdfund.addSeeds(batch);
     await tx.wait();
-    log("SEEDS", `  Batch ${Math.floor(i / SEED_BATCH_SIZE) + 1}: added ${batch.length} seeds`);
+    log(
+      "SEEDS",
+      `  Batch ${Math.floor(i / SEED_BATCH_SIZE) + 1}: added ${batch.length} seeds`,
+    );
   }
 
   // ============ VERIFY ARM PRE-LOAD ============
@@ -247,20 +283,31 @@ async function main() {
     // Each seed can invite up to 3 hop-1 addresses.
     const inviterSeeds = [...uiSeeds, ...seedSigners];
     let h1idx = 0;
-    for (let i = 0; i < inviterSeeds.length && h1idx < hop1Signers.length; i++) {
+    for (
+      let i = 0;
+      i < inviterSeeds.length && h1idx < hop1Signers.length;
+      i++
+    ) {
       for (let j = 0; j < 3 && h1idx < hop1Signers.length; j++) {
-        const tx = await crowdfund.connect(inviterSeeds[i]).invite(hop1Signers[h1idx].address, 0);
+        const tx = await crowdfund
+          .connect(inviterSeeds[i])
+          .invite(hop1Signers[h1idx].address, 0);
         await tx.wait();
         h1idx++;
       }
     }
-    log("INVITE", `${h1idx} hop-1 addresses invited (by ${Math.min(Math.ceil(h1idx / 3), inviterSeeds.length)} seeds)`);
+    log(
+      "INVITE",
+      `${h1idx} hop-1 addresses invited (by ${Math.min(Math.ceil(h1idx / 3), inviterSeeds.length)} seeds)`,
+    );
 
     // Each hop-1 invites 2 hop-2 addresses
     let h2idx = 0;
     for (let i = 0; i < hop1Signers.length; i++) {
       for (let j = 0; j < 2 && h2idx < hop2Signers.length; j++) {
-        const tx = await crowdfund.connect(hop1Signers[i]).invite(hop2Signers[h2idx].address, 1);
+        const tx = await crowdfund
+          .connect(hop1Signers[i])
+          .invite(hop2Signers[h2idx].address, 1);
         await tx.wait();
         h2idx++;
       }
@@ -280,7 +327,7 @@ async function main() {
     participants: typeof seedSigners,
     capUsdc: number,
     hop: number,
-    label: string
+    label: string,
   ) {
     const amount = ethers.parseUnits(capUsdc.toString(), 6);
     let committed = 0;
@@ -308,10 +355,16 @@ async function main() {
 
       committed += batch.length;
       if (participants.length > BATCH_SIZE) {
-        log("COMMIT", `  ${label}: ${committed}/${participants.length} committed`);
+        log(
+          "COMMIT",
+          `  ${label}: ${committed}/${participants.length} committed`,
+        );
       }
     }
-    log("COMMIT", `  ${label}: ${committed} × $${capUsdc.toLocaleString()} = $${(committed * capUsdc).toLocaleString()}`);
+    log(
+      "COMMIT",
+      `  ${label}: ${committed} × $${capUsdc.toLocaleString()} = $${(committed * capUsdc).toLocaleString()}`,
+    );
   }
 
   // Commit UI seed accounts (signers[1-3]) so they can test claiming via UI
@@ -351,7 +404,10 @@ async function main() {
   for (let h = 0; h < 3; h++) {
     const [tc, , uc, wc] = await crowdfund.getHopStats(h);
     if (Number(wc) > 0) {
-      log("STATS", `  Hop ${h}: ${wc} whitelisted, ${uc} committers, ${fmtUsdc(tc)} committed`);
+      log(
+        "STATS",
+        `  Hop ${h}: ${wc} whitelisted, ${uc} committers, ${fmtUsdc(tc)} committed`,
+      );
     }
   }
 

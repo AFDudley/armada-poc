@@ -35,12 +35,12 @@ interface ChainHealthReport {
 
 export async function getChainHealth(
   env: DeployEnv,
-  chains: ChainRole[] = ["hub", ...getClientChains().map((c) => c.role)]
+  chains: ChainRole[] = ["hub", ...getClientChains().map((c) => c.role)],
 ): Promise<ChainHealthReport[]> {
   const deployments = loadAllDeployments(env);
 
   const reports = await Promise.allSettled(
-    chains.map((role) => checkSingleChain(role, deployments))
+    chains.map((role) => checkSingleChain(role, deployments)),
   );
 
   return reports.map((result, i) => {
@@ -66,7 +66,7 @@ export async function getChainHealth(
 
 async function checkSingleChain(
   role: ChainRole,
-  deployments: AllDeployments
+  deployments: AllDeployments,
 ): Promise<ChainHealthReport> {
   const chain = getChainByRole(role);
   const rpcResult = await checkRpc(role);
@@ -76,8 +76,11 @@ async function checkSingleChain(
   const chainDeploy = getChainDeploymentsByRole(deployments, role);
 
   const usdcAddress = chainDeploy?.cctp?.contracts.usdc ?? null;
-  const poolAddress = chainDeploy?.privacyPool ? getPoolAddress(chainDeploy.privacyPool) : null;
-  const deployerAddress = chainDeploy?.cctp?.deployer ?? chainDeploy?.privacyPool?.deployer ?? null;
+  const poolAddress = chainDeploy?.privacyPool
+    ? getPoolAddress(chainDeploy.privacyPool)
+    : null;
+  const deployerAddress =
+    chainDeploy?.cctp?.deployer ?? chainDeploy?.privacyPool?.deployer ?? null;
 
   // Only query on-chain state if RPC is reachable
   let deployerBalance: string | null = null;
@@ -92,11 +95,17 @@ async function checkSingleChain(
     ]);
 
     deployerBalance =
-      checks[0].status === "fulfilled" ? (checks[0].value as string | null) : null;
+      checks[0].status === "fulfilled"
+        ? (checks[0].value as string | null)
+        : null;
     usdcDeployed =
-      checks[1].status === "fulfilled" ? (checks[1].value as boolean | null) : null;
+      checks[1].status === "fulfilled"
+        ? (checks[1].value as boolean | null)
+        : null;
     poolDeployed =
-      checks[2].status === "fulfilled" ? (checks[2].value as boolean | null) : null;
+      checks[2].status === "fulfilled"
+        ? (checks[2].value as boolean | null)
+        : null;
   }
 
   return {

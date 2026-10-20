@@ -30,11 +30,7 @@ library CCTPBindingLib {
      * @param maxFee Maximum CCTP fee (raw USDC units)
      * @return The keccak256 commitment set as boundParams.adaptParams
      */
-    function encode(
-        address recipient,
-        uint32 destinationDomain,
-        uint256 maxFee
-    ) internal pure returns (bytes32) {
+    function encode(address recipient, uint32 destinationDomain, uint256 maxFee) internal pure returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_TAG, recipient, destinationDomain, maxFee));
     }
 
@@ -46,12 +42,11 @@ library CCTPBindingLib {
      * @param maxFee maxFee argument
      * @return True when the arguments hash to the committed adaptParams
      */
-    function verify(
-        bytes32 adaptParams,
-        address recipient,
-        uint32 destinationDomain,
-        uint256 maxFee
-    ) internal pure returns (bool) {
+    function verify(bytes32 adaptParams, address recipient, uint32 destinationDomain, uint256 maxFee)
+        internal
+        pure
+        returns (bool)
+    {
         return adaptParams == encode(recipient, destinationDomain, maxFee);
     }
 }

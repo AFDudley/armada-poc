@@ -33,7 +33,7 @@ describe("Crowdfund Multi-Node", function () {
   }
 
   async function setupWithSeeds(seeds: SignerWithAddress[]) {
-    await crowdfund.addSeeds(seeds.map(s => s.address));
+    await crowdfund.addSeeds(seeds.map((s) => s.address));
   }
 
   beforeEach(async function () {
@@ -56,8 +56,8 @@ describe("Crowdfund Multi-Node", function () {
       await armToken.getAddress(),
       treasury.address,
       deployer.address,
-      deployer.address,       // securityCouncil
-      openTimestamp            // openTimestamp
+      deployer.address, // securityCouncil
+      openTimestamp, // openTimestamp
     );
     await crowdfund.waitForDeployment();
     const cfAddr = await crowdfund.getAddress();
@@ -138,7 +138,9 @@ describe("Crowdfund Multi-Node", function () {
 
       expect(await crowdfund.getInvitesReceived(alice.address, 1)).to.equal(3);
       // Effective cap = 3 * $4000 = $12000
-      expect(await crowdfund.getEffectiveCap(alice.address, 1)).to.equal(USDC(12_000));
+      expect(await crowdfund.getEffectiveCap(alice.address, 1)).to.equal(
+        USDC(12_000),
+      );
     });
 
     it("should allow commitment up to scaled cap", async function () {
@@ -150,7 +152,9 @@ describe("Crowdfund Multi-Node", function () {
 
       // Alice can commit up to $8000
       await crowdfund.connect(alice).commit(1, USDC(8_000));
-      expect(await crowdfund.getCommitment(alice.address, 1)).to.equal(USDC(8_000));
+      expect(await crowdfund.getCommitment(alice.address, 1)).to.equal(
+        USDC(8_000),
+      );
     });
 
     it("should accept commitment exceeding scaled cap (excess refunded at settlement)", async function () {
@@ -187,7 +191,7 @@ describe("Crowdfund Multi-Node", function () {
 
       // 7th invite should fail
       await expect(
-        crowdfund.connect(alice).invite(signers[16].address, 1)
+        crowdfund.connect(alice).invite(signers[16].address, 1),
       ).to.be.revertedWith("ArmadaCrowdfund: invite limit reached");
     });
   });
@@ -214,13 +218,19 @@ describe("Crowdfund Multi-Node", function () {
       await setupWithSeeds([seed1, seed2, seed3]);
 
       await crowdfund.connect(seed1).invite(alice.address, 0);
-      expect(await crowdfund.getEffectiveCap(alice.address, 1)).to.equal(USDC(4_000));
+      expect(await crowdfund.getEffectiveCap(alice.address, 1)).to.equal(
+        USDC(4_000),
+      );
 
       await crowdfund.connect(seed2).invite(alice.address, 0);
-      expect(await crowdfund.getEffectiveCap(alice.address, 1)).to.equal(USDC(8_000));
+      expect(await crowdfund.getEffectiveCap(alice.address, 1)).to.equal(
+        USDC(8_000),
+      );
 
       await crowdfund.connect(seed3).invite(alice.address, 0);
-      expect(await crowdfund.getEffectiveCap(alice.address, 1)).to.equal(USDC(12_000));
+      expect(await crowdfund.getEffectiveCap(alice.address, 1)).to.equal(
+        USDC(12_000),
+      );
     });
 
     it("should scale outgoing invite budget linearly: invitesReceived * maxInvites", async function () {
@@ -251,7 +261,9 @@ describe("Crowdfund Multi-Node", function () {
 
       // Add enough seeds + hop-1 demand to avoid refundMode
       const extraSeeds = signers.slice(10, 80);
-      await crowdfund.addSeeds(extraSeeds.map((s: SignerWithAddress) => s.address));
+      await crowdfund.addSeeds(
+        extraSeeds.map((s: SignerWithAddress) => s.address),
+      );
       for (const s of extraSeeds) {
         await fundAndApprove(s, USDC(15_000));
         await crowdfund.connect(s).commit(0, USDC(15_000));
@@ -259,11 +271,19 @@ describe("Crowdfund Multi-Node", function () {
 
       // Add the remaining $424K of H1 demand to clear MIN_SALE.
       const hop1Pool = signers.slice(140, 191);
-      const slotsByAddress = new Map<string, { signer: SignerWithAddress; slots: number }>();
+      const slotsByAddress = new Map<
+        string,
+        { signer: SignerWithAddress; slots: number }
+      >();
       for (let i = 0; i < 106; i++) {
         const signer = hop1Pool[i % hop1Pool.length];
-        await crowdfund.connect(extraSeeds[Math.floor(i / 3)]).invite(signer.address, 0);
-        const entry = slotsByAddress.get(signer.address) ?? { signer, slots: 0 };
+        await crowdfund
+          .connect(extraSeeds[Math.floor(i / 3)])
+          .invite(signer.address, 0);
+        const entry = slotsByAddress.get(signer.address) ?? {
+          signer,
+          slots: 0,
+        };
         entry.slots++;
         slotsByAddress.set(signer.address, entry);
       }
@@ -333,7 +353,9 @@ describe("Crowdfund Multi-Node", function () {
       await crowdfund.connect(seed2).invite(alice.address, 0);
 
       // First inviter is preserved
-      expect(await crowdfund.getInviteEdge(alice.address, 1)).to.equal(seed1.address);
+      expect(await crowdfund.getInviteEdge(alice.address, 1)).to.equal(
+        seed1.address,
+      );
     });
   });
 
@@ -358,7 +380,7 @@ describe("Crowdfund Multi-Node", function () {
       const extraSeed = signers[20];
       await crowdfund.addSeeds([extraSeed.address]);
       await expect(
-        crowdfund.connect(extraSeed).invite(alice.address, 0)
+        crowdfund.connect(extraSeed).invite(alice.address, 0),
       ).to.be.revertedWith("ArmadaCrowdfund: max invites received");
     });
 
@@ -388,7 +410,7 @@ describe("Crowdfund Multi-Node", function () {
 
       // 21st should revert
       await expect(
-        crowdfund.connect(hop1Addrs[20]).invite(alice.address, 1)
+        crowdfund.connect(hop1Addrs[20]).invite(alice.address, 1),
       ).to.be.revertedWith("ArmadaCrowdfund: max invites received");
     });
 
@@ -410,7 +432,7 @@ describe("Crowdfund Multi-Node", function () {
         await crowdfund.connect(seeds[i]).invite(alice.address, 0);
       }
       await expect(
-        crowdfund.connect(seeds[10]).invite(alice.address, 0)
+        crowdfund.connect(seeds[10]).invite(alice.address, 0),
       ).to.be.revertedWith("ArmadaCrowdfund: max invites received");
 
       // Meanwhile alice can still receive invites at hop-2 (different node)
@@ -444,9 +466,15 @@ describe("Crowdfund Multi-Node", function () {
       }
 
       // Verify caps
-      expect(await crowdfund.getEffectiveCap(seed1.address, 0)).to.equal(USDC(15_000)); // 1 * $15k
-      expect(await crowdfund.getEffectiveCap(seed1.address, 1)).to.equal(USDC(12_000)); // 3 * $4k
-      expect(await crowdfund.getEffectiveCap(seed1.address, 2)).to.equal(USDC(6_000));  // 6 * $1k
+      expect(await crowdfund.getEffectiveCap(seed1.address, 0)).to.equal(
+        USDC(15_000),
+      ); // 1 * $15k
+      expect(await crowdfund.getEffectiveCap(seed1.address, 1)).to.equal(
+        USDC(12_000),
+      ); // 3 * $4k
+      expect(await crowdfund.getEffectiveCap(seed1.address, 2)).to.equal(
+        USDC(6_000),
+      ); // 6 * $1k
 
       // Commit at all three hops
       await crowdfund.connect(seed1).commit(0, USDC(15_000));
@@ -454,9 +482,15 @@ describe("Crowdfund Multi-Node", function () {
       await crowdfund.connect(seed1).commit(2, USDC(6_000));
 
       // Verify commitments
-      expect(await crowdfund.getCommitment(seed1.address, 0)).to.equal(USDC(15_000));
-      expect(await crowdfund.getCommitment(seed1.address, 1)).to.equal(USDC(12_000));
-      expect(await crowdfund.getCommitment(seed1.address, 2)).to.equal(USDC(6_000));
+      expect(await crowdfund.getCommitment(seed1.address, 0)).to.equal(
+        USDC(15_000),
+      );
+      expect(await crowdfund.getCommitment(seed1.address, 1)).to.equal(
+        USDC(12_000),
+      );
+      expect(await crowdfund.getCommitment(seed1.address, 2)).to.equal(
+        USDC(6_000),
+      );
 
       // Total committed
       expect(await crowdfund.totalCommitted()).to.equal(USDC(33_000));
@@ -491,8 +525,12 @@ describe("Crowdfund Multi-Node", function () {
       // Can still commit at hop-1 (independent cap)
       await crowdfund.connect(seed1).commit(1, USDC(4_000));
 
-      expect(await crowdfund.getCommitment(seed1.address, 0)).to.equal(USDC(15_000));
-      expect(await crowdfund.getCommitment(seed1.address, 1)).to.equal(USDC(4_000));
+      expect(await crowdfund.getCommitment(seed1.address, 0)).to.equal(
+        USDC(15_000),
+      );
+      expect(await crowdfund.getCommitment(seed1.address, 1)).to.equal(
+        USDC(4_000),
+      );
     });
 
     it("should enforce invite budgets independently per node", async function () {
@@ -530,11 +568,19 @@ describe("Crowdfund Multi-Node", function () {
 
       // Additional stacked hop-1 invitations provide the needed $432K.
       const hop1Pool = signers.slice(140, 190);
-      const slotsByAddress = new Map<string, { signer: SignerWithAddress; slots: number }>();
+      const slotsByAddress = new Map<
+        string,
+        { signer: SignerWithAddress; slots: number }
+      >();
       for (let i = 0; i < 108; i++) {
         const signer = hop1Pool[i % hop1Pool.length];
-        await crowdfund.connect(seeds[1 + Math.floor(i / 3)]).invite(signer.address, 0);
-        const entry = slotsByAddress.get(signer.address) ?? { signer, slots: 0 };
+        await crowdfund
+          .connect(seeds[1 + Math.floor(i / 3)])
+          .invite(signer.address, 0);
+        const entry = slotsByAddress.get(signer.address) ?? {
+          signer,
+          slots: 0,
+        };
         entry.slots++;
         slotsByAddress.set(signer.address, entry);
       }
@@ -580,7 +626,7 @@ describe("Crowdfund Multi-Node", function () {
       await crowdfund.connect(seed1).claim(seed1.address);
 
       await expect(
-        crowdfund.connect(seed1).claim(seed1.address)
+        crowdfund.connect(seed1).claim(seed1.address),
       ).to.be.revertedWith("ArmadaCrowdfund: already claimed");
     });
   });

@@ -2,20 +2,21 @@
 // ABOUTME: Left tabs: Crowdfund, Your position, Claim (Your position disabled pre-open; Claim until claim opens),
 // ABOUTME: followed by a standalone "About the crowdfund" link to the project site's crowdfund page (AboutLink, hidden below 1000px).
 
-import { cn, useIsMobileLayout } from '@armada/crowdfund-shared'
-import { NavBar, type NavBarItem } from '@armada/ui'
-import { CROWDFUND_INFO_URL } from '@/config/socials'
+import { cn, useIsMobileLayout } from "@armada/crowdfund-shared";
+import { NavBar, type NavBarItem } from "@armada/ui";
+import { CROWDFUND_INFO_URL } from "@/config/socials";
 
-export type ActionTab = 'commit' | 'invite'
-export type Page = 'network' | 'participate' | 'claim' | 'my-position' | 'observe'
+export type ActionTab = "commit" | "invite";
+export type Page =
+  "network" | "participate" | "claim" | "my-position" | "observe";
 
 const NAV_ITEMS: ReadonlyArray<{ id: Page; label: string }> = [
-  { id: 'network', label: 'Crowdfund' },
-  { id: 'my-position', label: 'Your position' },
-  { id: 'claim', label: 'Claim' },
-]
+  { id: "network", label: "Crowdfund" },
+  { id: "my-position", label: "Your position" },
+  { id: "claim", label: "Claim" },
+];
 
-const ABOUT_LABEL = 'About the crowdfund'
+const ABOUT_LABEL = "About the crowdfund";
 
 /**
  *  "About the crowdfund" — external link to the project site's crowdfund page,
@@ -32,14 +33,14 @@ export function AboutLink({ className }: { className?: string }) {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        'inline-flex items-center whitespace-nowrap font-medium transition-opacity hover:opacity-80 max-[1000px]:hidden',
-        'text-[length:var(--semantic-component-button-primary-md-font-size)] text-[color:var(--semantic-color-brand-lavender)]',
+        "inline-flex items-center whitespace-nowrap font-medium transition-opacity hover:opacity-80 max-[1000px]:hidden",
+        "text-[length:var(--semantic-component-button-primary-md-font-size)] text-[color:var(--semantic-color-brand-lavender)]",
         className,
       )}
     >
       {ABOUT_LABEL}
     </a>
-  )
+  );
 }
 
 /**
@@ -58,73 +59,75 @@ export function AboutLink({ className }: { className?: string }) {
 export function PageNav({
   current,
   onChange,
-  orientation = 'horizontal',
+  orientation = "horizontal",
   claimEnabled = false,
   myPositionEnabled = true,
 }: {
-  current: Page
-  onChange: (p: Page) => void
-  orientation?: 'horizontal' | 'vertical'
+  current: Page;
+  onChange: (p: Page) => void;
+  orientation?: "horizontal" | "vertical";
   /** When false, Claim is visible but not navigable. */
-  claimEnabled?: boolean
+  claimEnabled?: boolean;
   /** When false, Your position is visible but not navigable. */
-  myPositionEnabled?: boolean
+  myPositionEnabled?: boolean;
 }) {
-  const isMobileLayout = useIsMobileLayout()
+  const isMobileLayout = useIsMobileLayout();
   const isDisabled = (id: Page) =>
-    (id === 'claim' && !claimEnabled) || (id === 'my-position' && !myPositionEnabled)
+    (id === "claim" && !claimEnabled) ||
+    (id === "my-position" && !myPositionEnabled);
 
-  if (orientation === 'horizontal') {
+  if (orientation === "horizontal") {
     const items: NavBarItem[] = NAV_ITEMS.map((item) => {
-      const id = item.id
-      const disabled = isDisabled(id)
+      const id = item.id;
+      const disabled = isDisabled(id);
       return {
         label: item.label,
         // Claim opens a modal — never treat it as the selected page tab.
-        active: id === 'claim' ? false : !disabled && id === current,
+        active: id === "claim" ? false : !disabled && id === current,
         disabled,
-        accent: id === 'claim' && !disabled ? ('brand' as const) : undefined,
+        accent: id === "claim" && !disabled ? ("brand" as const) : undefined,
         onClick: disabled ? undefined : () => onChange(id),
-      }
-    })
-    if (isMobileLayout) return <NavBar items={items} />
+      };
+    });
+    if (isMobileLayout) return <NavBar items={items} />;
     return (
       <div className="flex items-center gap-6">
         <NavBar items={items} />
         <AboutLink />
       </div>
-    )
+    );
   }
 
   return (
     <ul className="flex flex-col items-stretch gap-1">
       {NAV_ITEMS.map((item) => {
-        const disabled = isDisabled(item.id)
+        const disabled = isDisabled(item.id);
         // Claim opens a modal — never treat it as the selected page tab.
-        const active = item.id === 'claim' ? false : !disabled && item.id === current
+        const active =
+          item.id === "claim" ? false : !disabled && item.id === current;
         return (
           <li key={item.id}>
             <button
               type="button"
               onClick={() => {
-                if (!disabled) onChange(item.id)
+                if (!disabled) onChange(item.id);
               }}
               disabled={disabled}
-              aria-current={active ? 'page' : undefined}
+              aria-current={active ? "page" : undefined}
               aria-disabled={disabled || undefined}
               className={cn(
-                'w-full rounded-md px-3 py-1.5 text-left transition-colors',
+                "w-full rounded-md px-3 py-1.5 text-left transition-colors",
                 disabled
-                  ? 'cursor-not-allowed text-muted-foreground opacity-40'
+                  ? "cursor-not-allowed text-muted-foreground opacity-40"
                   : active
-                    ? 'bg-muted/60 text-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? "bg-muted/60 text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
               )}
             >
               {item.label}
             </button>
           </li>
-        )
+        );
       })}
       <li>
         <a
@@ -137,7 +140,7 @@ export function PageNav({
         </a>
       </li>
     </ul>
-  )
+  );
 }
 
 /**
@@ -145,10 +148,10 @@ export function PageNav({
  * production so a prod origin can never render a synthetic full-looking sale.
  */
 export function getMockSizeFromUrl(): number {
-  if (!import.meta.env.DEV) return 0
-  if (typeof window === 'undefined') return 0
-  const p = new URLSearchParams(window.location.search).get('mock')
-  if (!p) return 0
-  const n = parseInt(p.replace(/^stress/, ''), 10)
-  return Number.isFinite(n) && n > 0 ? n : 0
+  if (!import.meta.env.DEV) return 0;
+  if (typeof window === "undefined") return 0;
+  const p = new URLSearchParams(window.location.search).get("mock");
+  if (!p) return 0;
+  const n = parseInt(p.replace(/^stress/, ""), 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }

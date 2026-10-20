@@ -13,7 +13,10 @@ import {
   type DeadLetterRecord,
 } from "../../lib/dead-letter-store";
 
-function makeRecord(id: string, reason: DeadLetterRecord["reason"]): DeadLetterRecord {
+function makeRecord(
+  id: string,
+  reason: DeadLetterRecord["reason"],
+): DeadLetterRecord {
   return {
     id,
     sourceTxHash: "0x" + "ab".repeat(32),
@@ -52,7 +55,9 @@ describe("DeadLetterStore", function () {
     ]);
 
     expect((await store.read("hub"))!.records).to.have.length(1);
-    expect((await store.read("hub"))!.records[0].reason).to.equal("retries-exhausted");
+    expect((await store.read("hub"))!.records[0].reason).to.equal(
+      "retries-exhausted",
+    );
     expect((await store.read("clienta"))!.records).to.have.length(2);
   });
 
@@ -64,7 +69,9 @@ describe("DeadLetterStore", function () {
     await writeFile(
       path,
       JSON.stringify({
-        records: [{ ...makeRecord("0-1", "retries-exhausted"), reason: "who-knows" }],
+        records: [
+          { ...makeRecord("0-1", "retries-exhausted"), reason: "who-knows" },
+        ],
         updatedAt: 0,
         version: 1,
       }),

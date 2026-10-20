@@ -17,12 +17,7 @@ interface ITransactModule {
      * @param hash Array of commitment hashes
      * @param ciphertext Encrypted data for recipients
      */
-    event Transact(
-        uint256 treeNumber,
-        uint256 startPosition,
-        bytes32[] hash,
-        CommitmentCiphertext[] ciphertext
-    );
+    event Transact(uint256 treeNumber, uint256 startPosition, bytes32[] hash, CommitmentCiphertext[] ciphertext);
 
     /**
      * @notice Emitted when tokens are unshielded from the privacy pool
@@ -48,10 +43,7 @@ interface ITransactModule {
      * @param nonce CCTP message nonce
      */
     event CrossChainUnshieldInitiated(
-        uint32 indexed destinationDomain,
-        address indexed recipient,
-        uint256 amount,
-        uint64 nonce
+        uint32 indexed destinationDomain, address indexed recipient, uint256 amount, uint64 nonce
     );
 
     /**

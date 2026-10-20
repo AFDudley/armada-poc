@@ -563,7 +563,7 @@ After claiming, show completed status:
 ```
   ARM Claim:     18,200 ARM claimed ✓  (delegated to self)
   USDC Refund:   $800 claimed ✓
-  
+
   All claims complete.
 ```
 

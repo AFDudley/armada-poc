@@ -11,14 +11,16 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @dev Minimal ERC20 for testing (vault stand-in)
 contract SimpleToken is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
-    function mint(address to, uint256 amount) external { _mint(to, amount); }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
 }
 
 /// @title AdapterRegistryEnforcementTest — Verifies adapter enforces registry authorization
 /// @notice The authorization check fires before any proof/pool logic, so we can test
 ///         enforcement in isolation using dummy transaction data.
 contract AdapterRegistryEnforcementTest is Test {
-
     MockAdapterRegistry public registry;
     ArmadaYieldAdapter public adapter;
     SimpleToken public usdc;
@@ -29,11 +31,7 @@ contract AdapterRegistryEnforcementTest is Test {
         vault = new SimpleToken("Vault", "ayUSDC");
         registry = new MockAdapterRegistry();
 
-        adapter = new ArmadaYieldAdapter(
-            address(usdc),
-            address(vault),
-            address(registry)
-        );
+        adapter = new ArmadaYieldAdapter(address(usdc), address(vault), address(registry));
     }
 
     // ======== Helper: build minimal dummy transaction data ========

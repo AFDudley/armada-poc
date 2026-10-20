@@ -42,11 +42,7 @@ contract GovernorSignalingTest is Test, GovernorDeployHelper {
         treasury = new ArmadaTreasuryGov(address(timelock));
 
         // Deploy governor
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Whitelist participants
         address[] memory whitelist = new address[](3);
@@ -188,12 +184,8 @@ contract GovernorSignalingTest is Test, GovernorDeployHelper {
     // WHY: Signaling params (timing, quorum) are spec-fixed and must not be changeable
     // via governance. Like VetoRatification and Steward, Signaling is immutable.
     function test_signaling_paramsImmutable() public {
-        ProposalParams memory newParams = ProposalParams({
-            votingDelay: 1 days,
-            votingPeriod: 14 days,
-            executionDelay: 2 days,
-            quorumBps: 3000
-        });
+        ProposalParams memory newParams =
+            ProposalParams({votingDelay: 1 days, votingPeriod: 14 days, executionDelay: 2 days, quorumBps: 3000});
 
         vm.prank(address(timelock));
         vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_ImmutableProposalType.selector));

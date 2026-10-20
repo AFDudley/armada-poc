@@ -13,7 +13,9 @@ describe("withTimeout", function () {
   it("rejects with RpcTimeoutError when the timeout fires first", async function () {
     // WHY: the canonical "wedged RPC connection" case — provider never returns. Without the
     // timeout, the poll loop pins forever waiting on a dead socket.
-    const slow = new Promise<string>((resolve) => setTimeout(() => resolve("late"), 100));
+    const slow = new Promise<string>((resolve) =>
+      setTimeout(() => resolve("late"), 100),
+    );
     try {
       await withTimeout(slow, 10, "test-slow-rpc");
       expect.fail("should have thrown");
@@ -43,11 +45,17 @@ describe("withTimeout", function () {
     // tick would accumulate thousands of timers per hour. We can't easily observe handle
     // counts in user-land Node, so this test pins the cleanup invariant via active handle
     // counting against the process — the count after N withTimeout calls should not grow.
-    const initial = (process as NodeJS.Process & { _getActiveHandles?: () => unknown[] })._getActiveHandles?.()?.length ?? 0;
+    const initial =
+      (
+        process as NodeJS.Process & { _getActiveHandles?: () => unknown[] }
+      )._getActiveHandles?.()?.length ?? 0;
     for (let i = 0; i < 50; i++) {
       await withTimeout(Promise.resolve(i), 5000, "loop");
     }
-    const after = (process as NodeJS.Process & { _getActiveHandles?: () => unknown[] })._getActiveHandles?.()?.length ?? 0;
+    const after =
+      (
+        process as NodeJS.Process & { _getActiveHandles?: () => unknown[] }
+      )._getActiveHandles?.()?.length ?? 0;
     // Allow small slack for mocha's own timers; the key is the count doesn't grow proportionally
     // to iterations (50). If the cleanup is broken we'd see ~50 lingering Timeouts.
     expect(after - initial).to.be.lessThan(10);

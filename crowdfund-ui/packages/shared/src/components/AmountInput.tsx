@@ -1,47 +1,47 @@
 // ABOUTME: Controlled USDC amount input with a Max button that snaps to the
 // ABOUTME: smallest of one or more labelled ceilings; used by commit/redeem forms.
 
-import * as React from 'react'
-import { Button } from './ui/button.js'
-import { Input } from './ui/input.js'
+import * as React from "react";
+import { Button } from "./ui/button.js";
+import { Input } from "./ui/input.js";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from './ui/tooltip.js'
-import { cn } from '../lib/utils.js'
+} from "./ui/tooltip.js";
+import { cn } from "../lib/utils.js";
 
 export interface AmountCeiling {
-  label: string
-  value: bigint
+  label: string;
+  value: bigint;
 }
 
 export interface AmountInputProps {
-  value: string
-  onChange: (value: string) => void
+  value: string;
+  onChange: (value: string) => void;
   /** One or more upper bounds. Max button picks min(value); tooltip shows the binding label when >1. */
-  ceilings?: AmountCeiling[]
+  ceilings?: AmountCeiling[];
   /** Fixed-point decimals for the Max button's value conversion. Defaults to 6 (USDC). */
-  decimals?: number
+  decimals?: number;
   /** Marks the input as invalid for a11y; visible error text is rendered via FormMessage. */
-  error?: boolean
-  id?: string
-  name?: string
-  placeholder?: string
-  disabled?: boolean
-  className?: string
-  inputClassName?: string
-  maxLabel?: string
-  'aria-describedby'?: string
-  'aria-label'?: string
-  onBlur?: React.FocusEventHandler<HTMLInputElement>
+  error?: boolean;
+  id?: string;
+  name?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  inputClassName?: string;
+  maxLabel?: string;
+  "aria-describedby"?: string;
+  "aria-label"?: string;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
 }
 
 function formatFromBigint(amount: bigint, decimals: number): string {
-  if (amount <= 0n) return ''
-  const scale = 10 ** decimals
-  return (Number(amount) / scale).toString()
+  if (amount <= 0n) return "";
+  const scale = 10 ** decimals;
+  return (Number(amount) / scale).toString();
 }
 
 export function AmountInput({
@@ -52,47 +52,48 @@ export function AmountInput({
   error,
   id,
   name,
-  placeholder = '0',
+  placeholder = "0",
   disabled,
   className,
   inputClassName,
-  maxLabel = 'MAX',
-onBlur,
-...ariaProps
+  maxLabel = "MAX",
+  onBlur,
+  ...ariaProps
 }: AmountInputProps) {
-const binding = React.useMemo(() => {
-if (!ceilings || ceilings.length === 0) return null
-let smallest = ceilings[0]
-for (const c of ceilings) {
-if (c.value < smallest.value) smallest = c
-}
-return smallest
-}, [ceilings])
+  const binding = React.useMemo(() => {
+    if (!ceilings || ceilings.length === 0) return null;
+    let smallest = ceilings[0];
+    for (const c of ceilings) {
+      if (c.value < smallest.value) smallest = c;
+    }
+    return smallest;
+  }, [ceilings]);
 
-const maxDisabled = disabled || !binding || binding.value <= 0n
+  const maxDisabled = disabled || !binding || binding.value <= 0n;
 
-const handleMax = React.useCallback(() => {
-if (!binding || binding.value <= 0n) return
-onChange(formatFromBigint(binding.value, decimals))
-}, [binding, decimals, onChange])
+  const handleMax = React.useCallback(() => {
+    if (!binding || binding.value <= 0n) return;
+    onChange(formatFromBigint(binding.value, decimals));
+  }, [binding, decimals, onChange]);
 
-const maxButton = (
-<Button
-type="button"
-variant="ghost"
-size="sm"
-className="h-11 self-center rounded-[4px] border border-border/60 bg-transparent px-4 text-muted-foreground hover:border-hop-0/40 hover:bg-hop-0/10 hover:text-foreground"
-onClick={handleMax}
-disabled={maxDisabled}
->
-{maxLabel}
-</Button>
-)
+  const maxButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-11 self-center rounded-[4px] border border-border/60 bg-transparent px-4 text-muted-foreground hover:border-hop-0/40 hover:bg-hop-0/10 hover:text-foreground"
+      onClick={handleMax}
+      disabled={maxDisabled}
+    >
+      {maxLabel}
+    </Button>
+  );
 
-const showTooltip = !maxDisabled && ceilings && ceilings.length > 1 && binding
+  const showTooltip =
+    !maxDisabled && ceilings && ceilings.length > 1 && binding;
 
-return (
-<div className={cn('flex items-center gap-2', className)}>
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
       <Input
         id={id}
         name={name}
@@ -103,12 +104,12 @@ return (
         value={value}
         disabled={disabled}
         aria-invalid={error || undefined}
-        aria-label={ariaProps['aria-label']}
-        aria-describedby={ariaProps['aria-describedby']}
+        aria-label={ariaProps["aria-label"]}
+        aria-describedby={ariaProps["aria-describedby"]}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         className={cn(
-          'h-11 flex-1 rounded-md border-border/70 bg-background/35 shadow-inner placeholder:text-muted-foreground/60 focus-visible:border-primary/70 focus-visible:ring-primary/20',
+          "h-11 flex-1 rounded-md border-border/70 bg-background/35 shadow-inner placeholder:text-muted-foreground/60 focus-visible:border-primary/70 focus-visible:ring-primary/20",
           inputClassName,
         )}
       />
@@ -125,5 +126,5 @@ return (
         maxButton
       )}
     </div>
-  )
+  );
 }

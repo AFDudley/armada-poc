@@ -32,9 +32,7 @@ const GOVERNANCE_ABI = [
   "function proposalTypeParams(uint8) view returns (uint256 votingDelay, uint256 votingPeriod, uint256 executionDelay, uint256 quorumBps)",
 ];
 
-const TIMELOCK_ABI = [
-  "function getMinDelay() view returns (uint256)",
-];
+const TIMELOCK_ABI = ["function getMinDelay() view returns (uint256)"];
 
 const TREASURY_GOV_ABI = [
   "function getStewardBudget(address token) view returns (uint256 budget, uint256 spent, uint256 remaining)",
@@ -70,7 +68,7 @@ async function safeCall(
   address: string,
   abi: string[],
   fn: string,
-  args: unknown[] = []
+  args: unknown[] = [],
 ): Promise<unknown> {
   try {
     return await callView(role, address, abi, fn, args);
@@ -99,7 +97,7 @@ function formatArm(value: unknown): string {
 
 async function queryPrivacyPool(
   env: DeployEnv,
-  role: ChainRole
+  role: ChainRole,
 ): Promise<ContractQueryResult> {
   const deployments = loadAllDeployments(env);
   const chain = getChainDeploymentsByRole(deployments, role);
@@ -110,7 +108,9 @@ async function queryPrivacyPool(
 
   const poolAddr = getPoolAddress(chain.privacyPool);
   if (!poolAddr) {
-    return { error: `No pool contract address found in deployment for ${role}` };
+    return {
+      error: `No pool contract address found in deployment for ${role}`,
+    };
   }
   const usdcAddr = chain.privacyPool.cctp.usdc;
 
@@ -125,10 +125,12 @@ async function queryPrivacyPool(
   return {
     address: poolAddr,
     testingMode,
-    merkleRoot: typeof merkleRoot === "string" && merkleRoot.startsWith("error")
-      ? merkleRoot
-      : String(merkleRoot),
-    nextLeafIndex: typeof nextLeafIndex === "bigint" ? Number(nextLeafIndex) : nextLeafIndex,
+    merkleRoot:
+      typeof merkleRoot === "string" && merkleRoot.startsWith("error")
+        ? merkleRoot
+        : String(merkleRoot),
+    nextLeafIndex:
+      typeof nextLeafIndex === "bigint" ? Number(nextLeafIndex) : nextLeafIndex,
     usdcBalance: formatUsdc(usdcBalance),
     modules: chain.privacyPool.contracts,
   };
@@ -162,7 +164,9 @@ async function queryGovernance(env: DeployEnv): Promise<ContractQueryResult> {
       ? safeCall("hub", usdcAddr, ERC20_ABI, "balanceOf", [gov.treasury])
       : "no USDC address",
     usdcAddr
-      ? safeCall("hub", gov.treasury, TREASURY_GOV_ABI, "getStewardBudget", [usdcAddr])
+      ? safeCall("hub", gov.treasury, TREASURY_GOV_ABI, "getStewardBudget", [
+          usdcAddr,
+        ])
       : "no USDC address",
   ]);
 
@@ -199,7 +203,10 @@ async function queryGovernance(env: DeployEnv): Promise<ContractQueryResult> {
       treasury: formatParams(treasuryParams),
       constitutional: formatParams(constitutionalParams),
     },
-    timelockDelay: typeof timelockDelay === "bigint" ? `${Number(timelockDelay)} seconds` : timelockDelay,
+    timelockDelay:
+      typeof timelockDelay === "bigint"
+        ? `${Number(timelockDelay)} seconds`
+        : timelockDelay,
     treasuryUsdc: formatUsdc(treasuryUsdc),
     stewardBudget: formatBudget(stewardBudget),
   };
@@ -217,9 +224,21 @@ async function queryYield(env: DeployEnv): Promise<ContractQueryResult> {
 
   const [vaultAssets, vaultShares, treasuryBalance, adapterUsdc] =
     await Promise.all([
-      safeCall("hub", contracts.armadaYieldVault, YIELD_VAULT_ABI, "totalAssets"),
-      safeCall("hub", contracts.armadaYieldVault, YIELD_VAULT_ABI, "totalSupply"),
-      safeCall("hub", contracts.armadaTreasury, TREASURY_ABI, "getBalance", [usdcAddr]),
+      safeCall(
+        "hub",
+        contracts.armadaYieldVault,
+        YIELD_VAULT_ABI,
+        "totalAssets",
+      ),
+      safeCall(
+        "hub",
+        contracts.armadaYieldVault,
+        YIELD_VAULT_ABI,
+        "totalSupply",
+      ),
+      safeCall("hub", contracts.armadaTreasury, TREASURY_ABI, "getBalance", [
+        usdcAddr,
+      ]),
       safeCall("hub", usdcAddr, ERC20_ABI, "balanceOf", [
         contracts.armadaYieldAdapter,
       ]),
@@ -229,7 +248,8 @@ async function queryYield(env: DeployEnv): Promise<ContractQueryResult> {
     addresses: contracts,
     vault: {
       totalAssets: formatUsdc(vaultAssets),
-      totalShares: typeof vaultShares === "bigint" ? vaultShares.toString() : vaultShares,
+      totalShares:
+        typeof vaultShares === "bigint" ? vaultShares.toString() : vaultShares,
     },
     treasuryUsdcBalance: formatUsdc(treasuryBalance),
     adapterUsdcBalance: formatUsdc(adapterUsdc),
@@ -246,19 +266,14 @@ async function queryCrowdfund(env: DeployEnv): Promise<ContractQueryResult> {
   const cf = deployments.hub.crowdfund.contracts;
 
   // Phase enum: 0 = Active, 1 = Finalized, 2 = Canceled
-  const CROWDFUND_PHASES = [
-    "Active",
-    "Finalized",
-    "Canceled",
-  ];
+  const CROWDFUND_PHASES = ["Active", "Finalized", "Canceled"];
 
-  const [saleStats, baseSale, maxSale, minSale] =
-    await Promise.all([
-      safeCall("hub", cf.crowdfund, CROWDFUND_ABI, "getSaleStats"),
-      safeCall("hub", cf.crowdfund, CROWDFUND_ABI, "BASE_SALE"),
-      safeCall("hub", cf.crowdfund, CROWDFUND_ABI, "MAX_SALE"),
-      safeCall("hub", cf.crowdfund, CROWDFUND_ABI, "MIN_SALE"),
-    ]);
+  const [saleStats, baseSale, maxSale, minSale] = await Promise.all([
+    safeCall("hub", cf.crowdfund, CROWDFUND_ABI, "getSaleStats"),
+    safeCall("hub", cf.crowdfund, CROWDFUND_ABI, "BASE_SALE"),
+    safeCall("hub", cf.crowdfund, CROWDFUND_ABI, "MAX_SALE"),
+    safeCall("hub", cf.crowdfund, CROWDFUND_ABI, "MIN_SALE"),
+  ]);
 
   // getSaleStats returns (totalCommitted, phase, invitationEnd, commitmentEnd)
   let totalCommitted: unknown = null;
@@ -275,20 +290,31 @@ async function queryCrowdfund(env: DeployEnv): Promise<ContractQueryResult> {
     totalCommitted = saleStats;
   }
 
-  const phaseNum = typeof phase === "bigint" ? Number(phase) :
-    typeof phase === "number" ? phase : null;
+  const phaseNum =
+    typeof phase === "bigint"
+      ? Number(phase)
+      : typeof phase === "number"
+        ? phase
+        : null;
 
   return {
     address: cf.crowdfund,
     totalCommitted: formatUsdc(totalCommitted),
-    phase: phaseNum !== null ? CROWDFUND_PHASES[phaseNum] ?? `Unknown(${phaseNum})` : phase,
+    phase:
+      phaseNum !== null
+        ? (CROWDFUND_PHASES[phaseNum] ?? `Unknown(${phaseNum})`)
+        : phase,
     invitationEnd:
       typeof invitationEnd === "bigint"
-        ? invitationEnd > 0n ? new Date(Number(invitationEnd) * 1000).toISOString() : "not set"
+        ? invitationEnd > 0n
+          ? new Date(Number(invitationEnd) * 1000).toISOString()
+          : "not set"
         : invitationEnd,
     commitmentEnd:
       typeof commitmentEnd === "bigint"
-        ? commitmentEnd > 0n ? new Date(Number(commitmentEnd) * 1000).toISOString() : "not set"
+        ? commitmentEnd > 0n
+          ? new Date(Number(commitmentEnd) * 1000).toISOString()
+          : "not set"
         : commitmentEnd,
     saleLimits: {
       base: formatUsdc(baseSale),
@@ -303,15 +329,12 @@ async function queryCrowdfund(env: DeployEnv): Promise<ContractQueryResult> {
 // ============================================================================
 
 export type ContractComponent =
-  | "privacy-pool"
-  | "governance"
-  | "yield"
-  | "crowdfund";
+  "privacy-pool" | "governance" | "yield" | "crowdfund";
 
 export async function getContractState(
   env: DeployEnv,
   component: ContractComponent,
-  chain: ChainRole = "hub"
+  chain: ChainRole = "hub",
 ): Promise<ContractQueryResult> {
   switch (component) {
     case "privacy-pool":

@@ -12,7 +12,8 @@ import { RailgunWallet } from "@railgun-community/engine";
 // Anvil's publicly-known test mnemonic. Producing the same 0zk address from it twice in a row
 // is what proves the wallet-derivation pipeline is deterministic — the load-bearing property
 // for `restarts re-derive instead of growing new wallet IDs` (railgun-wallet.ts header).
-const ANVIL_MNEMONIC = "test test test test test test test test test test test junk";
+const ANVIL_MNEMONIC =
+  "test test test test test test test test test test test junk";
 
 /**
  * Init + create + tear down a wallet against a freshly-created LevelDB. Returns the derived
@@ -24,7 +25,9 @@ const ANVIL_MNEMONIC = "test test test test test test test test test test test j
  * deterministic key derivation from the mnemonic, not its persistence layer.
  */
 async function deriveAddressInTempDb(): Promise<string> {
-  const dbPath = fs.mkdtempSync(path.join(os.tmpdir(), "armada-relayer-engine-"));
+  const dbPath = fs.mkdtempSync(
+    path.join(os.tmpdir(), "armada-relayer-engine-"),
+  );
   try {
     const engine = await initializeEngine("armadarlytst", dbPath);
     const wallet = (await engine.createWalletFromMnemonic(

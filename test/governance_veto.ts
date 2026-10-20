@@ -11,8 +11,13 @@ import { deployGovernorProxy } from "./helpers/deploy-governor";
 const ProposalType = { Standard: 0, Extended: 1, VetoRatification: 2 };
 // Proposal states
 const ProposalState = {
-  Pending: 0, Active: 1, Defeated: 2, Succeeded: 3,
-  Queued: 4, Executed: 5, Canceled: 6,
+  Pending: 0,
+  Active: 1,
+  Defeated: 2,
+  Succeeded: 3,
+  Queued: 4,
+  Executed: 5,
+  Canceled: 6,
 };
 // Vote support values
 const Vote = { Against: 0, For: 1, Abstain: 2 };
@@ -45,9 +50,9 @@ describe("Governance Veto", function () {
   // Constants
   const ARM_DECIMALS = 18;
   const TOTAL_SUPPLY = ethers.parseUnits("12000000", ARM_DECIMALS);
-  const TREASURY_AMOUNT = TOTAL_SUPPLY * 65n / 100n;
-  const ALICE_AMOUNT = TOTAL_SUPPLY * 20n / 100n;
-  const BOB_AMOUNT = TOTAL_SUPPLY * 15n / 100n;
+  const TREASURY_AMOUNT = (TOTAL_SUPPLY * 65n) / 100n;
+  const ALICE_AMOUNT = (TOTAL_SUPPLY * 20n) / 100n;
+  const BOB_AMOUNT = (TOTAL_SUPPLY * 15n) / 100n;
 
   // Helper: mine a block so checkpoint reads work
   async function mineBlock() {
@@ -58,13 +63,20 @@ describe("Governance Veto", function () {
   async function asTimelock(): Promise<SignerWithAddress> {
     const timelockAddr = await timelockController.getAddress();
     await ethers.provider.send("hardhat_impersonateAccount", [timelockAddr]);
-    await deployer.sendTransaction({ to: timelockAddr, value: ethers.parseEther("1") });
-    return await ethers.getSigner(timelockAddr) as unknown as SignerWithAddress;
+    await deployer.sendTransaction({
+      to: timelockAddr,
+      value: ethers.parseEther("1"),
+    });
+    return (await ethers.getSigner(
+      timelockAddr,
+    )) as unknown as SignerWithAddress;
   }
 
   async function stopImpersonatingTimelock() {
     const timelockAddr = await timelockController.getAddress();
-    await ethers.provider.send("hardhat_stopImpersonatingAccount", [timelockAddr]);
+    await ethers.provider.send("hardhat_stopImpersonatingAccount", [
+      timelockAddr,
+    ]);
   }
 
   // Helper: create a proposal, vote it through, and queue it.
@@ -80,12 +92,20 @@ describe("Governance Veto", function () {
     const govAddr = await governor.getAddress();
     const _targets = targets ?? [govAddr];
     const _values = [0n];
-    const _calldatas = calldatas ?? [governor.interface.encodeFunctionData("proposalCount")];
+    const _calldatas = calldatas ?? [
+      governor.interface.encodeFunctionData("proposalCount"),
+    ];
     const _description = description ?? "Test proposal";
 
-    await governor.connect(proposer).propose(
-      ProposalType.Extended, _targets, _values, _calldatas, _description
-    );
+    await governor
+      .connect(proposer)
+      .propose(
+        ProposalType.Extended,
+        _targets,
+        _values,
+        _calldatas,
+        _description,
+      );
     const proposalId = Number(await governor.proposalCount());
 
     // Advance past voting delay (2 days)
@@ -106,8 +126,13 @@ describe("Governance Veto", function () {
   }
 
   // Helper: veto a queued proposal as SC, return the ratification proposal ID
-  async function vetoProposal(proposalId: number, rationaleHash?: string): Promise<number> {
-    const hash = rationaleHash ?? ethers.keccak256(ethers.toUtf8Bytes("Security risk identified"));
+  async function vetoProposal(
+    proposalId: number,
+    rationaleHash?: string,
+  ): Promise<number> {
+    const hash =
+      rationaleHash ??
+      ethers.keccak256(ethers.toUtf8Bytes("Security risk identified"));
 
     await governor.connect(carol).veto(proposalId, hash);
     return Number(await governor.proposalCount());
@@ -117,9 +142,13 @@ describe("Governance Veto", function () {
     [deployer, alice, bob, carol, dave] = await ethers.getSigners();
 
     // 1. Deploy TimelockController (minDelay = 2 days)
-    const TimelockController = await ethers.getContractFactory("TimelockController");
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
     timelockController = await TimelockController.deploy(
-      TWO_DAYS, [], [], deployer.address
+      TWO_DAYS,
+      [],
+      [],
+      deployer.address,
     );
     await timelockController.waitForDeployment();
     const timelockAddr = await timelockController.getAddress();
@@ -130,7 +159,8 @@ describe("Governance Veto", function () {
     await armToken.waitForDeployment();
 
     // 3. Deploy Treasury
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
     await treasury.waitForDeployment();
 
@@ -188,9 +218,12 @@ describe("Governance Veto", function () {
     it("should cancel a queued proposal when SC vetoes", async function () {
       const proposalId = await createAndQueueProposal(alice);
 
-      await governor.connect(carol).veto(
-        proposalId, ethers.keccak256(ethers.toUtf8Bytes("Security risk"))
-      );
+      await governor
+        .connect(carol)
+        .veto(
+          proposalId,
+          ethers.keccak256(ethers.toUtf8Bytes("Security risk")),
+        );
 
       expect(await governor.state(proposalId)).to.equal(ProposalState.Canceled);
     });
@@ -210,7 +243,8 @@ describe("Governance Veto", function () {
       const proposalId = await createAndQueueProposal(alice);
       const ratId = await vetoProposal(proposalId);
 
-      const [proposer, proposalType, voteStart, voteEnd] = await governor.getProposal(ratId);
+      const [proposer, proposalType, voteStart, voteEnd] =
+        await governor.getProposal(ratId);
 
       expect(proposer).to.equal(carol.address); // SC is the proposer
       expect(proposalType).to.equal(ProposalType.VetoRatification);
@@ -233,14 +267,14 @@ describe("Governance Veto", function () {
 
     it("should emit ProposalVetoed event", async function () {
       const proposalId = await createAndQueueProposal(alice);
-      const rationaleHash = ethers.keccak256(ethers.toUtf8Bytes("Security risk"));
+      const rationaleHash = ethers.keccak256(
+        ethers.toUtf8Bytes("Security risk"),
+      );
       const expectedRatId = Number(await governor.proposalCount()) + 1;
 
-      await expect(
-        governor.connect(carol).veto(proposalId, rationaleHash)
-      ).to.emit(governor, "ProposalVetoed").withArgs(
-        proposalId, rationaleHash, expectedRatId
-      );
+      await expect(governor.connect(carol).veto(proposalId, rationaleHash))
+        .to.emit(governor, "ProposalVetoed")
+        .withArgs(proposalId, rationaleHash, expectedRatId);
     });
 
     it("should cancel the timelock operation on veto", async function () {
@@ -254,16 +288,22 @@ describe("Governance Veto", function () {
       const calldatas = Array.from(result[2]);
       const salt = ethers.zeroPadValue(ethers.toBeHex(proposalId), 32);
       const timelockId = await timelockController.hashOperationBatch(
-        targets, values, calldatas, ethers.ZeroHash, salt
+        targets,
+        values,
+        calldatas,
+        ethers.ZeroHash,
+        salt,
       );
 
       // Verify operation is pending in timelock
-      expect(await timelockController.isOperationPending(timelockId)).to.be.true;
+      expect(await timelockController.isOperationPending(timelockId)).to.be
+        .true;
 
       await vetoProposal(proposalId);
 
       // Verify operation is no longer pending
-      expect(await timelockController.isOperationPending(timelockId)).to.be.false;
+      expect(await timelockController.isOperationPending(timelockId)).to.be
+        .false;
     });
   });
 
@@ -274,9 +314,9 @@ describe("Governance Veto", function () {
       const proposalId = await createAndQueueProposal(alice);
 
       await expect(
-        governor.connect(alice).veto(
-          proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale"))
-        )
+        governor
+          .connect(alice)
+          .veto(proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale"))),
       ).to.be.revertedWithCustomError(governor, "Gov_NotSecurityCouncil");
     });
 
@@ -285,40 +325,45 @@ describe("Governance Veto", function () {
 
       // Eject SC via timelock
       const timelockSigner = await asTimelock();
-      await governor.connect(timelockSigner).setSecurityCouncil(ethers.ZeroAddress);
+      await governor
+        .connect(timelockSigner)
+        .setSecurityCouncil(ethers.ZeroAddress);
       await stopImpersonatingTimelock();
 
       await expect(
-        governor.connect(carol).veto(
-          proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale"))
-        )
+        governor
+          .connect(carol)
+          .veto(proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale"))),
       ).to.be.revertedWithCustomError(governor, "Gov_NotSecurityCouncil");
     });
 
     it("should revert if proposal is not Queued", async function () {
       // Create proposal but don't queue it
       const govAddr = await governor.getAddress();
-      await governor.connect(alice).propose(
-        ProposalType.Standard,
-        [govAddr], [0n],
-        [governor.interface.encodeFunctionData("proposalCount")],
-        "Test proposal"
-      );
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          [govAddr],
+          [0n],
+          [governor.interface.encodeFunctionData("proposalCount")],
+          "Test proposal",
+        );
       const proposalId = Number(await governor.proposalCount());
 
       // Still Pending
       await expect(
-        governor.connect(carol).veto(
-          proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale"))
-        )
+        governor
+          .connect(carol)
+          .veto(proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale"))),
       ).to.be.revertedWithCustomError(governor, "Gov_NotQueued");
 
       // Advance to Active
       await time.increase(TWO_DAYS + 1);
       await expect(
-        governor.connect(carol).veto(
-          proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale"))
-        )
+        governor
+          .connect(carol)
+          .veto(proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale"))),
       ).to.be.revertedWithCustomError(governor, "Gov_NotQueued");
     });
   });
@@ -376,10 +421,18 @@ describe("Governance Veto", function () {
       await time.increase(RATIFICATION_PERIOD + 1);
 
       const tx = governor.resolveRatification(ratId);
-      await expect(tx).to.emit(governor, "ProposalRestored").withArgs(proposalId);
-      await expect(tx).to.emit(governor, "SecurityCouncilEjected").withArgs(ratId);
-      await expect(tx).to.emit(governor, "SecurityCouncilUpdated").withArgs(carol.address, ethers.ZeroAddress);
-      await expect(tx).to.emit(governor, "RatificationResolved").withArgs(ratId, false);
+      await expect(tx)
+        .to.emit(governor, "ProposalRestored")
+        .withArgs(proposalId);
+      await expect(tx)
+        .to.emit(governor, "SecurityCouncilEjected")
+        .withArgs(ratId);
+      await expect(tx)
+        .to.emit(governor, "SecurityCouncilUpdated")
+        .withArgs(carol.address, ethers.ZeroAddress);
+      await expect(tx)
+        .to.emit(governor, "RatificationResolved")
+        .withArgs(ratId, false);
 
       // SC ejected
       expect(await governor.securityCouncil()).to.equal(ethers.ZeroAddress);
@@ -412,7 +465,7 @@ describe("Governance Veto", function () {
       const ratId = await vetoProposal(proposalId);
 
       await expect(
-        governor.resolveRatification(ratId)
+        governor.resolveRatification(ratId),
       ).to.be.revertedWithCustomError(governor, "Gov_VotingNotEnded");
     });
 
@@ -420,7 +473,7 @@ describe("Governance Veto", function () {
       const proposalId = await createAndQueueProposal(alice);
 
       await expect(
-        governor.resolveRatification(proposalId)
+        governor.resolveRatification(proposalId),
       ).to.be.revertedWithCustomError(governor, "Gov_NotARatificationProposal");
     });
 
@@ -433,7 +486,7 @@ describe("Governance Veto", function () {
       await governor.resolveRatification(ratId);
 
       await expect(
-        governor.resolveRatification(ratId)
+        governor.resolveRatification(ratId),
       ).to.be.revertedWithCustomError(governor, "Gov_AlreadyResolved");
     });
   });
@@ -459,9 +512,9 @@ describe("Governance Veto", function () {
 
       // New SC tries to veto restored proposal — should revert
       await expect(
-        governor.connect(dave).veto(
-          proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale2"))
-        )
+        governor
+          .connect(dave)
+          .veto(proposalId, ethers.keccak256(ethers.toUtf8Bytes("rationale2"))),
       ).to.be.revertedWithCustomError(governor, "Gov_SingleVetoRule");
     });
 
@@ -485,15 +538,17 @@ describe("Governance Veto", function () {
         alice,
         undefined, // same targets
         undefined, // same calldatas
-        "second attempt"
+        "second attempt",
       );
 
       // New SC can veto — per-proposal flag, not calldata-based
-      await governor.connect(dave).veto(
-        proposalId2, ethers.keccak256(ethers.toUtf8Bytes("rationale2"))
-      );
+      await governor
+        .connect(dave)
+        .veto(proposalId2, ethers.keccak256(ethers.toUtf8Bytes("rationale2")));
 
-      expect(await governor.state(proposalId2)).to.equal(ProposalState.Canceled);
+      expect(await governor.state(proposalId2)).to.equal(
+        ProposalState.Canceled,
+      );
     });
   });
 
@@ -509,9 +564,10 @@ describe("Governance Veto", function () {
       await governor.connect(bob).castVote(ratId, Vote.For);
       await time.increase(RATIFICATION_PERIOD + 1);
 
-      await expect(
-        governor.queue(ratId)
-      ).to.be.revertedWithCustomError(governor, "Gov_UseResolveRatification");
+      await expect(governor.queue(ratId)).to.be.revertedWithCustomError(
+        governor,
+        "Gov_UseResolveRatification",
+      );
     });
 
     it("should revert execute() for ratification proposals", async function () {
@@ -525,9 +581,10 @@ describe("Governance Veto", function () {
 
       // Ratification proposals are never queued (they bypass normal execution path),
       // so execute() reverts at the Queued state check before reaching the type guard.
-      await expect(
-        governor.execute(ratId)
-      ).to.be.revertedWithCustomError(governor, "Gov_NotQueued");
+      await expect(governor.execute(ratId)).to.be.revertedWithCustomError(
+        governor,
+        "Gov_NotQueued",
+      );
     });
   });
 
@@ -551,16 +608,18 @@ describe("Governance Veto", function () {
 
       // Ejected SC tries to veto — carol is no longer SC
       await expect(
-        governor.connect(carol).veto(
-          proposalId2, ethers.keccak256(ethers.toUtf8Bytes("rationale"))
-        )
+        governor
+          .connect(carol)
+          .veto(proposalId2, ethers.keccak256(ethers.toUtf8Bytes("rationale"))),
       ).to.be.revertedWithCustomError(governor, "Gov_NotSecurityCouncil");
     });
 
     it("should allow governance to set a new SC after ejection", async function () {
       // Eject SC via timelock
       const timelockSigner = await asTimelock();
-      await governor.connect(timelockSigner).setSecurityCouncil(ethers.ZeroAddress);
+      await governor
+        .connect(timelockSigner)
+        .setSecurityCouncil(ethers.ZeroAddress);
 
       expect(await governor.securityCouncil()).to.equal(ethers.ZeroAddress);
 
@@ -581,7 +640,9 @@ describe("Governance Veto", function () {
       expect(await governor.state(proposalId)).to.equal(ProposalState.Queued);
 
       // 2. SC vetoes
-      const rationaleHash = ethers.keccak256(ethers.toUtf8Bytes("Potential reentrancy vulnerability"));
+      const rationaleHash = ethers.keccak256(
+        ethers.toUtf8Bytes("Potential reentrancy vulnerability"),
+      );
       await governor.connect(carol).veto(proposalId, rationaleHash);
       expect(await governor.state(proposalId)).to.equal(ProposalState.Canceled);
 
@@ -610,9 +671,9 @@ describe("Governance Veto", function () {
       const proposalId = await createAndQueueProposal(alice);
 
       // 2. SC vetoes
-      await governor.connect(carol).veto(
-        proposalId, ethers.keccak256(ethers.toUtf8Bytes("False alarm"))
-      );
+      await governor
+        .connect(carol)
+        .veto(proposalId, ethers.keccak256(ethers.toUtf8Bytes("False alarm")));
 
       // 3. Community votes AGAINST (deny veto)
       const ratId = Number(await governor.proposalCount());

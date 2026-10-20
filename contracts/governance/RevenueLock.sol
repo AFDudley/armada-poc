@@ -26,7 +26,6 @@ interface IArmadaTokenRevenueLock {
 ///         neutralises governance-controlled RevenueCounter upgrades that could otherwise
 ///         rewind (→ freeze) or accelerate (→ instant-unlock) entitlements.
 contract RevenueLock {
-
     // ============ Constants ============
 
     /// @notice Maximum basis points (100%)
@@ -116,12 +115,7 @@ contract RevenueLock {
 
     // ============ Events ============
 
-    event Released(
-        address indexed beneficiary,
-        uint256 amount,
-        address delegatee,
-        uint256 cumulativeReleased
-    );
+    event Released(address indexed beneficiary, uint256 amount, address delegatee, uint256 cumulativeReleased);
 
     /// @notice Emitted once when activation succeeds. fundedBalance is the contract's
     ///         ARM balance at activation time (must be >= totalAllocation).
@@ -132,11 +126,7 @@ contract RevenueLock {
     /// @param newMax             New maxObservedRevenue value (post-ratchet, post-cap).
     /// @param reportedByCounter  Raw value returned by RevenueCounter at the time of update.
     ///                           If `reportedByCounter > newMax`, the advance was rate-limited.
-    event ObservedRevenueUpdated(
-        uint256 oldMax,
-        uint256 newMax,
-        uint256 reportedByCounter
-    );
+    event ObservedRevenueUpdated(uint256 oldMax, uint256 newMax, uint256 reportedByCounter);
 
     /// @notice Emitted on every non-frozen call to _updateMaxObservedRevenue, including
     ///         no-op syncs that consume elapsed-time budget without advancing the ratchet.
@@ -147,11 +137,7 @@ contract RevenueLock {
     /// @param syncedAt              block.timestamp at sync.
     /// @param reportedByCounter     Raw value returned by RevenueCounter at the time of sync.
     /// @param maxObservedRevenue_   Post-call maxObservedRevenue (equals oldMax on no-op).
-    event Synced(
-        uint256 syncedAt,
-        uint256 reportedByCounter,
-        uint256 maxObservedRevenue_
-    );
+    event Synced(uint256 syncedAt, uint256 reportedByCounter, uint256 maxObservedRevenue_);
 
     event WindDownContractSet(address indexed windDownContract);
     event FrozenAtWindDown(uint256 maxObservedRevenue, uint256 unlockBps);
@@ -420,11 +406,11 @@ contract RevenueLock {
     function _unlockBpsForRevenue(uint256 revenue) internal pure returns (uint256) {
         // Milestones checked in descending order for early return at highest reached
         if (revenue >= MILESTONE_100PCT_REVENUE_USD) return MILESTONE_100PCT_BPS;
-        if (revenue >= MILESTONE_80PCT_REVENUE_USD)  return MILESTONE_80PCT_BPS;
-        if (revenue >= MILESTONE_60PCT_REVENUE_USD)  return MILESTONE_60PCT_BPS;
-        if (revenue >= MILESTONE_40PCT_REVENUE_USD)  return MILESTONE_40PCT_BPS;
-        if (revenue >= MILESTONE_25PCT_REVENUE_USD)  return MILESTONE_25PCT_BPS;
-        if (revenue >= MILESTONE_10PCT_REVENUE_USD)  return MILESTONE_10PCT_BPS;
+        if (revenue >= MILESTONE_80PCT_REVENUE_USD) return MILESTONE_80PCT_BPS;
+        if (revenue >= MILESTONE_60PCT_REVENUE_USD) return MILESTONE_60PCT_BPS;
+        if (revenue >= MILESTONE_40PCT_REVENUE_USD) return MILESTONE_40PCT_BPS;
+        if (revenue >= MILESTONE_25PCT_REVENUE_USD) return MILESTONE_25PCT_BPS;
+        if (revenue >= MILESTONE_10PCT_REVENUE_USD) return MILESTONE_10PCT_BPS;
         return 0;
     }
 

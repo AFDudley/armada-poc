@@ -9,11 +9,11 @@ contract PrivacyPoolFuzzTest is Test {
     uint120 private constant BASIS_POINTS = 10000;
 
     /// @dev Mirror of ShieldModule/TransactModule._getFee (inclusive and exclusive modes)
-    function _getFee(
-        uint136 _amount,
-        bool _isInclusive,
-        uint120 _feeBP
-    ) internal pure returns (uint120 base, uint120 fee) {
+    function _getFee(uint136 _amount, bool _isInclusive, uint120 _feeBP)
+        internal
+        pure
+        returns (uint120 base, uint120 fee)
+    {
         if (_feeBP == 0) {
             return (uint120(_amount), 0);
         }
@@ -105,7 +105,8 @@ contract PrivacyPoolFuzzTest is Test {
         // e.g. amount=1, feeBP=3: (10000*1)/(10000-3) - 1 = 1 - 1 = 0
         // Fee > 0 only when amount is large enough relative to feeBP.
         // Verify: fee matches the exact formula (including truncation)
-        uint256 expectedFee = (uint256(BASIS_POINTS) * uint256(amount)) / uint256(BASIS_POINTS - feeBP) - uint256(amount);
+        uint256 expectedFee =
+            (uint256(BASIS_POINTS) * uint256(amount)) / uint256(BASIS_POINTS - feeBP) - uint256(amount);
         assertEq(fee, uint120(expectedFee), "Exclusive fee formula mismatch");
 
         // Fee should be > 0 when amount >= ceil(10000 / feeBP)
@@ -135,7 +136,7 @@ contract PrivacyPoolFuzzTest is Test {
     }
 
     function _verifyShieldData(bytes memory data, bytes32 npk, uint120 value, bytes32 shieldKey) internal pure {
-        (bytes32 dNpk, uint120 dValue, , , , bytes32 dKey) =
+        (bytes32 dNpk, uint120 dValue,,,, bytes32 dKey) =
             abi.decode(data, (bytes32, uint120, bytes32, bytes32, bytes32, bytes32));
         assertEq(dNpk, npk, "npk mismatch");
         assertEq(dValue, value, "value mismatch");

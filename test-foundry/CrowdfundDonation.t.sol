@@ -27,14 +27,7 @@ contract CrowdfundDonationTest is Test {
 
         usdc = new MockUSDCV2("Mock USDC", "USDC");
         armToken = new ArmadaToken(admin, admin);
-        crowdfund = new ArmadaCrowdfund(
-            address(usdc),
-            address(armToken),
-            treasury,
-            admin,
-            admin,
-            block.timestamp
-        );
+        crowdfund = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp);
 
         address[] memory wl = new address[](2);
         wl[0] = admin;
@@ -129,7 +122,7 @@ contract CrowdfundDonationTest is Test {
 
         // Record allocations before ARM donation
         uint256 totalAllocBefore = crowdfund.totalAllocatedArm();
-        (uint256 seed0AllocArm, ) = crowdfund.computeAllocation(seeds[0]);
+        (uint256 seed0AllocArm,) = crowdfund.computeAllocation(seeds[0]);
         assertTrue(totalAllocBefore > 0, "Must have allocations");
 
         // Donate extra ARM directly to the contract
@@ -138,7 +131,7 @@ contract CrowdfundDonationTest is Test {
 
         // Allocations must be unchanged
         assertEq(crowdfund.totalAllocatedArm(), totalAllocBefore, "totalAllocatedArm must not change");
-        (uint256 seed0AllocArmAfter, ) = crowdfund.computeAllocation(seeds[0]);
+        (uint256 seed0AllocArmAfter,) = crowdfund.computeAllocation(seeds[0]);
         assertEq(seed0AllocArmAfter, seed0AllocArm, "Per-address allocation must not change");
     }
 

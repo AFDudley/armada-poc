@@ -247,11 +247,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
      */
     function _handleCCTPMessage(uint32 sourceDomain, bytes calldata messageBody) internal returns (bool) {
         // Decode the BurnMessageV2 to get amount, feeExecuted, and hookData
-        (
-            uint256 grossAmount,
-            uint256 feeExecuted,
-            bytes memory hookData
-        ) = BurnMessageV2.decodeForHook(messageBody);
+        (uint256 grossAmount, uint256 feeExecuted, bytes memory hookData) = BurnMessageV2.decodeForHook(messageBody);
 
         // Calculate actual amount received (gross - fee)
         // In local mock, feeExecuted may equal maxFee. On real CCTP, fee is set by attestation service.
@@ -270,18 +266,14 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
             // unconfigured domains or arbitrary source contracts.
             bytes32 sourcePool = remotePools[sourceDomain];
             require(sourcePool != bytes32(0), "PrivacyPool: unconfigured source domain");
-            require(
-                BurnMessageV2.getMessageSender(messageBody) == sourcePool,
-                "PrivacyPool: untrusted source pool"
-            );
+            require(BurnMessageV2.getMessageSender(messageBody) == sourcePool, "PrivacyPool: untrusted source pool");
 
             // Cross-chain shield from Client. The payload carries one or more notes: index 0 is the
             // recipient note; any further notes (e.g. a relayer fee note) are minted at full value.
             ShieldData[] memory shieldNotes = CCTPPayloadLib.decodeShieldData(payload.data);
 
             _delegatecall(
-                shieldModule,
-                abi.encodeCall(IShieldModule.processIncomingShield, (actualAmount, shieldNotes))
+                shieldModule, abi.encodeCall(IShieldModule.processIncomingShield, (actualAmount, shieldNotes))
             );
         } else {
             // Hub should not receive UNSHIELD messages (only Clients receive those)
@@ -358,15 +350,13 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
      * @param _commitments Number of commitments
      * @param _key The verification key
      */
-    function setVerificationKey(
-        uint256 _nullifiers,
-        uint256 _commitments,
-        VerifyingKey calldata _key
-    ) external override {
+    function setVerificationKey(uint256 _nullifiers, uint256 _commitments, VerifyingKey calldata _key)
+        external
+        override
+    {
         require(msg.sender == owner, "PrivacyPool: Only owner");
         _delegatecall(
-            verifierModule,
-            abi.encodeCall(IVerifierModule.setVerificationKey, (_nullifiers, _commitments, _key))
+            verifierModule, abi.encodeCall(IVerifierModule.setVerificationKey, (_nullifiers, _commitments, _key))
         );
     }
 
@@ -387,10 +377,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
      */
     function setTestingMode(bool _enabled) external override {
         require(msg.sender == owner, "PrivacyPool: Only owner");
-        _delegatecall(
-            verifierModule,
-            abi.encodeCall(IVerifierModule.setTestingMode, (_enabled))
-        );
+        _delegatecall(verifierModule, abi.encodeCall(IVerifierModule.setTestingMode, (_enabled)));
         emit TestingModeSet(_enabled);
     }
 
@@ -432,8 +419,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
     function setDefaultFinalityThreshold(uint32 _threshold) external override {
         require(msg.sender == owner, "PrivacyPool: Only owner");
         require(
-            _threshold == CCTPFinality.FAST || _threshold == CCTPFinality.STANDARD,
-            "PrivacyPool: Invalid threshold"
+            _threshold == CCTPFinality.FAST || _threshold == CCTPFinality.STANDARD, "PrivacyPool: Invalid threshold"
         );
         defaultFinalityThreshold = _threshold;
         emit DefaultFinalityThresholdSet(_threshold);
@@ -472,10 +458,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
      * @param _commitments Number of commitments
      * @return The verification key
      */
-    function getVerificationKey(
-        uint256 _nullifiers,
-        uint256 _commitments
-    ) external view returns (VerifyingKey memory) {
+    function getVerificationKey(uint256 _nullifiers, uint256 _commitments) external view returns (VerifyingKey memory) {
         return verificationKeys[_nullifiers][_commitments];
     }
 
@@ -553,9 +536,11 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
      * @return treeNum Tree number where commitments will be inserted
      * @return startIndex Starting leaf index within that tree
      */
-    function getInsertionTreeNumberAndStartingIndex(
-        uint256 _newCommitments
-    ) external view returns (uint256 treeNum, uint256 startIndex) {
+    function getInsertionTreeNumberAndStartingIndex(uint256 _newCommitments)
+        external
+        view
+        returns (uint256 treeNum, uint256 startIndex)
+    {
         if ((nextLeafIndex + _newCommitments) > (2 ** TREE_DEPTH)) {
             return (treeNumber + 1, 0);
         }

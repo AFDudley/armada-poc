@@ -83,10 +83,7 @@ interface IMessageTransmitterV2 {
      * @param attestation Circle attestation signature(s), or empty for mock
      * @return success Whether the message was successfully processed
      */
-    function receiveMessage(
-        bytes calldata message,
-        bytes calldata attestation
-    ) external returns (bool success);
+    function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool success);
 
     /**
      * @notice Get the local domain ID for this chain
@@ -256,18 +253,22 @@ library MessageV2 {
     /**
      * @notice Decode a full CCTP V2 message
      */
-    function decode(bytes calldata message) internal pure returns (
-        uint32 version,
-        uint32 sourceDomain,
-        uint32 destinationDomain,
-        bytes32 nonce,
-        bytes32 sender,
-        bytes32 recipient,
-        bytes32 destinationCaller,
-        uint32 minFinalityThreshold,
-        uint32 finalityThresholdExecuted,
-        bytes calldata messageBody
-    ) {
+    function decode(bytes calldata message)
+        internal
+        pure
+        returns (
+            uint32 version,
+            uint32 sourceDomain,
+            uint32 destinationDomain,
+            bytes32 nonce,
+            bytes32 sender,
+            bytes32 recipient,
+            bytes32 destinationCaller,
+            uint32 minFinalityThreshold,
+            uint32 finalityThresholdExecuted,
+            bytes calldata messageBody
+        )
+    {
         require(message.length >= MIN_MESSAGE_LENGTH, "MessageV2: message too short");
 
         version = uint32(bytes4(message[VERSION_OFFSET:VERSION_OFFSET + 4]));
@@ -278,7 +279,8 @@ library MessageV2 {
         recipient = bytes32(message[RECIPIENT_OFFSET:RECIPIENT_OFFSET + 32]);
         destinationCaller = bytes32(message[DESTINATION_CALLER_OFFSET:DESTINATION_CALLER_OFFSET + 32]);
         minFinalityThreshold = uint32(bytes4(message[MIN_FINALITY_THRESHOLD_OFFSET:MIN_FINALITY_THRESHOLD_OFFSET + 4]));
-        finalityThresholdExecuted = uint32(bytes4(message[FINALITY_THRESHOLD_EXECUTED_OFFSET:FINALITY_THRESHOLD_EXECUTED_OFFSET + 4]));
+        finalityThresholdExecuted =
+            uint32(bytes4(message[FINALITY_THRESHOLD_EXECUTED_OFFSET:FINALITY_THRESHOLD_EXECUTED_OFFSET + 4]));
         messageBody = message[MESSAGE_BODY_OFFSET:];
     }
 
@@ -411,17 +413,21 @@ library BurnMessageV2 {
     /**
      * @notice Decode a full CCTP V2 burn message
      */
-    function decode(bytes calldata messageBody) internal pure returns (
-        uint32 version,
-        bytes32 burnToken,
-        bytes32 mintRecipient,
-        uint256 amount,
-        bytes32 messageSender,
-        uint256 maxFee,
-        uint256 feeExecuted,
-        uint256 expirationBlock,
-        bytes memory hookData
-    ) {
+    function decode(bytes calldata messageBody)
+        internal
+        pure
+        returns (
+            uint32 version,
+            bytes32 burnToken,
+            bytes32 mintRecipient,
+            uint256 amount,
+            bytes32 messageSender,
+            uint256 maxFee,
+            uint256 feeExecuted,
+            uint256 expirationBlock,
+            bytes memory hookData
+        )
+    {
         require(messageBody.length >= MIN_BURN_MESSAGE_LENGTH, "BurnMessageV2: message too short");
 
         version = uint32(bytes4(messageBody[VERSION_OFFSET:VERSION_OFFSET + 4]));
@@ -447,11 +453,11 @@ library BurnMessageV2 {
      * @return feeExecuted The fee that was deducted (actualMint = amount - feeExecuted)
      * @return hookData The hook data for custom processing
      */
-    function decodeForHook(bytes calldata messageBody) internal pure returns (
-        uint256 amount,
-        uint256 feeExecuted,
-        bytes memory hookData
-    ) {
+    function decodeForHook(bytes calldata messageBody)
+        internal
+        pure
+        returns (uint256 amount, uint256 feeExecuted, bytes memory hookData)
+    {
         require(messageBody.length >= MIN_BURN_MESSAGE_LENGTH, "BurnMessageV2: message too short");
 
         amount = uint256(bytes32(messageBody[AMOUNT_OFFSET:AMOUNT_OFFSET + 32]));
@@ -512,23 +518,16 @@ library BurnMessage {
     function decode(bytes calldata messageBody)
         internal
         pure
-        returns (
-            address burnToken,
-            bytes32 mintRecipient,
-            uint256 amount,
-            bytes memory hookData
-        )
+        returns (address burnToken, bytes32 mintRecipient, uint256 amount, bytes memory hookData)
     {
         // Decode using new format
-        (
-            ,  // version
+        (, // version
             bytes32 burnTokenBytes,
             bytes32 mintRecipientBytes,
-            uint256 amountDecoded,
-            ,  // messageSender
-            ,  // maxFee
-            ,  // feeExecuted
-            ,  // expirationBlock
+            uint256 amountDecoded,, // messageSender
+            , // maxFee
+            , // feeExecuted
+            , // expirationBlock
             bytes memory hookDataDecoded
         ) = BurnMessageV2.decode(messageBody);
 
@@ -538,21 +537,20 @@ library BurnMessage {
         hookData = hookDataDecoded;
     }
 
-    function encode(
-        address burnToken,
-        bytes32 mintRecipient,
-        uint256 amount,
-        bytes memory hookData
-    ) internal pure returns (bytes memory) {
+    function encode(address burnToken, bytes32 mintRecipient, uint256 amount, bytes memory hookData)
+        internal
+        pure
+        returns (bytes memory)
+    {
         // Encode using new format with default values for new fields
         return BurnMessageV2.encode(
             MessageV2.addressToBytes32(burnToken),
             mintRecipient,
             amount,
-            bytes32(0),  // messageSender - filled by TokenMessenger
-            0,           // maxFee
-            0,           // feeExecuted
-            0,           // expirationBlock
+            bytes32(0), // messageSender - filled by TokenMessenger
+            0, // maxFee
+            0, // feeExecuted
+            0, // expirationBlock
             hookData
         );
     }

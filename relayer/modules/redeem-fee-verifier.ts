@@ -93,7 +93,10 @@ export function verifyRedeemFee(
   // Recompute the note public key the fee note WOULD have if it were shielded to us with this random.
   let expectedNpk: bigint;
   try {
-    expectedNpk = ShieldNote.getNotePublicKey(ctx.wallet.masterPublicKey, feeShieldRandom);
+    expectedNpk = ShieldNote.getNotePublicKey(
+      ctx.wallet.masterPublicKey,
+      feeShieldRandom,
+    );
   } catch (e: any) {
     throw new RelayError(
       "INVALID_DATA",

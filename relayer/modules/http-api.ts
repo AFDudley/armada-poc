@@ -17,7 +17,11 @@ import type { Counters } from "./counters";
 import type { IdempotencyStore } from "./idempotency-store";
 import type { CctpDeliveryStore } from "./cctp-delivery-store";
 import { armadaRelayerSettings } from "../config";
-import { RateLimiter, clientKey, type RateLimitedRequest } from "../lib/rate-limiter";
+import {
+  RateLimiter,
+  clientKey,
+  type RateLimitedRequest,
+} from "../lib/rate-limiter";
 
 /** Max accepted idempotency-key length — a ulid is 26 chars; cap well above that, reject abuse. */
 const MAX_IDEMPOTENCY_KEY_LENGTH = 200;
@@ -63,13 +67,21 @@ export class HttpApi {
 
     const { relayPerMin, getPerMin } = armadaRelayerSettings.rateLimit;
     // capacity = one minute's budget (burst), refilling at that budget / 60 per second.
-    this.relayLimiter = new RateLimiter({ capacity: relayPerMin, refillPerSec: relayPerMin / 60 });
-    this.getLimiter = new RateLimiter({ capacity: getPerMin, refillPerSec: getPerMin / 60 });
+    this.relayLimiter = new RateLimiter({
+      capacity: relayPerMin,
+      refillPerSec: relayPerMin / 60,
+    });
+    this.getLimiter = new RateLimiter({
+      capacity: getPerMin,
+      refillPerSec: getPerMin / 60,
+    });
 
     this.app = express();
     this.app.use(cors());
     // Explicit body limit (NOT the silent 100kb default) — see armadaRelayerSettings.maxRequestBodyBytes.
-    this.app.use(express.json({ limit: armadaRelayerSettings.maxRequestBodyBytes }));
+    this.app.use(
+      express.json({ limit: armadaRelayerSettings.maxRequestBodyBytes }),
+    );
 
     this.setupRoutes();
   }
@@ -81,15 +93,25 @@ export class HttpApi {
    */
   private rateLimitGuard(
     limiter: RateLimiter,
-  ): (req: express.Request, res: express.Response, next: express.NextFunction) => void {
+  ): (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) => void {
     return (req, res, next) => {
-      const key = clientKey(req as unknown as RateLimitedRequest, armadaRelayerSettings.rateLimit.trustProxy);
+      const key = clientKey(
+        req as unknown as RateLimitedRequest,
+        armadaRelayerSettings.rateLimit.trustProxy,
+      );
       if (limiter.allow(key)) {
         next();
         return;
       }
       this.counters.inc("rateLimited");
-      res.status(429).json({ error: "Too many requests — slow down.", code: "RATE_LIMITED" });
+      res.status(429).json({
+        error: "Too many requests — slow down.",
+        code: "RATE_LIMITED",
+      });
     };
   }
 
@@ -97,171 +119,222 @@ export class HttpApi {
     // GET /fees[?chainId=N] — Current fee schedule for the chain. Phase B2 made fees per-chain;
     // omitting the query param falls back to the hub so existing Phase A frontend callers (the
     // ones that pre-date the per-chain API) keep working without change.
-    this.app.get("/fees", this.rateLimitGuard(this.getLimiter), async (req, res) => {
-      try {
-        const raw = req.query.chainId;
-        let chainId = this.defaultChainId;
-        if (typeof raw === "string" && raw.length > 0) {
-          const parsed = Number(raw);
-          if (!Number.isInteger(parsed) || parsed <= 0) {
-            res.status(400).json({ error: `Invalid chainId: ${raw}` });
+    this.app.get(
+      "/fees",
+      this.rateLimitGuard(this.getLimiter),
+      async (req, res) => {
+        try {
+          const raw = req.query.chainId;
+          let chainId = this.defaultChainId;
+          if (typeof raw === "string" && raw.length > 0) {
+            const parsed = Number(raw);
+            if (!Number.isInteger(parsed) || parsed <= 0) {
+              res.status(400).json({ error: `Invalid chainId: ${raw}` });
+              return;
+            }
+            chainId = parsed;
+          }
+          const calc = this.feeCalculators.get(chainId);
+          if (!calc) {
+            res.status(404).json({
+              error: `No fee schedule for chain ${chainId}`,
+              supported: Array.from(this.feeCalculators.keys()),
+            });
             return;
           }
-          chainId = parsed;
+          const fees = await calc.getCurrentFees();
+          res.json(fees);
+        } catch (e: any) {
+          console.error("[http-api] Error fetching fees:", e);
+          res.status(500).json({ error: "Failed to calculate fees" });
         }
-        const calc = this.feeCalculators.get(chainId);
-        if (!calc) {
-          res.status(404).json({
-            error: `No fee schedule for chain ${chainId}`,
-            supported: Array.from(this.feeCalculators.keys()),
-          });
-          return;
-        }
-        const fees = await calc.getCurrentFees();
-        res.json(fees);
-      } catch (e: any) {
-        console.error("[http-api] Error fetching fees:", e);
-        res.status(500).json({ error: "Failed to calculate fees" });
-      }
-    });
+      },
+    );
 
     // POST /relay — Submit a shielded transaction
-    this.app.post("/relay", this.rateLimitGuard(this.relayLimiter), async (req, res) => {
-      try {
-        const { chainId, to, data, feesCacheId, idempotencyKey, feeShieldRandom } = req.body as RelayRequest;
+    this.app.post(
+      "/relay",
+      this.rateLimitGuard(this.relayLimiter),
+      async (req, res) => {
+        try {
+          const {
+            chainId,
+            to,
+            data,
+            feesCacheId,
+            idempotencyKey,
+            feeShieldRandom,
+          } = req.body as RelayRequest;
 
-        // Basic request validation
-        if (!chainId || !to || !data || !feesCacheId) {
-          res.status(400).json({
-            error: "Missing required fields: chainId, to, data, feesCacheId",
-          });
-          return;
-        }
-        // idempotencyKey is optional, but if present must be a sane non-empty string.
-        if (idempotencyKey !== undefined) {
-          if (typeof idempotencyKey !== "string" || idempotencyKey.length === 0 || idempotencyKey.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
-            res.status(400).json({ error: "Invalid idempotencyKey", code: "INVALID_DATA" });
+          // Basic request validation
+          if (!chainId || !to || !data || !feesCacheId) {
+            res.status(400).json({
+              error: "Missing required fields: chainId, to, data, feesCacheId",
+            });
             return;
           }
-        }
-
-        console.log(
-          `[http-api] Relay request: chain=${chainId} to=${to.slice(0, 10)}... ` +
-            `data=${data.slice(0, 10)}... feesCacheId=${feesCacheId}` +
-            (idempotencyKey ? ` idem=${idempotencyKey}` : "")
-        );
-
-        // Idempotent path: a repeat (or concurrent) POST with the same key returns the original
-        // broadcast's hash WITHOUT re-broadcasting — durable across restarts. Requests without a
-        // key fall through to the legacy submit (calldata dedup in wallet-manager still applies).
-        if (idempotencyKey) {
-          const outcome = await this.idempotencyStore.submitOnce(idempotencyKey, async () => {
-            const r = await this.privacyRelay.handleRelayRequest({ chainId, to, data, feesCacheId, feeShieldRandom });
-            return { txHash: r.txHash, chainId };
-          });
-          if (outcome.replayed) {
-            this.counters.inc("idempotentReplay");
-            console.log(`[http-api] Idempotent replay for ${idempotencyKey} → ${outcome.txHash}`);
+          // idempotencyKey is optional, but if present must be a sane non-empty string.
+          if (idempotencyKey !== undefined) {
+            if (
+              typeof idempotencyKey !== "string" ||
+              idempotencyKey.length === 0 ||
+              idempotencyKey.length > MAX_IDEMPOTENCY_KEY_LENGTH
+            ) {
+              res.status(400).json({
+                error: "Invalid idempotencyKey",
+                code: "INVALID_DATA",
+              });
+              return;
+            }
           }
-          res.json({ txHash: outcome.txHash, status: outcome.status });
-          return;
-        }
 
-        const result = await this.privacyRelay.handleRelayRequest({
-          chainId,
-          to,
-          data,
-          feesCacheId,
-          feeShieldRandom,
-        });
+          console.log(
+            `[http-api] Relay request: chain=${chainId} to=${to.slice(0, 10)}... ` +
+              `data=${data.slice(0, 10)}... feesCacheId=${feesCacheId}` +
+              (idempotencyKey ? ` idem=${idempotencyKey}` : ""),
+          );
 
-        res.json({ txHash: result.txHash, status: "pending" });
-      } catch (e: any) {
-        if (e instanceof RelayError) {
-          console.warn(`[http-api] Relay rejected (${e.code}): ${e.message}`);
-          const statusCode = this.errorCodeToStatus(e.code);
-          res.status(statusCode).json({
-            error: e.message,
-            code: e.code,
+          // Idempotent path: a repeat (or concurrent) POST with the same key returns the original
+          // broadcast's hash WITHOUT re-broadcasting — durable across restarts. Requests without a
+          // key fall through to the legacy submit (calldata dedup in wallet-manager still applies).
+          if (idempotencyKey) {
+            const outcome = await this.idempotencyStore.submitOnce(
+              idempotencyKey,
+              async () => {
+                const r = await this.privacyRelay.handleRelayRequest({
+                  chainId,
+                  to,
+                  data,
+                  feesCacheId,
+                  feeShieldRandom,
+                });
+                return { txHash: r.txHash, chainId };
+              },
+            );
+            if (outcome.replayed) {
+              this.counters.inc("idempotentReplay");
+              console.log(
+                `[http-api] Idempotent replay for ${idempotencyKey} → ${outcome.txHash}`,
+              );
+            }
+            res.json({ txHash: outcome.txHash, status: outcome.status });
+            return;
+          }
+
+          const result = await this.privacyRelay.handleRelayRequest({
+            chainId,
+            to,
+            data,
+            feesCacheId,
+            feeShieldRandom,
           });
-          return;
+
+          res.json({ txHash: result.txHash, status: "pending" });
+        } catch (e: any) {
+          if (e instanceof RelayError) {
+            console.warn(`[http-api] Relay rejected (${e.code}): ${e.message}`);
+            const statusCode = this.errorCodeToStatus(e.code);
+            res.status(statusCode).json({
+              error: e.message,
+              code: e.code,
+            });
+            return;
+          }
+          console.error("[http-api] Relay error:", e);
+          res.status(500).json({
+            error: "Internal relay error",
+            code: "UNKNOWN_ERROR",
+          });
         }
-        console.error("[http-api] Relay error:", e);
-        res.status(500).json({
-          error: "Internal relay error",
-          code: "UNKNOWN_ERROR",
-        });
-      }
-    });
+      },
+    );
 
     // GET /status/:txHash[?chainId=N] — Check transaction status. `chainId` is optional;
     // when omitted the relay fans out across every configured chain in parallel and returns
     // the first found receipt. Existing Phase A callers (pollRelayStatusOnce) don't pass it.
-    this.app.get("/status/:txHash", this.rateLimitGuard(this.getLimiter), async (req, res) => {
-      try {
-        // Single-value path param. The multi-handler overload widens req.params to allow arrays;
-        // this route always binds one txHash, so narrow it explicitly.
-        const { txHash } = req.params as { txHash: string };
+    this.app.get(
+      "/status/:txHash",
+      this.rateLimitGuard(this.getLimiter),
+      async (req, res) => {
+        try {
+          // Single-value path param. The multi-handler overload widens req.params to allow arrays;
+          // this route always binds one txHash, so narrow it explicitly.
+          const { txHash } = req.params as { txHash: string };
 
-        if (!txHash || !txHash.startsWith("0x") || txHash.length !== 66) {
-          res.status(400).json({ error: "Invalid transaction hash" });
-          return;
-        }
-
-        const raw = req.query.chainId;
-        let chainId: number | undefined;
-        if (typeof raw === "string" && raw.length > 0) {
-          const parsed = Number(raw);
-          if (!Number.isInteger(parsed) || parsed <= 0) {
-            res.status(400).json({ error: `Invalid chainId: ${raw}` });
+          if (!txHash || !txHash.startsWith("0x") || txHash.length !== 66) {
+            res.status(400).json({ error: "Invalid transaction hash" });
             return;
           }
-          chainId = parsed;
-        }
 
-        const status = await this.privacyRelay.getTransactionStatus(txHash, chainId);
-        // Backfill the idempotency record's terminal status (best-effort, non-blocking) so a late
-        // repeat POST with the same key returns confirmed/failed rather than a stale "pending".
-        if (status.status === "confirmed" || status.status === "failed") {
-          void this.idempotencyStore.updateStatusByTxHash(txHash, status.status);
+          const raw = req.query.chainId;
+          let chainId: number | undefined;
+          if (typeof raw === "string" && raw.length > 0) {
+            const parsed = Number(raw);
+            if (!Number.isInteger(parsed) || parsed <= 0) {
+              res.status(400).json({ error: `Invalid chainId: ${raw}` });
+              return;
+            }
+            chainId = parsed;
+          }
+
+          const status = await this.privacyRelay.getTransactionStatus(
+            txHash,
+            chainId,
+          );
+          // Backfill the idempotency record's terminal status (best-effort, non-blocking) so a late
+          // repeat POST with the same key returns confirmed/failed rather than a stale "pending".
+          if (status.status === "confirmed" || status.status === "failed") {
+            void this.idempotencyStore.updateStatusByTxHash(
+              txHash,
+              status.status,
+            );
+          }
+          res.json(status);
+        } catch (e: any) {
+          console.error("[http-api] Status check error:", e);
+          res.status(500).json({ error: "Failed to check status" });
         }
-        res.json(status);
-      } catch (e: any) {
-        console.error("[http-api] Status check error:", e);
-        res.status(500).json({ error: "Failed to check status" });
-      }
-    });
+      },
+    );
 
     // GET /cctp-status/:messageHash — Cross-chain delivery status for a CCTP message, keyed by the
     // SOURCE messageHash (keccak256(messageBytes)). The relayer performs the destination mint in
     // both modes and records the outcome here; the frontend polls this as the PRIMARY delivery
     // signal and falls back to its on-chain destination scan on a 404 / non-2xx (so shipping the
     // frontend first is safe — every poll just 404s until this route exists).
-    this.app.get("/cctp-status/:messageHash", this.rateLimitGuard(this.getLimiter), (req, res) => {
-      try {
-        const { messageHash } = req.params as { messageHash: string };
-        if (!messageHash || !messageHash.startsWith("0x") || messageHash.length !== 66) {
-          res.status(400).json({ error: "Invalid messageHash" });
-          return;
+    this.app.get(
+      "/cctp-status/:messageHash",
+      this.rateLimitGuard(this.getLimiter),
+      (req, res) => {
+        try {
+          const { messageHash } = req.params as { messageHash: string };
+          if (
+            !messageHash ||
+            !messageHash.startsWith("0x") ||
+            messageHash.length !== 66
+          ) {
+            res.status(400).json({ error: "Invalid messageHash" });
+            return;
+          }
+          const record = this.cctpDeliveryStore.get(messageHash);
+          if (!record) {
+            // Unknown hash → 404 (NOT 500): the frontend treats this as "fall back to the scan."
+            res.status(404).json({ status: "unknown" });
+            return;
+          }
+          res.json({
+            status: record.status,
+            destTxHash: record.destTxHash,
+            amount: record.amount,
+            feeExecuted: record.feeExecuted,
+            error: record.error,
+          });
+        } catch (e: any) {
+          console.error("[http-api] cctp-status error:", e);
+          res.status(500).json({ error: "Failed to look up delivery status" });
         }
-        const record = this.cctpDeliveryStore.get(messageHash);
-        if (!record) {
-          // Unknown hash → 404 (NOT 500): the frontend treats this as "fall back to the scan."
-          res.status(404).json({ status: "unknown" });
-          return;
-        }
-        res.json({
-          status: record.status,
-          destTxHash: record.destTxHash,
-          amount: record.amount,
-          feeExecuted: record.feeExecuted,
-          error: record.error,
-        });
-      } catch (e: any) {
-        console.error("[http-api] cctp-status error:", e);
-        res.status(500).json({ error: "Failed to look up delivery status" });
-      }
-    });
+      },
+    );
 
     // GET / — Service banner. Intentionally distinct from /health; this is the cheap
     // "is the process alive" check, /health is the "is the scanner working" check.
@@ -295,9 +368,14 @@ export class HttpApi {
         // Merge in-process counters at response time so the health snapshot reflects the
         // current values (counters live in PrivacyRelay + verifier; getHealth() comes from
         // cctp/iris relay modules which don't know about them).
-        const merged: RelayerHealth = { ...health, counters: this.counters.snapshot() };
+        const merged: RelayerHealth = {
+          ...health,
+          counters: this.counters.snapshot(),
+        };
         const code =
-          merged.status === "healthy" || merged.status === "degraded" ? 200 : 503;
+          merged.status === "healthy" || merged.status === "degraded"
+            ? 200
+            : 503;
         res.status(code).json(merged);
       } catch (e: any) {
         // getHealth itself throwing means a wiring bug (e.g. health provider not yet

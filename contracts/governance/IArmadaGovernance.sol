@@ -9,38 +9,39 @@ pragma solidity ^0.8.17;
 // ========== Enums ==========
 
 enum ProposalType {
-    Standard,          // 0 — 7d voting, 3d execution, 20% quorum
-    Extended,          // 1 — 14d voting, 7d execution, 30% quorum
-    VetoRatification,  // 2 — 14d voting, no delay, 20% quorum (auto-created only)
-    Steward,           // 3 — 7d voting, 2d execution, 20% quorum (pass-by-default, auto-created only)
-    Signaling          // 4 — 7d voting, no execution, 20% quorum (text-only, non-executable)
+    Standard, // 0 — 7d voting, 3d execution, 20% quorum
+    Extended, // 1 — 14d voting, 7d execution, 30% quorum
+    VetoRatification, // 2 — 14d voting, no delay, 20% quorum (auto-created only)
+    Steward, // 3 — 7d voting, 2d execution, 20% quorum (pass-by-default, auto-created only)
+    Signaling // 4 — 7d voting, no execution, 20% quorum (text-only, non-executable)
 }
 
 enum ProposalState {
-    Pending,     // Voting delay not elapsed
-    Active,      // Voting open
-    Defeated,    // Quorum not reached or majority against
-    Succeeded,   // Passed vote
-    Queued,      // In timelock
-    Executed,    // Done
-    Canceled     // Canceled by proposer
+    Pending, // Voting delay not elapsed
+    Active, // Voting open
+    Defeated, // Quorum not reached or majority against
+    Succeeded, // Passed vote
+    Queued, // In timelock
+    Executed, // Done
+    Canceled // Canceled by proposer
 }
 
 // ========== Structs ==========
 
 struct ProposalParams {
-    uint256 votingDelay;     // seconds before voting starts
-    uint256 votingPeriod;    // duration of voting in seconds
-    uint256 executionDelay;  // timelock delay after success in seconds
-    uint256 quorumBps;       // quorum in basis points of eligible supply
+    uint256 votingDelay; // seconds before voting starts
+    uint256 votingPeriod; // duration of voting in seconds
+    uint256 executionDelay; // timelock delay after success in seconds
+    uint256 quorumBps; // quorum in basis points of eligible supply
 }
 
 // ========== Interfaces ==========
 
 interface IArmadaGovernorTiming {
-    function proposalTypeParams(ProposalType proposalType) external view returns (
-        uint256 votingDelay, uint256 votingPeriod, uint256 executionDelay, uint256 quorumBps
-    );
+    function proposalTypeParams(ProposalType proposalType)
+        external
+        view
+        returns (uint256 votingDelay, uint256 votingPeriod, uint256 executionDelay, uint256 quorumBps);
 }
 
 interface ITreasurySteward {

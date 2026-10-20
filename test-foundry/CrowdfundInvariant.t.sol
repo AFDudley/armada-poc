@@ -23,17 +23,17 @@ contract CrowdfundHandler is Test {
     address[] public allCommitters;
 
     // Ghost variables for invariant checking
-    uint256 public ghost_totalUsdcIn;       // USDC deposited via commit()
-    uint256 public ghost_totalArmTransferred;   // ARM withdrawn via claim()
+    uint256 public ghost_totalUsdcIn; // USDC deposited via commit()
+    uint256 public ghost_totalArmTransferred; // ARM withdrawn via claim()
     uint256 public ghost_totalUsdcRefunded; // USDC returned via claimRefund() (normal pro-rata path)
     uint256 public ghost_totalUsdcCancelRefunded; // USDC returned via claimRefund() (canceled/refundMode full refund)
-    uint256 public ghost_proceedsPushed;    // USDC pushed to treasury at finalization
+    uint256 public ghost_proceedsPushed; // USDC pushed to treasury at finalization
     uint256 public ghost_unallocArmWithdrawn; // ARM withdrawn via withdrawUnallocatedArm()
-    uint256 public ghost_claimCount;        // number of successful claims
+    uint256 public ghost_claimCount; // number of successful claims
     bool public ghost_finalized;
     bool public ghost_canceled;
     bool public ghost_refundMode;
-    bool public ghost_timeWarped;           // true after warpPastWindow fires
+    bool public ghost_timeWarped; // true after warpPastWindow fires
 
     // Track per-participant committed amounts for sum verification
     mapping(address => uint256) public ghost_committed;
@@ -286,7 +286,7 @@ contract CrowdfundInvariantTest is Test {
             address(armToken),
             address(0xBEEF), // treasury
             admin,
-            admin,            // securityCouncil
+            admin, // securityCouncil
             block.timestamp
         );
 
@@ -313,7 +313,8 @@ contract CrowdfundInvariantTest is Test {
         uint256 hop1Idx = 0;
         for (uint256 i = 0; i < seeds.length && hop1Idx < hop1Addrs.length; i++) {
             // Only some seeds invite (to make it more realistic)
-            if (i < 7) { // first 7 seeds invite
+            if (i < 7) {
+                // first 7 seeds invite
                 for (uint256 j = 0; j < 3 && hop1Idx < hop1Addrs.length; j++) {
                     vm.prank(seeds[i]);
                     crowdfund.invite(hop1Addrs[hop1Idx], 0);
@@ -325,7 +326,8 @@ contract CrowdfundInvariantTest is Test {
         // Some hop-1 addresses invite hop-2
         uint256 hop2Idx = 0;
         for (uint256 i = 0; i < hop1Addrs.length && hop2Idx < hop2Addrs.length; i++) {
-            if (i < 10) { // first 10 hop-1 invite
+            if (i < 10) {
+                // first 10 hop-1 invite
                 for (uint256 j = 0; j < 2 && hop2Idx < hop2Addrs.length; j++) {
                     vm.prank(hop1Addrs[i]);
                     crowdfund.invite(hop2Addrs[hop2Idx], 1);
@@ -338,15 +340,7 @@ contract CrowdfundInvariantTest is Test {
         vm.warp(crowdfund.windowStart() + 1);
 
         // Create handler
-        handler = new CrowdfundHandler(
-            crowdfund,
-            usdc,
-            armToken,
-            admin,
-            seeds,
-            hop1Addrs,
-            hop2Addrs
-        );
+        handler = new CrowdfundHandler(crowdfund, usdc, armToken, admin, seeds, hop1Addrs, hop2Addrs);
 
         // Make usdc minter
         usdc.addMinter(address(handler));
@@ -360,19 +354,15 @@ contract CrowdfundInvariantTest is Test {
     /// @notice USDC conservation: contract balance = totalCommitted - claimed refunds - proceeds pushed - cancel refunds
     function invariant_usdcConservation() public view {
         uint256 contractUsdc = usdc.balanceOf(address(crowdfund));
-        uint256 expectedUsdc = handler.ghost_totalUsdcIn()
-            - handler.ghost_totalUsdcRefunded()
-            - handler.ghost_proceedsPushed()
-            - handler.ghost_totalUsdcCancelRefunded();
+        uint256 expectedUsdc = handler.ghost_totalUsdcIn() - handler.ghost_totalUsdcRefunded()
+            - handler.ghost_proceedsPushed() - handler.ghost_totalUsdcCancelRefunded();
         assertEq(contractUsdc, expectedUsdc, "USDC conservation violated");
     }
 
     /// @notice ARM conservation: contract balance = initial funding - claimed ARM - unalloc withdrawn
     function invariant_armConservation() public view {
         uint256 contractArm = armToken.balanceOf(address(crowdfund));
-        uint256 expectedArm = ARM_FUNDING
-            - handler.ghost_totalArmTransferred()
-            - handler.ghost_unallocArmWithdrawn();
+        uint256 expectedArm = ARM_FUNDING - handler.ghost_totalArmTransferred() - handler.ghost_unallocArmWithdrawn();
         assertEq(contractArm, expectedArm, "ARM conservation violated");
     }
 

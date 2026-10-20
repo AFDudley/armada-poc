@@ -21,14 +21,18 @@ export interface SendGuardIO {
  * broadcast. RPC errors from the broadcast are re-thrown unwrapped and never match.
  */
 export function isPreBroadcastLedgerError(error: unknown): boolean {
-  return (error as { pluginName?: unknown } | null)?.pluginName === LEDGER_PLUGIN_NAME;
+  return (
+    (error as { pluginName?: unknown } | null)?.pluginName ===
+    LEDGER_PLUGIN_NAME
+  );
 }
 
 /** The nonce a send request carries, for logging. */
 function sendNonce(args: RequestArguments): string {
   const [tx] = (args.params ?? []) as unknown[];
   try {
-    if (args.method === "eth_sendRawTransaction") return String(Transaction.from(tx as string).nonce);
+    if (args.method === "eth_sendRawTransaction")
+      return String(Transaction.from(tx as string).nonce);
     const nonce = (tx as { nonce?: string } | undefined)?.nonce;
     return nonce === undefined ? "?" : String(Number(nonce));
   } catch {
@@ -44,26 +48,38 @@ function sendNonce(args: RequestArguments): string {
  * pause re-uses the original fee cap, so it can sit pending until the base fee falls back.
  */
 export class SendGuardProvider extends ProviderWrapper {
-  constructor(provider: EIP1193Provider, private readonly _io: SendGuardIO) {
+  constructor(
+    provider: EIP1193Provider,
+    private readonly _io: SendGuardIO,
+  ) {
     super(provider);
   }
 
   public async request(args: RequestArguments): Promise<unknown> {
-    if (args.method !== "eth_sendTransaction" && args.method !== "eth_sendRawTransaction") {
+    if (
+      args.method !== "eth_sendTransaction" &&
+      args.method !== "eth_sendRawTransaction"
+    ) {
       return this._wrappedProvider.request(args);
     }
     const nonce = sendNonce(args);
     for (;;) {
       try {
         const hash = await this._wrappedProvider.request(args);
-        this._io.log(`   [send] nonce ${nonce} → ${hash} (waiting for receipt)`);
+        this._io.log(
+          `   [send] nonce ${nonce} → ${hash} (waiting for receipt)`,
+        );
         return hash;
       } catch (error) {
-        if (args.method !== "eth_sendTransaction" || !isPreBroadcastLedgerError(error)) throw error;
+        if (
+          args.method !== "eth_sendTransaction" ||
+          !isPreBroadcastLedgerError(error)
+        )
+          throw error;
         const retry = await this._io.confirmRetry(
           `\n   Ledger signing failed: ${(error as Error).message}\n` +
-          `   nothing was broadcast — nonce ${nonce} is still unused.\n` +
-          `   Retry the same transaction on the device? [y/N] `
+            `   nothing was broadcast — nonce ${nonce} is still unused.\n` +
+            `   Retry the same transaction on the device? [y/N] `,
         );
         if (!retry) throw error;
       }
@@ -76,10 +92,15 @@ export const consoleSendGuardIO: SendGuardIO = {
   log: (message) => console.log(message),
   async confirmRetry(question) {
     if (!process.stdin.isTTY) {
-      console.error(`${question}\n   (stdin is not interactive — not retrying)`);
+      console.error(
+        `${question}\n   (stdin is not interactive — not retrying)`,
+      );
       return false;
     }
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
     try {
       return /^y(es)?$/i.test((await rl.question(question)).trim());
     } finally {
@@ -94,12 +115,18 @@ export const consoleSendGuardIO: SendGuardIO = {
  * RPC) would otherwise become signer[0] and sign the deploy instead of the device.
  */
 export class LedgerOnlyAccountsProvider extends ProviderWrapper {
-  constructor(provider: EIP1193Provider, private readonly _ledgerAddress: string) {
+  constructor(
+    provider: EIP1193Provider,
+    private readonly _ledgerAddress: string,
+  ) {
     super(provider);
   }
 
   public async request(args: RequestArguments): Promise<unknown> {
-    if (args.method === "eth_accounts" || args.method === "eth_requestAccounts") {
+    if (
+      args.method === "eth_accounts" ||
+      args.method === "eth_requestAccounts"
+    ) {
       return [this._ledgerAddress];
     }
     return this._wrappedProvider.request(args);
@@ -113,7 +140,8 @@ export const TRANSACTION_GAS_LIMIT_CAP = 16_777_216n;
 export function withGasHeadroom(estimate: bigint, multiplier: number): bigint {
   const thousandths = BigInt(Math.round(multiplier * 1000));
   const scaled = (estimate * thousandths + 999n) / 1000n;
-  const capped = scaled < TRANSACTION_GAS_LIMIT_CAP ? scaled : TRANSACTION_GAS_LIMIT_CAP;
+  const capped =
+    scaled < TRANSACTION_GAS_LIMIT_CAP ? scaled : TRANSACTION_GAS_LIMIT_CAP;
   return capped > estimate ? capped : estimate;
 }
 
@@ -124,14 +152,19 @@ export function withGasHeadroom(estimate: bigint, multiplier: number): bigint {
  * Only the limit changes: gas used, and so the cost, is whatever the transaction consumes.
  */
 export class GasHeadroomProvider extends ProviderWrapper {
-  constructor(provider: EIP1193Provider, private readonly _multiplier: number) {
+  constructor(
+    provider: EIP1193Provider,
+    private readonly _multiplier: number,
+  ) {
     super(provider);
   }
 
   public async request(args: RequestArguments): Promise<unknown> {
     const result = await this._wrappedProvider.request(args);
     if (args.method !== "eth_estimateGas") return result;
-    return toQuantity(withGasHeadroom(BigInt(result as string), this._multiplier));
+    return toQuantity(
+      withGasHeadroom(BigInt(result as string), this._multiplier),
+    );
   }
 }
 
@@ -146,15 +179,21 @@ export function isLiveNetwork(networkName: string): boolean {
  */
 export function installLedgerOnlyAccounts(ledgerAddress: string): void {
   extendProvider(async (provider, _config, networkName) =>
-    isLiveNetwork(networkName) ? new LedgerOnlyAccountsProvider(provider, ledgerAddress) : provider
+    isLiveNetwork(networkName)
+      ? new LedgerOnlyAccountsProvider(provider, ledgerAddress)
+      : provider,
   );
 }
 
 /** Register GasHeadroomProvider on live networks whose config sets a gasMultiplier above 1. */
 export function installGasHeadroom(): void {
   extendProvider(async (provider, config, networkName) => {
-    const multiplier = (config.networks[networkName] as { gasMultiplier?: number }).gasMultiplier ?? 1;
-    return isLiveNetwork(networkName) && multiplier > 1 ? new GasHeadroomProvider(provider, multiplier) : provider;
+    const multiplier =
+      (config.networks[networkName] as { gasMultiplier?: number })
+        .gasMultiplier ?? 1;
+    return isLiveNetwork(networkName) && multiplier > 1
+      ? new GasHeadroomProvider(provider, multiplier)
+      : provider;
   });
 }
 
@@ -165,6 +204,8 @@ export function installGasHeadroom(): void {
  */
 export function installSendGuard(): void {
   extendProvider(async (provider, _config, networkName) =>
-    isLiveNetwork(networkName) ? new SendGuardProvider(provider, consoleSendGuardIO) : provider
+    isLiveNetwork(networkName)
+      ? new SendGuardProvider(provider, consoleSendGuardIO)
+      : provider,
   );
 }

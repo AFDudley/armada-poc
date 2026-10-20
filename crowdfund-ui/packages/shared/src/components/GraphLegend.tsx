@@ -3,8 +3,8 @@
 
 export interface GraphLegendProps {
   /** If supplied, legend includes the "your wallet" row. */
-  connectedAddress?: string | null
-  className?: string
+  connectedAddress?: string | null;
+  className?: string;
 }
 
 /** Small coloured circle swatch matching the TreeView node rendering. */
@@ -15,11 +15,15 @@ function Swatch({ color, stroke }: { color?: string; stroke?: string }) {
         cx={7}
         cy={7}
         r={5.5}
-        style={{ fill: color ?? 'none', stroke: stroke ?? color, fillOpacity: color ? 0.6 : 0 }}
+        style={{
+          fill: color ?? "none",
+          stroke: stroke ?? color,
+          fillOpacity: color ? 0.6 : 0,
+        }}
         strokeWidth={1.5}
       />
     </svg>
-  )
+  );
 }
 
 /** Multi-hop marker — circle with a dashed outer ring (matches the
@@ -32,7 +36,11 @@ function MultiHopSwatch() {
         cx={7}
         cy={7}
         r={3.5}
-        style={{ fill: 'var(--hop-0)', stroke: 'var(--hop-0)', fillOpacity: 0.6 }}
+        style={{
+          fill: "var(--hop-0)",
+          stroke: "var(--hop-0)",
+          fillOpacity: 0.6,
+        }}
         strokeWidth={1.5}
       />
       <circle
@@ -40,12 +48,12 @@ function MultiHopSwatch() {
         cy={7}
         r={6}
         fill="none"
-        style={{ stroke: 'var(--hop-multi)' }}
+        style={{ stroke: "var(--hop-multi)" }}
         strokeWidth={1}
         strokeDasharray="2 2"
       />
     </svg>
-  )
+  );
 }
 
 export function GraphLegend({ connectedAddress, className }: GraphLegendProps) {
@@ -55,9 +63,9 @@ export function GraphLegend({ connectedAddress, className }: GraphLegendProps) {
   return (
     <div
       className={[
-        'absolute z-10 rounded-md border border-border bg-card/80 backdrop-blur-sm shadow-sm',
-        className ?? 'bottom-3 left-3',
-      ].join(' ')}
+        "absolute z-10 rounded-md border border-border bg-card/80 backdrop-blur-sm shadow-sm",
+        className ?? "bottom-3 left-3",
+      ].join(" ")}
     >
       <div className="space-y-1.5 px-3 py-2">
         <div className="flex items-center gap-2">
@@ -84,5 +92,5 @@ export function GraphLegend({ connectedAddress, className }: GraphLegendProps) {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -22,10 +22,7 @@ describe("MCP Server — E2E Tests", function () {
   /**
    * Send a JSON-RPC message to the server and collect the response.
    */
-  function sendAndReceive(
-    proc: ChildProcess,
-    message: object
-  ): Promise<any> {
+  function sendAndReceive(proc: ChildProcess, message: object): Promise<any> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error("Timed out waiting for server response"));
@@ -55,11 +52,15 @@ describe("MCP Server — E2E Tests", function () {
   }
 
   function startServer(): ChildProcess {
-    return spawn("npx", ["ts-node", "--project", "tsconfig.json", SERVER_PATH], {
-      cwd: PROJECT_ROOT,
-      env: { ...process.env, DEPLOY_ENV: "local" },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    return spawn(
+      "npx",
+      ["ts-node", "--project", "tsconfig.json", SERVER_PATH],
+      {
+        cwd: PROJECT_ROOT,
+        env: { ...process.env, DEPLOY_ENV: "local" },
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
   }
 
   it("completes MCP protocol handshake (initialize)", async function () {
@@ -105,7 +106,8 @@ describe("MCP Server — E2E Tests", function () {
 
     // Send initialized notification (required by MCP protocol)
     serverProcess.stdin!.write(
-      JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n"
+      JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) +
+        "\n",
     );
 
     // List tools
@@ -144,7 +146,8 @@ describe("MCP Server — E2E Tests", function () {
     });
 
     serverProcess.stdin!.write(
-      JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n"
+      JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) +
+        "\n",
     );
 
     // Call tool

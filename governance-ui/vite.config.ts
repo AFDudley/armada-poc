@@ -1,15 +1,15 @@
 // ABOUTME: Vite configuration for the standalone governance test UI.
 // ABOUTME: Includes a plugin to serve deployment manifests from the parent deployments/ directory.
 
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Serves deployment JSON files from ../deployments/ at /api/deployments/.
@@ -21,55 +21,62 @@ const __dirname = path.dirname(__filename)
  */
 function serveDeployments() {
   return {
-    name: 'serve-deployments',
+    name: "serve-deployments",
     configureServer(server: any) {
       server.middlewares.use(
-        '/api/deployments',
+        "/api/deployments",
         (req: any, res: any, _next: any) => {
-          const urlPath = req.url || ''
-          const deploymentsDir = path.resolve(__dirname, '../deployments')
+          const urlPath = req.url || "";
+          const deploymentsDir = path.resolve(__dirname, "../deployments");
 
           // Directory listing mode: /?list=<prefix>
-          const listMatch = urlPath.match(/^\/?\?list=([a-zA-Z0-9_-]+)/)
+          const listMatch = urlPath.match(/^\/?\?list=([a-zA-Z0-9_-]+)/);
           if (listMatch) {
-            const prefix = listMatch[1]
+            const prefix = listMatch[1];
             if (!fs.existsSync(deploymentsDir)) {
-              res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify([]))
-              return
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify([]));
+              return;
             }
             const matches = fs
               .readdirSync(deploymentsDir)
-              .filter((f) => f.startsWith(prefix) && f.endsWith('.json'))
-              .sort()
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify(matches))
-            return
+              .filter((f) => f.startsWith(prefix) && f.endsWith(".json"))
+              .sort();
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify(matches));
+            return;
           }
 
           // Single file mode
-          const filename = urlPath.replace(/^\//, '').split('?')[0] || ''
-          const filepath = path.resolve(deploymentsDir, filename)
+          const filename = urlPath.replace(/^\//, "").split("?")[0] || "";
+          const filepath = path.resolve(deploymentsDir, filename);
 
           // Prevent path traversal outside the deployments directory
-          if (!filepath.startsWith(deploymentsDir + path.sep) && filepath !== deploymentsDir) {
-            res.statusCode = 403
-            res.end(JSON.stringify({ error: 'Access denied' }))
-            return
+          if (
+            !filepath.startsWith(deploymentsDir + path.sep) &&
+            filepath !== deploymentsDir
+          ) {
+            res.statusCode = 403;
+            res.end(JSON.stringify({ error: "Access denied" }));
+            return;
           }
 
           if (fs.existsSync(filepath)) {
-            const content = fs.readFileSync(filepath, 'utf-8')
-            res.setHeader('Content-Type', 'application/json')
-            res.end(content)
+            const content = fs.readFileSync(filepath, "utf-8");
+            res.setHeader("Content-Type", "application/json");
+            res.end(content);
           } else {
-            res.statusCode = 404
-            res.end(JSON.stringify({ error: `Deployment file not found: ${filename}` }))
+            res.statusCode = 404;
+            res.end(
+              JSON.stringify({
+                error: `Deployment file not found: ${filename}`,
+              }),
+            );
           }
         },
-      )
+      );
     },
-  }
+  };
 }
 
 export default defineConfig({
@@ -79,7 +86,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
-})
+});

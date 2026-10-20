@@ -32,11 +32,7 @@ contract GovernorEventGapsTest is Test, GovernorDeployHelper {
         armToken = new ArmadaToken(deployer, address(timelock));
         treasury = new ArmadaTreasuryGov(address(timelock));
 
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
     }
 
     // WHY: setExcludedAddresses modifies quorum denominator calculations — a critical

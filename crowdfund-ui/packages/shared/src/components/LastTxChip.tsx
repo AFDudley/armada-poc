@@ -1,36 +1,53 @@
 // ABOUTME: Compact chip in the AppShell header showing the latest transaction state.
 // ABOUTME: Click opens a Popover with the full label, explorer link, and error (if any).
 
-import { useAtomValue, useSetAtom } from 'jotai'
-import { CheckCircle2, CircleDashed, Copy, Loader2, XCircle } from 'lucide-react'
-import { toast } from 'sonner'
-import { lastTxAtom, type LastTx, type LastTxStatus } from '../hooks/useTxToast.js'
-import { Button } from './ui/button.js'
-import { CopyToast } from './CopyToast.js'
+import { useAtomValue, useSetAtom } from "jotai";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from './ui/popover.js'
+  CheckCircle2,
+  CircleDashed,
+  Copy,
+  Loader2,
+  XCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  lastTxAtom,
+  type LastTx,
+  type LastTxStatus,
+} from "../hooks/useTxToast.js";
+import { Button } from "./ui/button.js";
+import { CopyToast } from "./CopyToast.js";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover.js";
 
-function StatusIcon({ status, className }: { status: LastTxStatus; className?: string }) {
-  const cls = className ?? 'size-3.5'
-  if (status === 'pending') return <Loader2 className={`${cls} animate-spin text-status-pending`} />
-  if (status === 'submitted') return <CircleDashed className={`${cls} animate-spin text-status-submitted`} />
-  if (status === 'confirmed') return <CheckCircle2 className={`${cls} text-status-confirmed`} />
-  return <XCircle className={`${cls} text-status-failed`} />
+function StatusIcon({
+  status,
+  className,
+}: {
+  status: LastTxStatus;
+  className?: string;
+}) {
+  const cls = className ?? "size-3.5";
+  if (status === "pending")
+    return <Loader2 className={`${cls} animate-spin text-status-pending`} />;
+  if (status === "submitted")
+    return (
+      <CircleDashed className={`${cls} animate-spin text-status-submitted`} />
+    );
+  if (status === "confirmed")
+    return <CheckCircle2 className={`${cls} text-status-confirmed`} />;
+  return <XCircle className={`${cls} text-status-failed`} />;
 }
 
 function statusLabel(status: LastTxStatus): string {
-  if (status === 'pending') return 'Waiting for wallet'
-  if (status === 'submitted') return 'Submitted — pending confirmation'
-  if (status === 'confirmed') return 'Confirmed'
-  return 'Failed'
+  if (status === "pending") return "Waiting for wallet";
+  if (status === "submitted") return "Submitted — pending confirmation";
+  if (status === "confirmed") return "Confirmed";
+  return "Failed";
 }
 
 function shortHash(hash: string | null): string {
-  if (!hash) return '—'
-  return `${hash.slice(0, 6)}…${hash.slice(-4)}`
+  if (!hash) return "—";
+  return `${hash.slice(0, 6)}…${hash.slice(-4)}`;
 }
 
 export interface LastTxChipProps {
@@ -38,17 +55,17 @@ export interface LastTxChipProps {
    *  letting a caller drive it from its own source (e.g. a multi-tx pipeline
    *  store). The Dismiss control is hidden in this mode — the source manages
    *  the chip's lifecycle. */
-  override?: LastTx | null
+  override?: LastTx | null;
 }
 
 export function LastTxChip({ override }: LastTxChipProps = {}) {
-  const atomTx = useAtomValue(lastTxAtom)
-  const setLastTx = useSetAtom(lastTxAtom)
-  const usingOverride = override !== undefined
-  const lastTx = usingOverride ? override : atomTx
-  if (!lastTx) return null
+  const atomTx = useAtomValue(lastTxAtom);
+  const setLastTx = useSetAtom(lastTxAtom);
+  const usingOverride = override !== undefined;
+  const lastTx = usingOverride ? override : atomTx;
+  if (!lastTx) return null;
 
-  const hashDisplay = shortHash(lastTx.hash)
+  const hashDisplay = shortHash(lastTx.hash);
 
   return (
     <Popover>
@@ -96,7 +113,7 @@ export function LastTxChip({ override }: LastTxChipProps = {}) {
                   onClick={() =>
                     navigator.clipboard.writeText(lastTx.hash!).then(
                       () => toast.success(<CopyToast>Hash copied</CopyToast>),
-                      () => toast.error('Clipboard write failed'),
+                      () => toast.error("Clipboard write failed"),
                     )
                   }
                 >
@@ -124,5 +141,5 @@ export function LastTxChip({ override }: LastTxChipProps = {}) {
         </div>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

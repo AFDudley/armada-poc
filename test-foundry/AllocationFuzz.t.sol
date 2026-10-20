@@ -10,12 +10,11 @@ contract AllocationFuzzTest is Test {
     uint256 constant ARM_PRICE = 1e6; // $1.00 per ARM
 
     /// @dev Mirror of ArmadaCrowdfund._computeAllocation
-    function _computeAllocation(
-        uint256 committed,
-        uint256 finalReserve,
-        uint256 finalDemand,
-        uint256 effectiveCap
-    ) internal pure returns (uint256 allocArm, uint256 allocUsdc, uint256 refundUsdc) {
+    function _computeAllocation(uint256 committed, uint256 finalReserve, uint256 finalDemand, uint256 effectiveCap)
+        internal
+        pure
+        returns (uint256 allocArm, uint256 allocUsdc, uint256 refundUsdc)
+    {
         if (committed == 0) return (0, 0, 0);
         if (finalDemand == 0) return (0, 0, 0); // impossible in practice, but safe
 
@@ -44,7 +43,7 @@ contract AllocationFuzzTest is Test {
     ) public pure {
         // Bound inputs to realistic ranges
         committed = bound(committed, 1, 15_000 * 1e6); // max hop-0 cap
-        reserve = bound(reserve, 1, 1_800_000 * 1e6);  // max sale size
+        reserve = bound(reserve, 1, 1_800_000 * 1e6); // max sale size
         demand = bound(demand, committed, 2_000_000 * 1e6); // demand >= committed (participant is part of demand)
         effectiveCap = bound(effectiveCap, 1, committed * 3); // variety: sometimes below, sometimes above
 
@@ -65,18 +64,14 @@ contract AllocationFuzzTest is Test {
         demand = bound(demand, 1, 2_000_000 * 1e6);
         effectiveCap = bound(effectiveCap, 1, committed * 3);
 
-        (, uint256 allocUsdc, ) = _computeAllocation(committed, reserve, demand, effectiveCap);
+        (, uint256 allocUsdc,) = _computeAllocation(committed, reserve, demand, effectiveCap);
 
         assertLe(allocUsdc, committed, "allocUsdc > committed");
     }
 
     /// @notice When demand > reserve, allocUsdc <= reserve (single participant can't drain reserve)
     /// @dev More precisely: allocUsdc <= (committed * reserve) / demand <= reserve
-    function testFuzz_allocNeverExceedsReserve(
-        uint256 committed,
-        uint256 reserve,
-        uint256 demand
-    ) public pure {
+    function testFuzz_allocNeverExceedsReserve(uint256 committed, uint256 reserve, uint256 demand) public pure {
         committed = bound(committed, 1, 15_000 * 1e6);
         reserve = bound(reserve, 1, 1_800_000 * 1e6);
         // In the real system, demand >= committed (demand is sum of ALL commitments at a hop)
@@ -84,17 +79,13 @@ contract AllocationFuzzTest is Test {
 
         if (demand <= reserve) return; // skip under-subscribed cases
 
-        (, uint256 allocUsdc, ) = _computeAllocation(committed, reserve, demand, type(uint256).max);
+        (, uint256 allocUsdc,) = _computeAllocation(committed, reserve, demand, type(uint256).max);
 
         assertLe(allocUsdc, reserve, "allocUsdc > reserve when over-subscribed");
     }
 
     /// @notice When demand <= reserve, allocUsdc == committed (full allocation)
-    function testFuzz_underSubscribedFullAllocation(
-        uint256 committed,
-        uint256 reserve,
-        uint256 demand
-    ) public pure {
+    function testFuzz_underSubscribedFullAllocation(uint256 committed, uint256 reserve, uint256 demand) public pure {
         committed = bound(committed, 1, 15_000 * 1e6);
         demand = bound(demand, committed, 1_000_000 * 1e6);
         reserve = bound(reserve, demand, 1_800_000 * 1e6); // under-subscribed: reserve >= demand
@@ -107,17 +98,13 @@ contract AllocationFuzzTest is Test {
     }
 
     /// @notice ARM allocation matches USDC allocation at ARM_PRICE rate (two-step formula)
-    function testFuzz_armMatchesUsdcAtPrice(
-        uint256 committed,
-        uint256 reserve,
-        uint256 demand
-    ) public pure {
+    function testFuzz_armMatchesUsdcAtPrice(uint256 committed, uint256 reserve, uint256 demand) public pure {
         committed = bound(committed, 1, 15_000 * 1e6);
         reserve = bound(reserve, 1, 1_800_000 * 1e6);
         demand = bound(demand, committed, 2_000_000 * 1e6);
 
         // No cap for this test — focus on ARM/USDC relationship
-        (uint256 allocArm, uint256 allocUsdc, ) = _computeAllocation(committed, reserve, demand, type(uint256).max);
+        (uint256 allocArm, uint256 allocUsdc,) = _computeAllocation(committed, reserve, demand, type(uint256).max);
 
         // Two-step formula: allocArm = (allocUsdc * 1e18) / ARM_PRICE
         uint256 expectedArm = (allocUsdc * 1e18) / ARM_PRICE;
@@ -126,10 +113,7 @@ contract AllocationFuzzTest is Test {
 
     /// @notice Sum-of-parts: for N participants in an over-subscribed hop,
     ///         sum(allocUsdc_i) <= reserve (no more than reserve is allocated)
-    function testFuzz_sumOfPartsNeverExceedsReserve(
-        uint256 seed,
-        uint8 numParticipants
-    ) public pure {
+    function testFuzz_sumOfPartsNeverExceedsReserve(uint256 seed, uint8 numParticipants) public pure {
         numParticipants = uint8(bound(numParticipants, 2, 50));
         uint256 reserve = 840_000 * 1e6; // hop-0 reserve at BASE_SALE
 
@@ -150,7 +134,7 @@ contract AllocationFuzzTest is Test {
         // Compute sum of allocations
         uint256 sumAllocUsdc = 0;
         for (uint256 i = 0; i < numParticipants; i++) {
-            (, uint256 allocUsdc, ) = _computeAllocation(commitments[i], reserve, totalDemand, type(uint256).max);
+            (, uint256 allocUsdc,) = _computeAllocation(commitments[i], reserve, totalDemand, type(uint256).max);
             sumAllocUsdc += allocUsdc;
         }
 
@@ -162,7 +146,8 @@ contract AllocationFuzzTest is Test {
         reserve = bound(reserve, 1, 1_800_000 * 1e6);
         demand = bound(demand, 1, 2_000_000 * 1e6);
 
-        (uint256 allocArm, uint256 allocUsdc, uint256 refundUsdc) = _computeAllocation(0, reserve, demand, type(uint256).max);
+        (uint256 allocArm, uint256 allocUsdc, uint256 refundUsdc) =
+            _computeAllocation(0, reserve, demand, type(uint256).max);
 
         assertEq(allocArm, 0);
         assertEq(allocUsdc, 0);
@@ -170,19 +155,17 @@ contract AllocationFuzzTest is Test {
     }
 
     /// @notice Pro-rata scaling is monotonic: if A committed more than B, A gets at least as much
-    function testFuzz_proRataMonotonicity(
-        uint256 commitA,
-        uint256 commitB,
-        uint256 reserve,
-        uint256 demand
-    ) public pure {
+    function testFuzz_proRataMonotonicity(uint256 commitA, uint256 commitB, uint256 reserve, uint256 demand)
+        public
+        pure
+    {
         commitA = bound(commitA, 1, 15_000 * 1e6);
         commitB = bound(commitB, 1, commitA); // B <= A
         reserve = bound(reserve, 1, 1_800_000 * 1e6);
         demand = bound(demand, commitA, 2_000_000 * 1e6);
 
-        (, uint256 allocA, ) = _computeAllocation(commitA, reserve, demand, type(uint256).max);
-        (, uint256 allocB, ) = _computeAllocation(commitB, reserve, demand, type(uint256).max);
+        (, uint256 allocA,) = _computeAllocation(commitA, reserve, demand, type(uint256).max);
+        (, uint256 allocB,) = _computeAllocation(commitB, reserve, demand, type(uint256).max);
 
         assertGe(allocA, allocB, "Larger commitment got less allocation");
     }
@@ -199,7 +182,7 @@ contract AllocationFuzzTest is Test {
         reserve = bound(reserve, 1, 1_800_000 * 1e6);
         demand = bound(demand, committed, 2_000_000 * 1e6);
 
-        (, , uint256 refundUsdc) = _computeAllocation(committed, reserve, demand, effectiveCap);
+        (,, uint256 refundUsdc) = _computeAllocation(committed, reserve, demand, effectiveCap);
 
         uint256 excess = committed - effectiveCap;
         assertGe(refundUsdc, excess, "Refund should include at least the over-cap excess");

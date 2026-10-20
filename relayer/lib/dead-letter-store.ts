@@ -65,7 +65,11 @@ const VALID_REASONS: ReadonlySet<string> = new Set<DeadLetterReason>([
   "fee-too-low",
 ]);
 
-function validate(parsed: unknown, chainName: string, path: string): DeadLetterData {
+function validate(
+  parsed: unknown,
+  chainName: string,
+  path: string,
+): DeadLetterData {
   const candidate = parsed as { records?: unknown; updatedAt?: unknown };
   if (!Array.isArray(candidate.records)) {
     throw new Error(
@@ -81,8 +85,14 @@ function validate(parsed: unknown, chainName: string, path: string): DeadLetterD
       `dead-letter-store: invalid 'updatedAt' for chain '${chainName}' at ${path}. Delete to reset.`,
     );
   }
-  const records = candidate.records.map((raw, idx) => validateRecord(raw, chainName, path, idx));
-  return { records, updatedAt: candidate.updatedAt, version: DEAD_LETTER_SCHEMA_VERSION };
+  const records = candidate.records.map((raw, idx) =>
+    validateRecord(raw, chainName, path, idx),
+  );
+  return {
+    records,
+    updatedAt: candidate.updatedAt,
+    version: DEAD_LETTER_SCHEMA_VERSION,
+  };
 }
 
 function validateRecord(
@@ -92,10 +102,17 @@ function validateRecord(
   idx: number,
 ): DeadLetterRecord {
   if (typeof raw !== "object" || raw === null) {
-    throw new Error(`dead-letter-store: records[${idx}] for '${chainName}' at ${path} is not an object.`);
+    throw new Error(
+      `dead-letter-store: records[${idx}] for '${chainName}' at ${path} is not an object.`,
+    );
   }
   const r = raw as Partial<DeadLetterRecord>;
-  const strings: (keyof DeadLetterRecord)[] = ["id", "sourceTxHash", "rawMessage", "reason"];
+  const strings: (keyof DeadLetterRecord)[] = [
+    "id",
+    "sourceTxHash",
+    "rawMessage",
+    "reason",
+  ];
   for (const field of strings) {
     if (typeof r[field] !== "string") {
       throw new Error(
@@ -108,7 +125,11 @@ function validateRecord(
       `dead-letter-store: records[${idx}].reason '${r.reason}' for '${chainName}' at ${path} is not a known reason.`,
     );
   }
-  const numbers: (keyof DeadLetterRecord)[] = ["sourceDomain", "destinationDomain", "at"];
+  const numbers: (keyof DeadLetterRecord)[] = [
+    "sourceDomain",
+    "destinationDomain",
+    "at",
+  ];
   for (const field of numbers) {
     if (typeof r[field] !== "number" || !Number.isFinite(r[field] as number)) {
       throw new Error(

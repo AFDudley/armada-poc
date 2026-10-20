@@ -29,7 +29,7 @@ contract CrowdfundFinalizeGasColdTest is Test {
 
     uint256 constant ARM_FUNDING = 1_800_000 * 1e18;
     uint256 constant TX_GAS_CAP = 16_777_216; // EIP-7825 per-tx cap (2^24)
-    uint256 constant MIN_COMMIT = 50 * 1e6;     // ArmadaCrowdfund.MIN_COMMIT
+    uint256 constant MIN_COMMIT = 50 * 1e6; // ArmadaCrowdfund.MIN_COMMIT
 
     function setUp() public {
         admin = address(this);
@@ -43,16 +43,22 @@ contract CrowdfundFinalizeGasColdTest is Test {
     }
 
     function _deploy() internal returns (ArmadaCrowdfund cf) {
-        cf = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp
-        );
+        cf = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp);
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
     }
 
-    function _seedAddr(uint256 i) internal pure returns (address) { return address(uint160(0x10000000 + i)); }
-    function _hop1Addr(uint256 i) internal pure returns (address) { return address(uint160(0x20000000 + i)); }
-    function _hop2Addr(uint256 i) internal pure returns (address) { return address(uint160(0x30000000 + i)); }
+    function _seedAddr(uint256 i) internal pure returns (address) {
+        return address(uint160(0x10000000 + i));
+    }
+
+    function _hop1Addr(uint256 i) internal pure returns (address) {
+        return address(uint160(0x20000000 + i));
+    }
+
+    function _hop2Addr(uint256 i) internal pure returns (address) {
+        return address(uint160(0x30000000 + i));
+    }
 
     function _commitAs(ArmadaCrowdfund cf, address who, uint8 hop, uint256 amount) internal {
         usdc.mint(who, amount);
@@ -65,22 +71,24 @@ contract CrowdfundFinalizeGasColdTest is Test {
     /// @dev Build the invite tree for (h0, h1, h2) nodes. Commit amounts are supplied per hop so
     ///      the same tree can drive either the refund path (MIN_COMMIT everywhere) or the success path.
     ///      July-2026 structural ceilings: h0 ≤ 180, h1 ≤ 3*h0 + 100, h2 ≤ 2*h1 + 120.
-    function _build(
-        uint256 h0,
-        uint256 h1,
-        uint256 h2,
-        uint256 hop0Amt,
-        uint256 hop1RealCount,
-        uint256 hop1RealAmt
-    ) internal returns (ArmadaCrowdfund cf) {
+    function _build(uint256 h0, uint256 h1, uint256 h2, uint256 hop0Amt, uint256 hop1RealCount, uint256 hop1RealAmt)
+        internal
+        returns (ArmadaCrowdfund cf)
+    {
         cf = _buildTree(h0, h1, h2);
 
         // commits: hop-0 at hop0Amt; first hop1RealCount hop-1 nodes at hop1RealAmt, rest at
         // MIN_COMMIT; all hop-2 at MIN_COMMIT. Every node commits > 0 so the iteration body runs for it.
         uint256 dust = MIN_COMMIT;
-        for (uint256 i = 0; i < h0; i++) _commitAs(cf, _seedAddr(i), 0, hop0Amt);
-        for (uint256 i = 0; i < h1; i++) _commitAs(cf, _hop1Addr(i), 1, i < hop1RealCount ? hop1RealAmt : dust);
-        for (uint256 i = 0; i < h2; i++) _commitAs(cf, _hop2Addr(i), 2, dust);
+        for (uint256 i = 0; i < h0; i++) {
+            _commitAs(cf, _seedAddr(i), 0, hop0Amt);
+        }
+        for (uint256 i = 0; i < h1; i++) {
+            _commitAs(cf, _hop1Addr(i), 1, i < hop1RealCount ? hop1RealAmt : dust);
+        }
+        for (uint256 i = 0; i < h2; i++) {
+            _commitAs(cf, _hop2Addr(i), 2, dust);
+        }
     }
 
     /// @dev Build the invite tree only — whitelist seeds/invitees, NO commits. Isolates the
@@ -95,7 +103,9 @@ contract CrowdfundFinalizeGasColdTest is Test {
         // hop-0 seeds
         if (h0 > 0) {
             address[] memory seeds = new address[](h0);
-            for (uint256 i = 0; i < h0; i++) seeds[i] = _seedAddr(i);
+            for (uint256 i = 0; i < h0; i++) {
+                seeds[i] = _seedAddr(i);
+            }
             cf.addSeeds(seeds);
         }
 
@@ -145,15 +155,25 @@ contract CrowdfundFinalizeGasColdTest is Test {
         emit log_named_uint(string.concat(label, " gas  "), gasUsed);
         emit log_named_uint(string.concat(label, " pctCap x100"), gasUsed * 10000 / TX_GAS_CAP);
         emit log_named_string(
-            string.concat(label, " under 2^24?"),
-            gasUsed <= TX_GAS_CAP ? "YES" : "NO - finalize() UNSUBMITTABLE"
+            string.concat(label, " under 2^24?"), gasUsed <= TX_GAS_CAP ? "YES" : "NO - finalize() UNSUBMITTABLE"
         );
     }
 
     // ---- Cold gas profile at reachable node counts (the guard bounds the tree at 1,800). ----
-    function test_cold_0500_refund() public { ArmadaCrowdfund cf = _buildRefund(180, 320, 0);   _report(" 500(refund)",  500, _measure(cf)); }
-    function test_cold_1000_refund() public { ArmadaCrowdfund cf = _buildRefund(180, 540, 280); _report("1000(refund)", 1000, _measure(cf)); }
-    function test_cold_1500_refund() public { ArmadaCrowdfund cf = _buildRefund(180, 640, 680); _report("1500(refund)", 1500, _measure(cf)); }
+    function test_cold_0500_refund() public {
+        ArmadaCrowdfund cf = _buildRefund(180, 320, 0);
+        _report(" 500(refund)", 500, _measure(cf));
+    }
+
+    function test_cold_1000_refund() public {
+        ArmadaCrowdfund cf = _buildRefund(180, 540, 280);
+        _report("1000(refund)", 1000, _measure(cf));
+    }
+
+    function test_cold_1500_refund() public {
+        ArmadaCrowdfund cf = _buildRefund(180, 640, 680);
+        _report("1500(refund)", 1500, _measure(cf));
+    }
 
     // ---- GUARD: at the MAX_FINALIZE_NODES cap, cold one-shot finalize() must stay under 2^24.
     //      Regression tripwire — fails if per-node cost or fixed overhead ever rises past the cap.

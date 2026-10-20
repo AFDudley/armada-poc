@@ -1,28 +1,22 @@
 // ABOUTME: Post-commit Whitelist a friend modal — hop allowance rows + in-place invite actions.
 // ABOUTME: Matches InvitesCard hop-row pattern; wired to live CrowdfundInviteSlotSection handlers.
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-import { Button } from '@armada/ui'
-import { FlowChrome } from './FlowChrome'
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@armada/ui";
+import { FlowChrome } from "./FlowChrome";
 import {
   InviteHopFocusChrome,
   useInviteHopFocus,
-} from '../InviteFlow/useInviteSlotFocus'
-import type { CrowdfundInviteSlotSection } from '../CrowdfundExperience/CrowdfundExperience'
-import { HopAvailableRow } from '../MyPosition/InvitesCard'
-import inviteCardStyles from '../MyPosition/InvitesCard.module.css'
+} from "../InviteFlow/useInviteSlotFocus";
+import type { CrowdfundInviteSlotSection } from "../CrowdfundExperience/CrowdfundExperience";
+import { HopAvailableRow } from "../MyPosition/InvitesCard";
+import inviteCardStyles from "../MyPosition/InvitesCard.module.css";
 import {
   availableForHop,
   formatInviteeHop,
   hopsWithAllowance,
   type InviteeHop,
-} from '../MyPosition/inviteModel'
+} from "../MyPosition/inviteModel";
 import {
   allowanceFromInviteSections,
   firstEmptySlotId,
@@ -30,50 +24,50 @@ import {
   issuedSlotsFromInviteSections,
   revokeLinkViaSections,
   sectionForInviteeHop,
-} from '../MyPosition/inviteSectionsToCard'
-import { useIsMobileLayout } from '../../hooks/useIsMobileLayout'
-import inviteStyles from '../InviteFlow/screens/InviteSlots.module.css'
-import styles from './ParticipateFlowInviteSlots.module.css'
+} from "../MyPosition/inviteSectionsToCard";
+import { useIsMobileLayout } from "../../hooks/useIsMobileLayout";
+import inviteStyles from "../InviteFlow/screens/InviteSlots.module.css";
+import styles from "./ParticipateFlowInviteSlots.module.css";
 
 export interface ParticipateFlowInviteSlotsProps {
   /** One section per eligible hop, each carrying its own slot list +
    *  handlers. Pass an empty array for the "no invite slots" empty state. */
-  sections: ReadonlyArray<CrowdfundInviteSlotSection>
+  sections: ReadonlyArray<CrowdfundInviteSlotSection>;
   /** Connected wallet — self-invite CTA when the pasted address matches. */
-  selfWalletAddress?: string
-  onDoItLater?: () => void
+  selfWalletAddress?: string;
+  onDoItLater?: () => void;
   /** FlowChrome back — returns to the previous participate step (usually confirmation). */
-  onBack?: () => void
+  onBack?: () => void;
   /** FlowChrome close — dismisses the participate invite step. */
-  onClose?: () => void
+  onClose?: () => void;
   /** Reveal a just-created invite in the sent list (Done). */
-  onConfirmCreated?: (inviteId: number) => void
+  onConfirmCreated?: (inviteId: number) => void;
   /** Free the slot if the create confirmation is abandoned / discarded. */
-  onDiscardCreated?: (inviteId: number) => void
+  onDiscardCreated?: (inviteId: number) => void;
 }
 
 function whitelistSubtitle(
   sections: ReadonlyArray<CrowdfundInviteSlotSection>,
 ): string {
-  const allowance = allowanceFromInviteSections(sections)
-  const issuedSlots = issuedSlotsFromInviteSections(sections)
-  const hopRows = hopsWithAllowance(allowance)
+  const allowance = allowanceFromInviteSections(sections);
+  const issuedSlots = issuedSlotsFromInviteSections(sections);
+  const hopRows = hopsWithAllowance(allowance);
   const availableHops = hopRows.filter(
     (hop) => availableForHop(issuedSlots, allowance, hop) > 0,
-  )
+  );
   const total = availableHops.reduce(
     (sum, hop) => sum + availableForHop(issuedSlots, allowance, hop),
     0,
-  )
+  );
   if (total <= 0) {
-    return 'You have no invites left to send right now.'
+    return "You have no invites left to send right now.";
   }
-  const countLabel = total === 1 ? '1 invite left' : `${total} invites left`
+  const countLabel = total === 1 ? "1 invite left" : `${total} invites left`;
   if (availableHops.length === 1) {
-    const hop = availableHops[0]
-    return `You have ${countLabel} for ${formatInviteeHop(hop!)}. Share a link (no gas) or whitelist an address onchain so a friend can join.`
+    const hop = availableHops[0];
+    return `You have ${countLabel} for ${formatInviteeHop(hop!)}. Share a link (no gas) or whitelist an address onchain so a friend can join.`;
   }
-  return `You have ${countLabel}. Share a link (no gas) or whitelist an address onchain so a friend can join the fleet.`
+  return `You have ${countLabel}. Share a link (no gas) or whitelist an address onchain so a friend can join the fleet.`;
 }
 
 export function ParticipateFlowInviteSlots({
@@ -85,137 +79,137 @@ export function ParticipateFlowInviteSlots({
   onConfirmCreated,
   onDiscardCreated,
 }: ParticipateFlowInviteSlotsProps) {
-  const isMobile = useIsMobileLayout()
-  const focusApi = useInviteHopFocus()
+  const isMobile = useIsMobileLayout();
+  const focusApi = useInviteHopFocus();
   const [rollFromByHop, setRollFromByHop] = useState<
     Partial<Record<InviteeHop, number>>
-  >({})
+  >({});
   const actionAvailableSnapshotRef = useRef<Partial<
     Record<InviteeHop, number>
-  > | null>(null)
+  > | null>(null);
 
   const allowance = useMemo(
     () => allowanceFromInviteSections(sections),
     [sections],
-  )
+  );
   const issuedSlots = useMemo(
     () => issuedSlotsFromInviteSections(sections),
     [sections],
-  )
-  const hopRows = useMemo(() => hopsWithAllowance(allowance), [allowance])
+  );
+  const hopRows = useMemo(() => hopsWithAllowance(allowance), [allowance]);
 
-  const isEmpty = hopRows.length === 0
-  const isActionView = focusApi.view === 'action'
+  const isEmpty = hopRows.length === 0;
+  const isActionView = focusApi.view === "action";
   /** Mobile keeps the hop list under the action sheet — do not swap the chrome. */
-  const isInPlaceAction = isActionView && !isMobile
-  const subtitle = useMemo(() => whitelistSubtitle(sections), [sections])
+  const isInPlaceAction = isActionView && !isMobile;
+  const subtitle = useMemo(() => whitelistSubtitle(sections), [sections]);
 
   const loadingHop = useMemo((): InviteeHop | null => {
     for (const section of sections) {
-      if (section.config.loadingId == null) continue
-      const invitee = (section.hop + 1) as InviteeHop
-      if (invitee === 1 || invitee === 2) return invitee
+      if (section.config.loadingId == null) continue;
+      const invitee = (section.hop + 1) as InviteeHop;
+      if (invitee === 1 || invitee === 2) return invitee;
     }
-    return null
-  }, [sections])
+    return null;
+  }, [sections]);
 
   const copiedInviteId = useMemo(() => {
     for (const section of sections) {
-      if (section.config.copiedId != null) return section.config.copiedId
+      if (section.config.copiedId != null) return section.config.copiedId;
     }
-    return null
-  }, [sections])
+    return null;
+  }, [sections]);
 
-  const resolveEns = sections[0]?.config.resolveEns
+  const resolveEns = sections[0]?.config.resolveEns;
 
   // Snapshot available counts when entering the action screen so we can roll
   // the hop thumb down when returning after a successful invite.
   useEffect(() => {
     if (isActionView) {
       if (actionAvailableSnapshotRef.current == null) {
-        const snap: Partial<Record<InviteeHop, number>> = {}
+        const snap: Partial<Record<InviteeHop, number>> = {};
         for (const hop of hopRows) {
-          snap[hop] = availableForHop(issuedSlots, allowance, hop)
+          snap[hop] = availableForHop(issuedSlots, allowance, hop);
         }
-        actionAvailableSnapshotRef.current = snap
+        actionAvailableSnapshotRef.current = snap;
       }
-      return
+      return;
     }
 
-    const snap = actionAvailableSnapshotRef.current
-    if (!snap) return
-    actionAvailableSnapshotRef.current = null
-    const nextRoll: Partial<Record<InviteeHop, number>> = {}
+    const snap = actionAvailableSnapshotRef.current;
+    if (!snap) return;
+    actionAvailableSnapshotRef.current = null;
+    const nextRoll: Partial<Record<InviteeHop, number>> = {};
     for (const hop of hopRows) {
-      const from = snap[hop]
-      const to = availableForHop(issuedSlots, allowance, hop)
-      if (from != null && from > to) nextRoll[hop] = from
+      const from = snap[hop];
+      const to = availableForHop(issuedSlots, allowance, hop);
+      if (from != null && from > to) nextRoll[hop] = from;
     }
-    if (Object.keys(nextRoll).length > 0) setRollFromByHop(nextRoll)
-  }, [isActionView, hopRows, issuedSlots, allowance])
+    if (Object.keys(nextRoll).length > 0) setRollFromByHop(nextRoll);
+  }, [isActionView, hopRows, issuedSlots, allowance]);
 
   const handleGenerateLink = useCallback(
     async (hop: InviteeHop) => {
-      const section = sectionForInviteeHop(sections, hop)
-      if (!section) return
+      const section = sectionForInviteeHop(sections, hop);
+      if (!section) return;
       if (section.config.isWrongNetwork) {
-        section.config.onSwitchNetwork?.()
-        return
+        section.config.onSwitchNetwork?.();
+        return;
       }
-      const emptyId = firstEmptySlotId(section)
-      if (emptyId == null) return
-      const created = await section.config.onGenerateLink(emptyId)
+      const emptyId = firstEmptySlotId(section);
+      if (emptyId == null) return;
+      const created = await section.config.onGenerateLink(emptyId);
       if (
         created &&
-        typeof created === 'object' &&
-        'link' in created &&
-        'expiresAt' in created &&
-        'id' in created &&
-        typeof created.link === 'string' &&
+        typeof created === "object" &&
+        "link" in created &&
+        "expiresAt" in created &&
+        "id" in created &&
+        typeof created.link === "string" &&
         created.expiresAt instanceof Date &&
-        typeof created.id === 'number'
+        typeof created.id === "number"
       ) {
         return {
           id: created.id,
           link: created.link,
           expiresAt: created.expiresAt,
-        }
+        };
       }
     },
     [sections],
-  )
+  );
 
   const handleInviteOnchain = useCallback(
     (hop: InviteeHop, address: string, ensName?: string) =>
       inviteOnchainViaSections(sections, hop, address, ensName),
     [sections],
-  )
+  );
 
   const handleCopy = useCallback(
     (id: number, link: string) => {
       for (const section of sections) {
         if (section.config.slots.some((slot) => slot.id === id)) {
-          section.config.onCopy(id, link)
-          return
+          section.config.onCopy(id, link);
+          return;
         }
       }
     },
     [sections],
-  )
+  );
 
   // Revoke by the link itself, never by `id`: live rows re-sort as on-chain
   // invites land, so a captured slot id can point at a different pending link.
   const handleRevoke = useCallback(
     async (_id: number, link?: string) => {
-      if (link) revokeLinkViaSections(sections, link)
+      if (link) revokeLinkViaSections(sections, link);
     },
     [sections],
-  )
+  );
 
   const hopList = (
     <div className={inviteCardStyles.hopList} role="list">
       {hopRows.map((hop) => {
-        const available = availableForHop(issuedSlots, allowance, hop)
+        const available = availableForHop(issuedSlots, allowance, hop);
         return (
           <HopAvailableRow
             key={hop}
@@ -227,17 +221,17 @@ export function ParticipateFlowInviteSlots({
             inviteButtonRef={(el) => focusApi.registerInviteButton(hop, el)}
             onRollComplete={() =>
               setRollFromByHop((prev) => {
-                if (prev[hop] == null) return prev
-                const next = { ...prev }
-                delete next[hop]
-                return next
+                if (prev[hop] == null) return prev;
+                const next = { ...prev };
+                delete next[hop];
+                return next;
               })
             }
           />
-        )
+        );
       })}
     </div>
-  )
+  );
 
   const listBody = (
     <div className={styles.scroll}>
@@ -251,12 +245,12 @@ export function ParticipateFlowInviteSlots({
         hopList
       )}
     </div>
-  )
+  );
 
   return (
     <div className={styles.layout}>
       <div
-        className={[inviteStyles.shell, styles.shell].join(' ')}
+        className={[inviteStyles.shell, styles.shell].join(" ")}
         data-flow-shell
         data-invite-surface=""
       >
@@ -271,9 +265,7 @@ export function ParticipateFlowInviteSlots({
               closeAriaLabel="Close invite flow"
               backAriaLabel="Back to confirmation"
             />
-            {!isEmpty ? (
-              <p className={styles.subtitle}>{subtitle}</p>
-            ) : null}
+            {!isEmpty ? <p className={styles.subtitle}>{subtitle}</p> : null}
           </div>
         ) : null}
 
@@ -297,7 +289,7 @@ export function ParticipateFlowInviteSlots({
         )}
       </div>
 
-      {onDoItLater && focusApi.view === 'list' && (
+      {onDoItLater && focusApi.view === "list" && (
         <div className={styles.footer}>
           <Button
             variant="ghost"
@@ -309,5 +301,5 @@ export function ParticipateFlowInviteSlots({
         </div>
       )}
     </div>
-  )
+  );
 }

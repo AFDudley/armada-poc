@@ -56,11 +56,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         treasury = new ArmadaTreasuryGov(address(timelock));
 
         // Deploy governor
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Setup: whitelist deployer so they can transfer tokens
         address[] memory whitelist = new address[](3);
@@ -104,12 +100,10 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         return governor.propose(ProposalType.Standard, targets, values, calldatas, "test");
     }
 
-    function _proposeWithCalldata(
-        address proposer,
-        ProposalType pType,
-        address target,
-        bytes memory data
-    ) internal returns (uint256) {
+    function _proposeWithCalldata(address proposer, ProposalType pType, address target, bytes memory data)
+        internal
+        returns (uint256)
+    {
         address[] memory targets = new address[](1);
         targets[0] = target;
         uint256[] memory values = new uint256[](1);
@@ -222,15 +216,13 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
     function test_classify_registeredSelectorForcesExtended() public {
         // setProposalTypeParams is registered as extended in constructor
         bytes memory data = abi.encodeWithSelector(
-            governor.setProposalTypeParams.selector,
-            ProposalType.Standard,
-            ProposalParams(2 days, 7 days, 2 days, 2000)
+            governor.setProposalTypeParams.selector, ProposalType.Standard, ProposalParams(2 days, 7 days, 2 days, 2000)
         );
 
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
         // Check it was classified as Extended
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -241,7 +233,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         bytes memory data = abi.encodeWithSignature("proposalCount()");
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -250,7 +242,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         bytes memory data = abi.encodeWithSignature("proposalCount()");
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Extended, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -271,7 +263,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         vm.prank(alice);
         uint256 proposalId = governor.propose(ProposalType.Standard, targets, values, calldatas, "mixed");
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -285,7 +277,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         bytes memory data = abi.encodeWithSelector(governor.setStewardContract.selector, address(0x1234));
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -305,7 +297,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         bytes memory data = abi.encodeWithSelector(newSelector, uint256(42));
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -372,14 +364,11 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
 
         // Distribute 60,000 USDC (6% > 5% threshold) → Extended
         bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("distribute(address,address,uint256)")),
-            address(usdc),
-            alice,
-            60_000e6
+            bytes4(keccak256("distribute(address,address,uint256)")), address(usdc), alice, 60_000e6
         );
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(treasury), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -388,14 +377,11 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
 
         // Distribute 40,000 USDC (4% < 5% threshold) → Standard
         bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("distribute(address,address,uint256)")),
-            address(usdc),
-            alice,
-            40_000e6
+            bytes4(keccak256("distribute(address,address,uint256)")), address(usdc), alice, 40_000e6
         );
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(treasury), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Standard));
     }
 
@@ -407,14 +393,10 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         vm.deal(address(treasury), 100 ether);
 
         // 6 ETH > 5% of 100 ETH → Extended
-        bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("distributeETH(address,uint256)")),
-            alice,
-            6 ether
-        );
+        bytes memory data = abi.encodeWithSelector(bytes4(keccak256("distributeETH(address,uint256)")), alice, 6 ether);
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(treasury), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -424,14 +406,10 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         vm.deal(address(treasury), 100 ether);
 
         // 4 ETH < 5% of 100 ETH → Standard
-        bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("distributeETH(address,uint256)")),
-            alice,
-            4 ether
-        );
+        bytes memory data = abi.encodeWithSelector(bytes4(keccak256("distributeETH(address,uint256)")), alice, 4 ether);
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(treasury), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Standard));
     }
 
@@ -458,7 +436,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         vm.prank(alice);
         uint256 proposalId = governor.propose(ProposalType.Standard, targets, values, calldatas, "split usdc");
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -480,7 +458,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         vm.prank(alice);
         uint256 proposalId = governor.propose(ProposalType.Standard, targets, values, calldatas, "split eth");
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -501,7 +479,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         vm.prank(alice);
         uint256 proposalId = governor.propose(ProposalType.Standard, targets, values, calldatas, "below threshold");
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Standard));
     }
 
@@ -522,12 +500,12 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         uint256[] memory values = new uint256[](2);
         bytes[] memory calldatas = new bytes[](2);
         calldatas[0] = abi.encodeWithSelector(distSel, address(usdc), alice, 40_000e6); // 4% of USDC
-        calldatas[1] = abi.encodeWithSelector(distSel, address(dai), alice, 40_000e6);  // 4% of DAI
+        calldatas[1] = abi.encodeWithSelector(distSel, address(dai), alice, 40_000e6); // 4% of DAI
 
         vm.prank(alice);
         uint256 proposalId = governor.propose(ProposalType.Standard, targets, values, calldatas, "two tokens");
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Standard));
     }
 
@@ -553,7 +531,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         vm.prank(alice);
         uint256 proposalId = governor.propose(ProposalType.Standard, targets, values, calldatas, "mixed targets");
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Standard));
     }
 
@@ -562,60 +540,45 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
     // ═══════════════════════════════════════════════════════════════
 
     function test_classify_setBaseArmadaTake_forcesExtended() public {
-        bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("setBaseArmadaTake(uint256)")),
-            uint256(500)
-        );
+        bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setBaseArmadaTake(uint256)")), uint256(500));
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
     function test_classify_addTier_forcesExtended() public {
-        bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("addTier(uint256,uint256)")),
-            uint256(1_000_000e6),
-            uint256(300)
-        );
+        bytes memory data =
+            abi.encodeWithSelector(bytes4(keccak256("addTier(uint256,uint256)")), uint256(1_000_000e6), uint256(300));
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
     function test_classify_setTier_forcesExtended() public {
         bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("setTier(uint256,uint256,uint256)")),
-            uint256(0),
-            uint256(500_000e6),
-            uint256(400)
+            bytes4(keccak256("setTier(uint256,uint256,uint256)")), uint256(0), uint256(500_000e6), uint256(400)
         );
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
     function test_classify_removeTier_forcesExtended() public {
-        bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("removeTier(uint256)")),
-            uint256(0)
-        );
+        bytes memory data = abi.encodeWithSelector(bytes4(keccak256("removeTier(uint256)")), uint256(0));
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
     function test_classify_setYieldFee_forcesExtended() public {
-        bytes memory data = abi.encodeWithSelector(
-            bytes4(keccak256("setYieldFee(uint256)")),
-            uint256(1000)
-        );
+        bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setYieldFee(uint256)")), uint256(1000));
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -629,7 +592,7 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         );
         uint256 proposalId = _proposeWithCalldata(alice, ProposalType.Standard, address(governor), data);
 
-        (,ProposalType pType,,,,,,, ) = governor.getProposal(proposalId);
+        (, ProposalType pType,,,,,,,) = governor.getProposal(proposalId);
         assertEq(uint256(pType), uint256(ProposalType.Extended));
     }
 
@@ -702,6 +665,4 @@ contract GovernorClassificationWindDownTest is Test, GovernorDeployHelper {
         governor.setSecurityCouncil(securityCouncil);
         assertEq(governor.securityCouncil(), securityCouncil);
     }
-
 }
-

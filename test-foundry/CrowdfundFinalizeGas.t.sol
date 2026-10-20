@@ -30,7 +30,7 @@ contract CrowdfundFinalizeGasTest is Test {
     uint256 constant HOP1_CAP = 4_000 * 1e6;
     uint256 constant HOP2_CAP = 1_000 * 1e6;
     uint256 constant MIN_COMMIT = 50 * 1e6;
-    uint8   constant MAX_SEEDS = 180;
+    uint8 constant MAX_SEEDS = 180;
 
     function setUp() public {
         admin = address(this);
@@ -45,12 +45,29 @@ contract CrowdfundFinalizeGasTest is Test {
 
     // ---------- Sweep entry points (one per N) ----------
 
-    function test_gas_finalize_300()  public { _profile(300); }
-    function test_gas_finalize_500()  public { _profile(500); }
-    function test_gas_finalize_800()  public { _profile(800); }
-    function test_gas_finalize_1000() public { _profile(1000); }
-    function test_gas_finalize_1500() public { _profile(1500); }
-    function test_gas_finalize_1600() public { _profile(1600); }
+    function test_gas_finalize_300() public {
+        _profile(300);
+    }
+
+    function test_gas_finalize_500() public {
+        _profile(500);
+    }
+
+    function test_gas_finalize_800() public {
+        _profile(800);
+    }
+
+    function test_gas_finalize_1000() public {
+        _profile(1000);
+    }
+
+    function test_gas_finalize_1500() public {
+        _profile(1500);
+    }
+
+    function test_gas_finalize_1600() public {
+        _profile(1600);
+    }
 
     // ---------- Profile harness ----------
 
@@ -83,9 +100,7 @@ contract CrowdfundFinalizeGasTest is Test {
     }
 
     function _deploy() internal returns (ArmadaCrowdfund cf) {
-        cf = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp
-        );
+        cf = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp);
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
     }

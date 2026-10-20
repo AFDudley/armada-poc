@@ -8,11 +8,22 @@ import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers"
 import { deployGovernorProxy } from "./helpers/deploy-governor";
 
 // Proposal types (must match IArmadaGovernance.sol enum order)
-const ProposalType = { Standard: 0, Extended: 1, VetoRatification: 2, Steward: 3, Signaling: 4 };
+const ProposalType = {
+  Standard: 0,
+  Extended: 1,
+  VetoRatification: 2,
+  Steward: 3,
+  Signaling: 4,
+};
 // Proposal states
 const ProposalState = {
-  Pending: 0, Active: 1, Defeated: 2, Succeeded: 3,
-  Queued: 4, Executed: 5, Canceled: 6,
+  Pending: 0,
+  Active: 1,
+  Defeated: 2,
+  Succeeded: 3,
+  Queued: 4,
+  Executed: 5,
+  Canceled: 6,
 };
 // Vote support values
 const Vote = { Against: 0, For: 1, Abstain: 2 };
@@ -41,9 +52,9 @@ describe("Governance — Signaling Proposals", function () {
   // Constants
   const ARM_DECIMALS = 18;
   const TOTAL_SUPPLY = ethers.parseUnits("12000000", ARM_DECIMALS);
-  const TREASURY_AMOUNT = TOTAL_SUPPLY * 65n / 100n;
-  const ALICE_AMOUNT = TOTAL_SUPPLY * 20n / 100n;
-  const BOB_AMOUNT = TOTAL_SUPPLY * 15n / 100n;
+  const TREASURY_AMOUNT = (TOTAL_SUPPLY * 65n) / 100n;
+  const ALICE_AMOUNT = (TOTAL_SUPPLY * 20n) / 100n;
+  const BOB_AMOUNT = (TOTAL_SUPPLY * 15n) / 100n;
 
   async function mineBlock() {
     await mine(1);
@@ -54,9 +65,9 @@ describe("Governance — Signaling Proposals", function () {
     proposer: SignerWithAddress,
     description: string,
   ): Promise<number> {
-    await governor.connect(proposer).propose(
-      ProposalType.Signaling, [], [], [], description
-    );
+    await governor
+      .connect(proposer)
+      .propose(ProposalType.Signaling, [], [], [], description);
     return Number(await governor.proposalCount());
   }
 
@@ -64,9 +75,13 @@ describe("Governance — Signaling Proposals", function () {
     [deployer, alice, bob, carol, dave] = await ethers.getSigners();
 
     // 1. Deploy TimelockController
-    const TimelockController = await ethers.getContractFactory("TimelockController");
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
     timelockController = await TimelockController.deploy(
-      TWO_DAYS, [], [], deployer.address
+      TWO_DAYS,
+      [],
+      [],
+      deployer.address,
     );
     await timelockController.waitForDeployment();
     const timelockAddr = await timelockController.getAddress();
@@ -77,7 +92,8 @@ describe("Governance — Signaling Proposals", function () {
     await armToken.waitForDeployment();
 
     // 3. Deploy Treasury
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasury = await ArmadaTreasuryGov.deploy(timelockAddr);
     await treasury.waitForDeployment();
 
@@ -102,8 +118,14 @@ describe("Governance — Signaling Proposals", function () {
     const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
     const ADMIN_ROLE = await timelockController.TIMELOCK_ADMIN_ROLE();
 
-    await timelockController.grantRole(PROPOSER_ROLE, await governor.getAddress());
-    await timelockController.grantRole(EXECUTOR_ROLE, await governor.getAddress());
+    await timelockController.grantRole(
+      PROPOSER_ROLE,
+      await governor.getAddress(),
+    );
+    await timelockController.grantRole(
+      EXECUTOR_ROLE,
+      await governor.getAddress(),
+    );
 
     // 7. Distribute ARM tokens
     await armToken.transfer(await treasury.getAddress(), TREASURY_AMOUNT);
@@ -127,7 +149,10 @@ describe("Governance — Signaling Proposals", function () {
     // This is the fundamental difference from executable proposals — the propose()
     // function must accept empty targets for Signaling type.
     it("should create a signaling proposal in Pending state", async function () {
-      const proposalId = await createSignalingProposal(alice, "Should we pursue cross-chain MASP?");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Should we pursue cross-chain MASP?",
+      );
 
       expect(await governor.state(proposalId)).to.equal(ProposalState.Pending);
       const proposal = await governor.getProposal(proposalId);
@@ -137,7 +162,10 @@ describe("Governance — Signaling Proposals", function () {
     // WHY: Verify that the signaling lifecycle correctly transitions through
     // Pending → Active after the standard 48h voting delay.
     it("should become Active after voting delay", async function () {
-      const proposalId = await createSignalingProposal(alice, "Temperature check: Aave integration");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Temperature check: Aave integration",
+      );
 
       await time.increase(TWO_DAYS + 1);
 
@@ -147,7 +175,10 @@ describe("Governance — Signaling Proposals", function () {
     // WHY: After voting ends with quorum met and majority FOR, signaling proposals
     // must resolve to Succeeded. This is terminal — no queue/execute phase follows.
     it("should resolve to Succeeded when quorum met and majority FOR", async function () {
-      const proposalId = await createSignalingProposal(alice, "Pursue hub-and-spoke architecture");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Pursue hub-and-spoke architecture",
+      );
 
       // Fast-forward past voting delay
       await time.increase(TWO_DAYS + 1);
@@ -158,32 +189,44 @@ describe("Governance — Signaling Proposals", function () {
       // Fast-forward past voting period
       await time.increase(SEVEN_DAYS + 1);
 
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
     });
 
     // WHY: Signaling Succeeded state must be permanent — there is no grace period
     // because there is nothing to queue. Without the Signaling-specific check in
     // state(), the grace period expiry would incorrectly transition to Defeated.
     it("should remain Succeeded indefinitely (no grace period expiry)", async function () {
-      const proposalId = await createSignalingProposal(alice, "Permanent signaling result");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Permanent signaling result",
+      );
 
       await time.increase(TWO_DAYS + 1);
       await governor.connect(alice).castVote(proposalId, Vote.For);
       await time.increase(SEVEN_DAYS + 1);
 
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
 
       // Fast-forward well past the QUEUE_GRACE_PERIOD (14 days)
       await time.increase(THIRTY_DAYS);
 
       // Still Succeeded — not expired to Defeated
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
     });
 
     // WHY: Signaling proposals with insufficient quorum must be Defeated,
     // same as executable proposals. The quorum mechanism is shared.
     it("should resolve to Defeated when quorum not reached", async function () {
-      const proposalId = await createSignalingProposal(alice, "No quorum scenario");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "No quorum scenario",
+      );
 
       await time.increase(TWO_DAYS + 1);
 
@@ -221,13 +264,15 @@ describe("Governance — Signaling Proposals", function () {
     it("should revert when creating signaling with non-empty targets", async function () {
       const target = await governor.getAddress();
       await expect(
-        governor.connect(alice).propose(
-          ProposalType.Signaling,
-          [target],
-          [0n],
-          ["0x"],
-          "Sneaky executable"
-        )
+        governor
+          .connect(alice)
+          .propose(
+            ProposalType.Signaling,
+            [target],
+            [0n],
+            ["0x"],
+            "Sneaky executable",
+          ),
       ).to.be.revertedWithCustomError(governor, "Gov_SignalingMustBeEmpty");
     });
 
@@ -235,17 +280,23 @@ describe("Governance — Signaling Proposals", function () {
     // Succeeded-with-queue-eligibility, the explicit guard in queue() provides a
     // clear revert reason and prevents reliance on state machine logic alone.
     it("should revert when trying to queue a signaling proposal", async function () {
-      const proposalId = await createSignalingProposal(alice, "Cannot queue me");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Cannot queue me",
+      );
 
       await time.increase(TWO_DAYS + 1);
       await governor.connect(alice).castVote(proposalId, Vote.For);
       await time.increase(SEVEN_DAYS + 1);
 
-      expect(await governor.state(proposalId)).to.equal(ProposalState.Succeeded);
+      expect(await governor.state(proposalId)).to.equal(
+        ProposalState.Succeeded,
+      );
 
-      await expect(
-        governor.queue(proposalId)
-      ).to.be.revertedWithCustomError(governor, "Gov_SignalingNoExecution");
+      await expect(governor.queue(proposalId)).to.be.revertedWithCustomError(
+        governor,
+        "Gov_SignalingNoExecution",
+      );
     });
 
     // WHY: Signaling proposal params (timing, quorum) must be immutable — they represent
@@ -254,17 +305,26 @@ describe("Governance — Signaling Proposals", function () {
       // Need to call via timelock — impersonate it
       const timelockAddr = await timelockController.getAddress();
       await ethers.provider.send("hardhat_impersonateAccount", [timelockAddr]);
-      await deployer.sendTransaction({ to: timelockAddr, value: ethers.parseEther("1") });
+      await deployer.sendTransaction({
+        to: timelockAddr,
+        value: ethers.parseEther("1"),
+      });
       const timelockSigner = await ethers.getSigner(timelockAddr);
 
       await expect(
-        governor.connect(timelockSigner).setProposalTypeParams(
-          ProposalType.Signaling,
-          { votingDelay: ONE_DAY, votingPeriod: FOURTEEN_DAYS, executionDelay: 0, quorumBps: 3000 }
-        )
+        governor
+          .connect(timelockSigner)
+          .setProposalTypeParams(ProposalType.Signaling, {
+            votingDelay: ONE_DAY,
+            votingPeriod: FOURTEEN_DAYS,
+            executionDelay: 0,
+            quorumBps: 3000,
+          }),
       ).to.be.revertedWithCustomError(governor, "Gov_ImmutableProposalType");
 
-      await ethers.provider.send("hardhat_stopImpersonatingAccount", [timelockAddr]);
+      await ethers.provider.send("hardhat_stopImpersonatingAccount", [
+        timelockAddr,
+      ]);
     });
 
     // WHY: Signaling proposals must enforce the same proposal threshold as all other types.
@@ -272,9 +332,9 @@ describe("Governance — Signaling Proposals", function () {
     it("should require proposal threshold to create signaling proposal", async function () {
       // Carol has no ARM tokens — should fail threshold check
       await expect(
-        governor.connect(carol).propose(
-          ProposalType.Signaling, [], [], [], "No tokens carol"
-        )
+        governor
+          .connect(carol)
+          .propose(ProposalType.Signaling, [], [], [], "No tokens carol"),
       ).to.be.revertedWithCustomError(governor, "Gov_BelowProposalThreshold");
     });
 
@@ -285,28 +345,38 @@ describe("Governance — Signaling Proposals", function () {
       // We only need windDownActive=true; full ArmadaWindDown deployment is tested elsewhere.
       const timelockAddr = await timelockController.getAddress();
       await ethers.provider.send("hardhat_impersonateAccount", [timelockAddr]);
-      await deployer.sendTransaction({ to: timelockAddr, value: ethers.parseEther("1") });
+      await deployer.sendTransaction({
+        to: timelockAddr,
+        value: ethers.parseEther("1"),
+      });
       const timelockSigner = await ethers.getSigner(timelockAddr);
 
       const mockWindDown = dave.address;
       await governor.connect(timelockSigner).setWindDownContract(mockWindDown);
-      await ethers.provider.send("hardhat_stopImpersonatingAccount", [timelockAddr]);
+      await ethers.provider.send("hardhat_stopImpersonatingAccount", [
+        timelockAddr,
+      ]);
 
       await ethers.provider.send("hardhat_impersonateAccount", [mockWindDown]);
       await governor.connect(dave).setWindDownActive();
-      await ethers.provider.send("hardhat_stopImpersonatingAccount", [mockWindDown]);
+      await ethers.provider.send("hardhat_stopImpersonatingAccount", [
+        mockWindDown,
+      ]);
 
       await expect(
-        governor.connect(alice).propose(
-          ProposalType.Signaling, [], [], [], "After wind-down"
-        )
+        governor
+          .connect(alice)
+          .propose(ProposalType.Signaling, [], [], [], "After wind-down"),
       ).to.be.revertedWithCustomError(governor, "Gov_GovernanceEnded");
     });
 
     // WHY: Signaling proposals use standard timing and must never be auto-promoted
     // to Extended. Since they have no calldata, classification is skipped entirely.
     it("should use standard timing (7d vote, 48h delay)", async function () {
-      const proposalId = await createSignalingProposal(alice, "Check timing params");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Check timing params",
+      );
 
       const proposal = await governor.getProposal(proposalId);
       const votingPeriod = Number(proposal.voteEnd - proposal.voteStart);
@@ -325,7 +395,10 @@ describe("Governance — Signaling Proposals", function () {
     // WHY: FOR/AGAINST/ABSTAIN voting mechanics must work identically to executable
     // proposals. The voting system is shared across all proposal types.
     it("should support FOR/AGAINST/ABSTAIN votes", async function () {
-      const proposalId = await createSignalingProposal(alice, "Vote mechanics test");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Vote mechanics test",
+      );
 
       await time.increase(TWO_DAYS + 1);
 
@@ -340,12 +413,17 @@ describe("Governance — Signaling Proposals", function () {
     // WHY: Vote changing during the voting period is a core governance feature
     // that must work for signaling proposals too.
     it("should allow vote changing during voting period", async function () {
-      const proposalId = await createSignalingProposal(alice, "Change your mind");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Change your mind",
+      );
 
       await time.increase(TWO_DAYS + 1);
 
       await governor.connect(alice).castVote(proposalId, Vote.For);
-      expect((await governor.getProposal(proposalId)).forVotes).to.equal(ALICE_AMOUNT);
+      expect((await governor.getProposal(proposalId)).forVotes).to.equal(
+        ALICE_AMOUNT,
+      );
 
       // Change vote from FOR to AGAINST
       await governor.connect(alice).castVote(proposalId, Vote.Against);
@@ -373,13 +451,16 @@ describe("Governance — Signaling Proposals", function () {
     // WHY: Signaling proposals (like Standard) must not be cancellable once voting
     // has started. Only Steward proposals have the extended cancel window.
     it("should revert cancel during Active (Standard rule)", async function () {
-      const proposalId = await createSignalingProposal(alice, "Too late to cancel");
+      const proposalId = await createSignalingProposal(
+        alice,
+        "Too late to cancel",
+      );
 
       await time.increase(TWO_DAYS + 1);
       expect(await governor.state(proposalId)).to.equal(ProposalState.Active);
 
       await expect(
-        governor.connect(alice).cancel(proposalId)
+        governor.connect(alice).cancel(proposalId),
       ).to.be.revertedWithCustomError(governor, "Gov_NotPending");
     });
   });
@@ -393,17 +474,18 @@ describe("Governance — Signaling Proposals", function () {
       const description = "Signaling event test";
 
       await expect(
-        governor.connect(alice).propose(
-          ProposalType.Signaling, [], [], [], description
-        )
-      ).to.emit(governor, "ProposalCreated")
+        governor
+          .connect(alice)
+          .propose(ProposalType.Signaling, [], [], [], description),
+      )
+        .to.emit(governor, "ProposalCreated")
         .withArgs(
           1, // proposalId (first proposal)
           alice.address,
           ProposalType.Signaling,
           (v: any) => true, // voteStart (any timestamp)
           (v: any) => true, // voteEnd (any timestamp)
-          description
+          description,
         );
     });
   });

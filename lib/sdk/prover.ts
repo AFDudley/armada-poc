@@ -20,10 +20,10 @@ import {
   OutputType,
   getTokenDataERC20,
   UnshieldData,
-} from '@railgun-community/engine';
-import { Chain } from '@railgun-community/shared-models';
-import { getEngine } from './init';
-import { ContractTransaction } from 'ethers';
+} from "@railgun-community/engine";
+import { Chain } from "@railgun-community/shared-models";
+import { getEngine } from "./init";
+import { ContractTransaction } from "ethers";
 
 // ============ Types ============
 
@@ -35,12 +35,12 @@ export interface ProofProgress {
 export type ProofProgressCallback = (progress: ProofProgress) => void;
 
 export interface TransferRecipient {
-  railgunAddress: string;  // 0zk... format
+  railgunAddress: string; // 0zk... format
   amount: bigint;
 }
 
 export interface UnshieldRecipient {
-  ethAddress: string;      // 0x... format
+  ethAddress: string; // 0x... format
   amount: bigint;
 }
 
@@ -63,11 +63,11 @@ export async function initializeProver(): Promise<void> {
   // Always wire snarkjs into the current engine's prover.
   // The engine may have been recreated (shutdown + reinit), producing a fresh
   // Prover instance that needs setSnarkJSGroth16() called again.
-  console.log('Initializing prover with snarkjs...');
+  console.log("Initializing prover with snarkjs...");
 
   // Dynamic import of snarkjs
   // @ts-ignore
-  const snarkjs = await import('snarkjs');
+  const snarkjs = await import("snarkjs");
 
   // Get engine and its prover
   const engine = getEngine();
@@ -78,7 +78,7 @@ export async function initializeProver(): Promise<void> {
   prover.setSnarkJSGroth16(snarkjs.groth16 as unknown as SnarkJSGroth16);
 
   snarkjsInitialized = true;
-  console.log('Prover initialized successfully');
+  console.log("Prover initialized successfully");
 }
 
 /**
@@ -111,7 +111,7 @@ export function isProverInitialized(): boolean {
  */
 export function createTransactionBatch(
   chain: Chain,
-  minGasPrice: bigint = BigInt(0)
+  minGasPrice: bigint = BigInt(0),
 ): TransactionBatch {
   return new TransactionBatch(chain, minGasPrice);
 }
@@ -132,9 +132,9 @@ export function addTransferOutput(
   amount: bigint,
   tokenAddress: string,
   showSenderAddress: boolean = false,
-  memoText?: string
+  memoText?: string,
 ): void {
-  const { TransactNote, RailgunEngine } = require('@railgun-community/engine');
+  const { TransactNote, RailgunEngine } = require("@railgun-community/engine");
 
   const recipientAddressData = RailgunEngine.decodeAddress(recipient);
   const tokenData = getTokenDataERC20(tokenAddress);
@@ -146,7 +146,7 @@ export function addTransferOutput(
     tokenData,
     showSenderAddress,
     OutputType.Transfer,
-    memoText
+    memoText,
   );
 
   batch.addOutput(note);
@@ -166,7 +166,7 @@ export function addUnshieldOutput(
   batch: TransactionBatch,
   toAddress: string,
   amount: bigint,
-  tokenAddress: string
+  tokenAddress: string,
 ): void {
   const tokenData = getTokenDataERC20(tokenAddress);
   const unshieldData: UnshieldData = {
@@ -199,10 +199,10 @@ export async function generateProvedTransactions(
   wallet: RailgunWallet,
   txidVersion: TXIDVersion,
   encryptionKey: string,
-  progressCallback?: ProofProgressCallback
+  progressCallback?: ProofProgressCallback,
 ): Promise<TransactionStructV2[]> {
   if (!snarkjsInitialized) {
-    throw new Error('Prover not initialized. Call initializeProver() first.');
+    throw new Error("Prover not initialized. Call initializeProver() first.");
   }
 
   const prover = getProver();
@@ -215,7 +215,7 @@ export async function generateProvedTransactions(
     console.log(`  [${Math.round(progress)}%] ${status}`);
   };
 
-  console.log('Generating proved transactions...');
+  console.log("Generating proved transactions...");
 
   // Generate transactions with proofs
   const { provedTransactions } = await batch.generateTransactions(
@@ -224,7 +224,7 @@ export async function generateProvedTransactions(
     txidVersion,
     encryptionKey,
     wrappedCallback,
-    false // shouldGeneratePreTransactionPOIs (not needed for POC)
+    false, // shouldGeneratePreTransactionPOIs (not needed for POC)
   );
 
   console.log(`Generated ${provedTransactions.length} proved transaction(s)`);
@@ -245,12 +245,12 @@ export async function generateProvedTransactions(
 export async function generateTransactCall(
   txidVersion: TXIDVersion,
   provedTransactions: TransactionStructV2[],
-  chain: Chain
+  chain: Chain,
 ): Promise<ContractTransaction> {
   return RailgunVersionedSmartContracts.generateTransact(
     txidVersion,
     chain,
-    provedTransactions
+    provedTransactions,
   );
 }
 
@@ -278,14 +278,19 @@ export async function createTransferTransaction(
   tokenAddress: string,
   recipients: TransferRecipient[],
   encryptionKey: string,
-  progressCallback?: ProofProgressCallback
+  progressCallback?: ProofProgressCallback,
 ): Promise<ProvedTransactionResult> {
   // Create batch
   const batch = createTransactionBatch(chain);
 
   // Add outputs
   for (const recipient of recipients) {
-    addTransferOutput(batch, recipient.railgunAddress, recipient.amount, tokenAddress);
+    addTransferOutput(
+      batch,
+      recipient.railgunAddress,
+      recipient.amount,
+      tokenAddress,
+    );
   }
 
   // Generate proofs
@@ -294,14 +299,14 @@ export async function createTransferTransaction(
     wallet,
     TXIDVersion.V2_PoseidonMerkle,
     encryptionKey,
-    progressCallback
+    progressCallback,
   );
 
   // Generate contract call
   const contractTransaction = await generateTransactCall(
     TXIDVersion.V2_PoseidonMerkle,
     transactions,
-    chain
+    chain,
   );
 
   return {
@@ -330,7 +335,7 @@ export async function createUnshieldTransaction(
   toAddress: string,
   amount: bigint,
   encryptionKey: string,
-  progressCallback?: ProofProgressCallback
+  progressCallback?: ProofProgressCallback,
 ): Promise<ProvedTransactionResult> {
   // Create batch
   const batch = createTransactionBatch(chain);
@@ -344,14 +349,14 @@ export async function createUnshieldTransaction(
     wallet,
     TXIDVersion.V2_PoseidonMerkle,
     encryptionKey,
-    progressCallback
+    progressCallback,
   );
 
   // Generate contract call
   const contractTransaction = await generateTransactCall(
     TXIDVersion.V2_PoseidonMerkle,
     transactions,
-    chain
+    chain,
   );
 
   return {
@@ -372,10 +377,10 @@ export async function createUnshieldTransaction(
 export async function verifyProofLocally(
   proof: any,
   publicSignals: string[],
-  vkey: any
+  vkey: any,
 ): Promise<boolean> {
   // @ts-ignore
-  const snarkjs = await import('snarkjs');
+  const snarkjs = await import("snarkjs");
   return snarkjs.groth16.verify(vkey, publicSignals, proof);
 }
 
@@ -385,9 +390,13 @@ export async function verifyProofLocally(
  * Format proof for display
  */
 export function formatProof(proof: any): string {
-  return JSON.stringify({
-    a: proof.pi_a?.slice(0, 2),
-    b: proof.pi_b?.slice(0, 2),
-    c: proof.pi_c?.slice(0, 2),
-  }, null, 2);
+  return JSON.stringify(
+    {
+      a: proof.pi_a?.slice(0, 2),
+      b: proof.pi_b?.slice(0, 2),
+      c: proof.pi_c?.slice(0, 2),
+    },
+    null,
+    2,
+  );
 }

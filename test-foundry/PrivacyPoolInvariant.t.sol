@@ -96,7 +96,7 @@ contract MerkleHandler is Test {
         // Guard against overflow
         if (uint256(BASIS_POINTS) * uint256(amount) > type(uint136).max) return;
 
-        (uint120 base, ) = _getFee(uint136(amount), false, feeBP);
+        (uint120 base,) = _getFee(uint136(amount), false, feeBP);
         totalFeeComputations++;
 
         // In exclusive mode, base should always equal amount
@@ -129,10 +129,7 @@ contract MerkleHandler is Test {
 
             if (levelInsertionIndex % 2 == 1) {
                 nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
-                _leafHashes[nextLevelHashIndex] = _hashLeftRight(
-                    filledSubTrees[level],
-                    _leafHashes[insertionElement]
-                );
+                _leafHashes[nextLevelHashIndex] = _hashLeftRight(filledSubTrees[level], _leafHashes[insertionElement]);
                 insertionElement += 1;
                 levelInsertionIndex += 1;
             }
@@ -184,11 +181,11 @@ contract MerkleHandler is Test {
     // INTERNAL — mirrors _getFee from ShieldModule/TransactModule
     // ══════════════════════════════════════════════════════════════════════
 
-    function _getFee(
-        uint136 _amount,
-        bool _isInclusive,
-        uint120 _feeBP
-    ) internal pure returns (uint120 base, uint120 fee) {
+    function _getFee(uint136 _amount, bool _isInclusive, uint120 _feeBP)
+        internal
+        pure
+        returns (uint120 base, uint120 fee)
+    {
         if (_feeBP == 0) {
             return (uint120(_amount), 0);
         }
@@ -250,20 +247,12 @@ contract PrivacyPoolInvariantTest is Test {
 
     /// @notice nextLeafIndex never exceeds MAX_LEAVES (65536)
     function invariant_nextLeafIndexBounded() public view {
-        assertLe(
-            handler.nextLeafIndex(),
-            2 ** 16,
-            "nextLeafIndex must not exceed 2^16"
-        );
+        assertLe(handler.nextLeafIndex(), 2 ** 16, "nextLeafIndex must not exceed 2^16");
     }
 
     /// @notice treeNumber equals total rollovers
     function invariant_treeNumberMatchesRollovers() public view {
-        assertEq(
-            handler.treeNumber(),
-            handler.totalTreeRollovers(),
-            "treeNumber must match total rollovers"
-        );
+        assertEq(handler.treeNumber(), handler.totalTreeRollovers(), "treeNumber must match total rollovers");
     }
 
     /// @notice treeNumber is monotonically non-decreasing (never decreases)
@@ -300,10 +289,6 @@ contract PrivacyPoolInvariantTest is Test {
 
     /// @notice Fee conservation: base + fee == amount for ALL inclusive fee computations
     function invariant_feeConservation() public view {
-        assertEq(
-            handler.totalFeeConservationViolations(),
-            0,
-            "Fee conservation must never be violated"
-        );
+        assertEq(handler.totalFeeConservationViolations(), 0, "Fee conservation must never be violated");
     }
 }

@@ -57,4 +57,3 @@ contract CrowdfundRefundAttacker {
         }
     }
 }
-

@@ -2,10 +2,7 @@
 // ABOUTME: Providers are lazily created and reused across tool calls.
 
 import { ethers } from "ethers";
-import {
-  type ChainRole,
-  getChainByRole,
-} from "../../../config/networks";
+import { type ChainRole, getChainByRole } from "../../../config/networks";
 
 const RPC_TIMEOUT_MS = 5000;
 
@@ -32,7 +29,7 @@ export function getProvider(role: ChainRole): ethers.JsonRpcProvider {
  * Returns block number on success, null on failure.
  */
 export async function checkRpc(
-  role: ChainRole
+  role: ChainRole,
 ): Promise<{ blockNumber: number; chainId: number } | null> {
   const provider = getProvider(role);
   try {
@@ -51,13 +48,13 @@ export async function checkRpc(
  */
 export async function getBalance(
   role: ChainRole,
-  address: string
+  address: string,
 ): Promise<string | null> {
   try {
     const provider = getProvider(role);
     const balance = await withTimeout(
       provider.getBalance(address),
-      RPC_TIMEOUT_MS
+      RPC_TIMEOUT_MS,
     );
     return ethers.formatEther(balance);
   } catch {
@@ -70,14 +67,11 @@ export async function getBalance(
  */
 export async function hasCode(
   role: ChainRole,
-  address: string
+  address: string,
 ): Promise<boolean | null> {
   try {
     const provider = getProvider(role);
-    const code = await withTimeout(
-      provider.getCode(address),
-      RPC_TIMEOUT_MS
-    );
+    const code = await withTimeout(provider.getCode(address), RPC_TIMEOUT_MS);
     return code !== "0x";
   } catch {
     return null;
@@ -92,7 +86,7 @@ export async function callView(
   address: string,
   abi: string[],
   functionName: string,
-  args: unknown[] = []
+  args: unknown[] = [],
 ): Promise<unknown> {
   const provider = getProvider(role);
   const contract = new ethers.Contract(address, abi, provider);
@@ -103,7 +97,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`RPC timeout (${ms}ms)`)), ms)
+      setTimeout(() => reject(new Error(`RPC timeout (${ms}ms)`)), ms),
     ),
   ]);
 }

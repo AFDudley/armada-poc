@@ -32,11 +32,11 @@ const TWENTY_FOUR_HOURS = ONE_DAY;
 
 const ARM_DECIMALS = 18;
 const TOTAL_SUPPLY = ethers.parseUnits("12000000", ARM_DECIMALS);
-const TREASURY_AMOUNT = TOTAL_SUPPLY * 65n / 100n;
-const REVENUE_LOCK_AMOUNT = TOTAL_SUPPLY * 15n / 100n;
-const CROWDFUND_AMOUNT = TOTAL_SUPPLY * 10n / 100n;
-const ALICE_AMOUNT = TOTAL_SUPPLY * 5n / 100n;
-const BOB_AMOUNT = TOTAL_SUPPLY * 5n / 100n;
+const TREASURY_AMOUNT = (TOTAL_SUPPLY * 65n) / 100n;
+const REVENUE_LOCK_AMOUNT = (TOTAL_SUPPLY * 15n) / 100n;
+const CROWDFUND_AMOUNT = (TOTAL_SUPPLY * 10n) / 100n;
+const ALICE_AMOUNT = (TOTAL_SUPPLY * 5n) / 100n;
+const BOB_AMOUNT = (TOTAL_SUPPLY * 5n) / 100n;
 
 const REVENUE_THRESHOLD = ethers.parseUnits("10000", 18); // $10k in 18-decimal
 
@@ -57,7 +57,7 @@ describe("Wind-Down & Redemption Integration", function () {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress; // security council
   let revenueLockAddr: SignerWithAddress; // stand-in for revenue-lock contract
-  let crowdfundAddr: SignerWithAddress;   // stand-in for crowdfund contract
+  let crowdfundAddr: SignerWithAddress; // stand-in for crowdfund contract
 
   let windDownDeadline: number;
 
@@ -69,8 +69,13 @@ describe("Wind-Down & Redemption Integration", function () {
   async function asTimelock() {
     const timelockAddr = await timelockController.getAddress();
     await ethers.provider.send("hardhat_impersonateAccount", [timelockAddr]);
-    await deployer.sendTransaction({ to: timelockAddr, value: ethers.parseEther("1") });
-    return await ethers.getSigner(timelockAddr) as unknown as SignerWithAddress;
+    await deployer.sendTransaction({
+      to: timelockAddr,
+      value: ethers.parseEther("1"),
+    });
+    return (await ethers.getSigner(
+      timelockAddr,
+    )) as unknown as SignerWithAddress;
   }
 
   async function stopImpersonatingTimelock() {
@@ -101,8 +106,14 @@ describe("Wind-Down & Redemption Integration", function () {
 
     // --- Deploy base contracts ---
 
-    const TimelockController = await ethers.getContractFactory("TimelockController");
-    timelockController = await TimelockController.deploy(TWO_DAYS, [], [], deployer.address);
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
+    timelockController = await TimelockController.deploy(
+      TWO_DAYS,
+      [],
+      [],
+      deployer.address,
+    );
     await timelockController.waitForDeployment();
     const timelockAddr = await timelockController.getAddress();
 
@@ -110,7 +121,8 @@ describe("Wind-Down & Redemption Integration", function () {
     armToken = await ArmadaToken.deploy(deployer.address, timelockAddr);
     await armToken.waitForDeployment();
 
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasuryContract = await ArmadaTreasuryGov.deploy(timelockAddr);
     await treasuryContract.waitForDeployment();
 
@@ -133,14 +145,21 @@ describe("Wind-Down & Redemption Integration", function () {
     const RevenueCounter = await ethers.getContractFactory("RevenueCounter");
     const rcImpl = await RevenueCounter.deploy();
     await rcImpl.waitForDeployment();
-    const initData = RevenueCounter.interface.encodeFunctionData("initialize", [timelockAddr]);
+    const initData = RevenueCounter.interface.encodeFunctionData("initialize", [
+      timelockAddr,
+    ]);
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-    const rcProxy = await ERC1967Proxy.deploy(await rcImpl.getAddress(), initData);
+    const rcProxy = await ERC1967Proxy.deploy(
+      await rcImpl.getAddress(),
+      initData,
+    );
     await rcProxy.waitForDeployment();
     revenueCounter = RevenueCounter.attach(await rcProxy.getAddress());
 
     // Deploy ShieldPauseController
-    const ShieldPauseController = await ethers.getContractFactory("ShieldPauseController");
+    const ShieldPauseController = await ethers.getContractFactory(
+      "ShieldPauseController",
+    );
     shieldPauseController = await ShieldPauseController.deploy(
       await governor.getAddress(),
       timelockAddr,
@@ -148,7 +167,8 @@ describe("Wind-Down & Redemption Integration", function () {
     await shieldPauseController.waitForDeployment();
 
     // Deploy ArmadaRedemption
-    const ArmadaRedemption = await ethers.getContractFactory("ArmadaRedemption");
+    const ArmadaRedemption =
+      await ethers.getContractFactory("ArmadaRedemption");
     redemption = await ArmadaRedemption.deploy(
       await armToken.getAddress(),
       await treasuryContract.getAddress(),
@@ -180,7 +200,9 @@ describe("Wind-Down & Redemption Integration", function () {
     await armToken.setWindDownContract(await windDown.getAddress());
 
     // RevenueCounter: set wind-down contract for freeze() at trigger time.
-    await revenueCounter.connect(await asTimelock()).setWindDownContract(await windDown.getAddress());
+    await revenueCounter
+      .connect(await asTimelock())
+      .setWindDownContract(await windDown.getAddress());
 
     // Redemption: wire wind-down reference (deployer-only one-time setter).
     // ArmadaRedemption reads windDown.triggerTime() to enforce REDEMPTION_DELAY.
@@ -191,13 +213,19 @@ describe("Wind-Down & Redemption Integration", function () {
 
     // Governor: set SC, set wind-down contract
     await governor.connect(timelockSigner).setSecurityCouncil(carol.address);
-    await governor.connect(timelockSigner).setWindDownContract(await windDown.getAddress());
+    await governor
+      .connect(timelockSigner)
+      .setWindDownContract(await windDown.getAddress());
 
     // Treasury: set wind-down contract
-    await treasuryContract.connect(timelockSigner).setWindDownContract(await windDown.getAddress());
+    await treasuryContract
+      .connect(timelockSigner)
+      .setWindDownContract(await windDown.getAddress());
 
     // ShieldPauseController: set wind-down contract
-    await shieldPauseController.connect(timelockSigner).setWindDownContract(await windDown.getAddress());
+    await shieldPauseController
+      .connect(timelockSigner)
+      .setWindDownContract(await windDown.getAddress());
 
     await stopImpersonatingTimelock();
 
@@ -206,8 +234,14 @@ describe("Wind-Down & Redemption Integration", function () {
     const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
     const ADMIN_ROLE = await timelockController.TIMELOCK_ADMIN_ROLE();
 
-    await timelockController.grantRole(PROPOSER_ROLE, await governor.getAddress());
-    await timelockController.grantRole(EXECUTOR_ROLE, await governor.getAddress());
+    await timelockController.grantRole(
+      PROPOSER_ROLE,
+      await governor.getAddress(),
+    );
+    await timelockController.grantRole(
+      EXECUTOR_ROLE,
+      await governor.getAddress(),
+    );
 
     // Initialize ARM outflow config on the treasury so that proposals
     // distributing ARM can pass the queue-time outflow feasibility check.
@@ -221,16 +255,29 @@ describe("Wind-Down & Redemption Integration", function () {
       const cdatas = [
         treasuryContract.interface.encodeFunctionData("initOutflowConfig", [
           await armToken.getAddress(),
-          30 * ONE_DAY,                  // window
-          5000,                          // 50% bps
-          TREASURY_AMOUNT,               // ceiling
+          30 * ONE_DAY, // window
+          5000, // 50% bps
+          TREASURY_AMOUNT, // ceiling
           ethers.parseUnits("1000", 18), // floor
         ]),
       ];
       const salt = ethers.id("outflow-config-arm");
-      await timelockController.scheduleBatch(tgts, vals, cdatas, ethers.ZeroHash, salt, TWO_DAYS);
+      await timelockController.scheduleBatch(
+        tgts,
+        vals,
+        cdatas,
+        ethers.ZeroHash,
+        salt,
+        TWO_DAYS,
+      );
       await time.increase(TWO_DAYS + 1);
-      await timelockController.executeBatch(tgts, vals, cdatas, ethers.ZeroHash, salt);
+      await timelockController.executeBatch(
+        tgts,
+        vals,
+        cdatas,
+        ethers.ZeroHash,
+        salt,
+      );
     }
     await timelockController.revokeRole(PROPOSER_ROLE, deployer.address);
     await timelockController.revokeRole(EXECUTOR_ROLE, deployer.address);
@@ -250,7 +297,10 @@ describe("Wind-Down & Redemption Integration", function () {
     ]);
 
     // Distribute ARM
-    await armToken.transfer(await treasuryContract.getAddress(), TREASURY_AMOUNT);
+    await armToken.transfer(
+      await treasuryContract.getAddress(),
+      TREASURY_AMOUNT,
+    );
     await armToken.transfer(revenueLockAddr.address, REVENUE_LOCK_AMOUNT);
     await armToken.transfer(crowdfundAddr.address, CROWDFUND_AMOUNT);
     await armToken.transfer(alice.address, ALICE_AMOUNT);
@@ -260,7 +310,8 @@ describe("Wind-Down & Redemption Integration", function () {
     // that don't model the entitled-unclaimed bug see the same denominator as before.
     // Tests that DO model the bug (issue #90) set these explicitly.
     const rlMockContract = await ethers.getContractAt(
-      "MockRevenueLockRedemption", revenueLockAddr.address
+      "MockRevenueLockRedemption",
+      revenueLockAddr.address,
     );
     await rlMockContract.setLocked(REVENUE_LOCK_AMOUNT);
     // Crowdfund mock default armStillOwed = 0 → full balance subtracted (matches old).
@@ -270,7 +321,10 @@ describe("Wind-Down & Redemption Integration", function () {
     await armToken.connect(bob).delegate(bob.address);
 
     // Fund treasury with USDC (simulating fee accrual)
-    await usdc.mint(await treasuryContract.getAddress(), ethers.parseUnits("500000", 6));
+    await usdc.mint(
+      await treasuryContract.getAddress(),
+      ethers.parseUnits("500000", 6),
+    );
 
     // Fund treasury with ETH
     await deployer.sendTransaction({
@@ -297,7 +351,7 @@ describe("Wind-Down & Redemption Integration", function () {
 
     it("non-SC address cannot pause shields", async function () {
       await expect(
-        shieldPauseController.connect(alice).pauseShields()
+        shieldPauseController.connect(alice).pauseShields(),
       ).to.be.revertedWith("ShieldPauseController: not SC");
     });
 
@@ -312,7 +366,7 @@ describe("Wind-Down & Redemption Integration", function () {
 
       const timelockSigner = await asTimelock();
       await expect(
-        shieldPauseController.connect(timelockSigner).unpauseShields()
+        shieldPauseController.connect(timelockSigner).unpauseShields(),
       ).to.be.revertedWith("ShieldPauseController: not paused");
       await stopImpersonatingTimelock();
     });
@@ -324,7 +378,7 @@ describe("Wind-Down & Redemption Integration", function () {
 
       // Alice cannot pause (not SC)
       await expect(
-        shieldPauseController.connect(alice).pauseShields()
+        shieldPauseController.connect(alice).pauseShields(),
       ).to.be.revertedWith("ShieldPauseController: not SC");
 
       // Governor's SC changes are read live — pause controller reads from governor
@@ -350,26 +404,30 @@ describe("Wind-Down & Redemption Integration", function () {
 
     it("permissionless trigger reverts before deadline", async function () {
       await expect(
-        windDown.connect(alice).triggerWindDown()
+        windDown.connect(alice).triggerWindDown(),
       ).to.be.revertedWith("ArmadaWindDown: deadline not passed");
     });
 
     it("permissionless trigger reverts if revenue meets threshold", async function () {
       // Set revenue above threshold via attestation
       const timelockSigner = await asTimelock();
-      await revenueCounter.connect(timelockSigner).attestRevenue(REVENUE_THRESHOLD);
+      await revenueCounter
+        .connect(timelockSigner)
+        .attestRevenue(REVENUE_THRESHOLD);
       await stopImpersonatingTimelock();
 
       await time.increaseTo(windDownDeadline + 1);
       await expect(
-        windDown.connect(alice).triggerWindDown()
+        windDown.connect(alice).triggerWindDown(),
       ).to.be.revertedWith("ArmadaWindDown: revenue meets threshold");
     });
 
     it("governance trigger works regardless of conditions", async function () {
       // Revenue above threshold, deadline not passed — governance can still trigger
       const timelockSigner = await asTimelock();
-      await revenueCounter.connect(timelockSigner).attestRevenue(REVENUE_THRESHOLD);
+      await revenueCounter
+        .connect(timelockSigner)
+        .attestRevenue(REVENUE_THRESHOLD);
       await windDown.connect(timelockSigner).governanceTriggerWindDown();
       await stopImpersonatingTimelock();
 
@@ -378,16 +436,16 @@ describe("Wind-Down & Redemption Integration", function () {
 
     it("non-timelock cannot use governance trigger", async function () {
       await expect(
-        windDown.connect(alice).governanceTriggerWindDown()
+        windDown.connect(alice).governanceTriggerWindDown(),
       ).to.be.revertedWith("ArmadaWindDown: not timelock");
     });
 
     it("cannot trigger twice", async function () {
       await time.increaseTo(windDownDeadline + 1);
       await windDown.triggerWindDown();
-      await expect(
-        windDown.triggerWindDown()
-      ).to.be.revertedWith("ArmadaWindDown: already triggered");
+      await expect(windDown.triggerWindDown()).to.be.revertedWith(
+        "ArmadaWindDown: already triggered",
+      );
     });
   });
 
@@ -408,11 +466,17 @@ describe("Wind-Down & Redemption Integration", function () {
       const dave = (await ethers.getSigners())[6];
 
       // Give dave some ARM (alice is whitelisted, so she can transfer)
-      await armToken.connect(alice).transfer(dave.address, ethers.parseUnits("100", 18));
+      await armToken
+        .connect(alice)
+        .transfer(dave.address, ethers.parseUnits("100", 18));
 
       // dave is NOT whitelisted but transfers should work because ARM is now globally transferable
-      await armToken.connect(dave).transfer(alice.address, ethers.parseUnits("50", 18));
-      expect(await armToken.balanceOf(dave.address)).to.equal(ethers.parseUnits("50", 18));
+      await armToken
+        .connect(dave)
+        .transfer(alice.address, ethers.parseUnits("50", 18));
+      expect(await armToken.balanceOf(dave.address)).to.equal(
+        ethers.parseUnits("50", 18),
+      );
     });
 
     it("governance is disabled after wind-down", async function () {
@@ -443,8 +507,10 @@ describe("Wind-Down & Redemption Integration", function () {
 
       // Second SC pause still reverts (single-use post-wind-down)
       await expect(
-        shieldPauseController.connect(carol).pauseShields()
-      ).to.be.revertedWith("ShieldPauseController: post-wind-down pause already used");
+        shieldPauseController.connect(carol).pauseShields(),
+      ).to.be.revertedWith(
+        "ShieldPauseController: post-wind-down pause already used",
+      );
     });
 
     it("parameter setters frozen after trigger", async function () {
@@ -454,10 +520,10 @@ describe("Wind-Down & Redemption Integration", function () {
       const timelockSigner = await asTimelock();
       const futureDeadline = (await time.latest()) + 30 * ONE_DAY;
       await expect(
-        windDown.connect(timelockSigner).setRevenueThreshold(1n)
+        windDown.connect(timelockSigner).setRevenueThreshold(1n),
       ).to.be.revertedWith("ArmadaWindDown: already triggered");
       await expect(
-        windDown.connect(timelockSigner).setWindDownDeadline(futureDeadline)
+        windDown.connect(timelockSigner).setWindDownDeadline(futureDeadline),
       ).to.be.revertedWith("ArmadaWindDown: already triggered");
       await stopImpersonatingTimelock();
     });
@@ -474,8 +540,13 @@ describe("Wind-Down & Redemption Integration", function () {
     const STANDARD_EXECUTION_DELAY = 2 * ONE_DAY;
     const ProposalType = { Standard: 0 };
     const ProposalState = {
-      Pending: 0, Active: 1, Defeated: 2, Succeeded: 3,
-      Queued: 4, Executed: 5, Canceled: 6,
+      Pending: 0,
+      Active: 1,
+      Defeated: 2,
+      Succeeded: 3,
+      Queued: 4,
+      Executed: 5,
+      Canceled: 6,
     };
     const Vote = { Against: 0, For: 1, Abstain: 2 };
 
@@ -485,12 +556,22 @@ describe("Wind-Down & Redemption Integration", function () {
       const distributeAmount = ethers.parseUnits("1000", ARM_DECIMALS);
       const targets = [await treasuryContract.getAddress()];
       const values = [0n];
-      const calldatas = [treasuryContract.interface.encodeFunctionData("distribute", [
-        await armToken.getAddress(), carol.address, distributeAmount,
-      ])];
-      await governor.connect(alice).propose(
-        ProposalType.Standard, targets, values, calldatas, description
-      );
+      const calldatas = [
+        treasuryContract.interface.encodeFunctionData("distribute", [
+          await armToken.getAddress(),
+          carol.address,
+          distributeAmount,
+        ]),
+      ];
+      await governor
+        .connect(alice)
+        .propose(
+          ProposalType.Standard,
+          targets,
+          values,
+          calldatas,
+          description,
+        );
     }
 
     // Drive a freshly-created proposal (id=1) through voting to Succeeded.
@@ -518,12 +599,14 @@ describe("Wind-Down & Redemption Integration", function () {
 
       // queue() must reject — the proposal cannot progress.
       await expect(governor.queue(1)).to.be.revertedWithCustomError(
-        governor, "Gov_GovernanceEnded"
+        governor,
+        "Gov_GovernanceEnded",
       );
 
       // Treasury ARM balance is unchanged (no distribution happened).
-      expect(await armToken.balanceOf(await treasuryContract.getAddress()))
-        .to.equal(TREASURY_AMOUNT);
+      expect(
+        await armToken.balanceOf(await treasuryContract.getAddress()),
+      ).to.equal(TREASURY_AMOUNT);
     });
 
     // WHY: Mirrors the queue gate at the execute boundary. A proposal that
@@ -555,12 +638,14 @@ describe("Wind-Down & Redemption Integration", function () {
 
       // execute() must reject.
       await expect(governor.execute(1)).to.be.revertedWithCustomError(
-        governor, "Gov_GovernanceEnded"
+        governor,
+        "Gov_GovernanceEnded",
       );
 
       // Treasury ARM balance is unchanged.
-      expect(await armToken.balanceOf(await treasuryContract.getAddress()))
-        .to.equal(TREASURY_AMOUNT);
+      expect(
+        await armToken.balanceOf(await treasuryContract.getAddress()),
+      ).to.equal(TREASURY_AMOUNT);
     });
   });
 
@@ -585,12 +670,16 @@ describe("Wind-Down & Redemption Integration", function () {
     });
 
     it("sweepETH moves ETH from treasury to redemption", async function () {
-      const ethBefore = await ethers.provider.getBalance(await redemption.getAddress());
+      const ethBefore = await ethers.provider.getBalance(
+        await redemption.getAddress(),
+      );
       expect(ethBefore).to.equal(0n);
 
       await windDown.sweepETH();
 
-      const ethAfter = await ethers.provider.getBalance(await redemption.getAddress());
+      const ethAfter = await ethers.provider.getBalance(
+        await redemption.getAddress(),
+      );
       expect(ethAfter).to.equal(ethers.parseEther("10"));
     });
 
@@ -603,7 +692,7 @@ describe("Wind-Down & Redemption Integration", function () {
 
     it("cannot sweep ARM", async function () {
       await expect(
-        windDown.sweepToken(await armToken.getAddress())
+        windDown.sweepToken(await armToken.getAddress()),
       ).to.be.revertedWith("ArmadaWindDown: cannot sweep ARM");
     });
 
@@ -626,7 +715,7 @@ describe("Wind-Down & Redemption Integration", function () {
       await fresh.waitForDeployment();
 
       await expect(
-        fresh.sweepToken(await usdc.getAddress())
+        fresh.sweepToken(await usdc.getAddress()),
       ).to.be.revertedWith("ArmadaWindDown: not triggered");
     });
   });
@@ -647,46 +736,56 @@ describe("Wind-Down & Redemption Integration", function () {
       await advancePastRedemptionDelay();
 
       // Approve redemption to take ARM
-      await armToken.connect(alice).approve(
-        await redemption.getAddress(),
-        ethers.MaxUint256,
-      );
-      await armToken.connect(bob).approve(
-        await redemption.getAddress(),
-        ethers.MaxUint256,
-      );
+      await armToken
+        .connect(alice)
+        .approve(await redemption.getAddress(), ethers.MaxUint256);
+      await armToken
+        .connect(bob)
+        .approve(await redemption.getAddress(), ethers.MaxUint256);
     });
 
     it("pro-rata USDC redemption", async function () {
       // Circulating = total - treasury - revenueLock - crowdfund - redemption(0 ARM)
       // = 12M - 7.8M - 1.8M - 1.2M - 0 = 1.2M
       const circulating = await redemption.circulatingSupply();
-      expect(circulating).to.equal(TOTAL_SUPPLY * 10n / 100n); // 1.2M
+      expect(circulating).to.equal((TOTAL_SUPPLY * 10n) / 100n); // 1.2M
 
       const tokens = [await usdc.getAddress()];
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
 
       // Alice has 600K / 1.2M = 50% → $250k
-      expect(await usdc.balanceOf(alice.address)).to.equal(ethers.parseUnits("250000", 6));
+      expect(await usdc.balanceOf(alice.address)).to.equal(
+        ethers.parseUnits("250000", 6),
+      );
     });
 
     it("pro-rata ETH redemption", async function () {
       const tokens: string[] = [];
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
 
       // 50% of 10 ETH = 5 ETH
-      expect(await ethers.provider.getBalance(await redemption.getAddress())).to.equal(
-        ethers.parseEther("5"),
-      );
+      expect(
+        await ethers.provider.getBalance(await redemption.getAddress()),
+      ).to.equal(ethers.parseEther("5"));
     });
 
     it("combined ERC20 + ETH in one deposit", async function () {
       const tokens = [await usdc.getAddress()];
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
 
-      expect(await usdc.balanceOf(alice.address)).to.equal(ethers.parseUnits("250000", 6));
+      expect(await usdc.balanceOf(alice.address)).to.equal(
+        ethers.parseUnits("250000", 6),
+      );
       // Alice's ETH balance increased (exact check is hard due to gas, check contract balance)
-      const ethRemaining = await ethers.provider.getBalance(await redemption.getAddress());
+      const ethRemaining = await ethers.provider.getBalance(
+        await redemption.getAddress(),
+      );
       expect(ethRemaining).to.equal(ethers.parseEther("5"));
     });
 
@@ -694,7 +793,9 @@ describe("Wind-Down & Redemption Integration", function () {
       const tokens = [await usdc.getAddress()];
 
       // Alice redeems first
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
       const aliceUsdc = await usdc.balanceOf(alice.address);
 
       // Bob redeems second — should get the same share
@@ -707,16 +808,20 @@ describe("Wind-Down & Redemption Integration", function () {
 
     it("ARM is permanently locked after redemption", async function () {
       const tokens = [await usdc.getAddress()];
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
 
       expect(await armToken.balanceOf(alice.address)).to.equal(0n);
-      expect(await armToken.balanceOf(await redemption.getAddress())).to.equal(ALICE_AMOUNT);
+      expect(await armToken.balanceOf(await redemption.getAddress())).to.equal(
+        ALICE_AMOUNT,
+      );
     });
 
     it("rejects ARM token in tokens array", async function () {
       const tokens = [await armToken.getAddress()];
       await expect(
-        redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address)
+        redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address),
       ).to.be.revertedWith("ArmadaRedemption: cannot redeem ARM");
     });
 
@@ -724,7 +829,7 @@ describe("Wind-Down & Redemption Integration", function () {
       const usdcAddr = await usdc.getAddress();
       const tokens = [usdcAddr, usdcAddr];
       await expect(
-        redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address)
+        redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address),
       ).to.be.revertedWith("ArmadaRedemption: tokens not sorted/unique");
     });
 
@@ -738,7 +843,10 @@ describe("Wind-Down & Redemption Integration", function () {
       // passes on index 0 and the loop reaches the sort check at index 1.
       // Without this, the strict share-check would fire first on the empty token
       // and we'd never test the sort path.
-      await weth.mint(await redemption.getAddress(), ethers.parseUnits("1000", 6));
+      await weth.mint(
+        await redemption.getAddress(),
+        ethers.parseUnits("1000", 6),
+      );
 
       const addr1 = await usdc.getAddress();
       const addr2 = await weth.getAddress();
@@ -755,17 +863,19 @@ describe("Wind-Down & Redemption Integration", function () {
       // Put higher address first (unsorted — descending order).
       // Use lowercase for comparison because JS string comparison is case-sensitive
       // but Solidity address comparison is numeric (case-insensitive).
-      const tokens = addr1.toLowerCase() > addr2.toLowerCase()
-        ? [addr1, addr2] : [addr2, addr1];
+      const tokens =
+        addr1.toLowerCase() > addr2.toLowerCase()
+          ? [addr1, addr2]
+          : [addr2, addr1];
       await expect(
-        redemption.connect(alice).redeem(redeemAmount, tokens, alice.address)
+        redemption.connect(alice).redeem(redeemAmount, tokens, alice.address),
       ).to.be.revertedWith("ArmadaRedemption: tokens not sorted/unique");
     });
 
     it("rejects zero ARM amount", async function () {
       const tokens = [await usdc.getAddress()];
       await expect(
-        redemption.connect(alice).redeem(0n, tokens, alice.address)
+        redemption.connect(alice).redeem(0n, tokens, alice.address),
       ).to.be.revertedWith("ArmadaRedemption: zero amount");
     });
 
@@ -773,12 +883,13 @@ describe("Wind-Down & Redemption Integration", function () {
       const circulatingBefore = await redemption.circulatingSupply();
 
       const tokens = [await usdc.getAddress()];
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
 
       const circulatingAfter = await redemption.circulatingSupply();
       expect(circulatingAfter).to.equal(circulatingBefore - ALICE_AMOUNT);
     });
-
   });
 
   // ============================================================
@@ -797,16 +908,15 @@ describe("Wind-Down & Redemption Integration", function () {
       await windDown.sweepToken(await usdc.getAddress());
       await windDown.sweepETH();
 
-      await armToken.connect(alice).approve(
-        await redemption.getAddress(),
-        ethers.MaxUint256,
-      );
+      await armToken
+        .connect(alice)
+        .approve(await redemption.getAddress(), ethers.MaxUint256);
     });
 
     it("reverts if redeem is attempted before the delay elapses", async function () {
       const tokens = [await usdc.getAddress()];
       await expect(
-        redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address)
+        redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address),
       ).to.be.revertedWith("ArmadaRedemption: redemption delay not elapsed");
     });
 
@@ -817,15 +927,19 @@ describe("Wind-Down & Redemption Integration", function () {
       await time.increaseTo(Number(triggeredAt) + REDEMPTION_DELAY - 2);
       const tokens = [await usdc.getAddress()];
       await expect(
-        redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address)
+        redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address),
       ).to.be.revertedWith("ArmadaRedemption: redemption delay not elapsed");
     });
 
     it("succeeds once the delay has elapsed", async function () {
       await advancePastRedemptionDelay();
       const tokens = [await usdc.getAddress()];
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
-      expect(await usdc.balanceOf(alice.address)).to.equal(ethers.parseUnits("250000", 6));
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
+      expect(await usdc.balanceOf(alice.address)).to.equal(
+        ethers.parseUnits("250000", 6),
+      );
     });
   });
 
@@ -854,7 +968,10 @@ describe("Wind-Down & Redemption Integration", function () {
       const MockUSDCV2 = await ethers.getContractFactory("MockUSDCV2");
       weth = await MockUSDCV2.deploy("Wrapped ETH", "WETH");
       await weth.waitForDeployment();
-      await weth.mint(await treasuryContract.getAddress(), ethers.parseUnits("100", 18));
+      await weth.mint(
+        await treasuryContract.getAddress(),
+        ethers.parseUnits("100", 18),
+      );
 
       // Trigger and sweep ALL assets (the runbook's window checklist).
       await time.increaseTo(windDownDeadline + 1);
@@ -865,7 +982,8 @@ describe("Wind-Down & Redemption Integration", function () {
 
       // Deploy the router with the complete swept list — in production this is
       // scripts/deploy-redemption-router.ts reading TokenSwept events.
-      const RedemptionRouter = await ethers.getContractFactory("RedemptionRouter");
+      const RedemptionRouter =
+        await ethers.getContractFactory("RedemptionRouter");
       router = await RedemptionRouter.deploy(
         await armToken.getAddress(),
         await redemption.getAddress(),
@@ -877,43 +995,65 @@ describe("Wind-Down & Redemption Integration", function () {
     });
 
     it("redeemAll claims every swept asset in one call, leaving no residue", async function () {
-      await armToken.connect(alice).approve(await router.getAddress(), ethers.MaxUint256);
+      await armToken
+        .connect(alice)
+        .approve(await router.getAddress(), ethers.MaxUint256);
 
       const ethBefore = await ethers.provider.getBalance(alice.address);
-      const tx = await router.connect(alice).redeemAll(ALICE_AMOUNT, alice.address);
+      const tx = await router
+        .connect(alice)
+        .redeemAll(ALICE_AMOUNT, alice.address);
       const receipt = await tx.wait();
       const gasCost = receipt.gasUsed * receipt.gasPrice;
 
       // Alice holds 600k of 1.2M circulating = 50% of every asset.
-      expect(await usdc.balanceOf(alice.address)).to.equal(ethers.parseUnits("250000", 6));
-      expect(await weth.balanceOf(alice.address)).to.equal(ethers.parseUnits("50", 18));
+      expect(await usdc.balanceOf(alice.address)).to.equal(
+        ethers.parseUnits("250000", 6),
+      );
+      expect(await weth.balanceOf(alice.address)).to.equal(
+        ethers.parseUnits("50", 18),
+      );
       expect(await ethers.provider.getBalance(alice.address)).to.equal(
         ethBefore - gasCost + ethers.parseEther("5"),
       );
 
       // ARM locked in the core contract; router retains nothing.
-      expect(await armToken.balanceOf(await redemption.getAddress())).to.equal(ALICE_AMOUNT);
+      expect(await armToken.balanceOf(await redemption.getAddress())).to.equal(
+        ALICE_AMOUNT,
+      );
       expect(await armToken.balanceOf(await router.getAddress())).to.equal(0n);
       expect(await usdc.balanceOf(await router.getAddress())).to.equal(0n);
       expect(await weth.balanceOf(await router.getAddress())).to.equal(0n);
-      expect(await ethers.provider.getBalance(await router.getAddress())).to.equal(0n);
+      expect(
+        await ethers.provider.getBalance(await router.getAddress()),
+      ).to.equal(0n);
     });
 
     it("router and direct redemption interleave with pro-rata parity", async function () {
       // WHY: Sequential correctness must hold across mixed paths — a router
       // user and a direct caller with the full list must end up identical.
-      await armToken.connect(alice).approve(await router.getAddress(), ethers.MaxUint256);
+      await armToken
+        .connect(alice)
+        .approve(await router.getAddress(), ethers.MaxUint256);
       await router.connect(alice).redeemAll(ALICE_AMOUNT, alice.address);
 
-      await armToken.connect(bob).approve(await redemption.getAddress(), ethers.MaxUint256);
-      await redemption.connect(bob).redeem(
-        BOB_AMOUNT,
-        sortTokens([await usdc.getAddress(), await weth.getAddress()]),
-        bob.address,
-      );
+      await armToken
+        .connect(bob)
+        .approve(await redemption.getAddress(), ethers.MaxUint256);
+      await redemption
+        .connect(bob)
+        .redeem(
+          BOB_AMOUNT,
+          sortTokens([await usdc.getAddress(), await weth.getAddress()]),
+          bob.address,
+        );
 
-      expect(await usdc.balanceOf(alice.address)).to.equal(await usdc.balanceOf(bob.address));
-      expect(await weth.balanceOf(alice.address)).to.equal(await weth.balanceOf(bob.address));
+      expect(await usdc.balanceOf(alice.address)).to.equal(
+        await usdc.balanceOf(bob.address),
+      );
+      expect(await weth.balanceOf(alice.address)).to.equal(
+        await weth.balanceOf(bob.address),
+      );
       // Both drained their full share: contract is empty after both redeem.
       expect(await usdc.balanceOf(await redemption.getAddress())).to.equal(0n);
       expect(await weth.balanceOf(await redemption.getAddress())).to.equal(0n);
@@ -938,8 +1078,10 @@ describe("Wind-Down & Redemption Integration", function () {
       await time.increaseTo(windDownDeadline + 1);
 
       // 4. Anyone triggers wind-down
-      await expect(windDown.connect(bob).triggerWindDown())
-        .to.emit(windDown, "WindDownTriggered");
+      await expect(windDown.connect(bob).triggerWindDown()).to.emit(
+        windDown,
+        "WindDownTriggered",
+      );
 
       // 5. Verify all hook effects
       expect(await governor.windDownActive()).to.be.true;
@@ -949,26 +1091,40 @@ describe("Wind-Down & Redemption Integration", function () {
       await windDown.connect(alice).sweepToken(await usdc.getAddress());
       await windDown.connect(alice).sweepETH();
 
-      const redemptionUsdc = await usdc.balanceOf(await redemption.getAddress());
-      const redemptionEth = await ethers.provider.getBalance(await redemption.getAddress());
+      const redemptionUsdc = await usdc.balanceOf(
+        await redemption.getAddress(),
+      );
+      const redemptionEth = await ethers.provider.getBalance(
+        await redemption.getAddress(),
+      );
       expect(redemptionUsdc).to.equal(ethers.parseUnits("500000", 6));
       expect(redemptionEth).to.equal(ethers.parseEther("10"));
 
       // 7. Alice and Bob approve and redeem (after REDEMPTION_DELAY elapses)
-      await armToken.connect(alice).approve(await redemption.getAddress(), ethers.MaxUint256);
-      await armToken.connect(bob).approve(await redemption.getAddress(), ethers.MaxUint256);
+      await armToken
+        .connect(alice)
+        .approve(await redemption.getAddress(), ethers.MaxUint256);
+      await armToken
+        .connect(bob)
+        .approve(await redemption.getAddress(), ethers.MaxUint256);
 
       const tokens = [await usdc.getAddress()];
 
       // Delay gate: social-coordination window between trigger and redemptions (issue #254)
       await advancePastRedemptionDelay();
 
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
       await redemption.connect(bob).redeem(BOB_AMOUNT, tokens, bob.address);
 
       // Both get 50% of USDC
-      expect(await usdc.balanceOf(alice.address)).to.equal(ethers.parseUnits("250000", 6));
-      expect(await usdc.balanceOf(bob.address)).to.equal(ethers.parseUnits("250000", 6));
+      expect(await usdc.balanceOf(alice.address)).to.equal(
+        ethers.parseUnits("250000", 6),
+      );
+      expect(await usdc.balanceOf(bob.address)).to.equal(
+        ethers.parseUnits("250000", 6),
+      );
 
       // Redemption contract is drained of USDC
       expect(await usdc.balanceOf(await redemption.getAddress())).to.equal(0n);
@@ -999,19 +1155,27 @@ describe("Wind-Down & Redemption Integration", function () {
 
       // Cannot pause again
       await expect(
-        shieldPauseController.connect(carol).pauseShields()
-      ).to.be.revertedWith("ShieldPauseController: post-wind-down pause already used");
+        shieldPauseController.connect(carol).pauseShields(),
+      ).to.be.revertedWith(
+        "ShieldPauseController: post-wind-down pause already used",
+      );
 
       // Sweep and redeem still works (unshields unaffected)
       await windDown.sweepToken(await usdc.getAddress());
-      await armToken.connect(alice).approve(await redemption.getAddress(), ethers.MaxUint256);
+      await armToken
+        .connect(alice)
+        .approve(await redemption.getAddress(), ethers.MaxUint256);
 
       // Advance past REDEMPTION_DELAY so redeem() clears the delay gate.
       await advancePastRedemptionDelay();
 
       const tokens = [await usdc.getAddress()];
-      await redemption.connect(alice).redeem(ALICE_AMOUNT, tokens, alice.address);
-      expect(await usdc.balanceOf(alice.address)).to.equal(ethers.parseUnits("250000", 6));
+      await redemption
+        .connect(alice)
+        .redeem(ALICE_AMOUNT, tokens, alice.address);
+      expect(await usdc.balanceOf(alice.address)).to.equal(
+        ethers.parseUnits("250000", 6),
+      );
     });
   });
 });
@@ -1024,10 +1188,14 @@ describe("Wind-Down & Redemption Integration", function () {
 // ══════════════════════════════════════════════════════════════════════════
 
 const poseidonBytecode = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "lib", "poseidon_bytecode.json"), "utf-8")
+  fs.readFileSync(
+    path.join(__dirname, "..", "lib", "poseidon_bytecode.json"),
+    "utf-8",
+  ),
 );
 
-const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const SNARK_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const POOL_DOMAINS = { hub: 100 };
 
 describe("Wind-Down Pool Withdraw-Only Mode", function () {
@@ -1097,11 +1265,19 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
     ciphertextCount?: number;
   }) {
     const unshieldType = opts.unshield ?? 0;
-    const ciphertextCount = opts.ciphertextCount ??
-      (unshieldType !== 0 ? opts.commitments.length - 1 : opts.commitments.length);
+    const ciphertextCount =
+      opts.ciphertextCount ??
+      (unshieldType !== 0
+        ? opts.commitments.length - 1
+        : opts.commitments.length);
 
     const ciphertext = Array.from({ length: ciphertextCount }, () => ({
-      ciphertext: [ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash, ethers.ZeroHash],
+      ciphertext: [
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+        ethers.ZeroHash,
+      ],
       blindedSenderViewingKey: ethers.ZeroHash,
       blindedReceiverViewingKey: ethers.ZeroHash,
       annotationData: "0x",
@@ -1109,7 +1285,11 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
     }));
 
     return {
-      proof: { a: { x: 0, y: 0 }, b: { x: [0, 0], y: [0, 0] }, c: { x: 0, y: 0 } },
+      proof: {
+        a: { x: 0, y: 0 },
+        b: { x: [0, 0], y: [0, 0] },
+        c: { x: 0, y: 0 },
+      },
       merkleRoot: opts.merkleRoot,
       nullifiers: opts.nullifiers,
       commitments: opts.commitments,
@@ -1124,13 +1304,21 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
       },
       unshieldPreimage: opts.unshieldPreimage ?? {
         npk: ethers.ZeroHash,
-        token: { tokenType: 0, tokenAddress: ethers.ZeroAddress, tokenSubID: 0 },
+        token: {
+          tokenType: 0,
+          tokenAddress: ethers.ZeroAddress,
+          tokenSubID: 0,
+        },
         value: 0,
       },
     };
   }
 
-  function computeCommitmentHash(npkBigInt: bigint, tokenId: bigint, value: bigint): string {
+  function computeCommitmentHash(
+    npkBigInt: bigint,
+    tokenId: bigint,
+    value: bigint,
+  ): string {
     const hash = poseidon([F.e(npkBigInt), F.e(tokenId), F.e(value)]);
     return ethers.zeroPadValue(ethers.toBeHex(BigInt(F.toString(hash))), 32);
   }
@@ -1139,15 +1327,22 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
     const usdcAddr = await hubUsdc.getAddress();
     await hubUsdc.mint(aliceAddress, amount);
     await hubUsdc.connect(alice).approve(privacyPoolAddress, amount);
-    await privacyPool.connect(alice).shield([makeShieldRequest(usdcAddr, amount)], ethers.ZeroAddress);
+    await privacyPool
+      .connect(alice)
+      .shield([makeShieldRequest(usdcAddr, amount)], ethers.ZeroAddress);
     return await privacyPool.merkleRoot();
   }
 
   async function asTimelock() {
     const timelockAddr = await timelockController.getAddress();
     await ethers.provider.send("hardhat_impersonateAccount", [timelockAddr]);
-    await deployer.sendTransaction({ to: timelockAddr, value: ethers.parseEther("1") });
-    return await ethers.getSigner(timelockAddr) as unknown as SignerWithAddress;
+    await deployer.sendTransaction({
+      to: timelockAddr,
+      value: ethers.parseEther("1"),
+    });
+    return (await ethers.getSigner(
+      timelockAddr,
+    )) as unknown as SignerWithAddress;
   }
 
   async function stopImpersonatingTimelock() {
@@ -1189,14 +1384,21 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
 
     // --- Deploy governance stack ---
 
-    const TimelockController = await ethers.getContractFactory("TimelockController");
-    timelockController = await TimelockController.deploy(TWO_DAYS, [], [], deployer.address);
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
+    timelockController = await TimelockController.deploy(
+      TWO_DAYS,
+      [],
+      [],
+      deployer.address,
+    );
     const timelockAddr = await timelockController.getAddress();
 
     const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
     armToken = await ArmadaToken.deploy(deployer.address, timelockAddr);
 
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasuryContract = await ArmadaTreasuryGov.deploy(timelockAddr);
 
     governor = await deployGovernorProxy(
@@ -1212,20 +1414,28 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
     // Deploy RevenueCounter behind proxy
     const RevenueCounter = await ethers.getContractFactory("RevenueCounter");
     const rcImpl = await RevenueCounter.deploy();
-    const initData = RevenueCounter.interface.encodeFunctionData("initialize", [timelockAddr]);
+    const initData = RevenueCounter.interface.encodeFunctionData("initialize", [
+      timelockAddr,
+    ]);
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-    const rcProxy = await ERC1967Proxy.deploy(await rcImpl.getAddress(), initData);
+    const rcProxy = await ERC1967Proxy.deploy(
+      await rcImpl.getAddress(),
+      initData,
+    );
     revenueCounter = RevenueCounter.attach(await rcProxy.getAddress());
 
     // Deploy ShieldPauseController
-    const ShieldPauseController = await ethers.getContractFactory("ShieldPauseController");
+    const ShieldPauseController = await ethers.getContractFactory(
+      "ShieldPauseController",
+    );
     shieldPauseController = await ShieldPauseController.deploy(
       await governor.getAddress(),
       timelockAddr,
     );
 
     // Deploy ArmadaRedemption
-    const ArmadaRedemption = await ethers.getContractFactory("ArmadaRedemption");
+    const ArmadaRedemption =
+      await ethers.getContractFactory("ArmadaRedemption");
     redemption = await ArmadaRedemption.deploy(
       await armToken.getAddress(),
       await treasuryContract.getAddress(),
@@ -1252,21 +1462,35 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
     // Wire governance contracts
     await armToken.setWindDownContract(await windDown.getAddress());
     await redemption.setWindDown(await windDown.getAddress());
-    await revenueCounter.connect(await asTimelock()).setWindDownContract(await windDown.getAddress());
+    await revenueCounter
+      .connect(await asTimelock())
+      .setWindDownContract(await windDown.getAddress());
 
     const timelockSigner = await asTimelock();
     await governor.connect(timelockSigner).setSecurityCouncil(carol.address);
-    await governor.connect(timelockSigner).setWindDownContract(await windDown.getAddress());
-    await treasuryContract.connect(timelockSigner).setWindDownContract(await windDown.getAddress());
-    await shieldPauseController.connect(timelockSigner).setWindDownContract(await windDown.getAddress());
+    await governor
+      .connect(timelockSigner)
+      .setWindDownContract(await windDown.getAddress());
+    await treasuryContract
+      .connect(timelockSigner)
+      .setWindDownContract(await windDown.getAddress());
+    await shieldPauseController
+      .connect(timelockSigner)
+      .setWindDownContract(await windDown.getAddress());
     await stopImpersonatingTimelock();
 
     // Configure timelock roles
     const PROPOSER_ROLE = await timelockController.PROPOSER_ROLE();
     const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
     const ADMIN_ROLE = await timelockController.TIMELOCK_ADMIN_ROLE();
-    await timelockController.grantRole(PROPOSER_ROLE, await governor.getAddress());
-    await timelockController.grantRole(EXECUTOR_ROLE, await governor.getAddress());
+    await timelockController.grantRole(
+      PROPOSER_ROLE,
+      await governor.getAddress(),
+    );
+    await timelockController.grantRole(
+      EXECUTOR_ROLE,
+      await governor.getAddress(),
+    );
     await timelockController.renounceRole(ADMIN_ROLE, deployer.address);
 
     // Distribute ARM
@@ -1279,7 +1503,10 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
       crowdfundAddr.address,
       await redemption.getAddress(),
     ]);
-    await armToken.transfer(await treasuryContract.getAddress(), TREASURY_AMOUNT);
+    await armToken.transfer(
+      await treasuryContract.getAddress(),
+      TREASURY_AMOUNT,
+    );
     await armToken.transfer(alice.address, ALICE_AMOUNT);
     await armToken.transfer(bob.address, BOB_AMOUNT);
     await armToken.connect(alice).delegate(alice.address);
@@ -1287,33 +1514,54 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
     // --- Deploy privacy pool ---
 
     // Deploy Poseidon libraries
-    const poseidonT3Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT3.bytecode });
+    const poseidonT3Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT3.bytecode,
+    });
     const poseidonT3Address = (await poseidonT3Tx.wait())!.contractAddress!;
-    const poseidonT4Tx = await deployer.sendTransaction({ data: poseidonBytecode.PoseidonT4.bytecode });
+    const poseidonT4Tx = await deployer.sendTransaction({
+      data: poseidonBytecode.PoseidonT4.bytecode,
+    });
     const poseidonT4Address = (await poseidonT4Tx.wait())!.contractAddress!;
 
     // Deploy modules with Poseidon linking
-    const merkleModule = await (await ethers.getContractFactory("MerkleModule", {
-      libraries: { PoseidonT3: poseidonT3Address },
-    })).deploy();
-    const verifierModule = await (await ethers.getContractFactory("VerifierModule")).deploy();
-    const shieldModule = await (await ethers.getContractFactory("ShieldModule", {
-      libraries: { PoseidonT4: poseidonT4Address },
-    })).deploy();
-    const transactModule = await (await ethers.getContractFactory("TransactModule", {
-      libraries: { PoseidonT4: poseidonT4Address },
-    })).deploy();
+    const merkleModule = await (
+      await ethers.getContractFactory("MerkleModule", {
+        libraries: { PoseidonT3: poseidonT3Address },
+      })
+    ).deploy();
+    const verifierModule = await (
+      await ethers.getContractFactory("VerifierModule")
+    ).deploy();
+    const shieldModule = await (
+      await ethers.getContractFactory("ShieldModule", {
+        libraries: { PoseidonT4: poseidonT4Address },
+      })
+    ).deploy();
+    const transactModule = await (
+      await ethers.getContractFactory("TransactModule", {
+        libraries: { PoseidonT4: poseidonT4Address },
+      })
+    ).deploy();
 
     // Deploy mock CCTP
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-    const hubMessageTransmitter = await MockMessageTransmitterV2.deploy(POOL_DOMAINS.hub, deployer.address);
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
+    const hubMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      POOL_DOMAINS.hub,
+      deployer.address,
+    );
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     const hubTokenMessenger = await MockTokenMessengerV2.deploy(
       await hubMessageTransmitter.getAddress(),
       await hubUsdc.getAddress(),
       POOL_DOMAINS.hub,
     );
-    await hubMessageTransmitter.setTokenMessenger(await hubTokenMessenger.getAddress());
+    await hubMessageTransmitter.setTokenMessenger(
+      await hubTokenMessenger.getAddress(),
+    );
     await hubUsdc.addMinter(await hubTokenMessenger.getAddress());
 
     // Deploy and initialize PrivacyPool
@@ -1336,7 +1584,9 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
 
     await loadVerificationKeys(privacyPool, TESTING_ARTIFACT_CONFIGS, false);
     await privacyPool.setTestingMode(true);
-    await privacyPool.setShieldPauseContract(await shieldPauseController.getAddress());
+    await privacyPool.setShieldPauseContract(
+      await shieldPauseController.getAddress(),
+    );
 
     await mine(1);
   });
@@ -1353,14 +1603,20 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
       await hubUsdc.connect(alice).approve(privacyPoolAddress, amount);
 
       await expect(
-        privacyPool.connect(alice).shield([makeShieldRequest(usdcAddr, amount)], ethers.ZeroAddress)
+        privacyPool
+          .connect(alice)
+          .shield([makeShieldRequest(usdcAddr, amount)], ethers.ZeroAddress),
       ).to.not.be.reverted;
     });
 
     it("pure private transfer succeeds before wind-down", async function () {
       const root = await shieldAndGetRoot(ethers.parseUnits("100", 6));
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes("pre-wd-transfer-null"));
-      const commitment = ethers.keccak256(ethers.toUtf8Bytes("pre-wd-transfer-commit"));
+      const nullifier = ethers.keccak256(
+        ethers.toUtf8Bytes("pre-wd-transfer-null"),
+      );
+      const commitment = ethers.keccak256(
+        ethers.toUtf8Bytes("pre-wd-transfer-commit"),
+      );
 
       const tx = makeTransaction({
         merkleRoot: root,
@@ -1371,7 +1627,7 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
 
       // Should not revert with "withdraw only" (may succeed or fail on proof validation)
       await expect(privacyPool.transact([tx])).to.not.be.revertedWith(
-        "TransactModule: withdraw only"
+        "TransactModule: withdraw only",
       );
     });
 
@@ -1384,8 +1640,14 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
       const unshieldAmount = ethers.parseUnits("100", 6);
       const npkBigInt = BigInt(recipientAddr);
       const tokenId = BigInt(usdcAddr);
-      const commitHash = computeCommitmentHash(npkBigInt, tokenId, unshieldAmount);
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes("pre-wd-unshield-null"));
+      const commitHash = computeCommitmentHash(
+        npkBigInt,
+        tokenId,
+        unshieldAmount,
+      );
+      const nullifier = ethers.keccak256(
+        ethers.toUtf8Bytes("pre-wd-unshield-null"),
+      );
 
       const tx = makeTransaction({
         merkleRoot: root,
@@ -1423,14 +1685,20 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
       await hubUsdc.connect(alice).approve(privacyPoolAddress, amount);
 
       await expect(
-        privacyPool.connect(alice).shield([makeShieldRequest(usdcAddr, amount)], ethers.ZeroAddress)
+        privacyPool
+          .connect(alice)
+          .shield([makeShieldRequest(usdcAddr, amount)], ethers.ZeroAddress),
       ).to.be.revertedWith("ShieldModule: shields paused");
     });
 
     it("pure private transfer reverts after wind-down", async function () {
       const root = await privacyPool.merkleRoot();
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes("post-wd-transfer-null"));
-      const commitment = ethers.keccak256(ethers.toUtf8Bytes("post-wd-transfer-commit"));
+      const nullifier = ethers.keccak256(
+        ethers.toUtf8Bytes("post-wd-transfer-null"),
+      );
+      const commitment = ethers.keccak256(
+        ethers.toUtf8Bytes("post-wd-transfer-commit"),
+      );
 
       const tx = makeTransaction({
         merkleRoot: root,
@@ -1440,7 +1708,7 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
       });
 
       await expect(privacyPool.transact([tx])).to.be.revertedWith(
-        "TransactModule: withdraw only"
+        "TransactModule: withdraw only",
       );
     });
 
@@ -1451,11 +1719,17 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
       const unshieldAmount = ethers.parseUnits("50", 6);
       const npkBigInt = BigInt(recipientAddr);
       const tokenId = BigInt(usdcAddr);
-      const commitHash = computeCommitmentHash(npkBigInt, tokenId, unshieldAmount);
+      const commitHash = computeCommitmentHash(
+        npkBigInt,
+        tokenId,
+        unshieldAmount,
+      );
 
       const unshieldTx = makeTransaction({
         merkleRoot: root,
-        nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("mixed-unshield-null"))],
+        nullifiers: [
+          ethers.keccak256(ethers.toUtf8Bytes("mixed-unshield-null")),
+        ],
         commitments: [commitHash],
         unshield: 1,
         unshieldPreimage: {
@@ -1467,14 +1741,18 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
 
       const transferTx = makeTransaction({
         merkleRoot: root,
-        nullifiers: [ethers.keccak256(ethers.toUtf8Bytes("mixed-transfer-null"))],
-        commitments: [ethers.keccak256(ethers.toUtf8Bytes("mixed-transfer-commit"))],
+        nullifiers: [
+          ethers.keccak256(ethers.toUtf8Bytes("mixed-transfer-null")),
+        ],
+        commitments: [
+          ethers.keccak256(ethers.toUtf8Bytes("mixed-transfer-commit")),
+        ],
         unshield: 0,
       });
 
-      await expect(privacyPool.transact([unshieldTx, transferTx])).to.be.revertedWith(
-        "TransactModule: withdraw only"
-      );
+      await expect(
+        privacyPool.transact([unshieldTx, transferTx]),
+      ).to.be.revertedWith("TransactModule: withdraw only");
     });
 
     it("unshield succeeds after wind-down", async function () {
@@ -1485,8 +1763,14 @@ describe("Wind-Down Pool Withdraw-Only Mode", function () {
       const unshieldAmount = ethers.parseUnits("50", 6);
       const npkBigInt = BigInt(recipientAddr);
       const tokenId = BigInt(usdcAddr);
-      const commitHash = computeCommitmentHash(npkBigInt, tokenId, unshieldAmount);
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes("post-wd-unshield-null"));
+      const commitHash = computeCommitmentHash(
+        npkBigInt,
+        tokenId,
+        unshieldAmount,
+      );
+      const nullifier = ethers.keccak256(
+        ethers.toUtf8Bytes("post-wd-unshield-null"),
+      );
 
       const tx = makeTransaction({
         merkleRoot: root,

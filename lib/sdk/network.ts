@@ -15,13 +15,19 @@ import {
   createPollingJsonRpcProviderForListeners,
   TXIDVersion,
   TokenBalances,
-} from '@railgun-community/engine';
-import { Chain } from '@railgun-community/shared-models';
-import { ethers, FallbackProvider, JsonRpcProvider } from 'ethers';
-import { getEngine } from './init';
-import { HUB_CHAIN, CLIENT_CHAIN, HUB_RPC, CLIENT_RPC, DEPLOYMENT_BLOCK } from './chain-config';
-import * as fs from 'fs';
-import * as path from 'path';
+} from "@railgun-community/engine";
+import { Chain } from "@railgun-community/shared-models";
+import { ethers, FallbackProvider, JsonRpcProvider } from "ethers";
+import { getEngine } from "./init";
+import {
+  HUB_CHAIN,
+  CLIENT_CHAIN,
+  HUB_RPC,
+  CLIENT_RPC,
+  DEPLOYMENT_BLOCK,
+} from "./chain-config";
+import * as fs from "fs";
+import * as path from "path";
 
 // ============ Types ============
 
@@ -59,7 +65,7 @@ export interface NetworkLoadResult {
 
 // ============ Deployment Loading ============
 
-const DEPLOYMENTS_DIR = path.join(__dirname, '../../deployments');
+const DEPLOYMENTS_DIR = path.join(__dirname, "../../deployments");
 
 /**
  * Load deployment info from file
@@ -71,13 +77,13 @@ export function loadDeployment(filename: string): DeploymentInfo {
   if (!fs.existsSync(filepath)) {
     throw new Error(`Deployment file not found: ${filepath}`);
   }
-  return JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+  return JSON.parse(fs.readFileSync(filepath, "utf-8"));
 }
 
 /**
  * Get Railgun proxy address from deployment
  */
-export function getRailgunProxyAddress(filename: string = 'railgun'): string {
+export function getRailgunProxyAddress(filename: string = "railgun"): string {
   const deployment = loadDeployment(filename);
   return deployment.contracts.railgunProxy;
 }
@@ -91,8 +97,8 @@ export function listDeployments(): string[] {
   }
   return fs
     .readdirSync(DEPLOYMENTS_DIR)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => f.replace('.json', ''));
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => f.replace(".json", ""));
 }
 
 // ============ Provider Creation ============
@@ -103,7 +109,10 @@ export function listDeployments(): string[] {
  * @param rpcUrl - RPC URL to connect to
  * @param chainId - Chain ID
  */
-export function createProvider(rpcUrl: string, chainId: number): FallbackProvider {
+export function createProvider(
+  rpcUrl: string,
+  chainId: number,
+): FallbackProvider {
   const provider = new JsonRpcProvider(rpcUrl, chainId, {
     staticNetwork: true,
   });
@@ -124,12 +133,12 @@ export function createProvider(rpcUrl: string, chainId: number): FallbackProvide
 export async function createPollingProvider(
   fallbackProvider: FallbackProvider,
   chainId: number,
-  pollingInterval: number = 2000
+  pollingInterval: number = 2000,
 ): Promise<PollingJsonRpcProvider> {
   return createPollingJsonRpcProviderForListeners(
     fallbackProvider,
     chainId,
-    pollingInterval
+    pollingInterval,
   );
 }
 
@@ -154,7 +163,7 @@ export async function loadNetworkIntoEngine(
   railgunProxyAddress: string,
   relayAdaptAddress: string = ethers.ZeroAddress,
   rpcUrl: string,
-  deploymentBlock: number = 0
+  deploymentBlock: number = 0,
 ): Promise<NetworkLoadResult> {
   const engine = getEngine();
 
@@ -165,7 +174,10 @@ export async function loadNetworkIntoEngine(
 
   // Create providers
   const fallbackProvider = createProvider(rpcUrl, chain.id);
-  const pollingProvider = await createPollingProvider(fallbackProvider, chain.id);
+  const pollingProvider = await createPollingProvider(
+    fallbackProvider,
+    chain.id,
+  );
 
   // Deployment blocks for each TXID version
   const deploymentBlocks: Record<TXIDVersion, number> = {
@@ -177,25 +189,26 @@ export async function loadNetworkIntoEngine(
   // V3 addresses are set to zero since we're using V2 contracts only
   await engine.loadNetwork(
     chain,
-    railgunProxyAddress,      // V2 RailgunSmartWallet proxy
-    relayAdaptAddress,        // V2 RelayAdapt (optional)
-    ethers.ZeroAddress,       // V3 PoseidonMerkleAccumulator (not used)
-    ethers.ZeroAddress,       // V3 PoseidonMerkleVerifier (not used)
-    ethers.ZeroAddress,       // V3 TokenVault (not used)
+    railgunProxyAddress, // V2 RailgunSmartWallet proxy
+    relayAdaptAddress, // V2 RelayAdapt (optional)
+    ethers.ZeroAddress, // V3 PoseidonMerkleAccumulator (not used)
+    ethers.ZeroAddress, // V3 PoseidonMerkleVerifier (not used)
+    ethers.ZeroAddress, // V3 TokenVault (not used)
     fallbackProvider,
     pollingProvider,
     deploymentBlocks,
-    undefined,                // POI launch block (not used)
-    false                     // supportsV3 = false for V2-only
+    undefined, // POI launch block (not used)
+    false, // supportsV3 = false for V2-only
   );
 
   console.log(`  Network loaded successfully`);
 
   // Get fees from contract
-  const { RailgunVersionedSmartContracts } = await import('@railgun-community/engine');
+  const { RailgunVersionedSmartContracts } =
+    await import("@railgun-community/engine");
   const fees = await RailgunVersionedSmartContracts.fees(
     TXIDVersion.V2_PoseidonMerkle,
-    chain
+    chain,
   );
 
   console.log(`  Shield fee: ${fees.shield} basis points`);
@@ -219,11 +232,11 @@ export async function loadNetworkIntoEngine(
  * the saved deployment info.
  */
 export async function loadHubNetwork(): Promise<NetworkLoadResult> {
-  const deployment = loadDeployment('railgun');
+  const deployment = loadDeployment("railgun");
 
   if (deployment.chainId !== HUB_CHAIN.id) {
     throw new Error(
-      `Deployment chain ID (${deployment.chainId}) doesn't match HUB_CHAIN (${HUB_CHAIN.id})`
+      `Deployment chain ID (${deployment.chainId}) doesn't match HUB_CHAIN (${HUB_CHAIN.id})`,
     );
   }
 
@@ -232,7 +245,7 @@ export async function loadHubNetwork(): Promise<NetworkLoadResult> {
     deployment.contracts.railgunProxy,
     ethers.ZeroAddress, // No RelayAdapt in our deployment
     HUB_RPC,
-    DEPLOYMENT_BLOCK
+    DEPLOYMENT_BLOCK,
   );
 }
 
@@ -267,12 +280,15 @@ export async function scanMerkletree(chain: Chain): Promise<void> {
  */
 export async function getMerkleRoot(
   chain: Chain,
-  treeNumber: number = 0
+  treeNumber: number = 0,
 ): Promise<string | undefined> {
   const engine = getEngine();
 
   // Get the UTXO merkletree for this chain
-  const merkletree = engine.getUTXOMerkletree(TXIDVersion.V2_PoseidonMerkle, chain);
+  const merkletree = engine.getUTXOMerkletree(
+    TXIDVersion.V2_PoseidonMerkle,
+    chain,
+  );
   if (!merkletree) {
     return undefined;
   }
@@ -291,11 +307,14 @@ export async function getMerkleRoot(
 export async function getMerkleProof(
   chain: Chain,
   treeNumber: number,
-  leafIndex: number
+  leafIndex: number,
 ): Promise<{ root: string; elements: string[]; indices: string } | undefined> {
   const engine = getEngine();
 
-  const merkletree = engine.getUTXOMerkletree(TXIDVersion.V2_PoseidonMerkle, chain);
+  const merkletree = engine.getUTXOMerkletree(
+    TXIDVersion.V2_PoseidonMerkle,
+    chain,
+  );
   if (!merkletree) {
     return undefined;
   }
@@ -317,7 +336,7 @@ export async function getMerkleProof(
  */
 export async function scanWalletBalances(
   walletId: string,
-  chain: Chain
+  chain: Chain,
 ): Promise<void> {
   const engine = getEngine();
 
@@ -350,7 +369,7 @@ export async function scanWalletBalances(
 export async function getWalletBalances(
   walletId: string,
   chain: Chain,
-  onlySpendable: boolean = false
+  onlySpendable: boolean = false,
 ): Promise<TokenBalances> {
   const engine = getEngine();
 
@@ -363,7 +382,7 @@ export async function getWalletBalances(
   const balances = await wallet.getTokenBalances(
     TXIDVersion.V2_PoseidonMerkle,
     chain,
-    onlySpendable
+    onlySpendable,
   );
 
   return balances;

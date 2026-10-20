@@ -157,7 +157,10 @@ export class PrivacyRelay {
     // if the deployed addresses happen to collide.
     this.allowedTargets = new Map();
     for (const [chainId, addrs] of allowedTargetsByChain.entries()) {
-      this.allowedTargets.set(chainId, new Set(addrs.map((a) => a.toLowerCase())));
+      this.allowedTargets.set(
+        chainId,
+        new Set(addrs.map((a) => a.toLowerCase())),
+      );
     }
   }
 
@@ -174,9 +177,7 @@ export class PrivacyRelay {
    * 6. Gas estimation succeeds (catches reverts pre-submit)
    * 7. Submit
    */
-  async handleRelayRequest(
-    request: RelayRequest,
-  ): Promise<{ txHash: string }> {
+  async handleRelayRequest(request: RelayRequest): Promise<{ txHash: string }> {
     const { chainId, to, data, feesCacheId, feeShieldRandom } = request;
 
     // 1. Validate chain ID — must be one of the configured chains
@@ -212,7 +213,10 @@ export class PrivacyRelay {
 
     // 4. Validate calldata + selector
     if (!data || data.length < 10) {
-      throw new RelayError("INVALID_DATA", "Transaction data is empty or too short.");
+      throw new RelayError(
+        "INVALID_DATA",
+        "Transaction data is empty or too short.",
+      );
     }
     const selector = data.slice(0, 10);
     const selectorName = ALLOWED_SELECTORS[selector];
@@ -232,7 +236,10 @@ export class PrivacyRelay {
     //    - Proof-bearing selectors: fee is encrypted inside a SNARK commitment ciphertext;
     //      verifier decrypts under the relayer's viewing key. Hub-only today — Phase A doesn't
     //      run any non-hub proof-bearing flow.
-    const advertisedFee = advertisedFeeForSelector(selector, quotedSchedule.fees);
+    const advertisedFee = advertisedFeeForSelector(
+      selector,
+      quotedSchedule.fees,
+    );
     try {
       if (GASLESS_SELECTORS.has(selector)) {
         // Phase C — the gasless fee is a shielded note to the relayer's 0zk (like redeem), so the
@@ -247,9 +254,18 @@ export class PrivacyRelay {
         // Redeem's fee is shielded to the relayer contract-side (issue #312), not embedded as a
         // broadcaster output in the proof. Verify the fee note is ours via the frontend-supplied
         // shield random. See redeem-fee-verifier.
-        verifyRedeemFee(this.verifierContext, { data }, advertisedFee, feeShieldRandom);
+        verifyRedeemFee(
+          this.verifierContext,
+          { data },
+          advertisedFee,
+          feeShieldRandom,
+        );
       } else {
-        await verifyBroadcasterFee(this.verifierContext, { to, data }, advertisedFee);
+        await verifyBroadcasterFee(
+          this.verifierContext,
+          { to, data },
+          advertisedFee,
+        );
       }
     } catch (e) {
       if (e instanceof RelayError) {
@@ -306,7 +322,9 @@ export class PrivacyRelay {
           `Relayer wallet on chain ${chainId} is busy processing another transaction. Please retry shortly.`,
         );
       }
-      const code = e.message?.includes("Duplicate") ? "DUPLICATE_TX" : "SUBMISSION_FAILED";
+      const code = e.message?.includes("Duplicate")
+        ? "DUPLICATE_TX"
+        : "SUBMISSION_FAILED";
       this.counters.inc(`submitFail.${selectorName}.${code}`);
       if (code === "DUPLICATE_TX") {
         throw new RelayError("DUPLICATE_TX", e.message);
@@ -331,7 +349,9 @@ export class PrivacyRelay {
     txHash: string,
     chainId?: number,
   ): Promise<TransactionStatus> {
-    let receipt: Awaited<ReturnType<WalletManager["getTransactionReceipt"]>> | null = null;
+    let receipt: Awaited<
+      ReturnType<WalletManager["getTransactionReceipt"]>
+    > | null = null;
 
     if (chainId !== undefined) {
       receipt = await this.walletManager.getTransactionReceipt(chainId, txHash);

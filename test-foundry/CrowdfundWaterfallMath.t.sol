@@ -87,14 +87,14 @@ contract CrowdfundWaterfallMathTest is Test {
 
     function test_differentialVectors() public {
         uint256 K = 1_000 * 1e6; // $1,000 in 6-dec USDC
-        _assertTotal(BASE, 2_000 * K,        0,         0, 564 * K);   // hop-0 oversub → 47% ceiling
-        _assertTotal(MAX_, 2_000 * K,        0,         0, 846 * K);   // expanded hop-0 ceiling
+        _assertTotal(BASE, 2_000 * K, 0, 0, 564 * K); // hop-0 oversub → 47% ceiling
+        _assertTotal(MAX_, 2_000 * K, 0, 0, 846 * K); // expanded hop-0 ceiling
         _assertTotal(BASE, 2_000 * K, 2_000 * K, 2_000 * K, 1_200 * K); // saturated → full BASE
         _assertTotal(MAX_, 2_000 * K, 2_000 * K, 2_000 * K, 1_800 * K); // saturated → full MAX
-        _assertTotal(BASE,   564 * K,        0, 2_000 * K, 1_200 * K); // hop-0 leftover → hop-2 rollover
-        _assertTotal(BASE,        0,  2_000 * K,        0, 1_020 * K); // hop-0 empty → hop-1 gets `available`
-        _assertTotal(BASE, 1_050 * K,   436 * K,        0, 1_000 * K); // realistic success == MIN_SALE
-        _assertTotal(BASE, 1_050 * K,   435 * K,        0,   999 * K); // one hop-1 slot less → below MIN_SALE
-        _assertTotal(MAX_, 1_500 * K,        0,         0, 846 * K);   // concentrated hop-0 at expansion < MIN_SALE
+        _assertTotal(BASE, 564 * K, 0, 2_000 * K, 1_200 * K); // hop-0 leftover → hop-2 rollover
+        _assertTotal(BASE, 0, 2_000 * K, 0, 1_020 * K); // hop-0 empty → hop-1 gets `available`
+        _assertTotal(BASE, 1_050 * K, 436 * K, 0, 1_000 * K); // realistic success == MIN_SALE
+        _assertTotal(BASE, 1_050 * K, 435 * K, 0, 999 * K); // one hop-1 slot less → below MIN_SALE
+        _assertTotal(MAX_, 1_500 * K, 0, 0, 846 * K); // concentrated hop-0 at expansion < MIN_SALE
     }
 }

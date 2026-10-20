@@ -47,10 +47,7 @@ import {
   NetworkName,
   TXIDVersion,
 } from "@railgun-community/shared-models";
-import {
-  ChainType,
-  POI,
-} from "@railgun-community/engine";
+import { ChainType, POI } from "@railgun-community/engine";
 import { getNetworkConfig } from "../config/networks";
 
 // Same constant the rest of the relayer-side flow uses for engine-encrypted wallet ops. Not a
@@ -89,7 +86,6 @@ function patchNetworkConfig(
   hubChainId: number,
   isSepolia: boolean,
 ): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const networkConfig = NETWORK_CONFIG as any;
   const target = networkConfig[NetworkName.Hardhat];
   if (!target) {
@@ -133,8 +129,15 @@ async function main(): Promise<void> {
   const hubChainId = netConfig.hub.chainId;
   const hubRpc = netConfig.hub.rpc;
 
-  console.log("[check-balance] Initializing engine via wallet-package startRailgunEngine...");
-  const dbPath = path.resolve(__dirname, "..", "data", "relayer-balance-check-db");
+  console.log(
+    "[check-balance] Initializing engine via wallet-package startRailgunEngine...",
+  );
+  const dbPath = path.resolve(
+    __dirname,
+    "..",
+    "data",
+    "relayer-balance-check-db",
+  );
   if (!fs.existsSync(dbPath)) fs.mkdirSync(dbPath, { recursive: true });
   const db = leveldown(dbPath);
 
@@ -144,10 +147,14 @@ async function main(): Promise<void> {
   // than failing later with a more confusing error.
   const artifactStore = new ArtifactStore(
     async () => {
-      throw new Error("balance-check: artifact get not supported (proof-gen disabled)");
+      throw new Error(
+        "balance-check: artifact get not supported (proof-gen disabled)",
+      );
     },
     async () => {
-      throw new Error("balance-check: artifact store not supported (proof-gen disabled)");
+      throw new Error(
+        "balance-check: artifact store not supported (proof-gen disabled)",
+      );
     },
     async () => false,
   );
@@ -174,7 +181,9 @@ async function main(): Promise<void> {
   console.log(`  Wallet ID: ${walletId.slice(0, 16)}...`);
   console.log(`  Address:   ${railgunAddress}`);
 
-  console.log("[check-balance] Patching SDK network config + loading hub provider...");
+  console.log(
+    "[check-balance] Patching SDK network config + loading hub provider...",
+  );
   console.log(`  Scan deployBlock: ${deployBlock}`);
   console.log(`  RPC:              ${hubRpc}`);
   patchNetworkConfig(privacyPool, deployBlock, hubChainId, isSepolia);
@@ -188,7 +197,8 @@ async function main(): Promise<void> {
   // returns the right value.
   let lastReportedPct = -5;
   let lastStatus = "";
-  let resolveScanComplete: ((reason: "complete" | "incomplete") => void) | null = null;
+  let resolveScanComplete:
+    ((reason: "complete" | "incomplete") => void) | null = null;
   const scanSettled = new Promise<"complete" | "incomplete">((resolve) => {
     resolveScanComplete = resolve;
   });
@@ -201,10 +211,16 @@ async function main(): Promise<void> {
       if (milestone) lastReportedPct = pct;
       console.log(`  scan ${pct}% (status=${evt.scanStatus})`);
     }
-    if (evt.scanStatus === MerkletreeScanStatus.Complete && resolveScanComplete) {
+    if (
+      evt.scanStatus === MerkletreeScanStatus.Complete &&
+      resolveScanComplete
+    ) {
       resolveScanComplete("complete");
       resolveScanComplete = null;
-    } else if (evt.scanStatus === MerkletreeScanStatus.Incomplete && resolveScanComplete) {
+    } else if (
+      evt.scanStatus === MerkletreeScanStatus.Incomplete &&
+      resolveScanComplete
+    ) {
       // Incomplete = scan threw mid-flight (RPC failure, validation issue). Balance reads may
       // be partial but we resolve anyway so the operator sees something useful.
       resolveScanComplete("incomplete");
@@ -230,8 +246,12 @@ async function main(): Promise<void> {
     isSepolia ? 15_000 : 2_000,
   );
 
-  console.log("[check-balance] Kicking merkletree scan + awaiting completion...");
-  console.log("  (Sepolia first-run can take minutes — progress lines tick every ~5%)");
+  console.log(
+    "[check-balance] Kicking merkletree scan + awaiting completion...",
+  );
+  console.log(
+    "  (Sepolia first-run can take minutes — progress lines tick every ~5%)",
+  );
   const chain = { type: ChainType.EVM, id: hubChainId };
   // refreshBalances → engine.scanContractHistory: actually starts the scan. `loadProvider`
   // alone only registers the network; without this call there's nothing scanning and the
@@ -244,7 +264,9 @@ async function main(): Promise<void> {
   const SCAN_TIMEOUT_MS = isSepolia ? 15 * 60_000 : 60_000;
   const result = await Promise.race([
     scanSettled,
-    new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), SCAN_TIMEOUT_MS)),
+    new Promise<"timeout">((resolve) =>
+      setTimeout(() => resolve("timeout"), SCAN_TIMEOUT_MS),
+    ),
   ]);
   if (result === "timeout") {
     console.warn(
@@ -266,7 +288,7 @@ async function main(): Promise<void> {
   // undefined (reading 'filter')". An empty list array + stub node interface satisfies the
   // class invariant — bucketing falls into the no-active-list branch (MissingExternalPOI etc.)
   // which is fine because we're just summing all token balances regardless of bucket.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   POI.init([], {} as any);
   const wallet = fullWalletForID(walletId);
   const balanceRaw = await balanceForERC20Token(
@@ -282,7 +304,9 @@ async function main(): Promise<void> {
   const USDC_UNIT = 10n ** USDC_DECIMALS;
   const whole = balanceRaw / USDC_UNIT;
   const fraction = balanceRaw % USDC_UNIT;
-  const fractionPadded = fraction.toString().padStart(Number(USDC_DECIMALS), "0");
+  const fractionPadded = fraction
+    .toString()
+    .padStart(Number(USDC_DECIMALS), "0");
 
   console.log("");
   console.log("=".repeat(60));

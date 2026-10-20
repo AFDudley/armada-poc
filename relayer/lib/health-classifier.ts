@@ -47,7 +47,9 @@ export interface ChainHealthInput {
  *  4. Most recent tick errored OR lagBlocks > threshold → `degraded`.
  *  5. Otherwise → `healthy`.
  */
-export function classifyChainHealth(input: ChainHealthInput): ChainHealthStatus {
+export function classifyChainHealth(
+  input: ChainHealthInput,
+): ChainHealthStatus {
   const { lastError, lastScanAt, pollIntervalMs, lagBlocks, now } = input;
 
   if (lastScanAt === 0) return "unhealthy";
@@ -72,7 +74,12 @@ export function classifyChainHealth(input: ChainHealthInput): ChainHealthStatus 
 export function rollupStatus(statuses: ChainHealthStatus[]): ChainHealthStatus {
   if (statuses.length === 0) return "unhealthy";
   // Severity order (worst → best). Find the worst.
-  const severity: ChainHealthStatus[] = ["unhealthy", "stale", "degraded", "healthy"];
+  const severity: ChainHealthStatus[] = [
+    "unhealthy",
+    "stale",
+    "degraded",
+    "healthy",
+  ];
   for (const level of severity) {
     if (statuses.includes(level)) return level;
   }

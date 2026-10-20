@@ -99,7 +99,8 @@ const TRANSACTION_STRUCT =
   ") unshieldPreimage" +
   ")";
 
-const SHIELD_CIPHERTEXT_STRUCT = "tuple(bytes32[3] encryptedBundle, bytes32 shieldKey)";
+const SHIELD_CIPHERTEXT_STRUCT =
+  "tuple(bytes32[3] encryptedBundle, bytes32 shieldKey)";
 
 // ============ Function ABIs ============
 

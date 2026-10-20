@@ -78,20 +78,14 @@ library CCTPPayloadLib {
      *      on the Hub (before the shield fee, which every note pays).
      */
     function encodeShield(ShieldData[] memory notes) internal pure returns (bytes memory) {
-        return abi.encode(CCTPPayload({
-            messageType: MessageType.SHIELD,
-            data: abi.encode(notes)
-        }));
+        return abi.encode(CCTPPayload({messageType: MessageType.SHIELD, data: abi.encode(notes)}));
     }
 
     /**
      * @notice Encode an unshield payload for CCTP hook data
      */
     function encodeUnshield(UnshieldData memory data) internal pure returns (bytes memory) {
-        return abi.encode(CCTPPayload({
-            messageType: MessageType.UNSHIELD,
-            data: abi.encode(data)
-        }));
+        return abi.encode(CCTPPayload({messageType: MessageType.UNSHIELD, data: abi.encode(data)}));
     }
 
     /**

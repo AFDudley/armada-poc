@@ -1,31 +1,31 @@
 // ABOUTME: Ported byte-identical from the armada-crowdfund mockup (components/Participate/Participate.tsx).
 // ABOUTME: Internal paths rewritten — @armada/ui primitives via package barrel; cross-folder refs use crowdfund-shared relative paths.
 
-import { XMarkIcon } from '@heroicons/react/24/outline'
-import { Button } from '@armada/ui'
-import { useEffect, useRef, useState } from 'react'
-import styles from './Participate.module.css'
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { Button } from "@armada/ui";
+import { useEffect, useRef, useState } from "react";
+import styles from "./Participate.module.css";
 
 export interface ParticipateProps {
-  eyebrow?: string
-  heading?: string
-  ctaLabel?: string
-  imageSrc?: string
-  hoverImageSrc?: string
-  videoSrc?: string
-  onCtaClick?: () => void
-  onClose?: () => void
-  className?: string
-  headingClassName?: string
-  ctaClassName?: string
+  eyebrow?: string;
+  heading?: string;
+  ctaLabel?: string;
+  imageSrc?: string;
+  hoverImageSrc?: string;
+  videoSrc?: string;
+  onCtaClick?: () => void;
+  onClose?: () => void;
+  className?: string;
+  headingClassName?: string;
+  ctaClassName?: string;
   /** Defaults to true to match the original card design. */
-  buttonFullWidth?: boolean
+  buttonFullWidth?: boolean;
 }
 
 export function Participate({
-  eyebrow = 'Participate now',
-  heading = 'Join the fleet',
-  ctaLabel = 'Participate',
+  eyebrow = "Participate now",
+  heading = "Join the fleet",
+  ctaLabel = "Participate",
   imageSrc,
   hoverImageSrc,
   videoSrc,
@@ -36,62 +36,62 @@ export function Participate({
   ctaClassName,
   buttonFullWidth = true,
 }: ParticipateProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [videoReady, setVideoReady] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     // Ensure stopped by default on mount / src changes.
-    const v = videoRef.current
-    if (!v) return
-    v.pause()
+    const v = videoRef.current;
+    if (!v) return;
+    v.pause();
     try {
-      v.currentTime = 0
+      v.currentTime = 0;
     } catch {
       // ignore
     }
-  }, [videoSrc])
+  }, [videoSrc]);
 
   const play = () => {
-    setIsHovered(true)
-    const v = videoRef.current
-    if (!v) return
+    setIsHovered(true);
+    const v = videoRef.current;
+    if (!v) return;
     // preload="none": the media isn't fetched until first interaction. Kick off
     // loading on hover; onLoadedData plays it once buffered (if still hovered).
     if (videoReady) {
-      void v.play()
+      void v.play();
     } else {
-      v.load()
+      v.load();
     }
-  }
+  };
 
   const stop = () => {
-    setIsHovered(false)
-    const v = videoRef.current
-    if (!v) return
-    v.pause()
+    setIsHovered(false);
+    const v = videoRef.current;
+    if (!v) return;
+    v.pause();
     try {
-      v.currentTime = 0
+      v.currentTime = 0;
     } catch {
       // ignore
     }
-  }
+  };
 
   const handleCardKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onCtaClick?.()
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onCtaClick?.();
     }
-  }
+  };
 
   return (
     <div
-      className={[styles.card, className].filter(Boolean).join(' ')}
+      className={[styles.card, className].filter(Boolean).join(" ")}
       onMouseEnter={play}
       onMouseLeave={stop}
       onFocus={play}
       onBlur={stop}
-      role={onCtaClick ? 'button' : undefined}
+      role={onCtaClick ? "button" : undefined}
       tabIndex={onCtaClick ? 0 : undefined}
       aria-label={onCtaClick ? `${ctaLabel}: ${heading}` : undefined}
       onClick={onCtaClick}
@@ -113,7 +113,9 @@ export function Participate({
       {videoSrc && (
         <video
           ref={videoRef}
-          className={[styles.video, videoReady ? styles.videoReady : ''].filter(Boolean).join(' ')}
+          className={[styles.video, videoReady ? styles.videoReady : ""]
+            .filter(Boolean)
+            .join(" ")}
           src={videoSrc}
           poster={imageSrc}
           muted
@@ -121,16 +123,16 @@ export function Participate({
           playsInline
           preload="none"
           onLoadedData={(e) => {
-            const v = e.currentTarget
-            setVideoReady(true)
+            const v = e.currentTarget;
+            setVideoReady(true);
             // If the user is still hovering when buffering finishes, start
             // playing; otherwise leave it reset at the first frame.
             if (isHovered) {
-              void v.play()
+              void v.play();
             } else {
-              v.pause()
+              v.pause();
               try {
-                v.currentTime = 0
+                v.currentTime = 0;
               } catch {
                 // ignore
               }
@@ -148,8 +150,8 @@ export function Participate({
           // Stop propagation so closing the card doesn't also trigger the
           // outer card's `onCtaClick` via bubbling.
           onClick={(e) => {
-            e.stopPropagation()
-            onClose()
+            e.stopPropagation();
+            onClose();
           }}
           aria-label="Close"
         >
@@ -158,12 +160,16 @@ export function Participate({
       )}
 
       <p className={styles.eyebrow}>{eyebrow}</p>
-      <h2 className={[styles.heading, headingClassName].filter(Boolean).join(' ')}>{heading}</h2>
+      <h2
+        className={[styles.heading, headingClassName].filter(Boolean).join(" ")}
+      >
+        {heading}
+      </h2>
       {/* Wrap the visible Button so a click on it doesn't fire `onCtaClick`
        *  twice (once for the Button, once for the card via bubbling). The
        *  Button still handles its own click; this just stops the bubble. */}
       <div
-        className={[styles.cta, ctaClassName].filter(Boolean).join(' ')}
+        className={[styles.cta, ctaClassName].filter(Boolean).join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
         <Button
@@ -173,9 +179,9 @@ export function Participate({
           showIcon
           icon="arrow-right-micro"
           onClick={onCtaClick}
-          style={buttonFullWidth ? { width: '100%' } : undefined}
+          style={buttonFullWidth ? { width: "100%" } : undefined}
         />
       </div>
     </div>
-  )
+  );
 }

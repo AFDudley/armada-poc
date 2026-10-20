@@ -22,7 +22,7 @@ contract StewardSecurityTest is Test {
 
     function setUp() public {
         steward = new TreasurySteward(
-            address(this)  // this contract acts as timelock for test convenience
+            address(this) // this contract acts as timelock for test convenience
         );
 
         // Elect steward person

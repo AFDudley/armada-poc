@@ -12,7 +12,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @dev Mock ERC20 for testing
 contract MockTokenRedemption is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
-    function mint(address to, uint256 amount) external { _mint(to, amount); }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
 }
 
 /// @dev Minimal mock of ArmadaWindDown exposing the `triggerTime()` getter that
@@ -20,7 +23,10 @@ contract MockTokenRedemption is ERC20 {
 ///      the full wind-down contract and its dependency graph.
 contract MockWindDownRedemption {
     uint256 public triggerTime;
-    function setTriggerTime(uint256 _t) external { triggerTime = _t; }
+
+    function setTriggerTime(uint256 _t) external {
+        triggerTime = _t;
+    }
 }
 
 /// @dev Mock of RevenueLock exposing only the `lockedAtWindDown()` view that
@@ -30,7 +36,10 @@ contract MockWindDownRedemption {
 ///      want the old behavior of subtracting the full balance from circulating.
 contract MockRevenueLockRedemption {
     uint256 public lockedAtWindDown;
-    function setLocked(uint256 v) external { lockedAtWindDown = v; }
+
+    function setLocked(uint256 v) external {
+        lockedAtWindDown = v;
+    }
 }
 
 /// @dev Mock of ArmadaCrowdfund exposing only the `armStillOwed()` view that
@@ -39,7 +48,10 @@ contract MockRevenueLockRedemption {
 ///      that want to model entitled-unclaimed crowdfund balance set a value here.
 contract MockCrowdfundRedemption {
     uint256 public armStillOwed;
-    function setStillOwed(uint256 v) external { armStillOwed = v; }
+
+    function setStillOwed(uint256 v) external {
+        armStillOwed = v;
+    }
 }
 
 contract ArmadaRedemptionTest is Test {
@@ -61,7 +73,7 @@ contract ArmadaRedemptionTest is Test {
     MockRevenueLockRedemption public revenueLockMock;
     MockCrowdfundRedemption public crowdfundMock;
     address public revenueLock; // = address(revenueLockMock)
-    address public crowdfund;   // = address(crowdfundMock)
+    address public crowdfund; // = address(crowdfundMock)
 
     uint256 constant TOTAL_SUPPLY = 12_000_000 * 1e18;
     uint256 constant TWO_DAYS = 2 days;
@@ -98,12 +110,7 @@ contract ArmadaRedemptionTest is Test {
         // Since transfers are enabled, whitelist doesn't matter anymore
 
         // Deploy redemption
-        redemption = new ArmadaRedemption(
-            address(armToken),
-            treasuryAddr,
-            revenueLock,
-            crowdfund
-        );
+        redemption = new ArmadaRedemption(address(armToken), treasuryAddr, revenueLock, crowdfund);
 
         // Wire wind-down reference on redemption (one-time setter) and simulate that
         // wind-down triggered at the current timestamp. Warp past REDEMPTION_DELAY so
@@ -114,11 +121,11 @@ contract ArmadaRedemptionTest is Test {
 
         // Distribute ARM
         // Treasury gets 65%, revenue-lock gets 15%, crowdfund gets 10%, alice 5%, bob 5%
-        armToken.transfer(treasuryAddr, TOTAL_SUPPLY * 65 / 100);  // 7.8M
-        armToken.transfer(revenueLock, TOTAL_SUPPLY * 15 / 100);   // 1.8M
-        armToken.transfer(crowdfund, TOTAL_SUPPLY * 10 / 100);      // 1.2M
-        armToken.transfer(alice, TOTAL_SUPPLY * 5 / 100);           // 600K
-        armToken.transfer(bob, TOTAL_SUPPLY * 5 / 100);             // 600K
+        armToken.transfer(treasuryAddr, TOTAL_SUPPLY * 65 / 100); // 7.8M
+        armToken.transfer(revenueLock, TOTAL_SUPPLY * 15 / 100); // 1.8M
+        armToken.transfer(crowdfund, TOTAL_SUPPLY * 10 / 100); // 1.2M
+        armToken.transfer(alice, TOTAL_SUPPLY * 5 / 100); // 600K
+        armToken.transfer(bob, TOTAL_SUPPLY * 5 / 100); // 600K
 
         // Default mock state: RevenueLock fully locked (lockedAtWindDown = balance),
         // Crowdfund zero-owed (armStillOwed = 0). This preserves the OLD circulatingSupply
@@ -131,8 +138,8 @@ contract ArmadaRedemptionTest is Test {
         usdc = new MockTokenRedemption("Mock USDC", "USDC");
         weth = new MockTokenRedemption("Wrapped ETH", "WETH");
 
-        usdc.mint(address(redemption), 500_000e6);  // $500k USDC in redemption
-        weth.mint(address(redemption), 100e18);       // 100 WETH in redemption
+        usdc.mint(address(redemption), 500_000e6); // $500k USDC in redemption
+        weth.mint(address(redemption), 100e18); // 100 WETH in redemption
 
         // Approve redemption to take ARM from alice and bob
         vm.prank(alice);
@@ -198,7 +205,7 @@ contract ArmadaRedemptionTest is Test {
 
     function test_sequential_correctness() public {
         uint256 aliceArm = armToken.balanceOf(alice); // 600K
-        uint256 bobArm = armToken.balanceOf(bob);     // 600K
+        uint256 bobArm = armToken.balanceOf(bob); // 600K
 
         address[] memory tokens = new address[](1);
         tokens[0] = address(usdc);
@@ -274,7 +281,7 @@ contract ArmadaRedemptionTest is Test {
         vm.deal(address(redemption), 10 ether);
 
         uint256 aliceArm = armToken.balanceOf(alice); // 600K
-        uint256 bobArm = armToken.balanceOf(bob);     // 600K
+        uint256 bobArm = armToken.balanceOf(bob); // 600K
 
         address[] memory tokens = new address[](1);
         tokens[0] = address(usdc);
@@ -356,10 +363,8 @@ contract ArmadaRedemptionTest is Test {
     function test_circulatingSupply_excludesCorrectAddresses() public {
         uint256 circulating = redemption.circulatingSupply();
         uint256 total = armToken.totalSupply();
-        uint256 excluded = armToken.balanceOf(treasuryAddr) +
-                          armToken.balanceOf(revenueLock) +
-                          armToken.balanceOf(crowdfund) +
-                          armToken.balanceOf(address(redemption));
+        uint256 excluded = armToken.balanceOf(treasuryAddr) + armToken.balanceOf(revenueLock)
+            + armToken.balanceOf(crowdfund) + armToken.balanceOf(address(redemption));
 
         assertEq(circulating, total - excluded);
     }
@@ -592,9 +597,7 @@ contract ArmadaRedemptionTest is Test {
         wl[1] = alice;
         freshArm.initWhitelist(wl);
 
-        ArmadaRedemption freshRedemption = new ArmadaRedemption(
-            address(freshArm), treasuryAddr, revenueLock, crowdfund
-        );
+        ArmadaRedemption freshRedemption = new ArmadaRedemption(address(freshArm), treasuryAddr, revenueLock, crowdfund);
 
         freshArm.transfer(alice, 1000e18);
         vm.prank(alice);
@@ -612,9 +615,7 @@ contract ArmadaRedemptionTest is Test {
     function test_setWindDown_emitsEvent() public {
         // WHY: Redeployed setter path exercised in an isolated redemption to confirm
         // the WindDownSet event fires exactly once with the provided address.
-        ArmadaRedemption fresh = new ArmadaRedemption(
-            address(armToken), treasuryAddr, revenueLock, crowdfund
-        );
+        ArmadaRedemption fresh = new ArmadaRedemption(address(armToken), treasuryAddr, revenueLock, crowdfund);
         MockWindDownRedemption freshWD = new MockWindDownRedemption();
         vm.expectEmit(true, false, false, false);
         emit WindDownSet(address(freshWD));
@@ -634,9 +635,7 @@ contract ArmadaRedemptionTest is Test {
         // WHY: Only the deployer may wire the wind-down reference. Anyone else calling
         // would be either a mistake or an attack to point the delay check at a lying
         // contract.
-        ArmadaRedemption fresh = new ArmadaRedemption(
-            address(armToken), treasuryAddr, revenueLock, crowdfund
-        );
+        ArmadaRedemption fresh = new ArmadaRedemption(address(armToken), treasuryAddr, revenueLock, crowdfund);
         MockWindDownRedemption freshWD = new MockWindDownRedemption();
         vm.prank(alice);
         vm.expectRevert("ArmadaRedemption: not admin");
@@ -646,9 +645,7 @@ contract ArmadaRedemptionTest is Test {
     function test_revert_setWindDownZero() public {
         // WHY: Zero address would make redeem() permanently revert on the wind-down
         // interface call. Reject at set time for a clearer failure.
-        ArmadaRedemption fresh = new ArmadaRedemption(
-            address(armToken), treasuryAddr, revenueLock, crowdfund
-        );
+        ArmadaRedemption fresh = new ArmadaRedemption(address(armToken), treasuryAddr, revenueLock, crowdfund);
         vm.expectRevert("ArmadaRedemption: zero windDown");
         fresh.setWindDown(address(0));
     }
@@ -690,9 +687,7 @@ contract ArmadaRedemptionTest is Test {
     function test_revert_redeemIfWindDownNotSet() public {
         // WHY: Pre-setWindDown, redeem must hard-fail. Without this check, a
         // mis-ordered deploy would silently skip the delay gate.
-        ArmadaRedemption fresh = new ArmadaRedemption(
-            address(armToken), treasuryAddr, revenueLock, crowdfund
-        );
+        ArmadaRedemption fresh = new ArmadaRedemption(address(armToken), treasuryAddr, revenueLock, crowdfund);
         vm.prank(alice);
         armToken.approve(address(fresh), type(uint256).max);
         address[] memory tokens = new address[](0);
@@ -705,9 +700,7 @@ contract ArmadaRedemptionTest is Test {
         // WHY: windDown set but triggerTime still zero means wind-down has not been
         // triggered. The explicit check provides a clearer error than the subsequent
         // arithmetic check on `block.timestamp >= 0 + REDEMPTION_DELAY` would imply.
-        ArmadaRedemption fresh = new ArmadaRedemption(
-            address(armToken), treasuryAddr, revenueLock, crowdfund
-        );
+        ArmadaRedemption fresh = new ArmadaRedemption(address(armToken), treasuryAddr, revenueLock, crowdfund);
         MockWindDownRedemption freshWD = new MockWindDownRedemption();
         fresh.setWindDown(address(freshWD));
         // triggerTime left at 0
@@ -759,7 +752,9 @@ contract ArmadaRedemptionTest is Test {
         MockTokenRedemption b = new MockTokenRedemption("B", "B");
         MockTokenRedemption c = new MockTokenRedemption("C", "C");
         address[] memory raw = new address[](3);
-        raw[0] = address(a); raw[1] = address(b); raw[2] = address(c);
+        raw[0] = address(a);
+        raw[1] = address(b);
+        raw[2] = address(c);
         // Sort ascending (the contract enforces this)
         address[] memory tokens = new address[](3);
         tokens[0] = raw[0];

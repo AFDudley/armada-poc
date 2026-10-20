@@ -65,10 +65,7 @@ contract ArmadaToken is ERC20Votes {
 
     /// @param initialHolder Address that receives the entire initial supply
     /// @param _timelock TimelockController address (for governance-gated addToWhitelist)
-    constructor(
-        address initialHolder,
-        address _timelock
-    ) ERC20("Armada", "ARM") ERC20Permit("Armada") {
+    constructor(address initialHolder, address _timelock) ERC20("Armada", "ARM") ERC20Permit("Armada") {
         require(initialHolder != address(0), "ArmadaToken: zero initialHolder");
         require(_timelock != address(0), "ArmadaToken: zero timelock");
         timelock = _timelock;
@@ -166,10 +163,7 @@ contract ArmadaToken is ERC20Votes {
     ///         or the governor executor (timelock) via governance proposal.
     ///         One-way: transfers cannot be re-restricted once enabled.
     function setTransferable(bool _transferable) external {
-        require(
-            msg.sender == windDownContract || msg.sender == timelock,
-            "ArmadaToken: not authorized"
-        );
+        require(msg.sender == windDownContract || msg.sender == timelock, "ArmadaToken: not authorized");
         require(_transferable, "ArmadaToken: can only enable transfers");
         require(!transferable, "ArmadaToken: transfers already enabled");
         transferable = true;
@@ -214,18 +208,10 @@ contract ArmadaToken is ERC20Votes {
 
     /// @dev Restrict transfers when transferable is false: only whitelisted senders
     ///      or mints (from == address(0)) are allowed.
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         super._beforeTokenTransfer(from, to, amount);
         if (!transferable) {
-            require(
-                from == address(0) ||
-                transferWhitelist[from],
-                "ArmadaToken: transfers restricted"
-            );
+            require(from == address(0) || transferWhitelist[from], "ArmadaToken: transfers restricted");
         }
     }
 

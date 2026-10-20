@@ -25,6 +25,10 @@ ALLOWED_FILES=(
   "specs/PRIVACY_POOL_CONTRACT.md"  # ZERO_VALUE constant + frozen event topic0 catalog (public consensus values)
   "specs/CONTRACT_REWRITE_DEVIATIONS.md"  # ZERO_VALUE constant + provenance register (public consensus values)
   "scripts/smoke_shield_sepolia.ts"  # Public Shield event topic0 constant (frozen ABI catalog value)
+  "crowdfund-ui/packages/admin/vite.config.ts"  # Anvil deployer test key (publicly known)
+  "governance-ui/src/config/accounts.ts"  # Anvil test account keys (publicly known)
+  "lib/sdk/test-transfer.ts"  # Fixed test-vector placeholder keys (not real secrets)
+  "lib/poseidon_bytecode.json"  # Generated Poseidon bytecode fixture (public constants, not keys)
 )
 
 # Directories whose entire contents are known non-secret data: captured differential test vectors

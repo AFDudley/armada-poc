@@ -61,20 +61,28 @@ async function deployCCTP(role: ChainRole): Promise<DeploymentInfo> {
 
   // 2. Deploy MockMessageTransmitterV2
   console.log("\n2. Deploying MockMessageTransmitterV2...");
-  const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-  const messageTransmitter = await MockMessageTransmitterV2.deploy(domain, deployer.address, nm.override());
+  const MockMessageTransmitterV2 = await ethers.getContractFactory(
+    "MockMessageTransmitterV2",
+  );
+  const messageTransmitter = await MockMessageTransmitterV2.deploy(
+    domain,
+    deployer.address,
+    nm.override(),
+  );
   await messageTransmitter.deploymentTransaction()!.wait();
   const messageTransmitterAddress = await messageTransmitter.getAddress();
   console.log(`   MessageTransmitter: ${messageTransmitterAddress}`);
 
   // 3. Deploy MockTokenMessengerV2
   console.log("\n3. Deploying MockTokenMessengerV2...");
-  const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+  const MockTokenMessengerV2 = await ethers.getContractFactory(
+    "MockTokenMessengerV2",
+  );
   const tokenMessenger = await MockTokenMessengerV2.deploy(
     messageTransmitterAddress,
     usdcAddress,
     domain,
-    nm.override()
+    nm.override(),
   );
   await tokenMessenger.deploymentTransaction()!.wait();
   const tokenMessengerAddress = await tokenMessenger.getAddress();
@@ -82,7 +90,12 @@ async function deployCCTP(role: ChainRole): Promise<DeploymentInfo> {
 
   // 4. Link MessageTransmitter to TokenMessenger
   console.log("\n4. Linking contracts...");
-  await (await messageTransmitter.setTokenMessenger(tokenMessengerAddress, nm.override())).wait();
+  await (
+    await messageTransmitter.setTokenMessenger(
+      tokenMessengerAddress,
+      nm.override(),
+    )
+  ).wait();
   console.log("   MessageTransmitter linked to TokenMessenger");
 
   // 5. Add TokenMessenger as minter on USDC
@@ -112,7 +125,11 @@ async function main() {
   const role = getChainRole(chainId);
   if (!role) {
     console.error(`Unknown chain ID: ${chainId}`);
-    console.error(`Configured chains: ${getAllChains().map((c) => `${c.role}=${c.chainId}`).join(", ")}`);
+    console.error(
+      `Configured chains: ${getAllChains()
+        .map((c) => `${c.role}=${c.chainId}`)
+        .join(", ")}`,
+    );
     process.exit(1);
   }
 

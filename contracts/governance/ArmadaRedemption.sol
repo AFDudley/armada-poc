@@ -89,12 +89,7 @@ contract ArmadaRedemption is ReentrancyGuard {
     /// @param _treasury Treasury contract address
     /// @param _revenueLock Revenue-lock contract address
     /// @param _crowdfundContract Crowdfund contract address
-    constructor(
-        address _armToken,
-        address _treasury,
-        address _revenueLock,
-        address _crowdfundContract
-    ) {
+    constructor(address _armToken, address _treasury, address _revenueLock, address _crowdfundContract) {
         require(_armToken != address(0), "ArmadaRedemption: zero armToken");
         require(_treasury != address(0), "ArmadaRedemption: zero treasury");
         require(_revenueLock != address(0), "ArmadaRedemption: zero revenueLock");
@@ -137,19 +132,12 @@ contract ArmadaRedemption is ReentrancyGuard {
     ///        ethRecipient is ignored — allowing ERC20-only redemption against an ETH-less
     ///        treasury. Smart-contract redeemers that cannot receive ETH should pass an EOA
     ///        address they control rather than address(0).
-    function redeem(
-        uint256 armAmount,
-        address[] calldata tokens,
-        address ethRecipient
-    ) external nonReentrant {
+    function redeem(uint256 armAmount, address[] calldata tokens, address ethRecipient) external nonReentrant {
         require(armAmount > 0, "ArmadaRedemption: zero amount");
         // Defense-in-depth: ARM transfers are enabled by the wind-down contract via
         // setTransferable(true). While the safeTransferFrom below would revert for
         // non-whitelisted callers pre-wind-down, this makes the invariant explicit.
-        require(
-            IArmadaTokenRedemption(address(armToken)).transferable(),
-            "ArmadaRedemption: wind-down not triggered"
-        );
+        require(IArmadaTokenRedemption(address(armToken)).transferable(), "ArmadaRedemption: wind-down not triggered");
 
         // Enforce the post-trigger redemption delay. Provides a social-coordination window
         // for sweepToken/sweepETH to run before any redemption can execute. See issue #254.
@@ -158,10 +146,7 @@ contract ArmadaRedemption is ReentrancyGuard {
         require(wd != address(0), "ArmadaRedemption: wind-down not set");
         uint256 triggeredAt = IArmadaWindDownRedemption(wd).triggerTime();
         require(triggeredAt > 0, "ArmadaRedemption: wind-down not triggered");
-        require(
-            block.timestamp >= triggeredAt + REDEMPTION_DELAY,
-            "ArmadaRedemption: redemption delay not elapsed"
-        );
+        require(block.timestamp >= triggeredAt + REDEMPTION_DELAY, "ArmadaRedemption: redemption delay not elapsed");
 
         // Calculate circulating supply BEFORE the ARM transfer (depositor's ARM is still
         // in circulation and counts in the denominator for correct pro-rata math)

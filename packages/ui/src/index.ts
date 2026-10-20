@@ -1,49 +1,63 @@
 // ABOUTME: Public barrel for @armada/ui — re-exports every primitive and its types.
 // ABOUTME: Style sheets are exported via package.json subpath exports, not from here.
 
-export { ArmadaLogo } from './components/ArmadaLogo'
-export type { ArmadaLogoProps } from './components/ArmadaLogo'
+export { ArmadaLogo } from "./components/ArmadaLogo";
+export type { ArmadaLogoProps } from "./components/ArmadaLogo";
 
-export { ArmadaSymbol } from './components/ArmadaSymbol/ArmadaSymbol'
-export type { ArmadaSymbolProps } from './components/ArmadaSymbol/ArmadaSymbol'
+export { ArmadaSymbol } from "./components/ArmadaSymbol/ArmadaSymbol";
+export type { ArmadaSymbolProps } from "./components/ArmadaSymbol/ArmadaSymbol";
 
-export { Button } from './components/Button'
-export type { ButtonProps, ButtonVariant, ButtonSize, ButtonIcon } from './components/Button'
+export { Button } from "./components/Button";
+export type {
+  ButtonProps,
+  ButtonVariant,
+  ButtonSize,
+  ButtonIcon,
+} from "./components/Button";
 
-export { Text } from './components/Text'
-export type { TextProps, TypographyVariant } from './components/Text'
+export { Text } from "./components/Text";
+export type { TextProps, TypographyVariant } from "./components/Text";
 
-export { HeadingSm } from './components/HeadingSm'
-export type { HeadingSmProps } from './components/HeadingSm'
+export { HeadingSm } from "./components/HeadingSm";
+export type { HeadingSmProps } from "./components/HeadingSm";
 
-export { Tag } from './components/Tag'
-export type { TagProps, TagDot } from './components/Tag'
+export { Tag } from "./components/Tag";
+export type { TagProps, TagDot } from "./components/Tag";
 
-export { NavItem } from './components/NavItem'
-export type { NavItemProps } from './components/NavItem'
+export { NavItem } from "./components/NavItem";
+export type { NavItemProps } from "./components/NavItem";
 
-export { NavBar } from './components/NavBar'
-export type { NavBarProps, NavBarItem } from './components/NavBar'
+export { NavBar } from "./components/NavBar";
+export type { NavBarProps, NavBarItem } from "./components/NavBar";
 
-export { Header, WalletPillMenu, WalletMenuSheet } from './components/Header'
-export type { HeaderProps, WalletPillMenuProps, WalletMenuSheetProps } from './components/Header'
+export { Header, WalletPillMenu, WalletMenuSheet } from "./components/Header";
+export type {
+  HeaderProps,
+  WalletPillMenuProps,
+  WalletMenuSheetProps,
+} from "./components/Header";
 
-export { BarTrackTicks } from './components/BarTrackTicks'
+export { BarTrackTicks } from "./components/BarTrackTicks";
 
-export { Progress } from './components/Progress'
-export type { ProgressCountdown, ProgressProps } from './components/Progress'
+export { Progress } from "./components/Progress";
+export type { ProgressCountdown, ProgressProps } from "./components/Progress";
 
-export { WalletButton } from './components/WalletButton'
-export type { WalletButtonProps } from './components/WalletButton'
+export { WalletButton } from "./components/WalletButton";
+export type { WalletButtonProps } from "./components/WalletButton";
 
-export { Steps } from './components/Steps'
-export type { StepsProps } from './components/Steps'
+export { Steps } from "./components/Steps";
+export type { StepsProps } from "./components/Steps";
 
-export { Tooltip } from './components/Tooltip'
-export type { TooltipProps, TooltipSimpleProps, TooltipRichProps, TooltipPlacement } from './components/Tooltip'
+export { Tooltip } from "./components/Tooltip";
+export type {
+  TooltipProps,
+  TooltipSimpleProps,
+  TooltipRichProps,
+  TooltipPlacement,
+} from "./components/Tooltip";
 
-export { WalletItem } from './components/WalletItem'
-export type { WalletItemProps } from './components/WalletItem'
+export { WalletItem } from "./components/WalletItem";
+export type { WalletItemProps } from "./components/WalletItem";
 
 export {
   THEME_STORAGE_KEY,
@@ -52,5 +66,5 @@ export {
   getSystemTheme,
   getAppliedTheme,
   setTheme,
-} from './utils/theme'
-export type { Theme } from './utils/theme'
+} from "./utils/theme";
+export type { Theme } from "./utils/theme";

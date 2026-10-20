@@ -40,7 +40,8 @@ describe("Treasury Outflow Rate Limits", function () {
     await usdc.waitForDeployment();
 
     // Deploy treasury (deployer acts as owner/timelock for direct testing)
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasury = await ArmadaTreasuryGov.deploy(deployer.address);
     await treasury.waitForDeployment();
 
@@ -63,7 +64,11 @@ describe("Treasury Outflow Rate Limits", function () {
     const absolute = opts?.absolute ?? USDC(100_000); // $100K
     const floor = opts?.floor ?? USDC(50_000); // $50K
     await treasury.initOutflowConfig(
-      await usdc.getAddress(), window, bps, absolute, floor
+      await usdc.getAddress(),
+      window,
+      bps,
+      absolute,
+      floor,
     );
   }
 
@@ -89,17 +94,27 @@ describe("Treasury Outflow Rate Limits", function () {
 
     it("should reject initOutflowConfig from non-owner", async function () {
       await expect(
-        treasury.connect(stewardAddr).initOutflowConfig(
-          await usdc.getAddress(), THIRTY_DAYS, 1000, USDC(100_000), USDC(50_000)
-        )
+        treasury
+          .connect(stewardAddr)
+          .initOutflowConfig(
+            await usdc.getAddress(),
+            THIRTY_DAYS,
+            1000,
+            USDC(100_000),
+            USDC(50_000),
+          ),
       ).to.be.revertedWith("ArmadaTreasuryGov: not owner");
     });
 
     it("should reject initOutflowConfig with zero window", async function () {
       await expect(
         treasury.initOutflowConfig(
-          await usdc.getAddress(), 0, 1000, USDC(100_000), USDC(50_000)
-        )
+          await usdc.getAddress(),
+          0,
+          1000,
+          USDC(100_000),
+          USDC(50_000),
+        ),
       ).to.be.revertedWith("ArmadaTreasuryGov: window too short");
     });
 
@@ -112,31 +127,43 @@ describe("Treasury Outflow Rate Limits", function () {
       const maxWindow = await treasury.MAX_OUTFLOW_WINDOW();
       await expect(
         treasury.initOutflowConfig(
-          await usdc.getAddress(), maxWindow + 1n, 1000, USDC(100_000), USDC(50_000)
-        )
+          await usdc.getAddress(),
+          maxWindow + 1n,
+          1000,
+          USDC(100_000),
+          USDC(50_000),
+        ),
       ).to.be.revertedWith("ArmadaTreasuryGov: window too long");
     });
 
     it("should reject initOutflowConfig if already initialized for token", async function () {
       await initUsdcOutflow();
-      await expect(
-        initUsdcOutflow()
-      ).to.be.revertedWith("ArmadaTreasuryGov: outflow already initialized");
+      await expect(initUsdcOutflow()).to.be.revertedWith(
+        "ArmadaTreasuryGov: outflow already initialized",
+      );
     });
 
     it("should reject zero bps in initOutflowConfig", async function () {
       await expect(
         treasury.initOutflowConfig(
-          await usdc.getAddress(), THIRTY_DAYS, 0, USDC(100_000), USDC(50_000)
-        )
+          await usdc.getAddress(),
+          THIRTY_DAYS,
+          0,
+          USDC(100_000),
+          USDC(50_000),
+        ),
       ).to.be.revertedWith("ArmadaTreasuryGov: zero bps");
     });
 
     it("should reject absolute limit below floor", async function () {
       await expect(
         treasury.initOutflowConfig(
-          await usdc.getAddress(), THIRTY_DAYS, 1000, USDC(30_000), USDC(50_000)
-        )
+          await usdc.getAddress(),
+          THIRTY_DAYS,
+          1000,
+          USDC(30_000),
+          USDC(50_000),
+        ),
       ).to.be.revertedWith("ArmadaTreasuryGov: absolute below floor");
     });
   });
@@ -163,7 +190,7 @@ describe("Treasury Outflow Rate Limits", function () {
 
     it("should reject window below 1 day", async function () {
       await expect(
-        treasury.setOutflowWindow(await usdc.getAddress(), ONE_DAY - 1)
+        treasury.setOutflowWindow(await usdc.getAddress(), ONE_DAY - 1),
       ).to.be.revertedWith("ArmadaTreasuryGov: window too short");
     });
 
@@ -174,7 +201,7 @@ describe("Treasury Outflow Rate Limits", function () {
     it("should reject window above MAX_OUTFLOW_WINDOW", async function () {
       const maxWindow = await treasury.MAX_OUTFLOW_WINDOW();
       await expect(
-        treasury.setOutflowWindow(await usdc.getAddress(), maxWindow + 1n)
+        treasury.setOutflowWindow(await usdc.getAddress(), maxWindow + 1n),
       ).to.be.revertedWith("ArmadaTreasuryGov: window too long");
     });
 
@@ -199,13 +226,13 @@ describe("Treasury Outflow Rate Limits", function () {
 
     it("should reject zero bps", async function () {
       await expect(
-        treasury.setOutflowLimitBps(await usdc.getAddress(), 0)
+        treasury.setOutflowLimitBps(await usdc.getAddress(), 0),
       ).to.be.revertedWith("ArmadaTreasuryGov: zero bps");
     });
 
     it("should reject bps above 10000", async function () {
       await expect(
-        treasury.setOutflowLimitBps(await usdc.getAddress(), 10001)
+        treasury.setOutflowLimitBps(await usdc.getAddress(), 10001),
       ).to.be.revertedWith("ArmadaTreasuryGov: bps out of range");
     });
 
@@ -213,7 +240,10 @@ describe("Treasury Outflow Rate Limits", function () {
     // The loosening direction (higher absolute) is covered below.
     it("should allow owner to update absolute limit (tightening, immediate)", async function () {
       // Initial absolute = $100K, floor = $50K → tighten to $75K
-      await treasury.setOutflowLimitAbsolute(await usdc.getAddress(), USDC(75_000));
+      await treasury.setOutflowLimitAbsolute(
+        await usdc.getAddress(),
+        USDC(75_000),
+      );
       const config = await treasury.getOutflowConfig(await usdc.getAddress());
       expect(config.limitAbsolute).to.equal(USDC(75_000));
     });
@@ -221,27 +251,29 @@ describe("Treasury Outflow Rate Limits", function () {
     it("should reject absolute limit below floor", async function () {
       // Floor is $50K
       await expect(
-        treasury.setOutflowLimitAbsolute(await usdc.getAddress(), USDC(49_999))
+        treasury.setOutflowLimitAbsolute(await usdc.getAddress(), USDC(49_999)),
       ).to.be.revertedWith("ArmadaTreasuryGov: absolute below floor");
     });
 
     it("should reject setter calls from non-owner", async function () {
       const usdcAddr = await usdc.getAddress();
       await expect(
-        treasury.connect(stewardAddr).setOutflowWindow(usdcAddr, THIRTY_DAYS)
+        treasury.connect(stewardAddr).setOutflowWindow(usdcAddr, THIRTY_DAYS),
       ).to.be.revertedWith("ArmadaTreasuryGov: not owner");
       await expect(
-        treasury.connect(stewardAddr).setOutflowLimitBps(usdcAddr, 2000)
+        treasury.connect(stewardAddr).setOutflowLimitBps(usdcAddr, 2000),
       ).to.be.revertedWith("ArmadaTreasuryGov: not owner");
       await expect(
-        treasury.connect(stewardAddr).setOutflowLimitAbsolute(usdcAddr, USDC(200_000))
+        treasury
+          .connect(stewardAddr)
+          .setOutflowLimitAbsolute(usdcAddr, USDC(200_000)),
       ).to.be.revertedWith("ArmadaTreasuryGov: not owner");
     });
 
     it("should reject setter calls for uninitialized token", async function () {
       const fakeToken = ethers.Wallet.createRandom().address;
       await expect(
-        treasury.setOutflowWindow(fakeToken, THIRTY_DAYS)
+        treasury.setOutflowWindow(fakeToken, THIRTY_DAYS),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow not initialized");
     });
   });
@@ -256,7 +288,11 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow(); // 10% of $5M = $500K limit (pct > $100K absolute)
 
       // $400K is within the $500K limit
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(400_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(400_000),
+      );
 
       expect(await usdc.balanceOf(recipient.address)).to.equal(USDC(400_000));
     });
@@ -266,7 +302,11 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow(); // effective limit = $500K (10% of $5M)
 
       await expect(
-        treasury.distribute(await usdc.getAddress(), recipient.address, USDC(500_001))
+        treasury.distribute(
+          await usdc.getAddress(),
+          recipient.address,
+          USDC(500_001),
+        ),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
 
@@ -277,12 +317,20 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow(); // 10% of $500K = $50K < $100K absolute → limit = $100K
 
       // Two outflows totaling $100K — should succeed
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(60_000));
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(40_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(60_000),
+      );
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(40_000),
+      );
 
       // Third outflow of $1 should fail (at limit)
       await expect(
-        treasury.distribute(await usdc.getAddress(), recipient.address, 1n)
+        treasury.distribute(await usdc.getAddress(), recipient.address, 1n),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
 
@@ -291,13 +339,21 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow(); // limit = $500K
 
       // Spend full limit
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(500_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(500_000),
+      );
 
       // Advance past window
       await time.increase(THIRTY_DAYS + 1);
 
       // Should be able to spend again (old outflows expired)
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(400_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(400_000),
+      );
       expect(await usdc.balanceOf(recipient.address)).to.equal(USDC(900_000));
     });
 
@@ -307,7 +363,11 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow();
 
       // $400K should succeed (within $500K pct limit)
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(400_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(400_000),
+      );
       expect(await usdc.balanceOf(recipient.address)).to.equal(USDC(400_000));
     });
 
@@ -317,11 +377,19 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow();
 
       // $80K should succeed (within $100K absolute limit)
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(80_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(80_000),
+      );
 
       // Another $30K should fail ($80K + $30K = $110K > $100K)
       await expect(
-        treasury.distribute(await usdc.getAddress(), recipient.address, USDC(30_000))
+        treasury.distribute(
+          await usdc.getAddress(),
+          recipient.address,
+          USDC(30_000),
+        ),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
 
@@ -340,16 +408,28 @@ describe("Treasury Outflow Rate Limits", function () {
       // Test: set absolute to exactly floor, small treasury where pct < floor.
       await fundTreasury(USDC(200_000));
       await treasury.initOutflowConfig(
-        await usdc.getAddress(), THIRTY_DAYS, 100, USDC(50_000), USDC(50_000) // 1%, abs=$50K, floor=$50K
+        await usdc.getAddress(),
+        THIRTY_DAYS,
+        100,
+        USDC(50_000),
+        USDC(50_000), // 1%, abs=$50K, floor=$50K
       );
       // pct = 1% of $200K = $2K, absolute = $50K → limit = max($2K, $50K) = $50K
 
       // $45K should succeed
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(45_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(45_000),
+      );
 
       // $10K more should fail ($45K + $10K = $55K > $50K)
       await expect(
-        treasury.distribute(await usdc.getAddress(), recipient.address, USDC(10_000))
+        treasury.distribute(
+          await usdc.getAddress(),
+          recipient.address,
+          USDC(10_000),
+        ),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
 
@@ -357,7 +437,11 @@ describe("Treasury Outflow Rate Limits", function () {
       await fundTreasury(USDC(1_000_000));
       // No initOutflowConfig called — distribute should revert
       await expect(
-        treasury.distribute(await usdc.getAddress(), recipient.address, USDC(1_000_000))
+        treasury.distribute(
+          await usdc.getAddress(),
+          recipient.address,
+          USDC(1_000_000),
+        ),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow config required");
     });
 
@@ -369,7 +453,7 @@ describe("Treasury Outflow Rate Limits", function () {
       await fundTreasury(USDC(1_000_000));
       await initUsdcOutflow();
       await expect(
-        treasury.distribute(await usdc.getAddress(), recipient.address, 0n)
+        treasury.distribute(await usdc.getAddress(), recipient.address, 0n),
       ).to.be.revertedWith("ArmadaTreasuryGov: zero amount");
     });
   });
@@ -385,19 +469,29 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow(); // 10% of $500K = $50K < $100K → limit = $100K
 
       // Authorize USDC for steward spending (limit = $10K, window = 30d)
-      await treasury.addStewardBudgetToken(await usdc.getAddress(), USDC(10_000), THIRTY_DAYS);
+      await treasury.addStewardBudgetToken(
+        await usdc.getAddress(),
+        USDC(10_000),
+        THIRTY_DAYS,
+      );
 
       // Owner calls stewardSpend — $5K within steward budget and outflow limit
       await treasury.stewardSpend(
-        await usdc.getAddress(), recipient.address, USDC(5_000)
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(5_000),
       );
 
       // Governance distributes $95K (total outflow = $100K = limit)
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(95_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(95_000),
+      );
 
       // Next $1 from either path should fail
       await expect(
-        treasury.distribute(await usdc.getAddress(), recipient.address, 1n)
+        treasury.distribute(await usdc.getAddress(), recipient.address, 1n),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
 
@@ -406,20 +500,30 @@ describe("Treasury Outflow Rate Limits", function () {
       // But outflow limit applies as an aggregate cap on all outflows
       await fundTreasury(USDC(60_000));
       await treasury.initOutflowConfig(
-        await usdc.getAddress(), THIRTY_DAYS, 1000, USDC(50_000), USDC(50_000)
+        await usdc.getAddress(),
+        THIRTY_DAYS,
+        1000,
+        USDC(50_000),
+        USDC(50_000),
       );
 
       // Authorize USDC for steward spending (large limit — outflow limit is more restrictive here)
-      await treasury.addStewardBudgetToken(await usdc.getAddress(), USDC(60_000), THIRTY_DAYS);
+      await treasury.addStewardBudgetToken(
+        await usdc.getAddress(),
+        USDC(60_000),
+        THIRTY_DAYS,
+      );
 
       // Governance distributes $50K (at the outflow limit)
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(50_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(50_000),
+      );
 
       // Steward spend of $1 should fail outflow limit (even if within steward budget)
       await expect(
-        treasury.stewardSpend(
-          await usdc.getAddress(), recipient.address, 1n
-        )
+        treasury.stewardSpend(await usdc.getAddress(), recipient.address, 1n),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
   });
@@ -435,15 +539,23 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow(); // limit = $100K (absolute > 10% of $500K = $50K), window = 30d
 
       // Day 0: spend $60K
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(60_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(60_000),
+      );
 
       // Day 15: spend another $40K (total in window = $100K = limit)
       await time.increase(15 * ONE_DAY);
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(40_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(40_000),
+      );
 
       // Day 15: at limit, can't spend more
       await expect(
-        treasury.distribute(await usdc.getAddress(), recipient.address, 1n)
+        treasury.distribute(await usdc.getAddress(), recipient.address, 1n),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
 
       // Day 31: the $60K from day 0 has expired
@@ -451,7 +563,11 @@ describe("Treasury Outflow Rate Limits", function () {
       // Remaining in window: $40K from day 15 (still within window)
       // Absolute limit still $100K (balance = $400K, 10% = $40K < $100K)
       // Available: $100K - $40K = $60K
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(60_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(60_000),
+      );
       expect(await usdc.balanceOf(recipient.address)).to.equal(USDC(160_000));
     });
 
@@ -462,21 +578,38 @@ describe("Treasury Outflow Rate Limits", function () {
       await mockArm.waitForDeployment();
 
       await fundTreasury(USDC(5_000_000));
-      await mockArm.mint(await treasury.getAddress(), ethers.parseUnits("1000000", 6));
+      await mockArm.mint(
+        await treasury.getAddress(),
+        ethers.parseUnits("1000000", 6),
+      );
 
       // Init outflow for both tokens
       await initUsdcOutflow();
       await treasury.initOutflowConfig(
-        await mockArm.getAddress(), THIRTY_DAYS, 300, ethers.parseUnits("250000", 6), ethers.parseUnits("100000", 6)
+        await mockArm.getAddress(),
+        THIRTY_DAYS,
+        300,
+        ethers.parseUnits("250000", 6),
+        ethers.parseUnits("100000", 6),
       );
 
       // Spend USDC up to limit
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(500_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(500_000),
+      );
 
       // ARM should still be spendable (independent tracking)
-      await treasury.distribute(await mockArm.getAddress(), recipient.address, ethers.parseUnits("30000", 6));
+      await treasury.distribute(
+        await mockArm.getAddress(),
+        recipient.address,
+        ethers.parseUnits("30000", 6),
+      );
 
-      expect(await mockArm.balanceOf(recipient.address)).to.equal(ethers.parseUnits("30000", 6));
+      expect(await mockArm.balanceOf(recipient.address)).to.equal(
+        ethers.parseUnits("30000", 6),
+      );
     });
   });
 
@@ -491,11 +624,14 @@ describe("Treasury Outflow Rate Limits", function () {
 
       // Try to set absolute to $49K (below floor)
       await expect(
-        treasury.setOutflowLimitAbsolute(await usdc.getAddress(), USDC(49_000))
+        treasury.setOutflowLimitAbsolute(await usdc.getAddress(), USDC(49_000)),
       ).to.be.revertedWith("ArmadaTreasuryGov: absolute below floor");
 
       // Setting to exactly floor should succeed
-      await treasury.setOutflowLimitAbsolute(await usdc.getAddress(), USDC(50_000));
+      await treasury.setOutflowLimitAbsolute(
+        await usdc.getAddress(),
+        USDC(50_000),
+      );
       const config = await treasury.getOutflowConfig(await usdc.getAddress());
       expect(config.limitAbsolute).to.equal(USDC(50_000));
     });
@@ -509,9 +645,14 @@ describe("Treasury Outflow Rate Limits", function () {
       await initUsdcOutflow();
 
       await treasury.setOutflowLimitBps(await usdc.getAddress(), 5000); // 50%
-      await treasury.setOutflowLimitAbsolute(await usdc.getAddress(), USDC(1_000_000));
+      await treasury.setOutflowLimitAbsolute(
+        await usdc.getAddress(),
+        USDC(1_000_000),
+      );
 
-      const pending = await treasury.getPendingOutflowConfig(await usdc.getAddress());
+      const pending = await treasury.getPendingOutflowConfig(
+        await usdc.getAddress(),
+      );
       expect(pending.pendingLimitBps).to.equal(5000);
       expect(pending.pendingLimitAbsolute).to.equal(USDC(1_000_000));
       // Active values unchanged until activation
@@ -531,7 +672,11 @@ describe("Treasury Outflow Rate Limits", function () {
       await fundTreasury(USDC(500_000));
       await initUsdcOutflow(); // limit = $100K (absolute dominates over 10% of $500K = $50K)
 
-      await treasury.distribute(await usdc.getAddress(), recipient.address, USDC(30_000));
+      await treasury.distribute(
+        await usdc.getAddress(),
+        recipient.address,
+        USDC(30_000),
+      );
 
       const status = await treasury.getOutflowStatus(await usdc.getAddress());
       // Balance now $470K, 10% = $47K < $100K absolute → effective = $100K
@@ -572,7 +717,10 @@ describe("Treasury Outflow Rate Limits", function () {
       const usdcAddr = await usdc.getAddress();
 
       // Attacker-requested increase: $100K → $1M
-      const tx = await treasury.setOutflowLimitAbsolute(usdcAddr, USDC(1_000_000));
+      const tx = await treasury.setOutflowLimitAbsolute(
+        usdcAddr,
+        USDC(1_000_000),
+      );
       const block = await ethers.provider.getBlock(tx.blockNumber!);
       const activatesAt = BigInt(block!.timestamp) + BigInt(ACTIVATION_DELAY);
 
@@ -582,7 +730,9 @@ describe("Treasury Outflow Rate Limits", function () {
         .withArgs(usdcAddr, USDC(100_000), USDC(1_000_000), activatesAt);
 
       // Active value is unchanged; pending slot populated
-      expect((await treasury.getOutflowConfig(usdcAddr)).limitAbsolute).to.equal(USDC(100_000));
+      expect(
+        (await treasury.getOutflowConfig(usdcAddr)).limitAbsolute,
+      ).to.equal(USDC(100_000));
       const pending = await treasury.getPendingOutflowConfig(usdcAddr);
       expect(pending.pendingLimitAbsolute).to.equal(USDC(1_000_000));
       expect(pending.pendingLimitAbsoluteActivation).to.equal(activatesAt);
@@ -590,7 +740,7 @@ describe("Treasury Outflow Rate Limits", function () {
       // Drain attempt against the new limit fails: $5M treasury, 10% pct = $500K effective.
       // Try $600K (would pass under $1M pending but not under $500K current).
       await expect(
-        treasury.distribute(usdcAddr, recipient.address, USDC(600_000))
+        treasury.distribute(usdcAddr, recipient.address, USDC(600_000)),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
 
       // Within the current effective limit still works
@@ -628,7 +778,7 @@ describe("Treasury Outflow Rate Limits", function () {
       // Schedule a loosening first
       await treasury.setOutflowLimitAbsolute(usdcAddr, USDC(1_000_000));
       expect(
-        (await treasury.getPendingOutflowConfig(usdcAddr)).pendingLimitAbsolute
+        (await treasury.getPendingOutflowConfig(usdcAddr)).pendingLimitAbsolute,
       ).to.equal(USDC(1_000_000));
 
       // Tighten: from $100K active → $75K immediate, pending cleared
@@ -636,7 +786,9 @@ describe("Treasury Outflow Rate Limits", function () {
         .to.emit(treasury, "OutflowLimitAbsoluteDecreased")
         .withArgs(usdcAddr, USDC(100_000), USDC(75_000));
 
-      expect((await treasury.getOutflowConfig(usdcAddr)).limitAbsolute).to.equal(USDC(75_000));
+      expect(
+        (await treasury.getOutflowConfig(usdcAddr)).limitAbsolute,
+      ).to.equal(USDC(75_000));
       const pending = await treasury.getPendingOutflowConfig(usdcAddr);
       expect(pending.pendingLimitAbsolute).to.equal(0);
       expect(pending.pendingLimitAbsoluteActivation).to.equal(0);
@@ -652,26 +804,38 @@ describe("Treasury Outflow Rate Limits", function () {
       await treasury.setOutflowLimitAbsolute(usdcAddr, USDC(500_000));
       await time.increase(10 * ONE_DAY);
 
-      const tx = await treasury.setOutflowLimitAbsolute(usdcAddr, USDC(300_000));
+      const tx = await treasury.setOutflowLimitAbsolute(
+        usdcAddr,
+        USDC(300_000),
+      );
       const block = await ethers.provider.getBlock(tx.blockNumber!);
-      const newActivatesAt = BigInt(block!.timestamp) + BigInt(ACTIVATION_DELAY);
+      const newActivatesAt =
+        BigInt(block!.timestamp) + BigInt(ACTIVATION_DELAY);
 
       const pending = await treasury.getPendingOutflowConfig(usdcAddr);
       expect(pending.pendingLimitAbsolute).to.equal(USDC(300_000));
       expect(pending.pendingLimitAbsoluteActivation).to.equal(newActivatesAt);
       // Active untouched
-      expect((await treasury.getOutflowConfig(usdcAddr)).limitAbsolute).to.equal(USDC(100_000));
+      expect(
+        (await treasury.getOutflowConfig(usdcAddr)).limitAbsolute,
+      ).to.equal(USDC(100_000));
     });
 
     // ---- setOutflowLimitBps ----
 
     it("schedules bps increase and applies old bps until activation", async function () {
       const usdcAddr = await usdc.getAddress();
-      await expect(treasury.setOutflowLimitBps(usdcAddr, 5000))
-        .to.emit(treasury, "OutflowLimitBpsIncreaseScheduled");
+      await expect(treasury.setOutflowLimitBps(usdcAddr, 5000)).to.emit(
+        treasury,
+        "OutflowLimitBpsIncreaseScheduled",
+      );
 
-      expect((await treasury.getOutflowConfig(usdcAddr)).limitBps).to.equal(1000);
-      expect((await treasury.getPendingOutflowConfig(usdcAddr)).pendingLimitBps).to.equal(5000);
+      expect((await treasury.getOutflowConfig(usdcAddr)).limitBps).to.equal(
+        1000,
+      );
+      expect(
+        (await treasury.getPendingOutflowConfig(usdcAddr)).pendingLimitBps,
+      ).to.equal(5000);
     });
 
     it("tightens bps immediately and clears pending", async function () {
@@ -682,8 +846,12 @@ describe("Treasury Outflow Rate Limits", function () {
         .to.emit(treasury, "OutflowLimitBpsDecreased")
         .withArgs(usdcAddr, 1000, 500);
 
-      expect((await treasury.getOutflowConfig(usdcAddr)).limitBps).to.equal(500);
-      expect((await treasury.getPendingOutflowConfig(usdcAddr)).pendingLimitBps).to.equal(0);
+      expect((await treasury.getOutflowConfig(usdcAddr)).limitBps).to.equal(
+        500,
+      );
+      expect(
+        (await treasury.getPendingOutflowConfig(usdcAddr)).pendingLimitBps,
+      ).to.equal(0);
     });
 
     // ---- setOutflowWindow (INVERTED direction) ----
@@ -702,9 +870,12 @@ describe("Treasury Outflow Rate Limits", function () {
         .to.emit(treasury, "OutflowWindowDurationDecreaseScheduled")
         .withArgs(usdcAddr, THIRTY_DAYS, 7 * ONE_DAY, activatesAt);
 
-      expect((await treasury.getOutflowConfig(usdcAddr)).windowDuration).to.equal(THIRTY_DAYS);
       expect(
-        (await treasury.getPendingOutflowConfig(usdcAddr)).pendingWindowDuration
+        (await treasury.getOutflowConfig(usdcAddr)).windowDuration,
+      ).to.equal(THIRTY_DAYS);
+      expect(
+        (await treasury.getPendingOutflowConfig(usdcAddr))
+          .pendingWindowDuration,
       ).to.equal(7 * ONE_DAY);
     });
 
@@ -716,9 +887,12 @@ describe("Treasury Outflow Rate Limits", function () {
         .to.emit(treasury, "OutflowWindowDurationIncreased")
         .withArgs(usdcAddr, THIRTY_DAYS, 60 * ONE_DAY);
 
-      expect((await treasury.getOutflowConfig(usdcAddr)).windowDuration).to.equal(60 * ONE_DAY);
       expect(
-        (await treasury.getPendingOutflowConfig(usdcAddr)).pendingWindowDuration
+        (await treasury.getOutflowConfig(usdcAddr)).windowDuration,
+      ).to.equal(60 * ONE_DAY);
+      expect(
+        (await treasury.getPendingOutflowConfig(usdcAddr))
+          .pendingWindowDuration,
       ).to.equal(0);
     });
 
@@ -748,7 +922,7 @@ describe("Treasury Outflow Rate Limits", function () {
           } catch {
             return false;
           }
-        }).length
+        }).length,
       ).to.equal(0);
     });
 
@@ -768,7 +942,8 @@ describe("Treasury Outflow Rate Limits", function () {
       await time.increase(ACTIVATION_DELAY);
 
       // View should report effective (post-activation) values without mutating
-      const effectiveBefore = await treasury.getEffectiveOutflowConfig(usdcAddr);
+      const effectiveBefore =
+        await treasury.getEffectiveOutflowConfig(usdcAddr);
       expect(effectiveBefore.limitAbsolute).to.equal(USDC(800_000));
       expect(effectiveBefore.limitBps).to.equal(3000);
       expect(effectiveBefore.windowDuration).to.equal(7 * ONE_DAY);
@@ -801,7 +976,7 @@ describe("Treasury Outflow Rate Limits", function () {
       await treasury.setOutflowLimitAbsolute(usdcAddr, USDC(5_000_000));
 
       await expect(
-        treasury.distribute(usdcAddr, recipient.address, USDC(2_000_000))
+        treasury.distribute(usdcAddr, recipient.address, USDC(2_000_000)),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
   });

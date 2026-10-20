@@ -93,15 +93,26 @@ export interface ShieldDataFields {
 export function encodeShieldHookData(d: ShieldDataFields): string {
   const coder = ethers.AbiCoder.defaultAbiCoder();
   const shieldData = coder.encode(
-    ["tuple(bytes32 npk, uint120 value, bytes32[3] encryptedBundle, bytes32 shieldKey, address integrator)"],
-    [[d.npk, d.value, d.encryptedBundle, d.shieldKey, d.integrator]]
+    [
+      "tuple(bytes32 npk, uint120 value, bytes32[3] encryptedBundle, bytes32 shieldKey, address integrator)",
+    ],
+    [[d.npk, d.value, d.encryptedBundle, d.shieldKey, d.integrator]],
   );
-  return coder.encode(["tuple(uint8 messageType, bytes data)"], [[0, shieldData]]);
+  return coder.encode(
+    ["tuple(uint8 messageType, bytes data)"],
+    [[0, shieldData]],
+  );
 }
 
 /** CCTPPayload hookData with messageType = UNSHIELD (invalid inbound on hub). */
 export function encodeUnshieldHookData(recipient: string): string {
   const coder = ethers.AbiCoder.defaultAbiCoder();
-  const unshieldData = coder.encode(["tuple(address recipient)"], [[recipient]]);
-  return coder.encode(["tuple(uint8 messageType, bytes data)"], [[1, unshieldData]]);
+  const unshieldData = coder.encode(
+    ["tuple(address recipient)"],
+    [[recipient]],
+  );
+  return coder.encode(
+    ["tuple(uint8 messageType, bytes data)"],
+    [[1, unshieldData]],
+  );
 }

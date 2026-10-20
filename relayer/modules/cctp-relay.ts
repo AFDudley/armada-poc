@@ -146,13 +146,12 @@ interface PrivacyPoolDeployment {
 // ============ ABIs ============
 
 // Real CCTP v2 event signature: MessageSent(bytes message)
-const MESSAGE_SENT_ABI = [
-  "event MessageSent(bytes message)",
-];
+const MESSAGE_SENT_ABI = ["event MessageSent(bytes message)"];
 
 /** Hoisted once — Interface construction parses ABI fragments; avoid doing it per log / per tick. */
 const MESSAGE_SENT_IFACE = new ethers.Interface(MESSAGE_SENT_ABI);
-const MESSAGE_SENT_TOPIC = MESSAGE_SENT_IFACE.getEvent("MessageSent")!.topicHash;
+const MESSAGE_SENT_TOPIC =
+  MESSAGE_SENT_IFACE.getEvent("MessageSent")!.topicHash;
 
 const MESSAGE_TRANSMITTER_ABI = [
   "function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool)",
@@ -197,9 +196,12 @@ const MSG_BODY_OFFSET = 148;
  * Parse raw MessageV2 bytes into structured fields.
  * The message is already the full encoded envelope from the MessageSent event.
  */
-function parseMessageV2Bytes(hex: string): Omit<MessageEvent, "txHash" | "blockNumber" | "rawMessage"> {
+function parseMessageV2Bytes(
+  hex: string,
+): Omit<MessageEvent, "txHash" | "blockNumber" | "rawMessage"> {
   const h = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const slice = (offset: number, len: number) => "0x" + h.slice(offset * 2, (offset + len) * 2);
+  const slice = (offset: number, len: number) =>
+    "0x" + h.slice(offset * 2, (offset + len) * 2);
 
   return {
     sourceDomain: Number(BigInt(slice(MSG_SOURCE_DOMAIN_OFFSET, 4))),
@@ -217,13 +219,24 @@ function parseMessageV2Bytes(hex: string): Omit<MessageEvent, "txHash" | "blockN
  * Parse maxFee and amount from a BurnMessageV2 messageBody hex string.
  * Returns { amount, maxFee } as bigints, or null if body is too short.
  */
-function parseBurnMessageFee(messageBody: string): { amount: bigint; maxFee: bigint } | null {
+function parseBurnMessageFee(
+  messageBody: string,
+): { amount: bigint; maxFee: bigint } | null {
   // Remove 0x prefix, each byte = 2 hex chars
   const hex = messageBody.startsWith("0x") ? messageBody.slice(2) : messageBody;
   if (hex.length / 2 < BURN_MSG_MIN_LENGTH) return null;
 
-  const amount = BigInt("0x" + hex.slice(BURN_MSG_AMOUNT_OFFSET * 2, (BURN_MSG_AMOUNT_OFFSET + 32) * 2));
-  const maxFee = BigInt("0x" + hex.slice(BURN_MSG_MAX_FEE_OFFSET * 2, (BURN_MSG_MAX_FEE_OFFSET + 32) * 2));
+  const amount = BigInt(
+    "0x" +
+      hex.slice(BURN_MSG_AMOUNT_OFFSET * 2, (BURN_MSG_AMOUNT_OFFSET + 32) * 2),
+  );
+  const maxFee = BigInt(
+    "0x" +
+      hex.slice(
+        BURN_MSG_MAX_FEE_OFFSET * 2,
+        (BURN_MSG_MAX_FEE_OFFSET + 32) * 2,
+      ),
+  );
   return { amount, maxFee };
 }
 
@@ -245,7 +258,9 @@ function serializeMessageEvent(event: MessageEvent): PersistedMessageEvent {
 }
 
 /** Inverse of serializeMessageEvent — rebuild the in-memory event (string nonce → bigint). */
-function deserializeMessageEvent(persisted: PersistedMessageEvent): MessageEvent {
+function deserializeMessageEvent(
+  persisted: PersistedMessageEvent,
+): MessageEvent {
   return {
     nonce: BigInt(persisted.nonce),
     sourceDomain: persisted.sourceDomain,
@@ -349,21 +364,21 @@ export class CCTPRelayModule {
       if (state) {
         this.chains.set(state.domain, state);
         console.log(
-          `  [cctp-relay] ${chainConfig.name} (Chain ${chainConfig.chainId}, Domain ${state.domain})`
+          `  [cctp-relay] ${chainConfig.name} (Chain ${chainConfig.chainId}, Domain ${state.domain})`,
         );
         console.log(`    MessageTransmitter: ${state.messageTransmitter}`);
         console.log(`    TokenMessenger: ${state.tokenMessenger}`);
         console.log(`    HookRouter: ${state.hookRouter || "not configured"}`);
       } else {
         console.log(
-          `  [cctp-relay] ${chainConfig.name} (${chainConfig.chainId}): Failed to initialize`
+          `  [cctp-relay] ${chainConfig.name} (${chainConfig.chainId}): Failed to initialize`,
         );
         allInitialized = false;
       }
     }
 
     console.log(
-      `[cctp-relay] Initialized ${this.chains.size}/${allChains.length} chains`
+      `[cctp-relay] Initialized ${this.chains.size}/${allChains.length} chains`,
     );
 
     // Restore any retry-queue entries persisted before a previous shutdown/crash. Done AFTER the
@@ -422,7 +437,10 @@ export class CCTPRelayModule {
     this.deadLetters.set(sourceState.config.name, list);
     this.markProcessed(sourceState, messageKey);
     // Surface the permanent failure on /cctp-status so the frontend stops waiting (fails the tx).
-    this.deliveryStore.markFailed(ethers.keccak256(event.rawMessage), `dead-letter: ${reason}`);
+    this.deliveryStore.markFailed(
+      ethers.keccak256(event.rawMessage),
+      `dead-letter: ${reason}`,
+    );
     console.error(
       `[cctp-relay] DEAD-LETTER (${reason}): ${messageKey} (source tx ${event.txHash}). Recorded for manual relay.`,
     );
@@ -517,7 +535,7 @@ export class CCTPRelayModule {
   private async initChain(
     chainConfig: ChainConfig,
     deploymentFile: string,
-    privacyPoolFile?: string
+    privacyPoolFile?: string,
   ): Promise<ChainState | null> {
     try {
       const deployment = loadDeploymentV3(deploymentFile);
@@ -535,14 +553,19 @@ export class CCTPRelayModule {
       // Load hookRouter from privacy pool deployment
       let hookRouter: string | null = null;
       if (privacyPoolFile) {
-        const ppDeployment = loadDeploymentV3(privacyPoolFile) as unknown as PrivacyPoolDeployment | null;
+        const ppDeployment = loadDeploymentV3(
+          privacyPoolFile,
+        ) as unknown as PrivacyPoolDeployment | null;
         if (ppDeployment?.contracts?.hookRouter) {
           hookRouter = ppDeployment.contracts.hookRouter;
         }
       }
 
       // Pinned static provider (main's RPC-quota optimization) + our dedicated relayer key.
-      const provider = createStaticProvider(chainConfig.rpc, chainConfig.chainId);
+      const provider = createStaticProvider(
+        chainConfig.rpc,
+        chainConfig.chainId,
+      );
       const wallet = new ethers.Wallet(relayerPrivateKey, provider);
 
       // Verify connection up-front with the same timeout we'll use during polling.
@@ -557,7 +580,10 @@ export class CCTPRelayModule {
       const domain = chainConfig.cctpDomain ?? deployment.domain;
 
       // Load persisted cursor or bootstrap from lookback — same logic as iris-relay.
-      const lastProcessedBlock = await this.resolveBootCursor(chainConfig, currentBlock);
+      const lastProcessedBlock = await this.resolveBootCursor(
+        chainConfig,
+        currentBlock,
+      );
 
       return {
         config: chainConfig,
@@ -566,7 +592,11 @@ export class CCTPRelayModule {
         messageTransmitter,
         tokenMessenger,
         hookRouter,
-        messageTransmitterContract: new ethers.Contract(messageTransmitter, MESSAGE_TRANSMITTER_ABI, wallet),
+        messageTransmitterContract: new ethers.Contract(
+          messageTransmitter,
+          MESSAGE_TRANSMITTER_ABI,
+          wallet,
+        ),
         hookRouterContract: hookRouter
           ? new ethers.Contract(hookRouter, HOOK_ROUTER_ABI, wallet)
           : null,
@@ -646,7 +676,7 @@ export class CCTPRelayModule {
    */
   private async relayMessage(
     event: MessageEvent,
-    sourceState: ChainState
+    sourceState: ChainState,
   ): Promise<boolean> {
     const messageKey = `${event.sourceDomain}-${event.nonce}`;
 
@@ -657,7 +687,7 @@ export class CCTPRelayModule {
     const destState = this.getChainByDomain(event.destinationDomain);
     if (!destState) {
       console.log(
-        `  [cctp-relay] Unknown destination domain ${event.destinationDomain}, skipping`
+        `  [cctp-relay] Unknown destination domain ${event.destinationDomain}, skipping`,
       );
       return false;
     }
@@ -668,7 +698,7 @@ export class CCTPRelayModule {
 
     console.log(`\n${"=".repeat(60)}`);
     console.log(
-      `[cctp-relay] RELAYING: ${sourceState.config.name} (Domain ${event.sourceDomain}) → ${destState.config.name} (Domain ${event.destinationDomain})`
+      `[cctp-relay] RELAYING: ${sourceState.config.name} (Domain ${event.sourceDomain}) → ${destState.config.name} (Domain ${event.destinationDomain})`,
     );
     console.log(`${"=".repeat(60)}`);
     console.log(`  Nonce:               ${event.nonce}`);
@@ -676,7 +706,9 @@ export class CCTPRelayModule {
     console.log(`  Recipient:           ${event.recipient}`);
     console.log(`  DestinationCaller:   ${event.destinationCaller}`);
     console.log(`  MinFinality:         ${event.minFinalityThreshold}`);
-    console.log(`  Body Length:         ${(event.messageBody.length - 2) / 2} bytes`);
+    console.log(
+      `  Body Length:         ${(event.messageBody.length - 2) / 2} bytes`,
+    );
     console.log(`  maxFee:              ${maxFeeDisplay}`);
     console.log(`  Source Tx:           ${event.txHash}`);
 
@@ -687,12 +719,14 @@ export class CCTPRelayModule {
     // /cctp-status delivery index is keyed by the SOURCE messageHash (keccak256 of the MessageSent
     // bytes) — the same value the frontend captures at burn time. Mark "in flight" before relaying.
     const messageHash = ethers.keccak256(event.rawMessage);
-    this.deliveryStore.markPending(messageHash, { amount: burnFee?.amount.toString() });
+    this.deliveryStore.markPending(messageHash, {
+      amount: burnFee?.amount.toString(),
+    });
 
     try {
       const encodedMessage = event.rawMessage;
       console.log(
-        `\n  Encoded MessageV2 length: ${(encodedMessage.length - 2) / 2} bytes`
+        `\n  Encoded MessageV2 length: ${(encodedMessage.length - 2) / 2} bytes`,
       );
 
       // Allocate the nonce + broadcast through the shared coordinator (keyed by chainId). Only the
@@ -707,31 +741,31 @@ export class CCTPRelayModule {
           // Contracts are built once at init and cached on ChainState.
           if (destState.hookRouterContract) {
             console.log(
-              `  Sending relayWithHook to ${destState.config.name} via CCTPHookRouter (tx nonce: ${txNonce})...`
+              `  Sending relayWithHook to ${destState.config.name} via CCTPHookRouter (tx nonce: ${txNonce})...`,
             );
             return withTimeout(
               destState.hookRouterContract.relayWithHook(
                 encodedMessage,
                 "0x", // Empty attestation — mock skips verification
-                { nonce: txNonce }
+                { nonce: txNonce },
               ) as Promise<ethers.ContractTransactionResponse>,
               destState.config.scanner.rpcTimeoutMs,
               `relayWithHook ${destState.config.name}`,
             );
           }
           console.log(
-            `  Sending receiveMessage to ${destState.config.name} (tx nonce: ${txNonce})...`
+            `  Sending receiveMessage to ${destState.config.name} (tx nonce: ${txNonce})...`,
           );
           return withTimeout(
             destState.messageTransmitterContract.receiveMessage(
               encodedMessage,
               "0x", // Empty attestation — mock skips verification
-              { nonce: txNonce }
+              { nonce: txNonce },
             ) as Promise<ethers.ContractTransactionResponse>,
             destState.config.scanner.rpcTimeoutMs,
             `receiveMessage ${destState.config.name}`,
           );
-        }
+        },
       );
 
       console.log(`  Tx hash: ${tx.hash}`);
@@ -744,7 +778,9 @@ export class CCTPRelayModule {
 
       this.markProcessed(sourceState, messageKey);
       // Authoritative delivery signal for /cctp-status — the destination mint confirmed.
-      this.deliveryStore.markDelivered(messageHash, tx.hash, { amount: burnFee?.amount.toString() });
+      this.deliveryStore.markDelivered(messageHash, tx.hash, {
+        amount: burnFee?.amount.toString(),
+      });
 
       console.log(`  Relay successful`);
       return true;
@@ -776,12 +812,12 @@ export class CCTPRelayModule {
   private async enqueueRetry(
     event: MessageEvent,
     sourceState: ChainState,
-    currentAttempts: number
+    currentAttempts: number,
   ): Promise<void> {
     if (currentAttempts >= MAX_RETRIES) {
       console.error(
         `[cctp-relay] Max retries (${MAX_RETRIES}) reached for message ` +
-          `${event.sourceDomain}-${event.nonce}. Giving up.`
+          `${event.sourceDomain}-${event.nonce}. Giving up.`,
       );
       // Record durably instead of dropping into a log line — the burn is final, so this message's
       // USDC is stranded until manually relayed.
@@ -792,7 +828,7 @@ export class CCTPRelayModule {
     // Check if already in retry queue
     const messageKey = `${event.sourceDomain}-${event.nonce}`;
     const existing = this.retryQueue.find(
-      (r) => `${r.event.sourceDomain}-${r.event.nonce}` === messageKey
+      (r) => `${r.event.sourceDomain}-${r.event.nonce}` === messageKey,
     );
     if (existing) {
       return; // Already queued
@@ -802,7 +838,7 @@ export class CCTPRelayModule {
     const delay = RETRY_BASE_DELAY_MS * Math.pow(2, currentAttempts); // 2s, 4s, 8s, 16s, 32s
 
     console.log(
-      `[cctp-relay] Queuing retry #${nextAttempt} for ${messageKey} in ${delay}ms`
+      `[cctp-relay] Queuing retry #${nextAttempt} for ${messageKey} in ${delay}ms`,
     );
 
     this.retryQueue.push({
@@ -827,7 +863,7 @@ export class CCTPRelayModule {
 
       // Remove from queue before attempting
       this.retryQueue = this.retryQueue.filter(
-        (r) => `${r.event.sourceDomain}-${r.event.nonce}` !== messageKey
+        (r) => `${r.event.sourceDomain}-${r.event.nonce}` !== messageKey,
       );
 
       // Check if already processed (might have been processed by another path)
@@ -836,7 +872,7 @@ export class CCTPRelayModule {
       }
 
       console.log(
-        `[cctp-relay] Retrying message ${messageKey} (attempt ${entry.attempts}/${MAX_RETRIES})`
+        `[cctp-relay] Retrying message ${messageKey} (attempt ${entry.attempts}/${MAX_RETRIES})`,
       );
 
       const success = await this.relayMessageRetry(entry);
@@ -875,11 +911,9 @@ export class CCTPRelayModule {
           // Use the cached hookRouter contract if available.
           if (destState.hookRouterContract) {
             return withTimeout(
-              destState.hookRouterContract.relayWithHook(
-                encodedMessage,
-                "0x",
-                { nonce: txNonce }
-              ) as Promise<ethers.ContractTransactionResponse>,
+              destState.hookRouterContract.relayWithHook(encodedMessage, "0x", {
+                nonce: txNonce,
+              }) as Promise<ethers.ContractTransactionResponse>,
               destState.config.scanner.rpcTimeoutMs,
               `relayWithHook ${destState.config.name}`,
             );
@@ -888,12 +922,12 @@ export class CCTPRelayModule {
             destState.messageTransmitterContract.receiveMessage(
               encodedMessage,
               "0x",
-              { nonce: txNonce }
+              { nonce: txNonce },
             ) as Promise<ethers.ContractTransactionResponse>,
             destState.config.scanner.rpcTimeoutMs,
             `receiveMessage ${destState.config.name}`,
           );
-        }
+        },
       );
 
       const receipt = await withTimeout(
@@ -902,11 +936,14 @@ export class CCTPRelayModule {
         `tx.wait ${destState.config.name} ${tx.hash.slice(0, 12)}`,
       );
       console.log(
-        `[cctp-relay] Retry successful for ${messageKey} in block ${receipt?.blockNumber}`
+        `[cctp-relay] Retry successful for ${messageKey} in block ${receipt?.blockNumber}`,
       );
 
       this.markProcessed(sourceState, messageKey);
-      this.deliveryStore.markDelivered(ethers.keccak256(event.rawMessage), tx.hash);
+      this.deliveryStore.markDelivered(
+        ethers.keccak256(event.rawMessage),
+        tx.hash,
+      );
       return true;
     } catch (e: any) {
       if (
@@ -920,7 +957,9 @@ export class CCTPRelayModule {
       if (e.message?.includes("nonce") || e.message?.includes("NONCE")) {
         this.nonceCoordinator.reset(destState.config.chainId);
       }
-      console.error(`  [cctp-relay] Retry failed for ${messageKey}: ${e.message || e}`);
+      console.error(
+        `  [cctp-relay] Retry failed for ${messageKey}: ${e.message || e}`,
+      );
       return false;
     }
   }
@@ -998,9 +1037,10 @@ export class CCTPRelayModule {
       state.lastScanAt = Date.now();
     } catch (err: any) {
       // No longer silent. Cursor stays put → next tick retries from the same fromBlock.
-      const message = err instanceof RpcTimeoutError
-        ? `RPC timeout: ${err.label}`
-        : err?.message ?? "unknown error";
+      const message =
+        err instanceof RpcTimeoutError
+          ? `RPC timeout: ${err.label}`
+          : (err?.message ?? "unknown error");
       state.lastError = { message, at: Date.now() };
       console.error(
         `[cctp-relay] ${config.name}: Scan tick failed: ${message}. Cursor stays at ${state.lastProcessedBlock}; will retry next tick.`,
@@ -1022,7 +1062,7 @@ export class CCTPRelayModule {
     const chainsSummary = Array.from(this.chains.values())
       .map(
         (s) =>
-          `  ${s.config.name}: Domain ${s.domain} (Chain ${s.config.chainId})`
+          `  ${s.config.name}: Domain ${s.domain} (Chain ${s.config.chainId})`,
       )
       .join("\n");
 
@@ -1101,7 +1141,9 @@ export class CCTPRelayModule {
    */
   async stop(): Promise<void> {
     if (!this.isRunning) return;
-    console.log("[cctp-relay] Stopping — waiting for in-flight scan tick to complete...");
+    console.log(
+      "[cctp-relay] Stopping — waiting for in-flight scan tick to complete...",
+    );
     this.isRunning = false;
     if (this.loopExited) await this.loopExited;
     console.log("[cctp-relay] Stopped cleanly.");
@@ -1132,7 +1174,9 @@ export class CCTPRelayModule {
     const chains: ChainHealth[] = [];
     for (const state of this.chains.values()) {
       const lagBlocks =
-        state.lastChainHead > 0 ? state.lastChainHead - state.lastProcessedBlock : 0;
+        state.lastChainHead > 0
+          ? state.lastChainHead - state.lastProcessedBlock
+          : 0;
       const status = classifyChainHealth({
         lastError: state.lastError,
         lastScanAt: state.lastScanAt,

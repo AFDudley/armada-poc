@@ -30,18 +30,33 @@
  */
 
 import { ethers } from "hardhat";
-import { getNetworkConfig, getGovernanceDeploymentFile, isLocal } from "../config/networks";
-import { createNonceManager, loadDeployment, saveDeployment } from "./deploy-utils";
+import {
+  getNetworkConfig,
+  getGovernanceDeploymentFile,
+  isLocal,
+} from "../config/networks";
+import {
+  createNonceManager,
+  loadDeployment,
+  saveDeployment,
+} from "./deploy-utils";
 
 // Public RPCs commonly cap eth_getLogs ranges; query TokenSwept in chunks.
 const LOG_CHUNK_BLOCKS = 50_000;
 
-async function fetchSweptTokens(windDown: any, fromBlock: number): Promise<string[]> {
+async function fetchSweptTokens(
+  windDown: any,
+  fromBlock: number,
+): Promise<string[]> {
   const latest = await ethers.provider.getBlockNumber();
   const swept = new Set<string>();
   for (let start = fromBlock; start <= latest; start += LOG_CHUNK_BLOCKS) {
     const end = Math.min(start + LOG_CHUNK_BLOCKS - 1, latest);
-    const events = await windDown.queryFilter(windDown.filters.TokenSwept(), start, end);
+    const events = await windDown.queryFilter(
+      windDown.filters.TokenSwept(),
+      start,
+      end,
+    );
     for (const ev of events) {
       swept.add(ethers.getAddress(ev.args[0]));
     }
@@ -66,15 +81,28 @@ async function main() {
     console.error(`Governance manifest not found: ${govFile}`);
     process.exit(1);
   }
-  const { armToken: armTokenAddr, redemption: redemptionAddr, windDown: windDownAddr } = gov.contracts;
-  if (!redemptionAddr || redemptionAddr === ethers.ZeroAddress ||
-      !windDownAddr || windDownAddr === ethers.ZeroAddress) {
-    console.error(`Manifest ${govFile} has no redemption/windDown addresses — deploy_crowdfund.ts must run first.`);
+  const {
+    armToken: armTokenAddr,
+    redemption: redemptionAddr,
+    windDown: windDownAddr,
+  } = gov.contracts;
+  if (
+    !redemptionAddr ||
+    redemptionAddr === ethers.ZeroAddress ||
+    !windDownAddr ||
+    windDownAddr === ethers.ZeroAddress
+  ) {
+    console.error(
+      `Manifest ${govFile} has no redemption/windDown addresses — deploy_crowdfund.ts must run first.`,
+    );
     process.exit(1);
   }
 
   const windDown = await ethers.getContractAt("ArmadaWindDown", windDownAddr);
-  const redemption = await ethers.getContractAt("ArmadaRedemption", redemptionAddr);
+  const redemption = await ethers.getContractAt(
+    "ArmadaRedemption",
+    redemptionAddr,
+  );
   const treasuryAddr: string = gov.contracts.treasury;
 
   // The router only makes sense post-trigger: its token list is the set of
@@ -82,9 +110,13 @@ async function main() {
   const triggered: boolean = await windDown.triggered();
   if (!triggered) {
     if (isLocal()) {
-      console.warn("WARNING: wind-down not triggered (allowed on local for rehearsal only).");
+      console.warn(
+        "WARNING: wind-down not triggered (allowed on local for rehearsal only).",
+      );
     } else {
-      console.error("Wind-down has not triggered — there is nothing to route yet. Aborting.");
+      console.error(
+        "Wind-down has not triggered — there is nothing to route yet. Aborting.",
+      );
       process.exit(1);
     }
   }
@@ -97,17 +129,24 @@ async function main() {
   let anyUnswept = false;
   for (const token of tokens) {
     const erc20 = await ethers.getContractAt(
-      "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol:IERC20Metadata", token
+      "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol:IERC20Metadata",
+      token,
     );
     let symbol = "???";
-    try { symbol = await erc20.symbol(); } catch { /* non-standard token; address is the identifier */ }
+    try {
+      symbol = await erc20.symbol();
+    } catch {
+      /* non-standard token; address is the identifier */
+    }
     const redemptionBal = await erc20.balanceOf(redemptionAddr);
     const treasuryBal = await erc20.balanceOf(treasuryAddr);
     console.log(`  ${token}  ${symbol}`);
     console.log(`    redemption balance: ${redemptionBal}`);
     if (treasuryBal > 0n) {
       anyUnswept = true;
-      console.log(`    !! treasury still holds ${treasuryBal} — sweep again before deploying`);
+      console.log(
+        `    !! treasury still holds ${treasuryBal} — sweep again before deploying`,
+      );
     }
   }
   if (tokens.length === 0) {
@@ -118,24 +157,37 @@ async function main() {
   console.log(`  ETH on redemption: ${ethers.formatEther(redemptionEth)}`);
   if (treasuryEth > 0n) {
     anyUnswept = true;
-    console.log(`  !! treasury still holds ${ethers.formatEther(treasuryEth)} ETH — run sweepETH first`);
+    console.log(
+      `  !! treasury still holds ${ethers.formatEther(treasuryEth)} ETH — run sweepETH first`,
+    );
   }
   console.log("");
 
   if (anyUnswept) {
-    console.warn("WARNING: unswept treasury balances detected. Redemptions through a router");
-    console.warn("deployed now would forfeit shares of later sweeps. Complete all sweeps first.");
+    console.warn(
+      "WARNING: unswept treasury balances detected. Redemptions through a router",
+    );
+    console.warn(
+      "deployed now would forfeit shares of later sweeps. Complete all sweeps first.",
+    );
   }
 
   if (process.env.CONFIRM_ROUTER_DEPLOY !== "1") {
-    console.log("Dry run complete. Review the token list above against the wind-down manifest,");
+    console.log(
+      "Dry run complete. Review the token list above against the wind-down manifest,",
+    );
     console.log("then re-run with CONFIRM_ROUTER_DEPLOY=1 to deploy.");
     return;
   }
 
   console.log("Deploying RedemptionRouter...");
   const RedemptionRouter = await ethers.getContractFactory("RedemptionRouter");
-  const router = await RedemptionRouter.deploy(armTokenAddr, redemptionAddr, tokens, nm.override());
+  const router = await RedemptionRouter.deploy(
+    armTokenAddr,
+    redemptionAddr,
+    tokens,
+    nm.override(),
+  );
   await router.deploymentTransaction()!.wait();
   const routerAddr = await router.getAddress();
   console.log(`  RedemptionRouter: ${routerAddr}`);
@@ -143,8 +195,13 @@ async function main() {
   // Read the baked list back — the on-chain state, not the constructor args,
   // is what users will trust.
   const baked: string[] = await router.allTokens();
-  if (baked.length !== tokens.length || baked.some((t, i) => ethers.getAddress(t) !== tokens[i])) {
-    console.error("FATAL: allTokens() does not match the intended list. Do NOT publish this router.");
+  if (
+    baked.length !== tokens.length ||
+    baked.some((t, i) => ethers.getAddress(t) !== tokens[i])
+  ) {
+    console.error(
+      "FATAL: allTokens() does not match the intended list. Do NOT publish this router.",
+    );
     process.exit(1);
   }
   console.log("  allTokens() verified against intended list.");
@@ -170,8 +227,12 @@ async function main() {
   console.log("");
   console.log("Next steps (see docs/winddown-redemption-runbook.md):");
   console.log("  1. Verify the router source on the block explorer.");
-  console.log("  2. Publish the router address + token list in the signed wind-down manifest.");
-  console.log("  3. Users: approve ARM to the router, then call redeemAll(armAmount, recipient).");
+  console.log(
+    "  2. Publish the router address + token list in the signed wind-down manifest.",
+  );
+  console.log(
+    "  3. Users: approve ARM to the router, then call redeemAll(armAmount, recipient).",
+  );
 }
 
 main().catch((error) => {

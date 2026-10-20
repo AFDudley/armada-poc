@@ -78,19 +78,12 @@ contract OnlyDelegatecallTest is Test {
             commitmentCiphertext: ciphertext
         });
 
-        SnarkProof memory proof = SnarkProof({
-            a: G1Point(0, 0),
-            b: G2Point([uint256(0), 0], [uint256(0), 0]),
-            c: G1Point(0, 0)
-        });
+        SnarkProof memory proof =
+            SnarkProof({a: G1Point(0, 0), b: G2Point([uint256(0), 0], [uint256(0), 0]), c: G1Point(0, 0)});
 
         CommitmentPreimage memory unshieldPreimage = CommitmentPreimage({
             npk: bytes32(0),
-            token: TokenData({
-                tokenType: TokenType.ERC20,
-                tokenAddress: address(0),
-                tokenSubID: 0
-            }),
+            token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(0), tokenSubID: 0}),
             value: 0
         });
 
@@ -153,19 +146,12 @@ contract OnlyDelegatecallTest is Test {
             commitmentCiphertext: ciphertext
         });
 
-        SnarkProof memory proof = SnarkProof({
-            a: G1Point(0, 0),
-            b: G2Point([uint256(0), 0], [uint256(0), 0]),
-            c: G1Point(0, 0)
-        });
+        SnarkProof memory proof =
+            SnarkProof({a: G1Point(0, 0), b: G2Point([uint256(0), 0], [uint256(0), 0]), c: G1Point(0, 0)});
 
         CommitmentPreimage memory unshieldPreimage = CommitmentPreimage({
             npk: bytes32(0),
-            token: TokenData({
-                tokenType: TokenType.ERC20,
-                tokenAddress: address(0),
-                tokenSubID: 0
-            }),
+            token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(0), tokenSubID: 0}),
             value: 0
         });
 

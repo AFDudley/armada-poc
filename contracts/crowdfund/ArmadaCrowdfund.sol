@@ -27,11 +27,11 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
 
     // ============ Constants ============
 
-    uint256 public constant BASE_SALE = 1_200_000 * 1e6;       // $1.2M USDC
-    uint256 public constant MAX_SALE  = 1_800_000 * 1e6;       // $1.8M USDC
-    uint256 public constant MIN_SALE  = 1_000_000 * 1e6;       // $1.0M USDC
-    uint256 public constant ARM_PRICE = 1e6;                    // $1.00 per ARM in USDC
-    uint256 public constant ELASTIC_TRIGGER = 1_500_000 * 1e6;  // $1.5M capped demand triggers expansion
+    uint256 public constant BASE_SALE = 1_200_000 * 1e6; // $1.2M USDC
+    uint256 public constant MAX_SALE = 1_800_000 * 1e6; // $1.8M USDC
+    uint256 public constant MIN_SALE = 1_000_000 * 1e6; // $1.0M USDC
+    uint256 public constant ARM_PRICE = 1e6; // $1.00 per ARM in USDC
+    uint256 public constant ELASTIC_TRIGGER = 1_500_000 * 1e6; // $1.5M capped demand triggers expansion
     uint8 public constant NUM_HOPS = 3;
 
     /// @dev WATERFALL DESIGN NOTE. Allocation is computed against `saleSize` (BASE_SALE, or MAX_SALE
@@ -47,7 +47,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     ///        hop-2 floor = 5% + 10%        = 15%   (+ unconditional rollover of hop-0/hop-1 leftover)
     ///      Raw ceilings overlap (60% + 45% of basePool > 100%); a remainingAvailable tracker in
     ///      _computeHopAllocations guarantees total allocation never exceeds saleSize.
-    uint256 public constant HOP2_BASE_FLOOR_BPS = 500;   // 5% base-pool reduction
+    uint256 public constant HOP2_BASE_FLOOR_BPS = 500; // 5% base-pool reduction
     uint256 public constant HOP2_EXTRA_FLOOR_BPS = 1000; // additional 10% reserved for hop-2
 
     /// @notice Per-hop raw ceiling shares (basis points of the 95% base pool). Hop-0 additionally
@@ -77,20 +77,19 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     // participant invite/commit (`<= windowEnd`) remain open for that final second.
     uint256 public constant LAUNCH_TEAM_INVITE_PERIOD = WINDOW_DURATION;
     uint256 public constant CLAIM_DEADLINE_DURATION = 1095 days; // 3 years
-    uint256 public constant MIN_COMMIT = 50 * 1e6;               // $50 USDC minimum per commit
+    uint256 public constant MIN_COMMIT = 50 * 1e6; // $50 USDC minimum per commit
     // Per-hop invite stacking caps are stored in hopConfigs[].maxInvitesReceived (1, 10, 20)
-    uint8 public constant MAX_SEEDS = 180;                       // max number of seeds (hop-0 participants)
-    uint8 public constant LAUNCH_TEAM_HOP1_BUDGET = 100;         // launch team direct hop-1 invite slots
-    uint8 public constant LAUNCH_TEAM_HOP2_BUDGET = 120;         // launch team direct hop-2 invite slots
+    uint8 public constant MAX_SEEDS = 180; // max number of seeds (hop-0 participants)
+    uint8 public constant LAUNCH_TEAM_HOP1_BUDGET = 100; // launch team direct hop-1 invite slots
+    uint8 public constant LAUNCH_TEAM_HOP2_BUDGET = 120; // launch team direct hop-2 invite slots
     // Hard cap on total participant nodes. finalize() iterates every node in one tx at ~8,200 gas/node
     // (cold); this bound keeps it under the 16,777,216 (2^24, EIP-7825) per-tx gas cap. 1,800 nodes
     // ≈ 15.2M gas (~9% margin). Enforced in _initParticipant. See the DESIGN NOTE on _iterateCappedDemand.
     uint256 public constant MAX_FINALIZE_NODES = 1800;
 
     // EIP-712 typehash for off-chain invite signatures
-    bytes32 public constant INVITE_TYPEHASH = keccak256(
-        "Invite(address inviter,uint8 fromHop,uint256 nonce,uint256 deadline)"
-    );
+    bytes32 public constant INVITE_TYPEHASH =
+        keccak256("Invite(address inviter,uint8 fromHop,uint256 nonce,uint256 deadline)");
 
     // ============ Immutable ============
 
@@ -106,10 +105,10 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     // ============ State ============
     // Pack 5-byte run into one slot (audit-68): Phase (1) + 2×uint8 (2) + 2×bool (2) = 5 bytes.
     Phase public phase;
-    uint8 public launchTeamHop1Used;     // launch-team invite budget tracking (hop-1)
-    uint8 public launchTeamHop2Used;     // launch-team invite budget tracking (hop-2)
-    bool public armLoaded;               // ARM pre-load verification
-    bool public refundMode;              // true when finalize() entered refund mode (proceeds < MIN_SALE)
+    uint8 public launchTeamHop1Used; // launch-team invite budget tracking (hop-1)
+    uint8 public launchTeamHop2Used; // launch-team invite budget tracking (hop-2)
+    bool public armLoaded; // ARM pre-load verification
+    bool public refundMode; // true when finalize() entered refund mode (proceeds < MIN_SALE)
 
     // Timing (set once in constructor, never modified)
     uint256 public immutable windowStart;
@@ -126,16 +125,16 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     // Aggregate stats
     HopStats[3] public hopStats;
     uint256 public totalCommitted;
-    uint256 public cappedDemand;    // sum of capped deposits (set at finalization)
+    uint256 public cappedDemand; // sum of capped deposits (set at finalization)
 
     // Finalization results
     uint256 public saleSize;
-    uint256 public totalAllocatedArm;    // ARM (18 dec) — aggregate from hop-level computation
-    uint256 public totalAllocatedUsdc;   // USDC (6 dec) — hop-level upper bound
-    uint256[3] public finalCeilings;     // budget-capped hop ceilings (stored at finalization)
-    uint256[3] public finalDemands;      // hop demands (stored at finalization)
+    uint256 public totalAllocatedArm; // ARM (18 dec) — aggregate from hop-level computation
+    uint256 public totalAllocatedUsdc; // USDC (6 dec) — hop-level upper bound
+    uint256[3] public finalCeilings; // budget-capped hop ceilings (stored at finalization)
+    uint256[3] public finalDemands; // hop demands (stored at finalization)
     // Lazy evaluation accumulators (tracked during claims)
-    uint256 public totalArmTransferred;  // exact sum of ARM transferred via claim()
+    uint256 public totalArmTransferred; // exact sum of ARM transferred via claim()
 
     // Claim deadline — set at finalization, after which unclaimed ARM is sweepable
     uint256 public claimDeadline;
@@ -212,9 +211,24 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         launchTeamInviteEnd = _openTimestamp + LAUNCH_TEAM_INVITE_PERIOD;
         // phase defaults to Phase.Active (value 0)
 
-        hopConfigs[0] = HopConfig({ ceilingBps: HOP0_CEILING_BPS, capUsdc: HOP0_CAP_USDC, maxInvites: HOP0_MAX_INVITES, maxInvitesReceived: HOP0_MAX_INVITES_RECEIVED });
-        hopConfigs[1] = HopConfig({ ceilingBps: HOP1_CEILING_BPS, capUsdc: HOP1_CAP_USDC, maxInvites: HOP1_MAX_INVITES, maxInvitesReceived: HOP1_MAX_INVITES_RECEIVED });
-        hopConfigs[2] = HopConfig({ ceilingBps: 0,                capUsdc: HOP2_CAP_USDC, maxInvites: HOP2_MAX_INVITES, maxInvitesReceived: HOP2_MAX_INVITES_RECEIVED });
+        hopConfigs[0] = HopConfig({
+            ceilingBps: HOP0_CEILING_BPS,
+            capUsdc: HOP0_CAP_USDC,
+            maxInvites: HOP0_MAX_INVITES,
+            maxInvitesReceived: HOP0_MAX_INVITES_RECEIVED
+        });
+        hopConfigs[1] = HopConfig({
+            ceilingBps: HOP1_CEILING_BPS,
+            capUsdc: HOP1_CAP_USDC,
+            maxInvites: HOP1_MAX_INVITES,
+            maxInvitesReceived: HOP1_MAX_INVITES_RECEIVED
+        });
+        hopConfigs[2] = HopConfig({
+            ceilingBps: 0,
+            capUsdc: HOP2_CAP_USDC,
+            maxInvites: HOP2_MAX_INVITES,
+            maxInvitesReceived: HOP2_MAX_INVITES_RECEIVED
+        });
     }
 
     // ============ Seed Management ============
@@ -288,10 +302,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         require(inviterHop < NUM_HOPS - 1, "ArmadaCrowdfund: max hop reached");
         // Scaled invite budget: invitesReceived * maxInvites for this hop
         uint16 maxBudget = inviter.invitesReceived * uint16(hopConfigs[inviterHop].maxInvites);
-        require(
-            inviter.invitesSent < maxBudget,
-            "ArmadaCrowdfund: invite limit reached"
-        );
+        require(inviter.invitesSent < maxBudget, "ArmadaCrowdfund: invite limit reached");
         require(invitee != address(0), "ArmadaCrowdfund: zero address");
 
         uint8 inviteeHop = inviterHop + 1;
@@ -385,13 +396,15 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         require(!usedNonces[inviter][nonce], "ArmadaCrowdfund: nonce already used");
 
         // Verify EIP-712 signature
-        bytes32 structHash = keccak256(abi.encode(
-            INVITE_TYPEHASH,
-            inviter,        // bearer credential: inviter signs their own address
-            fromHop,
-            nonce,
-            deadline
-        ));
+        bytes32 structHash = keccak256(
+            abi.encode(
+                INVITE_TYPEHASH,
+                inviter, // bearer credential: inviter signs their own address
+                fromHop,
+                nonce,
+                deadline
+            )
+        );
         bytes32 digest = _hashTypedDataV4(structHash);
         require(
             SignatureChecker.isValidSignatureNow(inviter, digest, signature),
@@ -538,9 +551,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         // dust. The identity still holds at the contract level:
         // treasuryReceived + contractDust + sum(refunds) == totalCommitted.
         uint256 roundingBuffer = participantNodes.length;
-        uint256 proceedsPush = totalAllocUsdc_ > roundingBuffer
-            ? totalAllocUsdc_ - roundingBuffer
-            : 0;
+        uint256 proceedsPush = totalAllocUsdc_ > roundingBuffer ? totalAllocUsdc_ - roundingBuffer : 0;
         usdc.safeTransfer(treasury, proceedsPush);
 
         emit Finalized(saleSize_, allocatedArm, totalAllocUsdc_, false, capped, totalCommitted);
@@ -573,7 +584,8 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
             uint256 committed = p.committed;
             if (committed == 0) continue;
 
-            (uint256 allocArm, uint256 allocUsdc, uint256 hopRefund) = _computeAllocation(committed, h, _effectiveCap(p, h));
+            (uint256 allocArm, uint256 allocUsdc, uint256 hopRefund) =
+                _computeAllocation(committed, h, _effectiveCap(p, h));
             totalAllocArm += allocArm;
             totalRefundUsdc += hopRefund;
 
@@ -603,10 +615,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     ///         2. Phase.Canceled — full deposit refund (security council cancel)
     ///         Success-path refunds (pro-rata excess) are handled by claim().
     function claimRefund() external nonReentrant {
-        require(
-            refundMode || phase == Phase.Canceled,
-            "ArmadaCrowdfund: refund not available"
-        );
+        require(refundMode || phase == Phase.Canceled, "ArmadaCrowdfund: refund not available");
         require(!claimed[msg.sender], "ArmadaCrowdfund: already claimed");
 
         _requireHasCommitment();
@@ -634,10 +643,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     function withdrawUnallocatedArm() external nonReentrant {
         // Cache phase: read twice in the require check (audit-76).
         Phase ph = phase;
-        require(
-            ph == Phase.Finalized || ph == Phase.Canceled,
-            "ArmadaCrowdfund: not finalized or canceled"
-        );
+        require(ph == Phase.Finalized || ph == Phase.Canceled, "ArmadaCrowdfund: not finalized or canceled");
 
         uint256 armBalance = armToken.balanceOf(address(this));
         uint256 stillOwed = armStillOwed();
@@ -667,34 +673,29 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     // ============ View Functions ============
 
     /// @notice Get aggregate stats for a hop (visible during sale)
-    function getHopStats(uint8 hop) external view returns (
-        uint256 _totalCommitted,
-        uint256 _cappedCommitted,
-        uint32 _uniqueCommitters,
-        uint32 _whitelistCount
-    ) {
+    function getHopStats(uint8 hop)
+        external
+        view
+        returns (uint256 _totalCommitted, uint256 _cappedCommitted, uint32 _uniqueCommitters, uint32 _whitelistCount)
+    {
         require(hop < NUM_HOPS, "ArmadaCrowdfund: invalid hop");
         HopStats storage s = hopStats[hop];
         return (s.totalCommitted, s.cappedCommitted, s.uniqueCommitters, s.whitelistCount);
     }
 
     /// @notice Get overall sale stats
-    function getSaleStats() external view returns (
-        uint256 _totalCommitted,
-        Phase _phase,
-        uint256 _windowStart,
-        uint256 _windowEnd
-    ) {
+    function getSaleStats()
+        external
+        view
+        returns (uint256 _totalCommitted, Phase _phase, uint256 _windowStart, uint256 _windowEnd)
+    {
         return (totalCommitted, phase, windowStart, windowEnd);
     }
 
     /// @notice Compute capped demand on the fly without modifying state.
     ///         Pre-finalization this gives a live estimate; post-finalization it
     ///         matches the stored cappedDemand value.
-    function getEstimatedCappedDemand() external view returns (
-        uint256 globalCapped,
-        uint256[3] memory perHopCapped
-    ) {
+    function getEstimatedCappedDemand() external view returns (uint256 globalCapped, uint256[3] memory perHopCapped) {
         return _iterateCappedDemand();
     }
 
@@ -725,10 +726,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     /// @notice Compute aggregate allocation across all hops (only after finalization).
     ///         Purely derived from hop-level data — no stored per-address state.
     ///         In refundMode the deterministic answer is (0 ARM, sum of committed USDC).
-    function computeAllocation(address addr) public view returns (
-        uint256 armAmount,
-        uint256 refundUsdc
-    ) {
+    function computeAllocation(address addr) public view returns (uint256 armAmount, uint256 refundUsdc) {
         require(phase == Phase.Finalized, "ArmadaCrowdfund: not finalized");
         bool refundModeCache = refundMode;
 
@@ -742,7 +740,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
                 refundUsdc += committed;
                 continue;
             }
-            (uint256 allocArm, , uint256 hopRefund) = _computeAllocation(committed, h, _effectiveCap(p, h));
+            (uint256 allocArm,, uint256 hopRefund) = _computeAllocation(committed, h, _effectiveCap(p, h));
             armAmount += allocArm;
             refundUsdc += hopRefund;
         }
@@ -750,17 +748,18 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
 
     /// @notice Compute allocation at a specific hop (only after finalization).
     ///         In refundMode the deterministic answer is (0 ARM, p.committed).
-    function computeAllocationAtHop(address addr, uint8 hop) external view returns (
-        uint256 armAmount,
-        uint256 refundUsdc
-    ) {
+    function computeAllocationAtHop(address addr, uint8 hop)
+        external
+        view
+        returns (uint256 armAmount, uint256 refundUsdc)
+    {
         require(phase == Phase.Finalized, "ArmadaCrowdfund: not finalized");
         Participant storage p = participants[addr][hop];
 
         if (refundMode) {
             return (0, p.committed);
         }
-        (armAmount, , refundUsdc) = _computeAllocation(p.committed, hop, _effectiveCap(p, hop));
+        (armAmount,, refundUsdc) = _computeAllocation(p.committed, hop, _effectiveCap(p, hop));
     }
 
     /// @notice Get effective cap for an address at a hop (invitesReceived * per-slot cap)
@@ -846,25 +845,25 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     function _requireActiveCommitWindow() internal view {
         require(phase == Phase.Active, "ArmadaCrowdfund: not active");
         require(armLoaded, "ArmadaCrowdfund: ARM not loaded");
-        require(
-            block.timestamp >= windowStart && block.timestamp <= windowEnd,
-            "ArmadaCrowdfund: not active window"
-        );
+        require(block.timestamp >= windowStart && block.timestamp <= windowEnd, "ArmadaCrowdfund: not active window");
     }
 
     /// @dev Compute hop-level allocations and store results in finalCeilings/finalDemands.
     ///      Extracted from finalize() to avoid stack-too-deep. Takes the per-hop
     ///      capped totals as a parameter so it doesn't have to re-SLOAD
     ///      hopStats[h].cappedCommitted that _computeCappedDemand just wrote (audit-75).
-    function _computeHopAllocations(uint256 saleSize_, uint256[3] memory perHopCapped) internal returns (uint256 totalAllocUsdc_) {
+    function _computeHopAllocations(uint256 saleSize_, uint256[3] memory perHopCapped)
+        internal
+        returns (uint256 totalAllocUsdc_)
+    {
         uint256 hop2Floor = (saleSize_ * (HOP2_BASE_FLOOR_BPS + HOP2_EXTRA_FLOOR_BPS)) / 10000;
         uint256 available = saleSize_ - hop2Floor;
         uint256 basePool = (saleSize_ * (10000 - HOP2_BASE_FLOOR_BPS)) / 10000;
 
         // Raw BPS terms overlap (60% + 45% of basePool). The extra hop-2 floor is
         // funded solely from hop-0's raw ceiling, preserving hop-1's raw ceiling.
-        uint256 hop0Ceiling = ((basePool * hopConfigs[0].ceilingBps) / 10000)
-            - ((saleSize_ * HOP2_EXTRA_FLOOR_BPS) / 10000);
+        uint256 hop0Ceiling =
+            ((basePool * hopConfigs[0].ceilingBps) / 10000) - ((saleSize_ * HOP2_EXTRA_FLOOR_BPS) / 10000);
         uint256 hop1Ceiling = (basePool * hopConfigs[1].ceilingBps) / 10000;
 
         // --- Hop-0: allocate from available pool ---
@@ -904,11 +903,11 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     /// @dev Compute allocation for a participant from stored hop-level ceilings/demands.
     ///      Uses capped committed amount (min of raw committed and effectiveCap) for
     ///      allocation math. Over-cap excess is refunded in full.
-    function _computeAllocation(uint256 committed, uint8 hop, uint256 effectiveCap) internal view returns (
-        uint256 allocArm,
-        uint256 allocUsdc,
-        uint256 refundUsdc
-    ) {
+    function _computeAllocation(uint256 committed, uint8 hop, uint256 effectiveCap)
+        internal
+        view
+        returns (uint256 allocArm, uint256 allocUsdc, uint256 refundUsdc)
+    {
         if (committed == 0) return (0, 0, 0);
 
         uint256 cappedCommitted = committed < effectiveCap ? committed : effectiveCap;
@@ -943,10 +942,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     ///      NOTE: an earlier profile (test-foundry/CrowdfundFinalizeGas.t.sol) reported ~2,220 gas
     ///      per iteration / ~4.2M at max, but it measured WARM slots and understates a real
     ///      cold-first-touch transaction by ~3.6x; do not rely on it.
-    function _iterateCappedDemand() internal view returns (
-        uint256 globalCapped,
-        uint256[3] memory perHopCapped
-    ) {
+    function _iterateCappedDemand() internal view returns (uint256 globalCapped, uint256[3] memory perHopCapped) {
         uint256 len = participantNodes.length;
         for (uint256 i = 0; i < len; i++) {
             ParticipantNode storage node = participantNodes[i];
@@ -975,5 +971,4 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         }
         cappedDemand = globalCapped;
     }
-
 }

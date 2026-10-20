@@ -9,9 +9,9 @@ pragma solidity ^0.8.17;
 // ========== Enums ==========
 
 enum Phase {
-    Active,         // Invites + commits happen concurrently (3-week window)
-    Finalized,      // Allocations computed, claims open
-    Canceled        // Security Council cancel or permanent shutdown; full refunds
+    Active, // Invites + commits happen concurrently (3-week window)
+    Finalized, // Allocations computed, claims open
+    Canceled // Security Council cancel or permanent shutdown; full refunds
 }
 
 // ========== Structs ==========
@@ -19,10 +19,10 @@ enum Phase {
 // Field order packs the small fields into one slot, with the uint256 in its own
 // slot (audit-68). 5 bytes packed (uint16 + uint8 + uint16) + 1 slot for capUsdc.
 struct HopConfig {
-    uint16 ceilingBps;          // Ceiling as basis points — overlapping (6000, 4500, 0). Hop-2 uses floor+rollover instead.
-    uint8 maxInvites;           // How many addresses this hop can invite (3, 2, 0)
-    uint16 maxInvitesReceived;  // Cap on invite stacking per (address, hop) node
-    uint256 capUsdc;            // Max individual commitment in USDC (6 decimals)
+    uint16 ceilingBps; // Ceiling as basis points — overlapping (6000, 4500, 0). Hop-2 uses floor+rollover instead.
+    uint8 maxInvites; // How many addresses this hop can invite (3, 2, 0)
+    uint16 maxInvitesReceived; // Cap on invite stacking per (address, hop) node
+    uint256 capUsdc; // Max individual commitment in USDC (6 decimals)
 }
 
 // Field order packs invitedBy + 2×uint16 + bool into one slot (25 bytes), with
@@ -30,11 +30,11 @@ struct HopConfig {
 // per (address, hop) node — ~1500 instances over a sale's lifetime, so the
 // per-instance slot saving compounds significantly.
 struct Participant {
-    address invitedBy;      // who FIRST invited this participant (address(0) for seeds)
+    address invitedBy; // who FIRST invited this participant (address(0) for seeds)
     uint16 invitesReceived; // times invited to this hop — scales cap and outgoing invite budget
-    uint16 invitesSent;     // outgoing invites consumed — max = invitesReceived * maxInvites
-    bool isWhitelisted;     // true after being added as seed or invited
-    uint256 committed;      // USDC committed (6 decimals)
+    uint16 invitesSent; // outgoing invites consumed — max = invitesReceived * maxInvites
+    bool isWhitelisted; // true after being added as seed or invited
+    uint256 committed; // USDC committed (6 decimals)
 }
 
 /// @dev Enumeration entry for iterating all (address, hop) nodes.
@@ -44,10 +44,10 @@ struct ParticipantNode {
 }
 
 struct HopStats {
-    uint256 totalCommitted;     // aggregate USDC committed for this hop (raw, including over-cap)
-    uint256 cappedCommitted;    // aggregate USDC committed capped at effective caps (set at finalization)
-    uint32 uniqueCommitters;    // count of unique addresses that committed > 0
-    uint32 whitelistCount;      // count of whitelisted addresses at this hop
+    uint256 totalCommitted; // aggregate USDC committed for this hop (raw, including over-cap)
+    uint256 cappedCommitted; // aggregate USDC committed capped at effective caps (set at finalization)
+    uint32 uniqueCommitters; // count of unique addresses that committed > 0
+    uint32 whitelistCount; // count of whitelisted addresses at this hop
 }
 
 // ========== Interfaces ==========

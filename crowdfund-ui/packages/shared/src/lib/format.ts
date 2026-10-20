@@ -3,18 +3,18 @@
 
 /** Format a USDC amount (6 decimals) as a dollar string, e.g. "$1,200,000" */
 export function formatUsdc(amount: bigint): string {
-  const dollars = Number(amount) / 1e6
-  return `$${dollars.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+  const dollars = Number(amount) / 1e6;
+  return `$${dollars.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 }
 
 /** USDC (6 decimals) as a dollar number, cents kept — for display math; round at the label. */
 export function usdcToDollars(amount: bigint): number {
-  return Number(amount) / 1e6
+  return Number(amount) / 1e6;
 }
 
 /** Format USDC as a plain number string without dollar sign, for input fields */
 export function formatUsdcPlain(amount: bigint): string {
-  return (Number(amount) / 1e6).toString()
+  return (Number(amount) / 1e6).toString();
 }
 
 /**
@@ -27,13 +27,13 @@ export function formatUsdcPlain(amount: bigint): string {
  *  'negative'          — number is negative
  *  'too-many-decimals' — input has more than 6 fractional digits; truncation would lose precision
  */
-export type UsdcInputError = 'invalid' | 'negative' | 'too-many-decimals'
+export type UsdcInputError = "invalid" | "negative" | "too-many-decimals";
 
 export interface UsdcInputResult {
   /** Parsed raw 6-decimal bigint. Always 0n when `error` is set. */
-  value: bigint
+  value: bigint;
   /** Categorised parse error; undefined when the input is a valid USDC amount. */
-  error?: UsdcInputError
+  error?: UsdcInputError;
 }
 
 /**
@@ -45,12 +45,12 @@ export interface UsdcInputResult {
  * message instead of silently rounding.
  */
 export function parseUsdcInput(input: string): UsdcInputResult {
-  const trimmed = input.trim()
-  if (trimmed === '') return { value: 0n }
+  const trimmed = input.trim();
+  if (trimmed === "") return { value: 0n };
 
   // Categorize a leading '-' as 'negative' before the shape check so "-5" / "-0.01" report
   // 'negative' rather than 'invalid'.
-  if (trimmed.startsWith('-')) return { value: 0n, error: 'negative' }
+  if (trimmed.startsWith("-")) return { value: 0n, error: "negative" };
 
   // Pure decimal-string parsing — NO parseFloat/Number. parseFloat loses precision at 6dp:
   // parseFloat("8.165") * 1e6 is 8164999.99…, which Math.floor'd to 8164999 (off by one). We
@@ -58,58 +58,58 @@ export function parseUsdcInput(input: string): UsdcInputResult {
   // assemble the raw bigint from the digit groups directly, so the result is exact. The shape
   // check also rejects scientific notation ("1e3"), a leading "+", grouping commas, multiple
   // dots, and a lone ".".
-  if (trimmed === '.' || !/^\d*\.?\d*$/.test(trimmed)) {
-    return { value: 0n, error: 'invalid' }
+  if (trimmed === "." || !/^\d*\.?\d*$/.test(trimmed)) {
+    return { value: 0n, error: "invalid" };
   }
 
-  const dot = trimmed.indexOf('.')
-  const whole = dot === -1 ? trimmed : trimmed.slice(0, dot)
-  const frac = dot === -1 ? '' : trimmed.slice(dot + 1)
+  const dot = trimmed.indexOf(".");
+  const whole = dot === -1 ? trimmed : trimmed.slice(0, dot);
+  const frac = dot === -1 ? "" : trimmed.slice(dot + 1);
 
   // >6 fractional digits would lose precision — surface 'too-many-decimals' rather than truncate.
-  if (frac.length > 6) return { value: 0n, error: 'too-many-decimals' }
+  if (frac.length > 6) return { value: 0n, error: "too-many-decimals" };
 
-  const wholePart = whole === '' ? 0n : BigInt(whole)
-  const fracPart = frac === '' ? 0n : BigInt(frac.padEnd(6, '0'))
-  return { value: wholePart * 1_000_000n + fracPart }
+  const wholePart = whole === "" ? 0n : BigInt(whole);
+  const fracPart = frac === "" ? 0n : BigInt(frac.padEnd(6, "0"));
+  return { value: wholePart * 1_000_000n + fracPart };
 }
 
 /** Format an ARM amount (18 decimals) as a token string, e.g. "1,200,000 ARM" */
 export function formatArm(amount: bigint): string {
-  const tokens = Number(amount) / 1e18
-  return `${tokens.toLocaleString('en-US', { maximumFractionDigits: 2 })} ARM`
+  const tokens = Number(amount) / 1e18;
+  return `${tokens.toLocaleString("en-US", { maximumFractionDigits: 2 })} ARM`;
 }
 
 /** Truncate an Ethereum address to "0x1234...abcd" format */
 export function truncateAddress(address: string): string {
-  if (address.length <= 10) return address
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
+  if (address.length <= 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 /** Format a duration in seconds as a human-readable countdown, e.g. "6d 14h" */
 export function formatCountdown(seconds: number): string {
-  if (seconds <= 0) return 'expired'
+  if (seconds <= 0) return "expired";
 
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
 
-  if (days > 0) return `${days}d ${hours}h`
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 /** Threshold under which the Progress / stats "time left" becomes a live HH:MM:SS counter. */
-export const TIME_LEFT_COUNTER_THRESHOLD_S = 48 * 60 * 60
+export const TIME_LEFT_COUNTER_THRESHOLD_S = 48 * 60 * 60;
 
 /** Live HH:MM:SS counter (hours may exceed 24). */
 export function formatTimeLeftCounter(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return '00:00:00'
-  const total = Math.floor(seconds)
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  if (!Number.isFinite(seconds) || seconds <= 0) return "00:00:00";
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 /**
@@ -121,29 +121,33 @@ export function formatTimeLeftCounter(seconds: number): string {
  * - ≤ 0 → ''
  */
 export function formatTimeLeft(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return ''
-  if (seconds < TIME_LEFT_COUNTER_THRESHOLD_S) return formatTimeLeftCounter(seconds)
-  const days = Math.floor(seconds / 86400)
-  return `${days} ${days === 1 ? 'day' : 'days'}`
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  if (seconds < TIME_LEFT_COUNTER_THRESHOLD_S)
+    return formatTimeLeftCounter(seconds);
+  const days = Math.floor(seconds / 86400);
+  return `${days} ${days === 1 ? "day" : "days"}`;
 }
 
 /** Remaining whole seconds until an absolute deadline (unix ms or Date), floored at 0. */
-export function endsAtToRemainingSeconds(endsAt: number | Date, nowMs = Date.now()): number {
-  const endMs = typeof endsAt === 'number' ? endsAt : endsAt.getTime()
-  return Math.max(0, Math.floor((endMs - nowMs) / 1000))
+export function endsAtToRemainingSeconds(
+  endsAt: number | Date,
+  nowMs = Date.now(),
+): number {
+  const endMs = typeof endsAt === "number" ? endsAt : endsAt.getTime();
+  return Math.max(0, Math.floor((endMs - nowMs) / 1000));
 }
 
 /** "May 28, 2:42 PM" (local) from a unix timestamp (seconds) — no year, so the
  *  tooltip stays on one line. Returns '' at or before 0. Internal helper for
  *  {@link formatTimeLeftDetail}. */
 function formatEndDateTime(unixSeconds: number): string {
-  if (!Number.isFinite(unixSeconds) || unixSeconds <= 0) return ''
-  return new Date(unixSeconds * 1000).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  if (!Number.isFinite(unixSeconds) || unixSeconds <= 0) return "";
+  return new Date(unixSeconds * 1000).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /**
@@ -154,10 +158,13 @@ function formatEndDateTime(unixSeconds: number): string {
  * passed; `windowEndUnix` is the absolute deadline (unix seconds). Returns '' at
  * or past the deadline, or when the deadline is unknown.
  */
-export function formatTimeLeftDetail(seconds: number, windowEndUnix: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return ''
-  const end = formatEndDateTime(windowEndUnix)
-  return end ? `Ends ${end}` : ''
+export function formatTimeLeftDetail(
+  seconds: number,
+  windowEndUnix: number,
+): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  const end = formatEndDateTime(windowEndUnix);
+  return end ? `Ends ${end}` : "";
 }
 
 /**
@@ -166,8 +173,8 @@ export function formatTimeLeftDetail(seconds: number, windowEndUnix: number): st
  * is the absolute opening time (unix seconds). Returns '' when unknown.
  */
 export function formatOpensAtDetail(windowStartUnix: number): string {
-  const start = formatEndDateTime(windowStartUnix)
-  return start ? `Opens ${start}` : ''
+  const start = formatEndDateTime(windowStartUnix);
+  return start ? `Opens ${start}` : "";
 }
 
 /**
@@ -176,42 +183,54 @@ export function formatOpensAtDetail(windowStartUnix: number): string {
  * Returns '' at or past the opening.
  */
 export function formatOpensCountdown(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return ''
-  const total = Math.floor(seconds)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const d = Math.floor(total / 86400)
-  const h = Math.floor((total % 86400) / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  return `${pad(d)}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  const total = Math.floor(seconds);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${pad(d)}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
 }
 
 /** Get human-readable phase name */
 export function phaseName(phase: number): string {
   switch (phase) {
-    case 0: return 'Active'
-    case 1: return 'Finalized'
-    case 2: return 'Canceled'
-    default: return 'Unknown'
+    case 0:
+      return "Active";
+    case 1:
+      return "Finalized";
+    case 2:
+      return "Canceled";
+    default:
+      return "Unknown";
   }
 }
 
 /** Get Tailwind color classes for a phase badge */
 export function phaseColor(phase: number): string {
   switch (phase) {
-    case 0: return 'bg-info/20 text-info'
-    case 1: return 'bg-success/20 text-success'
-    case 2: return 'bg-destructive/20 text-destructive'
-    default: return 'bg-muted text-muted-foreground'
+    case 0:
+      return "bg-info/20 text-info";
+    case 1:
+      return "bg-success/20 text-success";
+    case 2:
+      return "bg-destructive/20 text-destructive";
+    default:
+      return "bg-muted text-muted-foreground";
   }
 }
 
 /** Get hop label for display */
 export function hopLabel(hop: number): string {
   switch (hop) {
-    case 0: return 'Hop-0'
-    case 1: return 'Hop-1'
-    case 2: return 'Hop-2'
-    default: return `Hop-${hop}`
+    case 0:
+      return "Hop-0";
+    case 1:
+      return "Hop-1";
+    case 2:
+      return "Hop-2";
+    default:
+      return `Hop-${hop}`;
   }
 }

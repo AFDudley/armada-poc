@@ -24,7 +24,7 @@ contract YieldHarvestProtocolFeeTest is Test {
     address public bob = address(0xB0B);
     address public randomCaller = address(0xCAFE);
 
-    uint256 constant YIELD_BPS = 500;            // 5% APY on the mock spoke
+    uint256 constant YIELD_BPS = 500; // 5% APY on the mock spoke
     uint256 constant DEPOSIT_AMOUNT = 100_000e6; // 100k USDC
     uint256 constant ONE_YEAR = 365 days;
 
@@ -40,13 +40,7 @@ contract YieldHarvestProtocolFeeTest is Test {
         spoke.addReserve(address(usdc), YIELD_BPS, true);
 
         treasury = new ArmadaTreasuryGov(address(this));
-        vault = new ArmadaYieldVault(
-            address(spoke),
-            0,
-            address(treasury),
-            "Armada Yield USDC",
-            "ayUSDC"
-        );
+        vault = new ArmadaYieldVault(address(spoke), 0, address(treasury), "Armada Yield USDC", "ayUSDC");
 
         usdc.mint(alice, DEPOSIT_AMOUNT * 4);
         usdc.mint(bob, DEPOSIT_AMOUNT * 4);
@@ -201,9 +195,7 @@ contract YieldHarvestProtocolFeeTest is Test {
         // drift to absorb integer-rounding differences between the view path's read
         // of spoke balance and the withdraw path's recalculation inside the spoke.
         assertLe(
-            vault.pendingProtocolFee(),
-            1,
-            "post-final-harvest pending must be ~zero (1 wei spoke-rounding tolerance)"
+            vault.pendingProtocolFee(), 1, "post-final-harvest pending must be ~zero (1 wei spoke-rounding tolerance)"
         );
     }
 

@@ -4,7 +4,10 @@
 import { expect } from "chai";
 import { ethers } from "ethers";
 import { RailgunWallet, ShieldNote } from "@railgun-community/engine";
-import { verifyRedeemFee, type RedeemFeeVerifierContext } from "../../modules/redeem-fee-verifier";
+import {
+  verifyRedeemFee,
+  type RedeemFeeVerifierContext,
+} from "../../modules/redeem-fee-verifier";
 import { REDEEM_AND_SHIELD_ABI } from "../../lib/transact-shape";
 import { RelayError } from "../../types";
 
@@ -33,7 +36,11 @@ const ZERO_CIPHERTEXT = {
 
 // Minimal zeroed Transaction struct — the verifier never inspects arg 0, only the fee fields.
 const DUMMY_TRANSACTION = {
-  proof: { a: { x: 0n, y: 0n }, b: { x: [0n, 0n], y: [0n, 0n] }, c: { x: 0n, y: 0n } },
+  proof: {
+    a: { x: 0n, y: 0n },
+    b: { x: [0n, 0n], y: [0n, 0n] },
+    c: { x: 0n, y: 0n },
+  },
   merkleRoot: ethers.ZeroHash,
   nullifiers: [],
   commitments: [],
@@ -76,7 +83,12 @@ describe("verifyRedeemFee", () => {
     // passes RANDOM_A; the recomputed npk must match, proving the relayer is the payee.
     const feeNpk = noteKey(RELAYER_MPK, RANDOM_A);
     const data = encodeRedeemCalldata(feeNpk, ADVERTISED_FEE);
-    const paid = verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_A);
+    const paid = verifyRedeemFee(
+      ctxFor(RELAYER_MPK),
+      { data },
+      ADVERTISED_FEE,
+      RANDOM_A,
+    );
     expect(paid).to.equal(ADVERTISED_FEE);
   });
 
@@ -84,9 +96,9 @@ describe("verifyRedeemFee", () => {
     // WHY: overpayment is fine — the relayer only requires AT LEAST the advertised fee.
     const feeNpk = noteKey(RELAYER_MPK, RANDOM_A);
     const data = encodeRedeemCalldata(feeNpk, ADVERTISED_FEE * 2n);
-    expect(verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_A)).to.equal(
-      ADVERTISED_FEE * 2n,
-    );
+    expect(
+      verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_A),
+    ).to.equal(ADVERTISED_FEE * 2n);
   });
 
   it("rejects a fee note addressed to someone else (attacker steals the fee)", () => {
@@ -96,7 +108,9 @@ describe("verifyRedeemFee", () => {
     // committed to the attacker's key — so we reject.
     const feeNpk = noteKey(ATTACKER_MPK, RANDOM_A); // shielded to attacker
     const data = encodeRedeemCalldata(feeNpk, ADVERTISED_FEE);
-    expect(() => verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_A))
+    expect(() =>
+      verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_A),
+    )
       .to.throw(RelayError)
       .with.property("code", "FEE_INSUFFICIENT");
   });
@@ -106,7 +120,9 @@ describe("verifyRedeemFee", () => {
     // fail closed rather than submit on an unverifiable claim.
     const feeNpk = noteKey(RELAYER_MPK, RANDOM_A);
     const data = encodeRedeemCalldata(feeNpk, ADVERTISED_FEE);
-    expect(() => verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_B))
+    expect(() =>
+      verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_B),
+    )
       .to.throw(RelayError)
       .with.property("code", "FEE_INSUFFICIENT");
   });
@@ -115,7 +131,9 @@ describe("verifyRedeemFee", () => {
     // WHY: a correctly-addressed but underpaid fee still doesn't cover the relayer's gas.
     const feeNpk = noteKey(RELAYER_MPK, RANDOM_A);
     const data = encodeRedeemCalldata(feeNpk, ADVERTISED_FEE - 1n);
-    expect(() => verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_A))
+    expect(() =>
+      verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, RANDOM_A),
+    )
       .to.throw(RelayError)
       .with.property("code", "FEE_INSUFFICIENT");
   });
@@ -124,14 +142,23 @@ describe("verifyRedeemFee", () => {
     // WHY: without the random we cannot verify the destination at all — refuse rather than relay blind.
     const feeNpk = noteKey(RELAYER_MPK, RANDOM_A);
     const data = encodeRedeemCalldata(feeNpk, ADVERTISED_FEE);
-    expect(() => verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, undefined))
+    expect(() =>
+      verifyRedeemFee(ctxFor(RELAYER_MPK), { data }, ADVERTISED_FEE, undefined),
+    )
       .to.throw(RelayError)
       .with.property("code", "INVALID_DATA");
   });
 
   it("rejects calldata that isn't a redeemAndShield call", () => {
     // WHY: defensive decode guard — a wrong/garbled selector must fail loudly, not silently pass.
-    expect(() => verifyRedeemFee(ctxFor(RELAYER_MPK), { data: "0xdeadbeef" }, ADVERTISED_FEE, RANDOM_A))
+    expect(() =>
+      verifyRedeemFee(
+        ctxFor(RELAYER_MPK),
+        { data: "0xdeadbeef" },
+        ADVERTISED_FEE,
+        RANDOM_A,
+      ),
+    )
       .to.throw(RelayError)
       .with.property("code", "INVALID_DATA");
   });

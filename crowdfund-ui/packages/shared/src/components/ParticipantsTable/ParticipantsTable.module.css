@@ -330,4 +330,3 @@
   .tr > :nth-child(5) { grid-area: invites; }
   .tr > :nth-child(6) { grid-area: actions; }
 }
-

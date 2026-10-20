@@ -97,11 +97,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         treasury = new ArmadaTreasuryGov(address(timelock));
 
         // Deploy governor
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Deploy steward contract and register it on the governor
         stewardContract = new TreasurySteward(address(timelock));
@@ -188,11 +184,10 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
     }
 
     /// @dev Submit a Steward proposal and advance past the voting period (pass-by-default).
-    function _proposeAndPassSteward(
-        address[] memory tokens,
-        address[] memory recipients,
-        uint256[] memory amounts
-    ) internal returns (uint256 proposalId) {
+    function _proposeAndPassSteward(address[] memory tokens, address[] memory recipients, uint256[] memory amounts)
+        internal
+        returns (uint256 proposalId)
+    {
         vm.prank(stewardPerson);
         proposalId = governor.proposeStewardSpend(tokens, recipients, amounts, "steward spend");
         // Steward: 0 voting delay, 7d voting period.
@@ -213,8 +208,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
         calldatas[0] = abi.encodeWithSignature(
-            "distribute(address,address,uint256)",
-            address(usdc), bob, USDC_EFFECTIVE_LIMIT + 1
+            "distribute(address,address,uint256)", address(usdc), bob, USDC_EFFECTIVE_LIMIT + 1
         );
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "exceed-limit distribute");
@@ -242,10 +236,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         targets[0] = address(treasury);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSignature(
-            "distribute(address,address,uint256)",
-            address(usdc), alice, newAmount
-        );
+        calldatas[0] = abi.encodeWithSignature("distribute(address,address,uint256)", address(usdc), alice, newAmount);
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "temporarily blocked");
 
@@ -320,12 +311,10 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         targets[1] = address(decoy);
         uint256[] memory values = new uint256[](2);
         bytes[] memory calldatas = new bytes[](2);
-        calldatas[0] = abi.encodeWithSignature(
-            "distribute(address,address,uint256)", address(usdc), alice, treasurySpend
-        );
-        calldatas[1] = abi.encodeWithSignature(
-            "distribute(address,address,uint256)", address(usdc), alice, nonTreasurySpend
-        );
+        calldatas[0] =
+            abi.encodeWithSignature("distribute(address,address,uint256)", address(usdc), alice, treasurySpend);
+        calldatas[1] =
+            abi.encodeWithSignature("distribute(address,address,uint256)", address(usdc), alice, nonTreasurySpend);
 
         // The non-treasury-targeted selector is unrecognized by standardSelectors on the
         // decoy target, so classification would force Extended; we propose as Extended.
@@ -362,9 +351,8 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         targets[1] = address(treasury);
         uint256[] memory values = new uint256[](2);
         bytes[] memory calldatas = new bytes[](2);
-        calldatas[0] = abi.encodeWithSignature(
-            "distribute(address,address,uint256)", address(usdc), alice, USDC_EFFECTIVE_LIMIT
-        );
+        calldatas[0] =
+            abi.encodeWithSignature("distribute(address,address,uint256)", address(usdc), alice, USDC_EFFECTIVE_LIMIT);
         calldatas[1] = abi.encodeWithSignature(
             "distribute(address,address,uint256)", address(other), alice, OTHER_EFFECTIVE_LIMIT + 1
         );
@@ -416,9 +404,8 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         targets[0] = address(treasury);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSignature(
-            "distribute(address,address,uint256)", address(usdc), alice, USDC_EFFECTIVE_LIMIT
-        );
+        calldatas[0] =
+            abi.encodeWithSignature("distribute(address,address,uint256)", address(usdc), alice, USDC_EFFECTIVE_LIMIT);
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "at limit");
 
@@ -439,9 +426,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         targets[0] = address(treasury);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSignature(
-            "distributeETH(address,uint256)", bob, ETH_EFFECTIVE_LIMIT + 1
-        );
+        calldatas[0] = abi.encodeWithSignature("distributeETH(address,uint256)", bob, ETH_EFFECTIVE_LIMIT + 1);
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "exceed-limit eth");
 
@@ -475,9 +460,7 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         targets[0] = address(treasury);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSignature(
-            "distributeETH(address,uint256)", alice, ETH_EFFECTIVE_LIMIT
-        );
+        calldatas[0] = abi.encodeWithSignature("distributeETH(address,uint256)", alice, ETH_EFFECTIVE_LIMIT);
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "eth at limit");
 
@@ -505,10 +488,13 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
     function test_queue_revertsWhenSingleStewardSpendExceedsBudget() public {
         _tightenUsdcStewardBudget();
 
-        address[] memory tokens = new address[](1); tokens[0] = address(usdc);
-        address[] memory recipients = new address[](1); recipients[0] = alice;
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(usdc);
+        address[] memory recipients = new address[](1);
+        recipients[0] = alice;
         // 50k fits the 100k outflow ceiling but exceeds the 10k tightened budget.
-        uint256[] memory amounts = new uint256[](1); amounts[0] = 50_000 * 1e6;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 50_000 * 1e6;
 
         uint256 proposalId = _proposeAndPassSteward(tokens, recipients, amounts);
 
@@ -544,9 +530,12 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
     function test_queue_succeedsWhenStewardSpendAtBudgetLimit() public {
         _tightenUsdcStewardBudget();
 
-        address[] memory tokens = new address[](1); tokens[0] = address(usdc);
-        address[] memory recipients = new address[](1); recipients[0] = alice;
-        uint256[] memory amounts = new uint256[](1); amounts[0] = TIGHT_STEWARD_BUDGET;
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(usdc);
+        address[] memory recipients = new address[](1);
+        recipients[0] = alice;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = TIGHT_STEWARD_BUDGET;
 
         uint256 proposalId = _proposeAndPassSteward(tokens, recipients, amounts);
 
@@ -561,13 +550,13 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
     function test_queue_distributeNotCheckedAgainstStewardBudget() public {
         _tightenUsdcStewardBudget();
 
-        address[] memory targets = new address[](1); targets[0] = address(treasury);
+        address[] memory targets = new address[](1);
+        targets[0] = address(treasury);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
         // 50k > 10k tightened steward budget, but well under the 100k outflow ceiling.
-        calldatas[0] = abi.encodeWithSignature(
-            "distribute(address,address,uint256)", address(usdc), alice, 50_000 * 1e6
-        );
+        calldatas[0] =
+            abi.encodeWithSignature("distribute(address,address,uint256)", address(usdc), alice, 50_000 * 1e6);
 
         uint256 proposalId = _proposeAndPassStandard(targets, values, calldatas, "distribute over budget");
 
@@ -588,10 +577,13 @@ contract GovernorQueueOutflowTest is Test, GovernorDeployHelper {
         vm.prank(address(timelock));
         treasury.initOutflowConfig(address(unauth), USDC_WINDOW, 100, 100_000 * 1e18, 50_000 * 1e18);
 
-        address[] memory tokens = new address[](1); tokens[0] = address(unauth);
-        address[] memory recipients = new address[](1); recipients[0] = alice;
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(unauth);
+        address[] memory recipients = new address[](1);
+        recipients[0] = alice;
         // Amount well under the outflow ceiling so the outflow gate passes first.
-        uint256[] memory amounts = new uint256[](1); amounts[0] = 1_000 * 1e18;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 1_000 * 1e18;
 
         uint256 proposalId = _proposeAndPassSteward(tokens, recipients, amounts);
 

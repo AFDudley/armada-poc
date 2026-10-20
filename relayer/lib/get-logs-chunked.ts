@@ -78,7 +78,9 @@ export async function getLogsChunked(
   opts: ChunkedLogsOptions,
 ): Promise<ethers.Log[]> {
   if (opts.maxRange < 1) {
-    throw new Error(`getLogsChunked: maxRange must be ≥ 1 (got ${opts.maxRange})`);
+    throw new Error(
+      `getLogsChunked: maxRange must be ≥ 1 (got ${opts.maxRange})`,
+    );
   }
   if (opts.fromBlock > opts.toBlock) return [];
 
@@ -97,7 +99,11 @@ export async function getLogsChunked(
       toBlock: chunkTo,
     });
     const logs = opts.perCallTimeoutMs
-      ? await withTimeout(getLogsCall, opts.perCallTimeoutMs, `getLogs ${cursor}-${chunkTo}`)
+      ? await withTimeout(
+          getLogsCall,
+          opts.perCallTimeoutMs,
+          `getLogs ${cursor}-${chunkTo}`,
+        )
       : await getLogsCall;
 
     if (collect) out.push(...logs);

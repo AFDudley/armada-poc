@@ -54,40 +54,48 @@ describe("Yield Integration", function () {
     await mockAaveSpoke.addReserve(
       await usdc.getAddress(),
       YIELD_BPS,
-      true // mintableYield
+      true, // mintableYield
     );
 
     // 5. Deploy ArmadaTreasuryGov (deployer acts as timelock-owner for this unit test).
     //    Outflow withdrawal paths are exercised in test/treasury_outflow.ts and the
     //    Foundry Treasury* suites — here we only need the treasury as a fee sink.
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     armadaTreasury = await ArmadaTreasuryGov.deploy(deployer.address);
     await armadaTreasury.waitForDeployment();
 
     // 6. Deploy ArmadaYieldVault
-    const ArmadaYieldVault = await ethers.getContractFactory("ArmadaYieldVault");
+    const ArmadaYieldVault =
+      await ethers.getContractFactory("ArmadaYieldVault");
     armadaYieldVault = await ArmadaYieldVault.deploy(
       await mockAaveSpoke.getAddress(),
       0, // reserveId
       await armadaTreasury.getAddress(),
       "Armada Yield USDC",
-      "ayUSDC"
+      "ayUSDC",
     );
     await armadaYieldVault.waitForDeployment();
 
     // 7. Deploy MockAdapterRegistry and ArmadaYieldAdapter
-    const MockAdapterRegistry = await ethers.getContractFactory("MockAdapterRegistry");
+    const MockAdapterRegistry = await ethers.getContractFactory(
+      "MockAdapterRegistry",
+    );
     const mockRegistry = await MockAdapterRegistry.deploy();
     await mockRegistry.waitForDeployment();
 
-    const ArmadaYieldAdapter = await ethers.getContractFactory("ArmadaYieldAdapter");
+    const ArmadaYieldAdapter =
+      await ethers.getContractFactory("ArmadaYieldAdapter");
     armadaYieldAdapter = await ArmadaYieldAdapter.deploy(
       await usdc.getAddress(),
       await armadaYieldVault.getAddress(),
-      await mockRegistry.getAddress()
+      await mockRegistry.getAddress(),
     );
     await armadaYieldAdapter.waitForDeployment();
-    await mockRegistry.setAuthorized(await armadaYieldAdapter.getAddress(), true);
+    await mockRegistry.setAuthorized(
+      await armadaYieldAdapter.getAddress(),
+      true,
+    );
 
     // 8. Configure vault adapter
     await armadaYieldVault.setAdapter(await armadaYieldAdapter.getAddress());
@@ -99,16 +107,14 @@ describe("Yield Integration", function () {
   describe("ArmadaYieldVault", function () {
     it("should deposit USDC and receive shares", async function () {
       // Approve
-      await usdc.connect(user).approve(
-        await armadaYieldVault.getAddress(),
-        DEPOSIT_AMOUNT
-      );
+      await usdc
+        .connect(user)
+        .approve(await armadaYieldVault.getAddress(), DEPOSIT_AMOUNT);
 
       // Deposit
-      const tx = await armadaYieldVault.connect(user).deposit(
-        DEPOSIT_AMOUNT,
-        user.address
-      );
+      const tx = await armadaYieldVault
+        .connect(user)
+        .deposit(DEPOSIT_AMOUNT, user.address);
       await tx.wait();
 
       // Check balances (allow small rounding tolerance)
@@ -128,11 +134,12 @@ describe("Yield Integration", function () {
 
     it("should accrue yield over time", async function () {
       // Deposit
-      await usdc.connect(user).approve(
-        await armadaYieldVault.getAddress(),
-        DEPOSIT_AMOUNT
-      );
-      await armadaYieldVault.connect(user).deposit(DEPOSIT_AMOUNT, user.address);
+      await usdc
+        .connect(user)
+        .approve(await armadaYieldVault.getAddress(), DEPOSIT_AMOUNT);
+      await armadaYieldVault
+        .connect(user)
+        .deposit(DEPOSIT_AMOUNT, user.address);
 
       // Check initial assets (allow small rounding tolerance)
       const initialAssets = await armadaYieldVault.getUserAssets(user.address);
@@ -145,10 +152,13 @@ describe("Yield Integration", function () {
       // WHY: After issue #75 (harvest-fee refactor), getUserAssets returns the
       //      user-claimable value — i.e. share of (totalAssets - pendingProtocolFee).
       //      For a single depositor that's principal + net-of-protocol-cut yield.
-      const assetsAfterYear = await armadaYieldVault.getUserAssets(user.address);
+      const assetsAfterYear = await armadaYieldVault.getUserAssets(
+        user.address,
+      );
 
       const expectedGrossYield = (DEPOSIT_AMOUNT * BigInt(YIELD_BPS)) / 10000n;
-      const expectedNetYield = (expectedGrossYield * (10000n - BigInt(YIELD_FEE_BPS))) / 10000n;
+      const expectedNetYield =
+        (expectedGrossYield * (10000n - BigInt(YIELD_FEE_BPS))) / 10000n;
       const expectedTotal = DEPOSIT_AMOUNT + expectedNetYield;
 
       // Allow 1 USDC tolerance for rounding
@@ -157,11 +167,12 @@ describe("Yield Integration", function () {
 
     it("should apply 10% yield fee on redemption", async function () {
       // Deposit
-      await usdc.connect(user).approve(
-        await armadaYieldVault.getAddress(),
-        DEPOSIT_AMOUNT
-      );
-      await armadaYieldVault.connect(user).deposit(DEPOSIT_AMOUNT, user.address);
+      await usdc
+        .connect(user)
+        .approve(await armadaYieldVault.getAddress(), DEPOSIT_AMOUNT);
+      await armadaYieldVault
+        .connect(user)
+        .deposit(DEPOSIT_AMOUNT, user.address);
 
       // Fast forward 1 year
       await time.increase(ONE_YEAR);
@@ -178,17 +189,19 @@ describe("Yield Integration", function () {
       expect(pendingFee).to.be.gt(0);
 
       // Treasury balance before
-      const treasuryBefore = await armadaTreasury.getBalance(await usdc.getAddress());
-
-      // Redeem all — settles the protocol's cut to treasury, pays user net amount.
-      await armadaYieldVault.connect(user).redeem(
-        shares,
-        user.address,
-        user.address
+      const treasuryBefore = await armadaTreasury.getBalance(
+        await usdc.getAddress(),
       );
 
+      // Redeem all — settles the protocol's cut to treasury, pays user net amount.
+      await armadaYieldVault
+        .connect(user)
+        .redeem(shares, user.address, user.address);
+
       // Treasury received exactly the protocol's pending cut (the gross fee).
-      const treasuryAfter = await armadaTreasury.getBalance(await usdc.getAddress());
+      const treasuryAfter = await armadaTreasury.getBalance(
+        await usdc.getAddress(),
+      );
       const feeReceived = treasuryAfter - treasuryBefore;
       expect(feeReceived).to.be.closeTo(pendingFee, ONE_USDC);
 
@@ -200,25 +213,28 @@ describe("Yield Integration", function () {
 
     it("should allow redemption with no yield (no fee)", async function () {
       // Deposit
-      await usdc.connect(user).approve(
-        await armadaYieldVault.getAddress(),
-        DEPOSIT_AMOUNT
-      );
-      await armadaYieldVault.connect(user).deposit(DEPOSIT_AMOUNT, user.address);
+      await usdc
+        .connect(user)
+        .approve(await armadaYieldVault.getAddress(), DEPOSIT_AMOUNT);
+      await armadaYieldVault
+        .connect(user)
+        .deposit(DEPOSIT_AMOUNT, user.address);
 
       // Redeem immediately (no time passed, no yield)
       const shares = await armadaYieldVault.balanceOf(user.address);
 
-      const treasuryBefore = await armadaTreasury.getBalance(await usdc.getAddress());
-
-      await armadaYieldVault.connect(user).redeem(
-        shares,
-        user.address,
-        user.address
+      const treasuryBefore = await armadaTreasury.getBalance(
+        await usdc.getAddress(),
       );
 
+      await armadaYieldVault
+        .connect(user)
+        .redeem(shares, user.address, user.address);
+
       // No fee should be charged
-      const treasuryAfter = await armadaTreasury.getBalance(await usdc.getAddress());
+      const treasuryAfter = await armadaTreasury.getBalance(
+        await usdc.getAddress(),
+      );
       expect(treasuryAfter).to.equal(treasuryBefore);
 
       // User should get back approximately what they deposited (tiny rounding tolerance)
@@ -246,22 +262,29 @@ describe("Yield Integration", function () {
     // the treasury address — the outflow / governance side of TreasuryGov is
     // exercised in test/treasury_outflow.ts and the Foundry Treasury* suites.
     it("should receive yield fees", async function () {
-      await usdc.connect(user).approve(
-        await armadaYieldVault.getAddress(),
-        DEPOSIT_AMOUNT
-      );
-      await armadaYieldVault.connect(user).deposit(DEPOSIT_AMOUNT, user.address);
+      await usdc
+        .connect(user)
+        .approve(await armadaYieldVault.getAddress(), DEPOSIT_AMOUNT);
+      await armadaYieldVault
+        .connect(user)
+        .deposit(DEPOSIT_AMOUNT, user.address);
 
       await time.increase(ONE_YEAR);
 
       const shares = await armadaYieldVault.balanceOf(user.address);
-      await armadaYieldVault.connect(user).redeem(shares, user.address, user.address);
+      await armadaYieldVault
+        .connect(user)
+        .redeem(shares, user.address, user.address);
 
-      const treasuryBalance = await armadaTreasury.getBalance(await usdc.getAddress());
+      const treasuryBalance = await armadaTreasury.getBalance(
+        await usdc.getAddress(),
+      );
       expect(treasuryBalance).to.be.gt(0);
 
       // Expect ~10% of 5% APY yield over 1 year on 1000 USDC = ~5 USDC.
-      const expectedFee = (DEPOSIT_AMOUNT * BigInt(YIELD_BPS) * BigInt(YIELD_FEE_BPS)) / (10000n * 10000n);
+      const expectedFee =
+        (DEPOSIT_AMOUNT * BigInt(YIELD_BPS) * BigInt(YIELD_FEE_BPS)) /
+        (10000n * 10000n);
       expect(treasuryBalance).to.be.closeTo(expectedFee, ONE_USDC);
     });
   });
@@ -269,16 +292,15 @@ describe("Yield Integration", function () {
   describe("MockAaveSpoke", function () {
     it("should track shares and assets correctly", async function () {
       // Approve spoke
-      await usdc.connect(user).approve(
-        await mockAaveSpoke.getAddress(),
-        DEPOSIT_AMOUNT
-      );
+      await usdc
+        .connect(user)
+        .approve(await mockAaveSpoke.getAddress(), DEPOSIT_AMOUNT);
 
       // Supply
       await mockAaveSpoke.connect(user).supply(
         0, // reserveId
         DEPOSIT_AMOUNT,
-        user.address
+        user.address,
       );
 
       // Check balances (allow small rounding tolerance)
@@ -292,32 +314,38 @@ describe("Yield Integration", function () {
       await time.increase(ONE_YEAR);
 
       // Assets should have grown
-      const assetsAfter = await mockAaveSpoke.getUserSuppliedAssets(0, user.address);
+      const assetsAfter = await mockAaveSpoke.getUserSuppliedAssets(
+        0,
+        user.address,
+      );
       const expectedYield = (DEPOSIT_AMOUNT * BigInt(YIELD_BPS)) / 10000n;
-      expect(assetsAfter).to.be.closeTo(DEPOSIT_AMOUNT + expectedYield, ONE_USDC);
+      expect(assetsAfter).to.be.closeTo(
+        DEPOSIT_AMOUNT + expectedYield,
+        ONE_USDC,
+      );
 
       // Shares should remain the same
-      const sharesAfter = await mockAaveSpoke.getUserSuppliedShares(0, user.address);
+      const sharesAfter = await mockAaveSpoke.getUserSuppliedShares(
+        0,
+        user.address,
+      );
       expect(sharesAfter).to.equal(shares);
     });
 
     it("should mint yield tokens on withdrawal", async function () {
       // Approve and supply
-      await usdc.connect(user).approve(
-        await mockAaveSpoke.getAddress(),
-        DEPOSIT_AMOUNT
-      );
+      await usdc
+        .connect(user)
+        .approve(await mockAaveSpoke.getAddress(), DEPOSIT_AMOUNT);
       await mockAaveSpoke.connect(user).supply(0, DEPOSIT_AMOUNT, user.address);
 
       // Fast forward
       await time.increase(ONE_YEAR);
 
       // Withdraw all
-      await mockAaveSpoke.connect(user).withdraw(
-        0,
-        ethers.MaxUint256,
-        user.address
-      );
+      await mockAaveSpoke
+        .connect(user)
+        .withdraw(0, ethers.MaxUint256, user.address);
 
       // User should have more than initial
       const userUSDC = await usdc.balanceOf(user.address);
@@ -327,25 +355,33 @@ describe("Yield Integration", function () {
 
     it("should support convertToAssets/convertToShares", async function () {
       // Before any deposits, 1:1 ratio (allow small rounding)
-      const assetsFor1000 = await mockAaveSpoke.convertToAssets(0, ONE_USDC * 1000n);
+      const assetsFor1000 = await mockAaveSpoke.convertToAssets(
+        0,
+        ONE_USDC * 1000n,
+      );
       expect(assetsFor1000).to.be.closeTo(ONE_USDC * 1000n, 100n);
 
       // Deposit
-      await usdc.connect(user).approve(
-        await mockAaveSpoke.getAddress(),
-        DEPOSIT_AMOUNT
-      );
+      await usdc
+        .connect(user)
+        .approve(await mockAaveSpoke.getAddress(), DEPOSIT_AMOUNT);
       await mockAaveSpoke.connect(user).supply(0, DEPOSIT_AMOUNT, user.address);
 
       // Fast forward
       await time.increase(ONE_YEAR);
 
       // Now shares are worth more
-      const assetsAfterYear = await mockAaveSpoke.convertToAssets(0, DEPOSIT_AMOUNT);
+      const assetsAfterYear = await mockAaveSpoke.convertToAssets(
+        0,
+        DEPOSIT_AMOUNT,
+      );
       expect(assetsAfterYear).to.be.gt(DEPOSIT_AMOUNT);
 
       // And same assets require fewer shares
-      const sharesNeeded = await mockAaveSpoke.convertToShares(0, DEPOSIT_AMOUNT);
+      const sharesNeeded = await mockAaveSpoke.convertToShares(
+        0,
+        DEPOSIT_AMOUNT,
+      );
       expect(sharesNeeded).to.be.lt(DEPOSIT_AMOUNT);
     });
   });
@@ -356,38 +392,59 @@ describe("Yield Integration", function () {
 
       // Step 1: User deposits USDC to vault
       console.log("1. Depositing 1000 USDC to ArmadaYieldVault...");
-      await usdc.connect(user).approve(
-        await armadaYieldVault.getAddress(),
-        DEPOSIT_AMOUNT
-      );
-      await armadaYieldVault.connect(user).deposit(DEPOSIT_AMOUNT, user.address);
+      await usdc
+        .connect(user)
+        .approve(await armadaYieldVault.getAddress(), DEPOSIT_AMOUNT);
+      await armadaYieldVault
+        .connect(user)
+        .deposit(DEPOSIT_AMOUNT, user.address);
 
       const sharesReceived = await armadaYieldVault.balanceOf(user.address);
-      console.log(`   Received ${ethers.formatUnits(sharesReceived, 6)} ayUSDC shares`);
+      console.log(
+        `   Received ${ethers.formatUnits(sharesReceived, 6)} ayUSDC shares`,
+      );
 
       // Step 2: Time passes, yield accrues
       console.log("\n2. Fast-forwarding 1 year...");
       await time.increase(ONE_YEAR);
 
-      const assetsAfterYear = await armadaYieldVault.getUserAssets(user.address);
+      const assetsAfterYear = await armadaYieldVault.getUserAssets(
+        user.address,
+      );
       const yieldAccrued = await armadaYieldVault.getUserYield(user.address);
-      console.log(`   Assets after 1 year: ${ethers.formatUnits(assetsAfterYear, 6)} USDC`);
-      console.log(`   Yield accrued: ${ethers.formatUnits(yieldAccrued, 6)} USDC`);
+      console.log(
+        `   Assets after 1 year: ${ethers.formatUnits(assetsAfterYear, 6)} USDC`,
+      );
+      console.log(
+        `   Yield accrued: ${ethers.formatUnits(yieldAccrued, 6)} USDC`,
+      );
 
       // Step 3: User redeems with yield fee
       console.log("\n3. Redeeming all shares...");
       const shares = await armadaYieldVault.balanceOf(user.address);
 
-      const treasuryBefore = await armadaTreasury.getBalance(await usdc.getAddress());
-      await armadaYieldVault.connect(user).redeem(shares, user.address, user.address);
-      const treasuryAfter = await armadaTreasury.getBalance(await usdc.getAddress());
+      const treasuryBefore = await armadaTreasury.getBalance(
+        await usdc.getAddress(),
+      );
+      await armadaYieldVault
+        .connect(user)
+        .redeem(shares, user.address, user.address);
+      const treasuryAfter = await armadaTreasury.getBalance(
+        await usdc.getAddress(),
+      );
 
       const feeCollected = treasuryAfter - treasuryBefore;
       const userFinal = await usdc.balanceOf(user.address);
 
-      console.log(`   Fee collected (10% of yield): ${ethers.formatUnits(feeCollected, 6)} USDC`);
-      console.log(`   User final balance: ${ethers.formatUnits(userFinal, 6)} USDC`);
-      console.log(`   Net gain: ${ethers.formatUnits(userFinal - INITIAL_BALANCE, 6)} USDC`);
+      console.log(
+        `   Fee collected (10% of yield): ${ethers.formatUnits(feeCollected, 6)} USDC`,
+      );
+      console.log(
+        `   User final balance: ${ethers.formatUnits(userFinal, 6)} USDC`,
+      );
+      console.log(
+        `   Net gain: ${ethers.formatUnits(userFinal - INITIAL_BALANCE, 6)} USDC`,
+      );
 
       // Verify
       expect(userFinal).to.be.gt(INITIAL_BALANCE);

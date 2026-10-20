@@ -27,7 +27,11 @@ import {
   getYieldDeploymentFile,
   type ChainRole,
 } from "../config/networks";
-import { createNonceManager, loadDeployment, saveDeployment } from "./deploy-utils";
+import {
+  createNonceManager,
+  loadDeployment,
+  saveDeployment,
+} from "./deploy-utils";
 
 interface YieldDeployment {
   chainId: number;
@@ -91,7 +95,9 @@ async function main() {
   const govFilename = getGovernanceDeploymentFile();
   const govDeployment = loadDeployment(govFilename);
   if (!govDeployment) {
-    console.error(`Governance deployment not found: ${govFilename}. Deploy governance first.`);
+    console.error(
+      `Governance deployment not found: ${govFilename}. Deploy governance first.`,
+    );
     process.exit(1);
   }
   const adapterRegistryAddress = govDeployment.contracts.adapterRegistry;
@@ -99,7 +105,9 @@ async function main() {
 
   const treasuryAddress = govDeployment.contracts.treasury;
   if (!treasuryAddress) {
-    console.error(`Governance deployment is missing 'treasury' (ArmadaTreasuryGov) address.`);
+    console.error(
+      `Governance deployment is missing 'treasury' (ArmadaTreasuryGov) address.`,
+    );
     process.exit(1);
   }
   console.log(`Using ArmadaTreasuryGov at: ${treasuryAddress}`);
@@ -113,7 +121,7 @@ async function main() {
     treasuryAddress,
     "Armada Yield USDC",
     "ayUSDC",
-    nm.override()
+    nm.override(),
   );
   await armadaYieldVault.deploymentTransaction()!.wait();
   const armadaYieldVaultAddress = await armadaYieldVault.getAddress();
@@ -121,12 +129,13 @@ async function main() {
 
   // 2. Deploy ArmadaYieldAdapter (with adapter registry for authorization checks)
   console.log("\n2. Deploying ArmadaYieldAdapter...");
-  const ArmadaYieldAdapter = await ethers.getContractFactory("ArmadaYieldAdapter");
+  const ArmadaYieldAdapter =
+    await ethers.getContractFactory("ArmadaYieldAdapter");
   const armadaYieldAdapter = await ArmadaYieldAdapter.deploy(
     usdcAddress,
     armadaYieldVaultAddress,
     adapterRegistryAddress,
-    nm.override()
+    nm.override(),
   );
   await armadaYieldAdapter.deploymentTransaction()!.wait();
   const armadaYieldAdapterAddress = await armadaYieldAdapter.getAddress();
@@ -134,7 +143,9 @@ async function main() {
 
   // 3. Configure ArmadaYieldVault to recognize adapter
   console.log("\n3. Configuring ArmadaYieldVault...");
-  await (await armadaYieldVault.setAdapter(armadaYieldAdapterAddress, nm.override())).wait();
+  await (
+    await armadaYieldVault.setAdapter(armadaYieldAdapterAddress, nm.override())
+  ).wait();
   console.log(`   Adapter set to: ${armadaYieldAdapterAddress}`);
 
   // Yield contract ownership transfers to timelock are handled by deploy_fee_module.ts

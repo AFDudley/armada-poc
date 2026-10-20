@@ -52,9 +52,9 @@ async function main() {
   const deployer = signers[0];
 
   // Allocate signers for roles
-  const seeds = signers.slice(1, 4);        // 3 seeds
-  const hop1Addrs = signers.slice(4, 13);   // up to 9 hop-1 (3 seeds × 3 invites)
-  const hop2Addrs = signers.slice(13, 31);  // up to 18 hop-2
+  const seeds = signers.slice(1, 4); // 3 seeds
+  const hop1Addrs = signers.slice(4, 13); // up to 9 hop-1 (3 seeds × 3 invites)
+  const hop2Addrs = signers.slice(13, 31); // up to 18 hop-2
   const treasuryAddr = signers[31];
 
   console.log("=".repeat(70));
@@ -80,7 +80,7 @@ async function main() {
     await armToken.getAddress(),
     treasuryAddr.address,
     deployer.address,
-    deployer.address,       // securityCouncil (demo)
+    deployer.address, // securityCouncil (demo)
     openTimestamp,
   );
   await crowdfund.waitForDeployment();
@@ -104,10 +104,13 @@ async function main() {
   console.log("-".repeat(70));
   console.log("");
 
-  await crowdfund.addSeeds(seeds.map(s => s.address));
+  await crowdfund.addSeeds(seeds.map((s) => s.address));
   log("SEED", `Added 3 seeds (hop 0, $15K cap, 3 invites each)`);
   for (let i = 0; i < seeds.length; i++) {
-    log("SEED", `  Seed-${String.fromCharCode(65 + i)}: ${seeds[i].address.slice(0, 10)}...`);
+    log(
+      "SEED",
+      `  Seed-${String.fromCharCode(65 + i)}: ${seeds[i].address.slice(0, 10)}...`,
+    );
   }
 
   // ============ PHASE: ACTIVE (3-week unified window) ============
@@ -134,14 +137,23 @@ async function main() {
 
   // Some hop-1 addresses invite hop-2
   let hop2Count = 0;
-  for (let i = 0; i < Math.min(hop1Count, 9) && hop2Count < hop2Addrs.length; i++) {
+  for (
+    let i = 0;
+    i < Math.min(hop1Count, 9) && hop2Count < hop2Addrs.length;
+    i++
+  ) {
     const invitesPerHop1 = Math.min(2, hop2Addrs.length - hop2Count);
     for (let j = 0; j < invitesPerHop1; j++) {
-      await crowdfund.connect(hop1Addrs[i]).invite(hop2Addrs[hop2Count].address, 1);
+      await crowdfund
+        .connect(hop1Addrs[i])
+        .invite(hop2Addrs[hop2Count].address, 1);
       hop2Count++;
     }
   }
-  log("INVITE", `${hop1Count} hop-1 addresses invited ${hop2Count} hop-2 addresses`);
+  log(
+    "INVITE",
+    `${hop1Count} hop-1 addresses invited ${hop2Count} hop-2 addresses`,
+  );
 
   const [, , , wc0] = await crowdfund.getHopStats(0);
   const [, , , wc1] = await crowdfund.getHopStats(1);
@@ -163,7 +175,9 @@ async function main() {
   for (let i = 0; i < hop1Count; i++) {
     const amount = ethers.parseUnits("4000", 6); // max hop-1 cap
     await usdc.mint(hop1Addrs[i].address, amount);
-    await usdc.connect(hop1Addrs[i]).approve(await crowdfund.getAddress(), amount);
+    await usdc
+      .connect(hop1Addrs[i])
+      .approve(await crowdfund.getAddress(), amount);
     await crowdfund.connect(hop1Addrs[i]).commit(1, amount);
   }
   log("COMMIT", `${hop1Count} hop-1 addresses commit $4,000 each`);
@@ -172,7 +186,9 @@ async function main() {
   for (let i = 0; i < hop2Count; i++) {
     const amount = ethers.parseUnits("1000", 6);
     await usdc.mint(hop2Addrs[i].address, amount);
-    await usdc.connect(hop2Addrs[i]).approve(await crowdfund.getAddress(), amount);
+    await usdc
+      .connect(hop2Addrs[i])
+      .approve(await crowdfund.getAddress(), amount);
     await crowdfund.connect(hop2Addrs[i]).commit(2, amount);
   }
   log("COMMIT", `${hop2Count} hop-2 addresses commit $1,000 each`);
@@ -189,14 +205,20 @@ async function main() {
   // Since with small numbers this will be below MIN_SALE, let's add more seeds
   // to reach the minimum. We'll use additional signers as extra seeds.
   const extraSeeds = signers.slice(32, 120);
-  log("NOTE", `Adding ${extraSeeds.length} extra seeds to reach minimum raise...`);
+  log(
+    "NOTE",
+    `Adding ${extraSeeds.length} extra seeds to reach minimum raise...`,
+  );
 
   // We need to deploy a new crowdfund with all these seeds pre-loaded.
   // Seeds can be added during the launch-team window, but this demo
   // is already past that point. Instead, show the demo even if it cancels.
   console.log("");
   log("NOTE", `Total committed: ${fmtUsdc(totalComm)} (below $1M minimum)`);
-  log("NOTE", `In production, 70+ seeds would reach minimum. Demo shows mechanics.`);
+  log(
+    "NOTE",
+    `In production, 70+ seeds would reach minimum. Demo shows mechanics.`,
+  );
 
   // For demo purposes, let's deploy a SECOND crowdfund with many seeds
   // to show a successful finalization
@@ -212,18 +234,21 @@ async function main() {
     await armToken.getAddress(),
     treasuryAddr.address,
     deployer.address,
-    deployer.address,       // securityCouncil (demo)
+    deployer.address, // securityCouncil (demo)
     openTimestamp2,
   );
   await cf2.waitForDeployment();
 
   // Fund ARM and verify pre-load
-  await armToken.transfer(await cf2.getAddress(), ethers.parseUnits(CROWDFUND_ARM, 18));
+  await armToken.transfer(
+    await cf2.getAddress(),
+    ethers.parseUnits(CROWDFUND_ARM, 18),
+  );
   await cf2.loadArm();
 
   // Add 80 seeds and have them all commit $15K each = $1.2M
   const bigSeeds = signers.slice(32, 112); // 80 signers
-  await cf2.addSeeds(bigSeeds.map(s => s.address));
+  await cf2.addSeeds(bigSeeds.map((s) => s.address));
   log("SETUP", `Added ${bigSeeds.length} seeds to second crowdfund`);
 
   // Advance past openTimestamp so the window is active
@@ -239,7 +264,10 @@ async function main() {
     await cf2.connect(s).commit(0, amt);
   }
   const total2 = await cf2.totalCommitted();
-  log("COMMIT", `${bigSeeds.length} seeds commit $15K each = ${fmtUsdc(total2)}`);
+  log(
+    "COMMIT",
+    `${bigSeeds.length} seeds commit $15K each = ${fmtUsdc(total2)}`,
+  );
 
   await network.provider.send("evm_increaseTime", [THREE_WEEKS + 1]);
   await network.provider.send("evm_mine");
@@ -253,7 +281,10 @@ async function main() {
 
   const totalAlloc = await cf2.totalAllocatedArm();
   const totalAllocUsdc = await cf2.totalAllocatedUsdc();
-  log("FINALIZE", `Total allocated: ${fmtArm(totalAlloc)} (${fmtUsdc(totalAllocUsdc)} USDC value)`);
+  log(
+    "FINALIZE",
+    `Total allocated: ${fmtArm(totalAlloc)} (${fmtUsdc(totalAllocUsdc)} USDC value)`,
+  );
 
   // Hop-0 ceiling = 60% of the 95% base pool less the 10% extra hop-2 floor.
   const [hop0tc] = await cf2.getHopStats(0);
@@ -261,13 +292,22 @@ async function main() {
   const basePool = (saleSize * 9500n) / 10000n;
   const reserve0 = (basePool * 6000n) / 10000n - (saleSize * 1000n) / 10000n;
   if (hop0tc > reserve0) {
-    log("ALLOC", `Hop 0: demand ${fmtUsdc(hop0tc)} > reserve ${fmtUsdc(reserve0)} \u2192 pro-rata`);
-    log("ALLOC", `  Scale: ${((Number(reserve0) / Number(hop0tc)) * 100).toFixed(1)}%`);
+    log(
+      "ALLOC",
+      `Hop 0: demand ${fmtUsdc(hop0tc)} > reserve ${fmtUsdc(reserve0)} \u2192 pro-rata`,
+    );
+    log(
+      "ALLOC",
+      `  Scale: ${((Number(reserve0) / Number(hop0tc)) * 100).toFixed(1)}%`,
+    );
   }
 
   // Claim one seed
   const [allocEx, refundEx] = await cf2.computeAllocation(bigSeeds[0].address);
-  log("CLAIM", `Seed claims ARM: ${fmtArm(allocEx)} (USDC refund available via claimRefund: ${fmtUsdc(refundEx)})`);
+  log(
+    "CLAIM",
+    `Seed claims ARM: ${fmtArm(allocEx)} (USDC refund available via claimRefund: ${fmtUsdc(refundEx)})`,
+  );
   await cf2.connect(bigSeeds[0]).claim(ethers.ZeroAddress);
   log("CLAIM", `ARM claimed successfully \u2713`);
 
@@ -294,8 +334,12 @@ async function main() {
   console.log("=".repeat(70));
   console.log("");
   console.log("  Flows demonstrated:");
-  console.log("  1. Crowdfund: seeds \u2192 window \u2192 invite + commit \u2192 finalize \u2192 claim");
-  console.log("  2. Governance bridge: claimed ARM \u2192 delegate \u2192 voting power");
+  console.log(
+    "  1. Crowdfund: seeds \u2192 window \u2192 invite + commit \u2192 finalize \u2192 claim",
+  );
+  console.log(
+    "  2. Governance bridge: claimed ARM \u2192 delegate \u2192 voting power",
+  );
   console.log("");
 }
 

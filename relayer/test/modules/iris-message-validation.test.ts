@@ -5,7 +5,10 @@
 // and let the client pick the right entry when one source tx yields multiple messages.
 
 import { expect } from "chai";
-import { isPlausibleHexBytes, irisMessageMatches } from "../../modules/iris-relay";
+import {
+  isPlausibleHexBytes,
+  irisMessageMatches,
+} from "../../modules/iris-relay";
 
 // MessageV2 envelope: nonce@12 (32B) and finalityThresholdExecuted@144 (4B) are the only fields
 // Iris fills in; everything else must match the locally-observed bytes.
@@ -25,7 +28,8 @@ function buildMessage(opts: {
   buf.writeUInt32BE(opts.finalityExecuted ?? 0, 144);
   if (opts.maxFee) Buffer.from(opts.maxFee, "hex").copy(buf, 280);
   if (opts.feeExecuted) Buffer.from(opts.feeExecuted, "hex").copy(buf, 312);
-  if (opts.expirationBlock) Buffer.from(opts.expirationBlock, "hex").copy(buf, 344);
+  if (opts.expirationBlock)
+    Buffer.from(opts.expirationBlock, "hex").copy(buf, 344);
   return "0x" + buf.toString("hex");
 }
 
@@ -48,7 +52,10 @@ describe("irisMessageMatches", function () {
     // WHY: the source event has a zero nonce; Iris fills the real nonce + finality. Those two
     // fields differing must NOT count as a mismatch, or every legitimate relay would be rejected.
     const local = buildMessage({}); // zero nonce, finality 0
-    const fromIris = buildMessage({ nonce: "11".repeat(32), finalityExecuted: 2000 });
+    const fromIris = buildMessage({
+      nonce: "11".repeat(32),
+      finalityExecuted: 2000,
+    });
     expect(irisMessageMatches(local, fromIris)).to.equal(true);
   });
 

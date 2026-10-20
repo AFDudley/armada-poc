@@ -2,6 +2,6 @@
 // ABOUTME: Only true for actual mobile user agents, so desktop never enters those paths.
 
 export function isMobileBrowser(): boolean {
-  if (typeof navigator === 'undefined') return false
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }

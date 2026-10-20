@@ -120,7 +120,10 @@ export class Recorder {
       { key: "pool.lastEventBlock", read: () => pool.lastEventBlock() },
     ];
     for (const [label, addr] of balancesOf) {
-      reads.push({ key: `usdc.balanceOf[${label}]`, read: () => usdc.balanceOf(addr) });
+      reads.push({
+        key: `usdc.balanceOf[${label}]`,
+        read: () => usdc.balanceOf(addr),
+      });
     }
     return reads;
   }
@@ -151,7 +154,7 @@ export class Recorder {
       try {
         const [reason] = ethers.AbiCoder.defaultAbiCoder().decode(
           ["string"],
-          "0x" + data.slice(10)
+          "0x" + data.slice(10),
         );
         return { kind: "Error(string)", reason, data };
       } catch {
@@ -162,7 +165,7 @@ export class Recorder {
       try {
         const [code] = ethers.AbiCoder.defaultAbiCoder().decode(
           ["uint256"],
-          "0x" + data.slice(10)
+          "0x" + data.slice(10),
         );
         return { kind: "Panic(uint256)", panicCode: toHex(code), data };
       } catch {
@@ -201,8 +204,15 @@ export class Recorder {
     // Execute and mine executable setup transactions first. A null/empty `to`
     // is a contract-creation tx (deterministic address from sender nonce).
     for (const s of req.setupTxs ?? []) {
-      const rcpt = await (await s.from.sendTransaction({ ...(s.to ? { to: s.to } : {}), data: s.calldata, value: 0 })).wait();
-      if (rcpt!.status !== 1) throw new Error(`[${meta.id}] setupTx failed: ${s.description}`);
+      const rcpt = await (
+        await s.from.sendTransaction({
+          ...(s.to ? { to: s.to } : {}),
+          data: s.calldata,
+          value: 0,
+        })
+      ).wait();
+      if (rcpt!.status !== 1)
+        throw new Error(`[${meta.id}] setupTx failed: ${s.description}`);
     }
 
     const preState = await this.snapshot([
@@ -223,7 +233,7 @@ export class Recorder {
       revert = this.decodeRevert(this.extractRevertData(err));
       if (!req.expectRevert) {
         throw new Error(
-          `[${meta.id}] unexpected eth_call failure: ${revert.reason ?? revert.kind}`
+          `[${meta.id}] unexpected eth_call failure: ${revert.reason ?? revert.kind}`,
         );
       }
       if (
@@ -232,7 +242,7 @@ export class Recorder {
       ) {
         console.warn(
           `  [${meta.id}] WARNING: revert reason "${revert.reason ?? revert.kind}" ` +
-            `does not contain expected "${req.expectReason}"`
+            `does not contain expected "${req.expectReason}"`,
         );
       }
     }
@@ -254,7 +264,8 @@ export class Recorder {
       if (!req.expectRevert) throw err;
       receipt = await ethers.provider.getTransactionReceipt(txResponse.hash);
     }
-    if (!receipt) throw new Error(`[${meta.id}] no receipt for ${txResponse.hash}`);
+    if (!receipt)
+      throw new Error(`[${meta.id}] no receipt for ${txResponse.hash}`);
 
     const status: number = receipt.status;
     if (req.expectRevert && status !== 0) {
@@ -270,7 +281,9 @@ export class Recorder {
     const events = status === 1 ? this.decodeEvents(receipt) : [];
     for (const e of events) {
       if (!e.decoded) {
-        console.warn(`  [${meta.id}] WARNING: undecoded log ${e.logIndex} topic0=${e.topics[0]} from ${e.address}`);
+        console.warn(
+          `  [${meta.id}] WARNING: undecoded log ${e.logIndex} topic0=${e.topics[0]} from ${e.address}`,
+        );
       }
     }
 
@@ -340,7 +353,9 @@ export class Recorder {
     });
 
     const gasStr = Number(receipt.gasUsed).toLocaleString("en-US");
-    const tag = req.expectRevert ? `REVERT ${revert?.reason ?? revert?.kind}` : "OK";
+    const tag = req.expectRevert
+      ? `REVERT ${revert?.reason ?? revert?.kind}`
+      : "OK";
     console.log(`  [${meta.id}] ${tag} gas=${gasStr}`);
   }
 }

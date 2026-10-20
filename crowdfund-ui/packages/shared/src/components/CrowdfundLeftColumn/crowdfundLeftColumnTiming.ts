@@ -9,7 +9,7 @@
  * - Open:  card 380ms → list shell 380ms → list content fade 200ms (starts at 760ms)
  * - Close: list fade 200ms → retract 380ms → card re-enter 380ms (filter pinned throughout)
  */
-export const CROWDFUND_LIST_EXPAND_MS = 380
+export const CROWDFUND_LIST_EXPAND_MS = 380;
 
 /** Participant rows opacity; short close: before retract; short open: after shell expand */
-export const CROWDFUND_LIST_CONTENT_FADE_MS = 200
+export const CROWDFUND_LIST_CONTENT_FADE_MS = 200;

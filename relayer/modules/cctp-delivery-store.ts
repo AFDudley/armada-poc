@@ -57,7 +57,10 @@ export class CctpDeliveryStore {
   /** Most recent persist promise — `flush()` awaits it so callers/tests can confirm a durable write. */
   private lastWrite: Promise<void> = Promise.resolve();
 
-  constructor(baseDir: string = RELAYER_STATE_DIR, ttlMs: number = DEFAULT_TTL_MS) {
+  constructor(
+    baseDir: string = RELAYER_STATE_DIR,
+    ttlMs: number = DEFAULT_TTL_MS,
+  ) {
     this.store = new JsonStateStore<DeliveryData>({
       baseDir,
       filenamePrefix: "cctp-delivery",
@@ -205,30 +208,53 @@ function validate(parsed: unknown, key: string, path: string): DeliveryData {
     !Number.isInteger(candidate.updatedAt) ||
     candidate.updatedAt < 0
   ) {
-    throw new Error(`cctp-delivery-store: invalid 'updatedAt' at ${path}. Delete to reset.`);
+    throw new Error(
+      `cctp-delivery-store: invalid 'updatedAt' at ${path}. Delete to reset.`,
+    );
   }
-  const records = candidate.records.map((raw, idx) => validateRecord(raw, path, idx));
+  const records = candidate.records.map((raw, idx) =>
+    validateRecord(raw, path, idx),
+  );
   return { records, updatedAt: candidate.updatedAt, version: SCHEMA_VERSION };
 }
 
-function validateRecord(raw: unknown, path: string, idx: number): DeliveryRecord {
+function validateRecord(
+  raw: unknown,
+  path: string,
+  idx: number,
+): DeliveryRecord {
   if (typeof raw !== "object" || raw === null) {
-    throw new Error(`cctp-delivery-store: records[${idx}] at ${path} is not an object.`);
+    throw new Error(
+      `cctp-delivery-store: records[${idx}] at ${path} is not an object.`,
+    );
   }
   const r = raw as Partial<DeliveryRecord>;
   if (typeof r.messageHash !== "string" || r.messageHash.length === 0) {
-    throw new Error(`cctp-delivery-store: records[${idx}].messageHash at ${path} is not a non-empty string.`);
+    throw new Error(
+      `cctp-delivery-store: records[${idx}].messageHash at ${path} is not a non-empty string.`,
+    );
   }
   if (!VALID_STATUSES.has(r.status as string)) {
-    throw new Error(`cctp-delivery-store: records[${idx}].status '${r.status}' at ${path} is not valid.`);
+    throw new Error(
+      `cctp-delivery-store: records[${idx}].status '${r.status}' at ${path} is not valid.`,
+    );
   }
   if (typeof r.updatedAt !== "number" || !Number.isFinite(r.updatedAt)) {
-    throw new Error(`cctp-delivery-store: records[${idx}].updatedAt at ${path} is not a finite number.`);
+    throw new Error(
+      `cctp-delivery-store: records[${idx}].updatedAt at ${path} is not a finite number.`,
+    );
   }
   // Optional string fields — validate only if present.
-  for (const field of ["destTxHash", "amount", "feeExecuted", "error"] as const) {
+  for (const field of [
+    "destTxHash",
+    "amount",
+    "feeExecuted",
+    "error",
+  ] as const) {
     if (r[field] !== undefined && typeof r[field] !== "string") {
-      throw new Error(`cctp-delivery-store: records[${idx}].${field} at ${path} is set but not a string.`);
+      throw new Error(
+        `cctp-delivery-store: records[${idx}].${field} at ${path} is set but not a string.`,
+      );
     }
   }
   return r as DeliveryRecord;

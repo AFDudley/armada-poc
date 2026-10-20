@@ -42,10 +42,15 @@ describe("Crowdfund Settlement Rework", function () {
 
     // Add $436K of hop-1 demand so projected allocation clears MIN_SALE.
     const hop1Pool = allSigners.slice(140, 195);
-    const committedSlots = new Map<string, { signer: HardhatEthersSigner; slots: number }>();
+    const committedSlots = new Map<
+      string,
+      { signer: HardhatEthersSigner; slots: number }
+    >();
     for (let i = 0; i < 109; i++) {
       const signer = hop1Pool[i % hop1Pool.length];
-      await crowdfund.connect(seeds[i % seeds.length]).invite(signer.address, 0);
+      await crowdfund
+        .connect(seeds[i % seeds.length])
+        .invite(signer.address, 0);
       const entry = committedSlots.get(signer.address) ?? { signer, slots: 0 };
       entry.slots++;
       committedSlots.set(signer.address, entry);
@@ -83,9 +88,9 @@ describe("Crowdfund Settlement Rework", function () {
       await usdc.getAddress(),
       await armToken.getAddress(),
       treasury.address,
-      deployer.address,         // launchTeam
-      securityCouncil.address,  // securityCouncil
-      openTimestamp              // openTimestamp
+      deployer.address, // launchTeam
+      securityCouncil.address, // securityCouncil
+      openTimestamp, // openTimestamp
     );
     await crowdfund.waitForDeployment();
     const cfAddr = await crowdfund.getAddress();
@@ -110,7 +115,7 @@ describe("Crowdfund Settlement Rework", function () {
 
     it("security council can cancel during Active phase", async function () {
       await crowdfund.addSeeds([allSigners[5].address]);
-  
+
       expect(await crowdfund.phase()).to.equal(Phase.Active);
 
       await crowdfund.connect(securityCouncil).cancel();
@@ -119,7 +124,7 @@ describe("Crowdfund Settlement Rework", function () {
 
     it("security council can cancel after window but before finalize", async function () {
       await crowdfund.addSeeds([allSigners[5].address]);
-  
+
       await time.increase(THREE_WEEKS + 1);
 
       // Window ended, but still Active phase
@@ -132,50 +137,50 @@ describe("Crowdfund Settlement Rework", function () {
       expect(await crowdfund.phase()).to.equal(Phase.Finalized);
 
       await expect(
-        crowdfund.connect(securityCouncil).cancel()
+        crowdfund.connect(securityCouncil).cancel(),
       ).to.be.revertedWith("ArmadaCrowdfund: already finalized");
     });
 
     it("cancel when already canceled reverts", async function () {
       await crowdfund.connect(securityCouncil).cancel();
       await expect(
-        crowdfund.connect(securityCouncil).cancel()
+        crowdfund.connect(securityCouncil).cancel(),
       ).to.be.revertedWith("ArmadaCrowdfund: already canceled");
     });
 
     it("non-security-council address reverts", async function () {
-      await expect(
-        crowdfund.connect(deployer).cancel()
-      ).to.be.revertedWith("ArmadaCrowdfund: not security council");
+      await expect(crowdfund.connect(deployer).cancel()).to.be.revertedWith(
+        "ArmadaCrowdfund: not security council",
+      );
     });
 
     it("after cancel: commit reverts", async function () {
       await crowdfund.addSeeds([allSigners[5].address]);
-  
+
       await fundAndApprove(allSigners[5], USDC(15_000));
 
       await crowdfund.connect(securityCouncil).cancel();
 
       await expect(
-        crowdfund.connect(allSigners[5]).commit(0, USDC(10_000))
+        crowdfund.connect(allSigners[5]).commit(0, USDC(10_000)),
       ).to.be.revertedWith("ArmadaCrowdfund: not active");
     });
 
     it("after cancel: finalize reverts", async function () {
       await crowdfund.addSeeds([allSigners[5].address]);
-  
+
       await time.increase(THREE_WEEKS + 1);
 
       await crowdfund.connect(securityCouncil).cancel();
 
-      await expect(
-        crowdfund.finalize()
-      ).to.be.revertedWith("ArmadaCrowdfund: already finalized");
+      await expect(crowdfund.finalize()).to.be.revertedWith(
+        "ArmadaCrowdfund: already finalized",
+      );
     });
 
     it("after cancel: claimRefund works", async function () {
       await crowdfund.addSeeds([allSigners[5].address]);
-  
+
       await fundAndApprove(allSigners[5], USDC(10_000));
       await crowdfund.connect(allSigners[5]).commit(0, USDC(10_000));
 
@@ -199,21 +204,25 @@ describe("Crowdfund Settlement Rework", function () {
 
     it("emits Cancelled event", async function () {
       await crowdfund.addSeeds([allSigners[5].address]);
-  
+
       await fundAndApprove(allSigners[5], USDC(10_000));
       await crowdfund.connect(allSigners[5]).commit(0, USDC(10_000));
 
-      await expect(crowdfund.connect(securityCouncil).cancel())
-        .to.emit(crowdfund, "Cancelled");
+      await expect(crowdfund.connect(securityCouncil).cancel()).to.emit(
+        crowdfund,
+        "Cancelled",
+      );
     });
 
     it("securityCouncil immutable is set correctly", async function () {
-      expect(await crowdfund.securityCouncil()).to.equal(securityCouncil.address);
+      expect(await crowdfund.securityCouncil()).to.equal(
+        securityCouncil.address,
+      );
     });
 
     it("claimRefund reverts for whitelisted address with zero commitment", async function () {
       await crowdfund.addSeeds([allSigners[5].address, allSigners[6].address]);
-  
+
       // allSigners[5] commits, allSigners[6] does not
       await fundAndApprove(allSigners[5], USDC(10_000));
       await crowdfund.connect(allSigners[5]).commit(0, USDC(10_000));
@@ -222,7 +231,7 @@ describe("Crowdfund Settlement Rework", function () {
 
       // Whitelisted-but-uncommitted address should revert
       await expect(
-        crowdfund.connect(allSigners[6]).claimRefund()
+        crowdfund.connect(allSigners[6]).claimRefund(),
       ).to.be.revertedWith("ArmadaCrowdfund: no commitment");
     });
   });
@@ -276,8 +285,10 @@ describe("Crowdfund Settlement Rework", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map((s: HardhatEthersSigner) => s.address));
-  
+      await crowdfund.addSeeds(
+        seeds.map((s: HardhatEthersSigner) => s.address),
+      );
+
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
       }
@@ -323,8 +334,10 @@ describe("Crowdfund Settlement Rework", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map((s: HardhatEthersSigner) => s.address));
-  
+      await crowdfund.addSeeds(
+        seeds.map((s: HardhatEthersSigner) => s.address),
+      );
+
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
       }
@@ -334,7 +347,14 @@ describe("Crowdfund Settlement Rework", function () {
       // 80 seeds × $15K each = $1.2M committed; capped to $1.2M (within slot caps)
       await expect(crowdfund.finalize())
         .to.emit(crowdfund, "Finalized")
-        .withArgs(USDC(1_200_000), 0, 0, true, USDC(1_200_000), USDC(1_200_000));
+        .withArgs(
+          USDC(1_200_000),
+          0,
+          0,
+          true,
+          USDC(1_200_000),
+          USDC(1_200_000),
+        );
     });
   });
 
@@ -380,8 +400,10 @@ describe("Crowdfund Settlement Rework", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map((s: HardhatEthersSigner) => s.address));
-  
+      await crowdfund.addSeeds(
+        seeds.map((s: HardhatEthersSigner) => s.address),
+      );
+
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
       }
@@ -404,8 +426,10 @@ describe("Crowdfund Settlement Rework", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map((s: HardhatEthersSigner) => s.address));
-  
+      await crowdfund.addSeeds(
+        seeds.map((s: HardhatEthersSigner) => s.address),
+      );
+
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
       }
@@ -417,7 +441,9 @@ describe("Crowdfund Settlement Rework", function () {
     });
 
     it("CLAIM_DEADLINE_DURATION is 1095 days (3 years)", async function () {
-      expect(await crowdfund.CLAIM_DEADLINE_DURATION()).to.equal(1095 * 24 * 60 * 60);
+      expect(await crowdfund.CLAIM_DEADLINE_DURATION()).to.equal(
+        1095 * 24 * 60 * 60,
+      );
     });
   });
 
@@ -437,7 +463,7 @@ describe("Crowdfund Settlement Rework", function () {
       const inviterCount = Math.min(80, 18);
       const hop1Invitees: HardhatEthersSigner[] = [];
       for (let i = 0; i < inviterCount; i++) {
-        for (let j = 0; j < 3 && (i * 3 + j) < hop1Pool.length; j++) {
+        for (let j = 0; j < 3 && i * 3 + j < hop1Pool.length; j++) {
           hop1Invitees.push(hop1Pool[i * 3 + j]);
         }
       }
@@ -449,14 +475,16 @@ describe("Crowdfund Settlement Rework", function () {
         const before = await usdc.balanceOf(p.address);
         await crowdfund.connect(p).claim(p.address);
         const after = await usdc.balanceOf(p.address);
-        sumRefundsPaid += (after - before);
+        sumRefundsPaid += after - before;
       }
 
       const residual = await usdc.balanceOf(await crowdfund.getAddress());
       const totalCommitted = await crowdfund.totalCommitted();
 
       // Conservation: every USDC deposited is accounted for
-      expect(treasuryDelta + sumRefundsPaid + residual).to.equal(totalCommitted);
+      expect(treasuryDelta + sumRefundsPaid + residual).to.equal(
+        totalCommitted,
+      );
       // Contract should have only dust remaining
       expect(residual).to.be.lte(USDC(1));
     });
@@ -473,7 +501,9 @@ describe("Crowdfund Settlement Rework", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map((s: HardhatEthersSigner) => s.address));
+      await crowdfund.addSeeds(
+        seeds.map((s: HardhatEthersSigner) => s.address),
+      );
 
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
@@ -486,7 +516,7 @@ describe("Crowdfund Settlement Rework", function () {
 
       // claim() should revert — if this guard were missing, users could drain ARM
       await expect(
-        crowdfund.connect(seeds[0]).claim(ethers.ZeroAddress)
+        crowdfund.connect(seeds[0]).claim(ethers.ZeroAddress),
       ).to.be.revertedWith("ArmadaCrowdfund: sale in refund mode");
     });
 
@@ -496,7 +526,9 @@ describe("Crowdfund Settlement Rework", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map((s: HardhatEthersSigner) => s.address));
+      await crowdfund.addSeeds(
+        seeds.map((s: HardhatEthersSigner) => s.address),
+      );
 
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
@@ -523,7 +555,9 @@ describe("Crowdfund Settlement Rework", function () {
       const seeds = await setupAndFinalize(68, USDC(15_000));
 
       const totalAlloc = await crowdfund.totalAllocatedArm();
-      const armInContract = await armToken.balanceOf(await crowdfund.getAddress());
+      const armInContract = await armToken.balanceOf(
+        await crowdfund.getAddress(),
+      );
       const expectedSweep = armInContract - totalAlloc;
       expect(expectedSweep).to.be.gt(0);
 
@@ -539,9 +573,9 @@ describe("Crowdfund Settlement Rework", function () {
 
       await crowdfund.withdrawUnallocatedArm();
 
-      await expect(
-        crowdfund.withdrawUnallocatedArm()
-      ).to.be.revertedWith("ArmadaCrowdfund: nothing to sweep");
+      await expect(crowdfund.withdrawUnallocatedArm()).to.be.revertedWith(
+        "ArmadaCrowdfund: nothing to sweep",
+      );
     });
 
     it("after some claims: sweep sees reduced armStillOwed", async function () {
@@ -561,7 +595,9 @@ describe("Crowdfund Settlement Rework", function () {
 
       // armStillOwed decreased, but no new unsold ARM. Balance = totalAlloc - claimed.
       // Nothing new to sweep unless there's rounding dust.
-      const armAfterClaims = await armToken.balanceOf(await crowdfund.getAddress());
+      const armAfterClaims = await armToken.balanceOf(
+        await crowdfund.getAddress(),
+      );
       const totalArmClaimed = await crowdfund.totalArmTransferred();
       // Contract should have exactly totalAlloc - totalArmClaimed
       expect(armAfterClaims).to.equal(totalAlloc - totalArmClaimed);
@@ -577,9 +613,9 @@ describe("Crowdfund Settlement Rework", function () {
       await crowdfund.connect(seeds[0]).claim(seeds[0].address);
 
       // Before deadline: can't sweep unclaimed
-      await expect(
-        crowdfund.withdrawUnallocatedArm()
-      ).to.be.revertedWith("ArmadaCrowdfund: nothing to sweep");
+      await expect(crowdfund.withdrawUnallocatedArm()).to.be.revertedWith(
+        "ArmadaCrowdfund: nothing to sweep",
+      );
 
       // Warp past deadline
       const deadline = await crowdfund.claimDeadline();
@@ -594,7 +630,9 @@ describe("Crowdfund Settlement Rework", function () {
       const treasuryAfter = await armToken.balanceOf(treasury.address);
 
       expect(treasuryAfter - treasuryBefore).to.equal(armBalance);
-      expect(await armToken.balanceOf(await crowdfund.getAddress())).to.equal(0);
+      expect(await armToken.balanceOf(await crowdfund.getAddress())).to.equal(
+        0,
+      );
     });
 
     it("after refundMode finalization: sweeps all ARM (armStillOwed = 0)", async function () {
@@ -603,7 +641,9 @@ describe("Crowdfund Settlement Rework", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map((s: HardhatEthersSigner) => s.address));
+      await crowdfund.addSeeds(
+        seeds.map((s: HardhatEthersSigner) => s.address),
+      );
 
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
@@ -624,7 +664,6 @@ describe("Crowdfund Settlement Rework", function () {
 
     it("after cancel: sweeps all ARM", async function () {
       await crowdfund.addSeeds([allSigners[5].address]);
-  
 
       await crowdfund.connect(securityCouncil).cancel();
 
@@ -639,7 +678,9 @@ describe("Crowdfund Settlement Rework", function () {
       const seeds = await setupAndFinalize(68, USDC(15_000));
 
       const totalAlloc = await crowdfund.totalAllocatedArm();
-      const armInContract = await armToken.balanceOf(await crowdfund.getAddress());
+      const armInContract = await armToken.balanceOf(
+        await crowdfund.getAddress(),
+      );
       const expectedSweep = armInContract - totalAlloc;
 
       await expect(crowdfund.withdrawUnallocatedArm())

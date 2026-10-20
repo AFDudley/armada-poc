@@ -280,11 +280,7 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
      */
     function _handleCCTPMessage(bytes calldata messageBody) internal returns (bool) {
         // Decode the BurnMessageV2 to get amount, feeExecuted, and hookData
-        (
-            uint256 grossAmount,
-            uint256 feeExecuted,
-            bytes memory hookData
-        ) = BurnMessageV2.decodeForHook(messageBody);
+        (uint256 grossAmount, uint256 feeExecuted, bytes memory hookData) = BurnMessageV2.decodeForHook(messageBody);
 
         // Calculate actual amount received (gross - fee)
         // In local mock, feeExecuted may equal maxFee. On real CCTP, fee is set by attestation service.
@@ -300,10 +296,7 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
             // configured hubPool. The envelope sender is the Hub TokenMessenger, not the pool, so it
             // cannot be used here. The handlers already enforce remoteDomain == hubDomain. This is a
             // defense-in-depth backstop on top of CCTP's attestation.
-            require(
-                BurnMessageV2.getMessageSender(messageBody) == hubPool,
-                "PrivacyPoolClient: untrusted source pool"
-            );
+            require(BurnMessageV2.getMessageSender(messageBody) == hubPool, "PrivacyPoolClient: untrusted source pool");
 
             // Cross-chain unshield from Hub
             UnshieldData memory unshieldData = CCTPPayloadLib.decodeUnshieldData(payload.data);
@@ -328,28 +321,19 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
      * @dev destinationCaller is pinned to the Hub's hook router (validated non-zero by the callers) so
      *      the message can only be delivered via the Hub's CCTPHookRouter.
      */
-    function _pullAndBurn(
-        uint256 total,
-        uint256 maxFee,
-        uint32 minFinalityThreshold,
-        ShieldData[] memory notes
-    ) internal {
+    function _pullAndBurn(uint256 total, uint256 maxFee, uint32 minFinalityThreshold, ShieldData[] memory notes)
+        internal
+    {
         // Transfer USDC from the caller to this contract and approve the TokenMessenger.
         IERC20(usdc).safeTransferFrom(msg.sender, address(this), total);
         IERC20(usdc).safeApprove(tokenMessenger, 0);
         IERC20(usdc).safeApprove(tokenMessenger, total);
 
         bytes memory hookData = CCTPPayloadLib.encodeShield(notes);
-        ITokenMessengerV2(tokenMessenger).depositForBurnWithHook(
-            total,
-            hubDomain,
-            hubPool,
-            usdc,
-            hubHookRouter,
-            maxFee,
-            _resolveFinality(minFinalityThreshold),
-            hookData
-        );
+        ITokenMessengerV2(tokenMessenger)
+            .depositForBurnWithHook(
+                total, hubDomain, hubPool, usdc, hubHookRouter, maxFee, _resolveFinality(minFinalityThreshold), hookData
+            );
     }
 
     /**

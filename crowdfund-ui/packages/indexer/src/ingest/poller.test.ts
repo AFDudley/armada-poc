@@ -1,16 +1,19 @@
 // ABOUTME: Unit tests for the supervised indexer polling loop.
 // ABOUTME: Verifies retry, timeout, error visibility, and non-overlapping poll cycles.
 
-import { mkdtemp, rm } from 'node:fs/promises'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
-import { afterEach, describe, expect, it } from 'vitest'
-import { FileIndexerStore } from '../db/fileStore.js'
-import { CrowdfundIndexerPoller, createResilientRangeProvider } from './poller.js'
-import type { CursorState } from '../types.js'
-import type { RangeLogProvider, RpcLog } from './rpc.js'
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { afterEach, describe, expect, it } from "vitest";
+import { FileIndexerStore } from "../db/fileStore.js";
+import {
+  CrowdfundIndexerPoller,
+  createResilientRangeProvider,
+} from "./poller.js";
+import type { CursorState } from "../types.js";
+import type { RangeLogProvider, RpcLog } from "./rpc.js";
 
-const tempDirs: string[] = []
+const tempDirs: string[] = [];
 
 const cursor: CursorState = {
   deployBlock: 100,
@@ -19,86 +22,100 @@ const cursor: CursorState = {
   confirmedHead: 100,
   ingestedCursor: 99,
   verifiedCursor: 99,
-}
+};
 
 const config = {
   chainId: 11155111,
-  contractAddress: '0xF681A7c700420e5CA93f77c8988d3eED02767035',
-  providerName: 'primary',
-}
+  contractAddress: "0xF681A7c700420e5CA93f77c8988d3eED02767035",
+  providerName: "primary",
+};
 
 function makeLog(blockNumber: number): RpcLog {
   return {
     blockNumber,
-    blockHash: '0x' + blockNumber.toString(16).padStart(64, '0'),
-    transactionHash: '0x' + (blockNumber + 1).toString(16).padStart(64, '0'),
+    blockHash: "0x" + blockNumber.toString(16).padStart(64, "0"),
+    transactionHash: "0x" + (blockNumber + 1).toString(16).padStart(64, "0"),
     index: 0,
-    topics: ['0x' + '33'.repeat(32)],
-    data: '0x',
-  }
+    topics: ["0x" + "33".repeat(32)],
+    data: "0x",
+  };
 }
 
 async function makeStore(): Promise<FileIndexerStore> {
-  const dir = await mkdtemp(join(tmpdir(), 'crowdfund-indexer-poller-'))
-  tempDirs.push(dir)
+  const dir = await mkdtemp(join(tmpdir(), "crowdfund-indexer-poller-"));
+  tempDirs.push(dir);
   return new FileIndexerStore({
-    path: join(dir, 'store.json'),
+    path: join(dir, "store.json"),
     initialCursor: cursor,
-  })
+  });
 }
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
-})
+  await Promise.all(
+    tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })),
+  );
+});
 
-describe('createResilientRangeProvider', () => {
-  it('retries rate-limited getLogs calls before succeeding', async () => {
-    let calls = 0
+describe("createResilientRangeProvider", () => {
+  it("retries rate-limited getLogs calls before succeeding", async () => {
+    let calls = 0;
     const provider: RangeLogProvider = {
       getBlockNumber: async () => 102,
       getLogs: async () => {
-        calls += 1
+        calls += 1;
         if (calls === 1) {
-          const err = new Error('429 Too Many Requests')
-          throw err
+          const err = new Error("429 Too Many Requests");
+          throw err;
         }
-        return [makeLog(100)]
+        return [makeLog(100)];
       },
-    }
+    };
 
     const resilient = createResilientRangeProvider(provider, {
       timeoutMs: 50,
       maxRetries: 2,
       retryBaseDelayMs: 1,
-    })
+    });
 
-    await expect(resilient.getLogs({ address: config.contractAddress, fromBlock: 100, toBlock: 100 })).resolves.toHaveLength(1)
-    expect(calls).toBe(2)
-  })
+    await expect(
+      resilient.getLogs({
+        address: config.contractAddress,
+        fromBlock: 100,
+        toBlock: 100,
+      }),
+    ).resolves.toHaveLength(1);
+    expect(calls).toBe(2);
+  });
 
-  it('times out non-responsive provider calls', async () => {
+  it("times out non-responsive provider calls", async () => {
     const provider: RangeLogProvider = {
       getBlockNumber: async () => 102,
       getLogs: async () => new Promise<readonly RpcLog[]>(() => {}),
-    }
+    };
 
     const resilient = createResilientRangeProvider(provider, {
       timeoutMs: 5,
       maxRetries: 0,
       retryBaseDelayMs: 1,
-    })
+    });
 
-    await expect(resilient.getLogs({ address: config.contractAddress, fromBlock: 100, toBlock: 100 })).rejects.toThrow('RPC timeout')
-  })
-})
+    await expect(
+      resilient.getLogs({
+        address: config.contractAddress,
+        fromBlock: 100,
+        toBlock: 100,
+      }),
+    ).rejects.toThrow("RPC timeout");
+  });
+});
 
-describe('CrowdfundIndexerPoller', () => {
-  it('records timeout failures without advancing the verified cursor', async () => {
-    const store = await makeStore()
+describe("CrowdfundIndexerPoller", () => {
+  it("records timeout failures without advancing the verified cursor", async () => {
+    const store = await makeStore();
     const provider: RangeLogProvider = {
       getBlockNumber: async () => 102,
       getLogs: async () => new Promise<readonly RpcLog[]>(() => {}),
-    }
+    };
 
     const poller = new CrowdfundIndexerPoller({
       ...config,
@@ -110,47 +127,51 @@ describe('CrowdfundIndexerPoller', () => {
       retryBaseDelayMs: 1,
       pollIntervalMs: 1000,
       errorBackoffMs: 1000,
-    })
+    });
 
-    const result = await poller.runOnce()
-    const data = await store.read()
+    const result = await poller.runOnce();
+    const data = await store.read();
 
-    expect(result.status).toBe('completed')
-    expect(data.cursor.verifiedCursor).toBe(99)
-    expect(data.ranges[0]).toMatchObject({ fromBlock: 100, toBlock: 100, status: 'failed' })
-    expect(data.lastError).toContain('RPC timeout')
-  })
+    expect(result.status).toBe("completed");
+    expect(data.cursor.verifiedCursor).toBe(99);
+    expect(data.ranges[0]).toMatchObject({
+      fromBlock: 100,
+      toBlock: 100,
+      status: "failed",
+    });
+    expect(data.lastError).toContain("RPC timeout");
+  });
 
-  it('auto-reconciles failed ranges before backfilling new ones', async () => {
-    const store = await makeStore()
+  it("auto-reconciles failed ranges before backfilling new ones", async () => {
+    const store = await makeStore();
 
     // Seed a pre-existing failed range that auto-reconcile should pick up.
     await store.upsertRange({
       fromBlock: 100,
       toBlock: 100,
-      status: 'failed',
-      provider: 'primary',
+      status: "failed",
+      provider: "primary",
       attempts: 1,
       logCount: 0,
       digest: null,
-      fetchedAt: '2026-05-01T00:00:00.000Z',
+      fetchedAt: "2026-05-01T00:00:00.000Z",
       verifiedAt: null,
-      lastError: 'RPC timeout',
+      lastError: "RPC timeout",
       nextRetryAt: null,
-    })
+    });
 
     const provider: RangeLogProvider = {
       getBlockNumber: async () => 100,
       // Returns consistent logs so reconcile (and backfill) both succeed.
       getLogs: async ({ fromBlock }) => [makeLog(fromBlock)],
-    }
+    };
 
     const poller = new CrowdfundIndexerPoller({
       ...config,
       store,
       provider,
       auditProvider: provider,
-      auditProviderName: 'audit',
+      auditProviderName: "audit",
       maxBlockRange: 5,
       rpcTimeoutMs: 50,
       rpcMaxRetries: 0,
@@ -158,81 +179,83 @@ describe('CrowdfundIndexerPoller', () => {
       pollIntervalMs: 1000,
       errorBackoffMs: 1000,
       reconcileOptions: { maxAttempts: 3, backoffBaseMs: 1, backoffMaxMs: 10 },
-    })
+    });
 
-    const result = await poller.runOnce()
-    const data = await store.read()
+    const result = await poller.runOnce();
+    const data = await store.read();
 
-    expect(result.status).toBe('completed')
-    expect(result.reconcile?.attempted).toHaveLength(1)
-    expect(result.reconcile?.attempted[0].status).toBe('verified')
-    expect(data.cursor.verifiedCursor).toBeGreaterThanOrEqual(100)
-    expect(data.lastReconciledAt).not.toBeNull()
-  })
+    expect(result.status).toBe("completed");
+    expect(result.reconcile?.attempted).toHaveLength(1);
+    expect(result.reconcile?.attempted[0].status).toBe("verified");
+    expect(data.cursor.verifiedCursor).toBeGreaterThanOrEqual(100);
+    expect(data.lastReconciledAt).not.toBeNull();
+  });
 
-  it('skips auto-reconcile when reconcileOptions is omitted', async () => {
-    const store = await makeStore()
+  it("skips auto-reconcile when reconcileOptions is omitted", async () => {
+    const store = await makeStore();
     await store.upsertRange({
       fromBlock: 100,
       toBlock: 100,
-      status: 'failed',
-      provider: 'primary',
+      status: "failed",
+      provider: "primary",
       attempts: 1,
       logCount: 0,
       digest: null,
-      fetchedAt: '2026-05-01T00:00:00.000Z',
+      fetchedAt: "2026-05-01T00:00:00.000Z",
       verifiedAt: null,
-      lastError: 'RPC timeout',
+      lastError: "RPC timeout",
       nextRetryAt: null,
-    })
+    });
 
     const provider: RangeLogProvider = {
       getBlockNumber: async () => 100,
       getLogs: async ({ fromBlock }) => [makeLog(fromBlock)],
-    }
+    };
 
     const poller = new CrowdfundIndexerPoller({
       ...config,
       store,
       provider,
       auditProvider: provider,
-      auditProviderName: 'audit',
+      auditProviderName: "audit",
       maxBlockRange: 5,
       rpcTimeoutMs: 50,
       rpcMaxRetries: 0,
       retryBaseDelayMs: 1,
       pollIntervalMs: 1000,
       errorBackoffMs: 1000,
-    })
+    });
 
-    const result = await poller.runOnce()
-    const data = await store.read()
+    const result = await poller.runOnce();
+    const data = await store.read();
 
-    expect(result.reconcile).toBeUndefined()
+    expect(result.reconcile).toBeUndefined();
     // The pre-existing failed range stays failed because no auto-reconcile was attempted.
-    const seeded = data.ranges.find((range) => range.fromBlock === 100 && range.toBlock === 100)
-    expect(seeded?.status).toBe('failed')
-  })
+    const seeded = data.ranges.find(
+      (range) => range.fromBlock === 100 && range.toBlock === 100,
+    );
+    expect(seeded?.status).toBe("failed");
+  });
 
-  it('keeps the poll cycle completed when snapshot publishing fails', async () => {
-    const store = await makeStore()
+  it("keeps the poll cycle completed when snapshot publishing fails", async () => {
+    const store = await makeStore();
     const provider: RangeLogProvider = {
       getBlockNumber: async () => 102,
       getLogs: async ({ fromBlock }) => [makeLog(fromBlock)],
-    }
-    const warnings: string[] = []
+    };
+    const warnings: string[] = [];
     const logger = {
       info: () => {},
       warn: (message: string) => warnings.push(message),
       error: () => {},
-    }
+    };
 
     const poller = new CrowdfundIndexerPoller({
       ...config,
       store,
       provider,
       auditProvider: provider,
-      auditProviderName: 'audit',
+      auditProviderName: "audit",
       maxBlockRange: 5,
       rpcTimeoutMs: 50,
       rpcMaxRetries: 0,
@@ -241,55 +264,59 @@ describe('CrowdfundIndexerPoller', () => {
       errorBackoffMs: 1000,
       publishOnPoll: true,
       publishSnapshot: async () => {
-        throw new Error('Refusing to publish failed reconciliation: hop0.totalCommitted mismatch')
+        throw new Error(
+          "Refusing to publish failed reconciliation: hop0.totalCommitted mismatch",
+        );
       },
       logger,
-    })
+    });
 
-    const result = await poller.runOnce()
-    const data = await store.read()
+    const result = await poller.runOnce();
+    const data = await store.read();
 
     // Backfill succeeded, so the cycle is completed even though publishing threw.
-    expect(result.status).toBe('completed')
-    expect(data.cursor.verifiedCursor).toBeGreaterThanOrEqual(100)
-    expect(warnings.some((w) => w.includes('publish'))).toBe(true)
-    expect(data.lastError).toContain('Refusing to publish')
-  })
+    expect(result.status).toBe("completed");
+    expect(data.cursor.verifiedCursor).toBeGreaterThanOrEqual(100);
+    expect(warnings.some((w) => w.includes("publish"))).toBe(true);
+    expect(data.lastError).toContain("Refusing to publish");
+  });
 
-  it('does not run overlapping poll cycles', async () => {
-    const store = await makeStore()
-    const controls: { releaseBlockNumber?: () => void } = {}
+  it("does not run overlapping poll cycles", async () => {
+    const store = await makeStore();
+    const controls: { releaseBlockNumber?: () => void } = {};
     const provider: RangeLogProvider = {
-      getBlockNumber: async () => new Promise<number>((resolve) => {
-        controls.releaseBlockNumber = () => resolve(102)
-      }),
+      getBlockNumber: async () =>
+        new Promise<number>((resolve) => {
+          controls.releaseBlockNumber = () => resolve(102);
+        }),
       getLogs: async ({ fromBlock }) => [makeLog(fromBlock)],
-    }
+    };
 
     const poller = new CrowdfundIndexerPoller({
       ...config,
       store,
       provider,
       auditProvider: provider,
-      auditProviderName: 'audit',
+      auditProviderName: "audit",
       maxBlockRange: 5,
       rpcTimeoutMs: 50,
       rpcMaxRetries: 0,
       retryBaseDelayMs: 1,
       pollIntervalMs: 1000,
       errorBackoffMs: 1000,
-    })
+    });
 
-    const first = poller.runOnce()
+    const first = poller.runOnce();
     // Wait until the first cycle is actually blocked inside getBlockNumber before
     // starting the second, so the overlap check is deterministic regardless of how many
     // async hops precede the blocking call.
-    while (!controls.releaseBlockNumber) await new Promise((resolve) => setTimeout(resolve, 1))
-    const second = await poller.runOnce()
-    controls.releaseBlockNumber()
-    const firstResult = await first
+    while (!controls.releaseBlockNumber)
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    const second = await poller.runOnce();
+    controls.releaseBlockNumber();
+    const firstResult = await first;
 
-    expect(second.status).toBe('skipped')
-    expect(firstResult.status).toBe('completed')
-  })
-})
+    expect(second.status).toBe("skipped");
+    expect(firstResult.status).toBe("completed");
+  });
+});

@@ -12,7 +12,10 @@
  * possibly recoverable, malformed response = probably config error).
  */
 export class RpcTimeoutError extends Error {
-  constructor(public readonly label: string, public readonly timeoutMs: number) {
+  constructor(
+    public readonly label: string,
+    public readonly timeoutMs: number,
+  ) {
     super(`RPC timeout after ${timeoutMs}ms: ${label}`);
     this.name = "RpcTimeoutError";
   }
@@ -38,7 +41,10 @@ export async function withTimeout<T>(
 ): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new RpcTimeoutError(label, timeoutMs)), timeoutMs);
+    timer = setTimeout(
+      () => reject(new RpcTimeoutError(label, timeoutMs)),
+      timeoutMs,
+    );
   });
   try {
     return await Promise.race([promise, timeout]);

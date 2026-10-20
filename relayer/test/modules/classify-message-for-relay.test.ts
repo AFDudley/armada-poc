@@ -31,13 +31,17 @@ function buildMessage(opts: {
   const sender = opts.sender ?? ethers.zeroPadValue(SOURCE_TM, 32);
   const recipient = opts.recipient ?? ethers.zeroPadValue(DEST_TM, 32);
   if (total >= 76) Buffer.from(sender.replace(/^0x/, ""), "hex").copy(buf, 44);
-  if (total >= 108) Buffer.from(recipient.replace(/^0x/, ""), "hex").copy(buf, 76);
+  if (total >= 108)
+    Buffer.from(recipient.replace(/^0x/, ""), "hex").copy(buf, 76);
   if (total >= 152) buf.writeUInt32BE(opts.bodyVersion ?? 1, 148); // body version (abs offset 148)
   if (opts.mintRecipient && total >= 216) {
     Buffer.from(opts.mintRecipient.replace(/^0x/, ""), "hex").copy(buf, 184);
   }
   if (opts.destinationCaller && total >= 140) {
-    Buffer.from(opts.destinationCaller.replace(/^0x/, ""), "hex").copy(buf, 108);
+    Buffer.from(opts.destinationCaller.replace(/^0x/, ""), "hex").copy(
+      buf,
+      108,
+    );
   }
   return "0x" + buf.toString("hex");
 }
@@ -49,7 +53,12 @@ describe("classifyMessageForRelay", function () {
     // WHY: the happy path — Armada burn paths legitimately leave destinationCaller zero, so this
     // MUST relay. This is the case the previous fail-open filter also accepted.
     const msg = buildMessage({ mintRecipient: POOL });
-    const result = classifyMessageForRelay(msg, KNOWN, HOOK_ROUTER, TOKEN_MESSENGERS);
+    const result = classifyMessageForRelay(
+      msg,
+      KNOWN,
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(true);
     if (result.relay) expect(result.mintRecipient).to.equal(POOL);
   });
@@ -58,7 +67,12 @@ describe("classifyMessageForRelay", function () {
     // WHY: this is the core fix. A short body made parseMessageFields return mintRecipient="" and
     // the old filter relayed it. Now anything below the BurnMessageV2 minimum is rejected.
     const msg = buildMessage({ mintRecipient: POOL, totalBytes: 200 });
-    const result = classifyMessageForRelay(msg, KNOWN, HOOK_ROUTER, TOKEN_MESSENGERS);
+    const result = classifyMessageForRelay(
+      msg,
+      KNOWN,
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(false);
     if (!result.relay) expect(result.reason).to.contain("minimum");
   });
@@ -67,40 +81,76 @@ describe("classifyMessageForRelay", function () {
     // WHY: a generic (non-burn) CCTP message could place our pool at the mintRecipient offset to
     // pass the recipient check — the version field is what distinguishes a real burn body.
     const msg = buildMessage({ mintRecipient: POOL, bodyVersion: 99 });
-    const result = classifyMessageForRelay(msg, KNOWN, HOOK_ROUTER, TOKEN_MESSENGERS);
+    const result = classifyMessageForRelay(
+      msg,
+      KNOWN,
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(false);
     if (!result.relay) expect(result.reason).to.contain("version");
   });
 
   it("rejects a mintRecipient that is not in knownRecipients", function () {
-    const stranger = ethers.zeroPadValue("0x" + "99".repeat(20), 32).toLowerCase();
+    const stranger = ethers
+      .zeroPadValue("0x" + "99".repeat(20), 32)
+      .toLowerCase();
     const msg = buildMessage({ mintRecipient: stranger });
-    const result = classifyMessageForRelay(msg, KNOWN, HOOK_ROUTER, TOKEN_MESSENGERS);
+    const result = classifyMessageForRelay(
+      msg,
+      KNOWN,
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(false);
-    if (!result.relay) expect(result.reason).to.contain("not in knownRecipients");
+    if (!result.relay)
+      expect(result.reason).to.contain("not in knownRecipients");
   });
 
   it("rejects everything when knownRecipients is empty (misconfiguration ⇒ fail closed)", function () {
     // WHY: an empty allowlist used to bypass the filter entirely (fail open). Now it means "we
     // can't identify any message as ours" → relay nothing, loudly.
     const msg = buildMessage({ mintRecipient: POOL });
-    const result = classifyMessageForRelay(msg, new Set(), HOOK_ROUTER, TOKEN_MESSENGERS);
+    const result = classifyMessageForRelay(
+      msg,
+      new Set(),
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(false);
     if (!result.relay) expect(result.reason).to.contain("no known recipients");
   });
 
   it("relays when destinationCaller is set and equals our hookRouter", function () {
-    const msg = buildMessage({ mintRecipient: POOL, destinationCaller: HOOK_ROUTER_BYTES32 });
-    const result = classifyMessageForRelay(msg, KNOWN, HOOK_ROUTER, TOKEN_MESSENGERS);
+    const msg = buildMessage({
+      mintRecipient: POOL,
+      destinationCaller: HOOK_ROUTER_BYTES32,
+    });
+    const result = classifyMessageForRelay(
+      msg,
+      KNOWN,
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(true);
   });
 
   it("rejects when destinationCaller is set but does not equal our hookRouter", function () {
     // WHY: a non-zero destinationCaller binds receiveMessage to a specific caller; if it's not us,
     // our relay would revert (and we'd pay gas), so skip it.
-    const otherCaller = ethers.zeroPadValue("0x" + "ab".repeat(20), 32).toLowerCase();
-    const msg = buildMessage({ mintRecipient: POOL, destinationCaller: otherCaller });
-    const result = classifyMessageForRelay(msg, KNOWN, HOOK_ROUTER, TOKEN_MESSENGERS);
+    const otherCaller = ethers
+      .zeroPadValue("0x" + "ab".repeat(20), 32)
+      .toLowerCase();
+    const msg = buildMessage({
+      mintRecipient: POOL,
+      destinationCaller: otherCaller,
+    });
+    const result = classifyMessageForRelay(
+      msg,
+      KNOWN,
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(false);
     if (!result.relay) expect(result.reason).to.contain("hookRouter");
   });
@@ -110,17 +160,29 @@ describe("classifyMessageForRelay", function () {
     // Only messages addressed to the destination TokenMessenger are burns (#613, armada-relayer#40).
     const attacker = ethers.zeroPadValue("0x" + "66".repeat(20), 32);
     const msg = buildMessage({ mintRecipient: POOL, recipient: attacker });
-    const result = classifyMessageForRelay(msg, KNOWN, HOOK_ROUTER, TOKEN_MESSENGERS);
+    const result = classifyMessageForRelay(
+      msg,
+      KNOWN,
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(false);
-    if (!result.relay) expect(result.reason).to.contain("destination TokenMessenger");
+    if (!result.relay)
+      expect(result.reason).to.contain("destination TokenMessenger");
   });
 
   it("rejects a message not sent by the source TokenMessenger", function () {
     // WHY: a genuine burn is always sent by the source chain's TokenMessenger.
     const attacker = ethers.zeroPadValue("0x" + "77".repeat(20), 32);
     const msg = buildMessage({ mintRecipient: POOL, sender: attacker });
-    const result = classifyMessageForRelay(msg, KNOWN, HOOK_ROUTER, TOKEN_MESSENGERS);
+    const result = classifyMessageForRelay(
+      msg,
+      KNOWN,
+      HOOK_ROUTER,
+      TOKEN_MESSENGERS,
+    );
     expect(result.relay).to.equal(false);
-    if (!result.relay) expect(result.reason).to.contain("source TokenMessenger");
+    if (!result.relay)
+      expect(result.reason).to.contain("source TokenMessenger");
   });
 });

@@ -13,10 +13,10 @@ import {
   RailgunWallet,
   Mnemonic,
   ByteUtils,
-} from '@railgun-community/engine';
-import { getEngine } from './init';
-import * as fs from 'fs';
-import * as path from 'path';
+} from "@railgun-community/engine";
+import { getEngine } from "./init";
+import * as fs from "fs";
+import * as path from "path";
 
 // ============ Types ============
 
@@ -36,11 +36,12 @@ export interface WalletKeys {
 
 // ============ Constants ============
 
-const WALLETS_DIR = path.join(__dirname, '../../wallets');
+const WALLETS_DIR = path.join(__dirname, "../../wallets");
 
 // Default encryption key for POC (in production, derive from user password)
 // Must be 64 hex chars (32 bytes)
-export const DEFAULT_ENCRYPTION_KEY = '0101010101010101010101010101010101010101010101010101010101010101';
+export const DEFAULT_ENCRYPTION_KEY =
+  "0101010101010101010101010101010101010101010101010101010101010101";
 
 // ============ Wallet Creation ============
 
@@ -70,7 +71,7 @@ export function validateMnemonic(mnemonic: string): boolean {
 export async function createWallet(
   encryptionKey: string = DEFAULT_ENCRYPTION_KEY,
   mnemonic?: string,
-  derivationIndex: number = 0
+  derivationIndex: number = 0,
 ): Promise<WalletInfo> {
   const engine = getEngine();
 
@@ -79,7 +80,7 @@ export async function createWallet(
 
   // Validate mnemonic
   if (!validateMnemonic(walletMnemonic)) {
-    throw new Error('Invalid mnemonic');
+    throw new Error("Invalid mnemonic");
   }
 
   // Create wallet in engine
@@ -87,7 +88,7 @@ export async function createWallet(
     encryptionKey,
     walletMnemonic,
     derivationIndex,
-    undefined // creationBlockNumbers (not needed for local devnet)
+    undefined, // creationBlockNumbers (not needed for local devnet)
   );
 
   // Get Railgun address (0zk...)
@@ -112,10 +113,13 @@ export async function createWallet(
  */
 export async function loadWallet(
   walletId: string,
-  encryptionKey: string = DEFAULT_ENCRYPTION_KEY
+  encryptionKey: string = DEFAULT_ENCRYPTION_KEY,
 ): Promise<RailgunWallet> {
   const engine = getEngine();
-  return (await engine.loadExistingWallet(walletId, encryptionKey)) as RailgunWallet;
+  return (await engine.loadExistingWallet(
+    walletId,
+    encryptionKey,
+  )) as RailgunWallet;
 }
 
 /**
@@ -187,7 +191,7 @@ export function loadWalletInfo(filename: string): WalletInfo {
     throw new Error(`Wallet file not found: ${filepath}`);
   }
 
-  return JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+  return JSON.parse(fs.readFileSync(filepath, "utf-8"));
 }
 
 /**
@@ -210,8 +214,8 @@ export function listWallets(): string[] {
 
   return fs
     .readdirSync(WALLETS_DIR)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => f.replace('.json', ''));
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => f.replace(".json", ""));
 }
 
 // ============ Wallet Recovery ============
@@ -227,7 +231,7 @@ export function listWallets(): string[] {
 export async function getOrCreateWallet(
   name: string,
   encryptionKey: string = DEFAULT_ENCRYPTION_KEY,
-  mnemonic?: string
+  mnemonic?: string,
 ): Promise<{ wallet: RailgunWallet; info: WalletInfo; isNew: boolean }> {
   const engine = getEngine();
 
@@ -240,7 +244,7 @@ export async function getOrCreateWallet(
     try {
       const wallet = (await engine.loadExistingWallet(
         info.id,
-        encryptionKey
+        encryptionKey,
       )) as RailgunWallet;
       return { wallet, info, isNew: false };
     } catch {
@@ -250,7 +254,7 @@ export async function getOrCreateWallet(
         encryptionKey,
         info.mnemonic,
         info.derivationIndex,
-        undefined
+        undefined,
       )) as RailgunWallet;
       return { wallet, info, isNew: false };
     }
@@ -263,7 +267,7 @@ export async function getOrCreateWallet(
 
     // Validate mnemonic
     if (!validateMnemonic(walletMnemonic)) {
-      throw new Error('Invalid mnemonic');
+      throw new Error("Invalid mnemonic");
     }
 
     // Create wallet in engine (wallet is already loaded after creation)
@@ -271,7 +275,7 @@ export async function getOrCreateWallet(
       encryptionKey,
       walletMnemonic,
       0, // derivationIndex
-      undefined // creationBlockNumbers
+      undefined, // creationBlockNumbers
     )) as RailgunWallet;
 
     const info: WalletInfo = {

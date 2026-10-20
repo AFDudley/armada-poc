@@ -1,51 +1,67 @@
 // ABOUTME: 4-card stats banner — Total Committed, Your Allocation, Participants, Time Remaining.
 // ABOUTME: Plus per-hop oversubscription strip below. All data comes in via props.
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { motion } from 'framer-motion'
-import { Clock, DollarSign, UserCheck, Users } from 'lucide-react'
-import { formatArm, formatTimeLeft, formatTimeLeftDetail, formatUsdc } from '../lib/format.js'
-import { CROWDFUND_CONSTANTS, HOP_CONFIGS } from '../lib/constants.js'
-import { estimateAllocation } from '../lib/allocation.js'
-import { Skeleton } from './ui/skeleton.js'
-import { InfoTooltip } from './InfoTooltip.js'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip.js'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { motion } from "framer-motion";
+import { Clock, DollarSign, UserCheck, Users } from "lucide-react";
+import {
+  formatArm,
+  formatTimeLeft,
+  formatTimeLeftDetail,
+  formatUsdc,
+} from "../lib/format.js";
+import { CROWDFUND_CONSTANTS, HOP_CONFIGS } from "../lib/constants.js";
+import { estimateAllocation } from "../lib/allocation.js";
+import { Skeleton } from "./ui/skeleton.js";
+import { InfoTooltip } from "./InfoTooltip.js";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip.js";
 
 const numberFade = {
   initial: { opacity: 0, y: -2 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.15 },
-}
+};
 
 export interface HopStatsData {
-  totalCommitted: bigint
-  cappedCommitted: bigint
-  whitelistCount: number
-  uniqueCommitters: number
+  totalCommitted: bigint;
+  cappedCommitted: bigint;
+  whitelistCount: number;
+  uniqueCommitters: number;
 }
 
 export interface UserAllocation {
   /** Connected user's est. ARM allocation if finalized now (18 dec). */
-  estArmAllocation: bigint
+  estArmAllocation: bigint;
   /** Number of distinct hops the user has positions in. */
-  hopCount: number
+  hopCount: number;
 }
 
 export interface StatsBarProps {
-  hopStats: HopStatsData[]
-  totalCommitted: bigint
-  cappedDemand: bigint
-  saleSize: bigint
-  participantCount: number
-  phase: number
-  armLoaded: boolean
-  windowEnd: number
-  blockTimestamp: number
+  hopStats: HopStatsData[];
+  totalCommitted: bigint;
+  cappedDemand: bigint;
+  saleSize: bigint;
+  participantCount: number;
+  phase: number;
+  armLoaded: boolean;
+  windowEnd: number;
+  blockTimestamp: number;
   /** Connected user's projected allocation. Undefined when no wallet is
    *  connected — the card falls back to a "Connect wallet" placeholder. */
-  userAllocation?: UserAllocation
+  userAllocation?: UserAllocation;
   /** When true with no hop data yet, renders skeleton chrome. */
-  isLoading?: boolean
+  isLoading?: boolean;
 }
 
 /** Card icon recipe — mirrors TableView's hop avatar so card icons and
@@ -58,18 +74,18 @@ function cardIconStyle(token: string, iconToken?: string): CSSProperties {
     border: `2px solid var(${token})`,
     boxShadow: `0 0 4px color-mix(in oklch, var(${token}) 22%, transparent)`,
     color: `var(${iconToken ?? token})`,
-  }
+  };
 }
 
 /** "May 28, 2025" from a unix timestamp (seconds). Returns null at 0. */
 function formatEndDate(unixSeconds: number): string | null {
-  if (unixSeconds <= 0) return null
-  const d = new Date(unixSeconds * 1000)
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  if (unixSeconds <= 0) return null;
+  const d = new Date(unixSeconds * 1000);
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 /** Phase-aware time card content. Shows live countdown in commit window;
@@ -82,27 +98,39 @@ function timeRemainingDisplay(
   windowEnd: number,
   localTime: number,
 ): { primary: string; sub: string | null; exact: string | null } {
-  if (phase === 2) return { primary: 'Cancelled', sub: 'Refunds available', exact: null }
-  if (phase === 1) return { primary: 'Sale closed', sub: 'Claim window open', exact: null }
-  if (!armLoaded) return { primary: 'Not yet open', sub: null, exact: null }
-  if (windowEnd === 0) return { primary: '—', sub: null, exact: null }
-  const remaining = Math.max(0, windowEnd - localTime)
-  const endLabel = formatEndDate(windowEnd)
+  if (phase === 2)
+    return { primary: "Cancelled", sub: "Refunds available", exact: null };
+  if (phase === 1)
+    return { primary: "Sale closed", sub: "Claim window open", exact: null };
+  if (!armLoaded) return { primary: "Not yet open", sub: null, exact: null };
+  if (windowEnd === 0) return { primary: "—", sub: null, exact: null };
+  const remaining = Math.max(0, windowEnd - localTime);
+  const endLabel = formatEndDate(windowEnd);
   if (remaining === 0) {
-    return { primary: 'Closed', sub: endLabel ? `ended ${endLabel}` : null, exact: null }
+    return {
+      primary: "Closed",
+      sub: endLabel ? `ended ${endLabel}` : null,
+      exact: null,
+    };
   }
   return {
     primary: formatTimeLeft(remaining),
     sub: endLabel ? `ends ${endLabel}` : null,
     exact: formatTimeLeftDetail(remaining, windowEnd) || null,
-  }
+  };
 }
 
 /** Countdown value with an optional hover tooltip revealing the exact remaining
  *  time and local end timestamp. Falls back to a plain span when there's no
  *  exact detail (terminal states). */
-function TimeRemainingValue({ label, exact }: { label: string; exact: string | null }) {
-  if (!exact) return <span>{label}</span>
+function TimeRemainingValue({
+  label,
+  exact,
+}: {
+  label: string;
+  exact: string | null;
+}) {
+  if (!exact) return <span>{label}</span>;
   return (
     <TooltipProvider delayDuration={150}>
       <Tooltip>
@@ -116,7 +144,7 @@ function TimeRemainingValue({ label, exact }: { label: string; exact: string | n
         <TooltipContent>{exact}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  )
+  );
 }
 
 /** One stat card (icon + label + primary value + subline). */
@@ -129,13 +157,13 @@ function StatCard({
   sub,
   primaryAnimateKey,
 }: {
-  icon: ReactNode
-  iconStyle: CSSProperties
-  label: ReactNode
-  primary: ReactNode
-  primaryClassName?: string
-  sub?: ReactNode
-  primaryAnimateKey?: string | number
+  icon: ReactNode;
+  iconStyle: CSSProperties;
+  label: ReactNode;
+  primary: ReactNode;
+  primaryClassName?: string;
+  sub?: ReactNode;
+  primaryAnimateKey?: string | number;
 }) {
   return (
     <div className="rounded-xl border border-border/60 bg-card/80 p-4 shadow-elevated backdrop-blur-sm">
@@ -150,25 +178,21 @@ function StatCard({
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-muted-foreground">
-            {label}
-          </div>
+          <div className="text-muted-foreground">{label}</div>
           <motion.div
             key={primaryAnimateKey ?? String(primary)}
             {...numberFade}
-            className={`mt-0.5 truncate ${primaryClassName ?? 'text-foreground'}`}
+            className={`mt-0.5 truncate ${primaryClassName ?? "text-foreground"}`}
           >
             {primary}
           </motion.div>
           {sub && (
-            <div className="mt-0.5 truncate text-muted-foreground">
-              {sub}
-            </div>
+            <div className="mt-0.5 truncate text-muted-foreground">{sub}</div>
           )}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /** Per-hop oversubscription strip below the cards.
@@ -177,66 +201,66 @@ function PerHopStrip({
   hopStats,
   saleSize,
 }: {
-  hopStats: HopStatsData[]
-  saleSize: bigint
+  hopStats: HopStatsData[];
+  saleSize: bigint;
 }) {
   const effectiveSaleSize =
-    saleSize > 0n ? saleSize : CROWDFUND_CONSTANTS.BASE_SALE
+    saleSize > 0n ? saleSize : CROWDFUND_CONSTANTS.BASE_SALE;
   // Hop color tokens defined in theme.css. Bar fills use the same
   // primary→primary/65 gradient recipe as TableView's invites bar, swapping
   // the hop hue in for visual consistency across the surface.
   const palette: Array<{ text: string; bar: string; track: string }> = [
     {
-      text: 'text-hop-0',
-      bar: 'bg-gradient-to-r from-hop-0 via-hop-0/90 to-hop-0/65',
-      track: 'bg-hop-0/15',
+      text: "text-hop-0",
+      bar: "bg-gradient-to-r from-hop-0 via-hop-0/90 to-hop-0/65",
+      track: "bg-hop-0/15",
     },
     {
-      text: 'text-hop-1',
-      bar: 'bg-gradient-to-r from-hop-1 via-hop-1/90 to-hop-1/65',
-      track: 'bg-hop-1/15',
+      text: "text-hop-1",
+      bar: "bg-gradient-to-r from-hop-1 via-hop-1/90 to-hop-1/65",
+      track: "bg-hop-1/15",
     },
     {
-      text: 'text-hop-2',
-      bar: 'bg-gradient-to-r from-hop-2 via-hop-2/90 to-hop-2/65',
-      track: 'bg-hop-2/15',
-},
-]
+      text: "text-hop-2",
+      bar: "bg-gradient-to-r from-hop-2 via-hop-2/90 to-hop-2/65",
+      track: "bg-hop-2/15",
+    },
+  ];
 
-return (
-<div className="grid grid-cols-1 gap-x-6 gap-y-1.5 px-1 sm:grid-cols-3">
-{hopStats.map((stat, hop) => {
-const cfg = HOP_CONFIGS[hop]
-const ceilingBps = cfg?.ceilingBps ?? 0
-const ceiling =
-ceilingBps > 0
-? (effectiveSaleSize * BigInt(ceilingBps)) / 10_000n
-: 0n
-const pct =
-ceiling > 0n
-? Math.min(999, Number((stat.cappedCommitted * 100n) / ceiling))
-: 0
-const visualWidth = Math.min(100, pct)
-const colors = palette[hop] ?? palette[0]
-return (
-<div key={hop} className="flex items-center gap-2">
-<div className="w-10 text-muted-foreground">
-Hop {hop}
-</div>
-<div className={`h-1 flex-1 overflow-hidden rounded-full ${colors.track}`}>
-<div
-className={`h-full rounded-full transition-[width] duration-300 ${colors.bar}`}
-style={{ width: `${visualWidth}%` }}
-/>
-</div>
-<div className="w-8 text-right text-muted-foreground">
-{ceilingBps > 0 ? `${pct}%` :'—'}
+  return (
+    <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 px-1 sm:grid-cols-3">
+      {hopStats.map((stat, hop) => {
+        const cfg = HOP_CONFIGS[hop];
+        const ceilingBps = cfg?.ceilingBps ?? 0;
+        const ceiling =
+          ceilingBps > 0
+            ? (effectiveSaleSize * BigInt(ceilingBps)) / 10_000n
+            : 0n;
+        const pct =
+          ceiling > 0n
+            ? Math.min(999, Number((stat.cappedCommitted * 100n) / ceiling))
+            : 0;
+        const visualWidth = Math.min(100, pct);
+        const colors = palette[hop] ?? palette[0];
+        return (
+          <div key={hop} className="flex items-center gap-2">
+            <div className="w-10 text-muted-foreground">Hop {hop}</div>
+            <div
+              className={`h-1 flex-1 overflow-hidden rounded-full ${colors.track}`}
+            >
+              <div
+                className={`h-full rounded-full transition-[width] duration-300 ${colors.bar}`}
+                style={{ width: `${visualWidth}%` }}
+              />
+            </div>
+            <div className="w-8 text-right text-muted-foreground">
+              {ceilingBps > 0 ? `${pct}%` : "—"}
             </div>
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 function StatsBarSkeleton() {
@@ -267,7 +291,7 @@ function StatsBarSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 export function StatsBar(props: StatsBarProps) {
@@ -283,46 +307,46 @@ export function StatsBar(props: StatsBarProps) {
     blockTimestamp,
     userAllocation,
     isLoading,
-  } = props
+  } = props;
 
   if (isLoading && hopStats.length === 0) {
-    return <StatsBarSkeleton />
+    return <StatsBarSkeleton />;
   }
 
   // Smooth countdown — increment locally between block-timestamp polls so
   // the time card ticks every second without thrashing the contract.
-  const [localTime, setLocalTime] = useState(blockTimestamp)
-  const baseTimeRef = useRef(blockTimestamp)
-  const wallStartRef = useRef(Date.now())
+  const [localTime, setLocalTime] = useState(blockTimestamp);
+  const baseTimeRef = useRef(blockTimestamp);
+  const wallStartRef = useRef(Date.now());
 
   useEffect(() => {
-    baseTimeRef.current = blockTimestamp
-    wallStartRef.current = Date.now()
-    setLocalTime(blockTimestamp)
-  }, [blockTimestamp])
+    baseTimeRef.current = blockTimestamp;
+    wallStartRef.current = Date.now();
+    setLocalTime(blockTimestamp);
+  }, [blockTimestamp]);
 
   useEffect(() => {
     const id = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - wallStartRef.current) / 1000)
-      setLocalTime(baseTimeRef.current + elapsed)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [])
+      const elapsed = Math.floor((Date.now() - wallStartRef.current) / 1000);
+      setLocalTime(baseTimeRef.current + elapsed);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  const estimate = estimateAllocation(hopStats, cappedDemand, saleSize)
-  const committedDiffers = totalCommitted !== cappedDemand
+  const estimate = estimateAllocation(hopStats, cappedDemand, saleSize);
+  const committedDiffers = totalCommitted !== cappedDemand;
   const belowMin =
-    estimate.totalAllocUsdc < CROWDFUND_CONSTANTS.MIN_SALE && cappedDemand > 0n
+    estimate.totalAllocUsdc < CROWDFUND_CONSTANTS.MIN_SALE && cappedDemand > 0n;
 
   // Total Committed card — progress bar is "capped demand vs sale size".
   // Pre-finalize, sale size is 0; estimate.effectiveSaleSize gives the
   // BASE/MAX projection used elsewhere in the UI.
-  const denomForBar = estimate.effectiveSaleSize
+  const denomForBar = estimate.effectiveSaleSize;
   const fillPct =
     denomForBar > 0n
       ? Math.min(999, Number((cappedDemand * 100n) / denomForBar))
-      : 0
-  const visualFill = Math.min(100, fillPct)
+      : 0;
+  const visualFill = Math.min(100, fillPct);
 
   // Total whitelisted addresses — sum of whitelist slots across hops.
   // Note: this counts hop-positions, not unique addresses (an address on
@@ -331,18 +355,20 @@ export function StatsBar(props: StatsBarProps) {
   const totalWhitelisted = hopStats.reduce(
     (sum, s) => sum + s.whitelistCount,
     0,
-  )
+  );
 
-  const time = timeRemainingDisplay(phase, armLoaded, windowEnd, localTime)
+  const time = timeRemainingDisplay(phase, armLoaded, windowEnd, localTime);
 
   // Card 2 — connected: est. ARM + hop count; disconnected: muted prompt.
   const yourAllocPrimary = userAllocation
     ? formatArm(userAllocation.estArmAllocation)
-    : 'Connect wallet'
+    : "Connect wallet";
   const yourAllocSub = userAllocation
-    ? `across ${userAllocation.hopCount} hop${userAllocation.hopCount === 1 ? '' : 's'}`
-    : 'to estimate your allocation'
-  const yourAllocClass = userAllocation ? 'text-foreground' : 'text-muted-foreground'
+    ? `across ${userAllocation.hopCount} hop${userAllocation.hopCount === 1 ? "" : "s"}`
+    : "to estimate your allocation";
+  const yourAllocClass = userAllocation
+    ? "text-foreground"
+    : "text-muted-foreground";
 
   return (
     <div className="space-y-3">
@@ -352,7 +378,7 @@ export function StatsBar(props: StatsBarProps) {
           <div className="flex items-center gap-3">
             <div
               className="flex size-10 shrink-0 items-center justify-center rounded-full"
-              style={cardIconStyle('--hop-root', '--hop-root-icon')}
+              style={cardIconStyle("--hop-root", "--hop-root-icon")}
             >
               <DollarSign className="size-5" />
             </div>
@@ -388,16 +414,14 @@ export function StatsBar(props: StatsBarProps) {
                 style={{ width: `${visualFill}%` }}
               />
             </div>
-            <div className="text-muted-foreground">
-              {fillPct}%
-            </div>
+            <div className="text-muted-foreground">{fillPct}%</div>
           </div>
         </div>
 
         {/* Card 2 — Your Allocation */}
         <StatCard
           icon={<UserCheck className="size-5" />}
-          iconStyle={cardIconStyle('--hop-0', '--hop-0-icon')}
+          iconStyle={cardIconStyle("--hop-0", "--hop-0-icon")}
           label="Your Allocation"
           primary={yourAllocPrimary}
           primaryClassName={`${yourAllocClass}`}
@@ -408,13 +432,9 @@ export function StatsBar(props: StatsBarProps) {
         {/* Card 3 — Participants */}
         <StatCard
           icon={<Users className="size-5" />}
-          iconStyle={cardIconStyle('--primary')}
+          iconStyle={cardIconStyle("--primary")}
           label="Participants"
-          primary={
-            <span className="">
-              {participantCount}
-            </span>
-          }
+          primary={<span className="">{participantCount}</span>}
           sub={`of ${totalWhitelisted} addresses`}
           primaryAnimateKey={participantCount}
         />
@@ -422,9 +442,11 @@ export function StatsBar(props: StatsBarProps) {
         {/* Card 4 — Time Remaining */}
         <StatCard
           icon={<Clock className="size-5" />}
-          iconStyle={cardIconStyle('--hop-2')}
+          iconStyle={cardIconStyle("--hop-2")}
           label="Time Remaining"
-          primary={<TimeRemainingValue label={time.primary} exact={time.exact} />}
+          primary={
+            <TimeRemainingValue label={time.primary} exact={time.exact} />
+          }
           sub={time.sub}
           primaryAnimateKey={time.primary}
         />
@@ -444,5 +466,5 @@ export function StatsBar(props: StatsBarProps) {
         </div>
       )}
     </div>
-  )
+  );
 }

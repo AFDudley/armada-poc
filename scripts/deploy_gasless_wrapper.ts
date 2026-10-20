@@ -46,7 +46,11 @@ import {
   getPrivacyPoolDeploymentFile,
   type ChainRole,
 } from "../config/networks";
-import { createNonceManager, loadDeployment, saveDeployment } from "./deploy-utils";
+import {
+  createNonceManager,
+  loadDeployment,
+  saveDeployment,
+} from "./deploy-utils";
 
 async function deployForRole(role: ChainRole): Promise<void> {
   const [deployer] = await ethers.getSigners();
@@ -79,8 +83,12 @@ async function deployForRole(role: ChainRole): Promise<void> {
     );
   }
 
-  const contractName = isHub ? "GaslessShieldWrapper" : "GaslessShieldWrapperClient";
-  const manifestKey = isHub ? "gaslessShieldWrapper" : "gaslessShieldWrapperClient";
+  const contractName = isHub
+    ? "GaslessShieldWrapper"
+    : "GaslessShieldWrapperClient";
+  const manifestKey = isHub
+    ? "gaslessShieldWrapper"
+    : "gaslessShieldWrapperClient";
 
   console.log(`=== Deploying ${contractName} ===`);
   console.log(`Deployer: ${deployer.address}`);
@@ -100,7 +108,9 @@ async function deployForRole(role: ChainRole): Promise<void> {
   if (existing && !forceRedeploy) {
     const code = await ethers.provider.getCode(existing);
     if (code !== "0x") {
-      console.log(`${contractName} already deployed at ${existing} (manifest + on-chain code).`);
+      console.log(
+        `${contractName} already deployed at ${existing} (manifest + on-chain code).`,
+      );
       console.log(`Skipping. Set FORCE_REDEPLOY=1 to deploy a fresh wrapper.`);
       return;
     }
@@ -116,11 +126,7 @@ async function deployForRole(role: ChainRole): Promise<void> {
   }
 
   const Wrapper = await ethers.getContractFactory(contractName);
-  const wrapper = await Wrapper.deploy(
-    usdcAddress,
-    poolAddress,
-    nm.override(),
-  );
+  const wrapper = await Wrapper.deploy(usdcAddress, poolAddress, nm.override());
   await wrapper.deploymentTransaction()!.wait();
   const wrapperAddress = await wrapper.getAddress();
   console.log(`${contractName}: ${wrapperAddress}`);
@@ -149,7 +155,9 @@ async function main() {
   if (!role) {
     console.error(`Unknown chain ID: ${chainId}`);
     console.error(
-      `Configured chains: ${getAllChains().map((c) => `${c.role}=${c.chainId}`).join(", ")}`,
+      `Configured chains: ${getAllChains()
+        .map((c) => `${c.role}=${c.chainId}`)
+        .join(", ")}`,
     );
     process.exit(1);
   }

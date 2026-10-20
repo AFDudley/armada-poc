@@ -2,54 +2,54 @@
 // ABOUTME: Replaces the Steps progress header after the Before you start intro.
 // ABOUTME: `variant="overlay"` pins close without a header row; `titleAlign="start"` left-aligns the title.
 
-import type { ReactNode } from 'react'
-import { ArrowLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import styles from './FlowChrome.module.css'
+import type { ReactNode } from "react";
+import { ArrowLeftIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import styles from "./FlowChrome.module.css";
 
-const ICON_PX = 16
+const ICON_PX = 16;
 
 export interface FlowChromeProps {
   /** Screen title between the controls. Omit for close-only chrome. */
-  title?: ReactNode
+  title?: ReactNode;
   /** Optional id for the title heading (aria / form labels). */
-  titleId?: string
+  titleId?: string;
   /** Title alignment in the bar. Default centers; `start` left-aligns (e.g. refund claim). */
-  titleAlign?: 'center' | 'start'
-  onBack?: () => void
-  onClose?: () => void
+  titleAlign?: "center" | "start";
+  onBack?: () => void;
+  onClose?: () => void;
   /** When false, keeps layout balance with an empty left slot (unless titleAlign is start). */
-  showBack?: boolean
-  backAriaLabel?: string
-  closeAriaLabel?: string
+  showBack?: boolean;
+  backAriaLabel?: string;
+  closeAriaLabel?: string;
   /**
    * `bar` — in-flow header row (default).
    * `overlay` — absolute corner controls; use when the title lives in the body.
    */
-  variant?: 'bar' | 'overlay'
+  variant?: "bar" | "overlay";
 }
 
 export function FlowChrome({
   title,
   titleId,
-  titleAlign = 'center',
+  titleAlign = "center",
   onBack,
   onClose,
   showBack = true,
-  backAriaLabel = 'Back',
-  closeAriaLabel = 'Close participate flow',
-  variant = 'bar',
+  backAriaLabel = "Back",
+  closeAriaLabel = "Close participate flow",
+  variant = "bar",
 }: FlowChromeProps) {
-  const showBackBtn = showBack && !!onBack
-  const hasTitle = title != null && title !== ''
-  const titleStart = titleAlign === 'start'
+  const showBackBtn = showBack && !!onBack;
+  const hasTitle = title != null && title !== "";
+  const titleStart = titleAlign === "start";
 
-  if (variant === 'overlay') {
+  if (variant === "overlay") {
     return (
       <div className={styles.overlay}>
         {showBackBtn ? (
           <button
             type="button"
-            className={[styles.iconBtn, styles.overlayBack].join(' ')}
+            className={[styles.iconBtn, styles.overlayBack].join(" ")}
             onClick={onBack}
             aria-label={backAriaLabel}
           >
@@ -59,7 +59,7 @@ export function FlowChrome({
         {onClose ? (
           <button
             type="button"
-            className={[styles.iconBtn, styles.overlayClose].join(' ')}
+            className={[styles.iconBtn, styles.overlayClose].join(" ")}
             onClick={onClose}
             aria-label={closeAriaLabel}
           >
@@ -67,7 +67,7 @@ export function FlowChrome({
           </button>
         ) : null}
       </div>
-    )
+    );
   }
 
   return (
@@ -78,7 +78,7 @@ export function FlowChrome({
         titleStart && !showBackBtn ? styles.barTitleStart : undefined,
       ]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
     >
       {showBackBtn ? (
         <button
@@ -97,7 +97,7 @@ export function FlowChrome({
           id={titleId}
           className={[styles.title, titleStart ? styles.titleStart : undefined]
             .filter(Boolean)
-            .join(' ')}
+            .join(" ")}
         >
           {title}
         </h2>
@@ -117,5 +117,5 @@ export function FlowChrome({
         <span className={styles.spacer} aria-hidden />
       )}
     </div>
-  )
+  );
 }

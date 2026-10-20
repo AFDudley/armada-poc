@@ -16,7 +16,12 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { armadaRelayerSettings, allChains, hubChain, clientChains } from "./config";
+import {
+  armadaRelayerSettings,
+  allChains,
+  hubChain,
+  clientChains,
+} from "./config";
 import { WalletManager } from "./modules/wallet-manager";
 import { FeeCalculator } from "./modules/fee-calculator";
 import { PrivacyRelay } from "./modules/privacy-relay";
@@ -28,7 +33,11 @@ import { CctpDeliveryStore } from "./modules/cctp-delivery-store";
 import { CCTPRelayModule } from "./modules/cctp-relay";
 import { IrisRelayModule } from "./modules/iris-relay";
 import { deriveBroadcasterIdentity } from "./modules/broadcaster-fee-verifier";
-import type { PrivacyPoolDeployment, CCTPDeployment, RelayerHealth } from "./types";
+import type {
+  PrivacyPoolDeployment,
+  CCTPDeployment,
+  RelayerHealth,
+} from "./types";
 import { getNetworkConfig } from "../config/networks";
 import { selectedBackend } from "../lib/sdk/shielded-identity";
 import { installBisectingGetLogs } from "./lib/rpc-bisecting";
@@ -122,7 +131,9 @@ function loadClientAddresses(): ClientContractAddresses[] {
   // deployment-script convention: `privacy-pool-{prefix}{-env}.json`.
   for (const chain of clientChains) {
     // chain.privacyPoolDeploymentFile already encodes the per-env suffix.
-    const ppDeployment = loadJson<PrivacyPoolDeployment>(chain.privacyPoolDeploymentFile);
+    const ppDeployment = loadJson<PrivacyPoolDeployment>(
+      chain.privacyPoolDeploymentFile,
+    );
     if (!ppDeployment) {
       console.warn(
         `[armada] ${chain.privacyPoolDeploymentFile} not found — client chain ${chain.chainId} (${chain.name}) will have no allowed targets. Phase B2 gasless-shield on this chain will reject as INVALID_TARGET.`,
@@ -138,13 +149,16 @@ function loadClientAddresses(): ClientContractAddresses[] {
     out.push({
       chainId: chain.chainId,
       privacyPoolClient: ppDeployment.contracts.privacyPoolClient,
-      gaslessShieldWrapperClient: ppDeployment.contracts.gaslessShieldWrapperClient,
+      gaslessShieldWrapperClient:
+        ppDeployment.contracts.gaslessShieldWrapperClient,
     });
     // Tell the operator unambiguously whether B2 wrappers are wired up.
     const wrapperStatus = ppDeployment.contracts.gaslessShieldWrapperClient
       ? ppDeployment.contracts.gaslessShieldWrapperClient
       : "(not deployed — gaslessCrossChainShield will reject as INVALID_TARGET)";
-    console.log(`  chain=${chain.chainId} (${chain.name}) wrapper=${wrapperStatus}`);
+    console.log(
+      `  chain=${chain.chainId} (${chain.name}) wrapper=${wrapperStatus}`,
+    );
   }
 
   return out;
@@ -208,7 +222,8 @@ async function main() {
   // request, and MUST precede PrivacyRelay so broadcaster-fee verification has a viewing key.
   console.log("[armada] Initializing relayer Railgun wallet...");
   const railgunWallet = new RelayerRailgunWallet();
-  const { walletId: railgunWalletId, railgunAddress } = await railgunWallet.initialize();
+  const { walletId: railgunWalletId, railgunAddress } =
+    await railgunWallet.initialize();
   console.log(`  Wallet ID: ${railgunWalletId.slice(0, 16)}...`);
   console.log(`  Broadcaster address: ${railgunAddress}`);
   console.log();
@@ -223,11 +238,21 @@ async function main() {
     feeCalculators.set(chain.chainId, calc);
     const initial = await calc.generateFeeSchedule();
     console.log(`  chain=${chain.chainId} (${chain.name})`);
-    console.log(`    shield:            ${FeeCalculator.formatUsdcFee(initial.fees.shield)}`);
-    console.log(`    shieldXchain:      ${FeeCalculator.formatUsdcFee(initial.fees.shieldXchain)}`);
-    console.log(`    transfer/unshield: ${FeeCalculator.formatUsdcFee(initial.fees.transfer)} / ${FeeCalculator.formatUsdcFee(initial.fees.unshield)}`);
-    console.log(`    crossContract:     ${FeeCalculator.formatUsdcFee(initial.fees.crossContract)}`);
-    console.log(`    crossChainUnshield:${FeeCalculator.formatUsdcFee(initial.fees.crossChainUnshield)}`);
+    console.log(
+      `    shield:            ${FeeCalculator.formatUsdcFee(initial.fees.shield)}`,
+    );
+    console.log(
+      `    shieldXchain:      ${FeeCalculator.formatUsdcFee(initial.fees.shieldXchain)}`,
+    );
+    console.log(
+      `    transfer/unshield: ${FeeCalculator.formatUsdcFee(initial.fees.transfer)} / ${FeeCalculator.formatUsdcFee(initial.fees.unshield)}`,
+    );
+    console.log(
+      `    crossContract:     ${FeeCalculator.formatUsdcFee(initial.fees.crossContract)}`,
+    );
+    console.log(
+      `    crossChainUnshield:${FeeCalculator.formatUsdcFee(initial.fees.crossChainUnshield)}`,
+    );
     console.log(`    cacheId:           ${initial.cacheId}`);
   }
   console.log();
@@ -237,7 +262,10 @@ async function main() {
   //   client: GaslessShieldWrapperClient (when deployed)
   // Phase A selectors are hub-only today, so clients only need the wrapper allow-listed.
   const allowedTargetsByChain = new Map<number, string[]>();
-  const hubTargets: string[] = [hubAddresses.privacyPool, hubAddresses.armadaYieldAdapter];
+  const hubTargets: string[] = [
+    hubAddresses.privacyPool,
+    hubAddresses.armadaYieldAdapter,
+  ];
   if (hubAddresses.gaslessShieldWrapper) {
     hubTargets.push(hubAddresses.gaslessShieldWrapper);
   }
@@ -313,7 +341,11 @@ async function main() {
 
   if (armadaRelayerSettings.cctpReal) {
     console.log("[armada] Initializing REAL CCTP relay (Iris attestation)...");
-    const irisRelay = new IrisRelayModule(nonceCoordinator, counters, cctpDeliveryStore);
+    const irisRelay = new IrisRelayModule(
+      nonceCoordinator,
+      counters,
+      cctpDeliveryStore,
+    );
     const initialized = await irisRelay.initialize();
     if (!initialized) {
       console.warn("[armada] Some chains failed to initialize for Iris relay.");
@@ -371,21 +403,32 @@ async function main() {
   console.log();
   console.log("=".repeat(60));
   console.log("  ARMADA RELAYER RUNNING");
-  console.log(`  Mode: ${armadaRelayerSettings.cctpReal ? "REAL CCTP (Iris)" : "MOCK CCTP"}`);
+  console.log(
+    `  Mode: ${armadaRelayerSettings.cctpReal ? "REAL CCTP (Iris)" : "MOCK CCTP"}`,
+  );
   console.log("=".repeat(60));
   console.log();
   console.log("Services:");
-  console.log(`  Privacy Relay:  http://localhost:${armadaRelayerSettings.port}/relay`);
-  console.log(`  Fee API:        http://localhost:${armadaRelayerSettings.port}/fees`);
-  console.log(`  CCTP Relay:     Polling ${cctpRelayModule.chainCount} chain(s)`);
+  console.log(
+    `  Privacy Relay:  http://localhost:${armadaRelayerSettings.port}/relay`,
+  );
+  console.log(
+    `  Fee API:        http://localhost:${armadaRelayerSettings.port}/fees`,
+  );
+  console.log(
+    `  CCTP Relay:     Polling ${cctpRelayModule.chainCount} chain(s)`,
+  );
   console.log();
 
   // Periodic cleanup (every 5 minutes): in-memory calldata dedup cache + durable store TTLs.
-  const cleanupInterval = setInterval(() => {
-    walletManager.cleanDedupCache();
-    void idempotencyStore.sweep();
-    void cctpDeliveryStore.sweep();
-  }, 5 * 60 * 1000);
+  const cleanupInterval = setInterval(
+    () => {
+      walletManager.cleanDedupCache();
+      void idempotencyStore.sweep();
+      void cctpDeliveryStore.sweep();
+    },
+    5 * 60 * 1000,
+  );
 
   // Handle graceful shutdown. CRITICAL: await `cctpRelayModule.stop()` BEFORE process.exit so
   // the in-flight poll tick completes and its cursor write lands on disk. Previously this was

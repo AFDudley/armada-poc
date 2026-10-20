@@ -43,7 +43,9 @@ interface SubmitResult {
  */
 export class WalletLockedError extends Error {
   constructor(public readonly chainId: number) {
-    super(`Wallet is locked on chain ${chainId} — another transaction is in progress`);
+    super(
+      `Wallet is locked on chain ${chainId} — another transaction is in progress`,
+    );
     this.name = "WalletLockedError";
   }
 }
@@ -65,8 +67,10 @@ export class WalletManager {
    * (otherwise replaying a hub `transact()` shape on a client would be silently rejected as a
    * dup, even though it's a legitimately separate tx on a separate chain).
    */
-  private txCache: Map<string, { txHash: string; chainId: number; timestamp: number }> =
-    new Map();
+  private txCache: Map<
+    string,
+    { txHash: string; chainId: number; timestamp: number }
+  > = new Map();
 
   /** Dedup cache TTL in ms (10 minutes) */
   private readonly DEDUP_TTL_MS = 10 * 60 * 1000;
@@ -110,10 +114,14 @@ export class WalletManager {
         const balance = await state.provider.getBalance(state.wallet.address);
         const ethBalance = ethers.formatEther(balance);
 
-        console.log(`  chain=${chainId}  address=${state.wallet.address}  nonce=${nonce}  eth=${ethBalance}  head=${blockNumber}`);
+        console.log(
+          `  chain=${chainId}  address=${state.wallet.address}  nonce=${nonce}  eth=${ethBalance}  head=${blockNumber}`,
+        );
 
         if (parseFloat(ethBalance) < 0.1) {
-          console.warn(`[wallet-manager] WARNING: Low ETH balance on chain ${chainId} (${ethBalance})`);
+          console.warn(
+            `[wallet-manager] WARNING: Low ETH balance on chain ${chainId} (${ethBalance})`,
+          );
         }
       }),
     );
@@ -220,7 +228,9 @@ export class WalletManager {
       }
 
       console.log(`  To: ${to}`);
-      console.log(`  Data: ${data.slice(0, 10)}... (${(data.length - 2) / 2} bytes)`);
+      console.log(
+        `  Data: ${data.slice(0, 10)}... (${(data.length - 2) / 2} bytes)`,
+      );
 
       // Allocate the nonce + broadcast through the shared coordinator. It seeds from
       // `getTransactionCount('pending')` once and tracks locally thereafter, serialising the
@@ -246,12 +256,18 @@ export class WalletManager {
         },
       );
 
-      console.log(`[wallet-manager] Tx submitted (chain=${chainId}): ${tx.hash}`);
+      console.log(
+        `[wallet-manager] Tx submitted (chain=${chainId}): ${tx.hash}`,
+      );
 
       // Cache for dedup at broadcast — a future identical request hits the cache instead of
       // re-broadcasting with a fresh nonce. The mempool already has the tx; we don't need
       // confirmation to know it's "ours".
-      this.txCache.set(cacheKey, { txHash: tx.hash, chainId, timestamp: Date.now() });
+      this.txCache.set(cacheKey, {
+        txHash: tx.hash,
+        chainId,
+        timestamp: Date.now(),
+      });
 
       // Track the receipt in the background for operator-side revert logging. The HTTP response
       // doesn't wait on this — the frontend polls /status/:txHash, which observes the receipt
@@ -272,11 +288,15 @@ export class WalletManager {
       )
         .then((receipt) => {
           if (!receipt) {
-            console.warn(`[wallet-manager] Tx ${tx.hash} confirmed without receipt`);
+            console.warn(
+              `[wallet-manager] Tx ${tx.hash} confirmed without receipt`,
+            );
             return;
           }
           if (receipt.status === 0) {
-            console.error(`[wallet-manager] Tx reverted (chain=${chainId}): ${tx.hash}`);
+            console.error(
+              `[wallet-manager] Tx reverted (chain=${chainId}): ${tx.hash}`,
+            );
             // Surface on /health — a climbing revert count is the visible signal of the
             // estimateGas-passes-then-front-run griefing race (a user spends the nullifier before
             // our relay lands, so our tx reverts and we eat the gas). Can't prevent the race here,
@@ -345,7 +365,11 @@ export class WalletManager {
   /**
    * Estimate gas for a transaction on the specified chain.
    */
-  async estimateGas(chainId: number, to: string, data: string): Promise<bigint> {
+  async estimateGas(
+    chainId: number,
+    to: string,
+    data: string,
+  ): Promise<bigint> {
     const state = this.chains.get(chainId);
     if (!state) {
       throw new Error(`WalletManager: chain ${chainId} is not configured`);

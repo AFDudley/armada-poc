@@ -5,8 +5,7 @@ pragma solidity ^0.8.17;
 
 // Order of the BN254 scalar field. Every field-valued public input must be
 // strictly smaller than this value.
-uint256 constant SNARK_SCALAR_FIELD =
-    21888242871839275222246405745257275088548364400416034343698204186575808495617;
+uint256 constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
 // Escape hatch for gas estimation: when `tx.origin` equals this address,
 // proof verification reports success so relayers can estimate fees without

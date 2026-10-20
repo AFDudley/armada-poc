@@ -89,3 +89,6 @@ Thumbs.db
 
 # Local chain data
 nodes/
+
+# Agent scratch space (throwaway analysis, scratch worktrees, TMPDIR)
+.scratch/

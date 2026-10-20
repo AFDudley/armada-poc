@@ -9,30 +9,48 @@ import "../contracts/governance/ArmadaWindDown.sol";
 /// @dev Mock contracts for WindDown dependencies
 contract MockTokenWD {
     bool public transferable;
-    function setTransferable(bool _t) external { transferable = _t; }
+
+    function setTransferable(bool _t) external {
+        transferable = _t;
+    }
 }
 
 contract MockGovernorWD {
     bool public windDownActive;
-    function setWindDownActive() external { windDownActive = true; }
+
+    function setWindDownActive() external {
+        windDownActive = true;
+    }
 }
 
 contract MockPauseWD {
     bool public windDownActive;
-    function setWindDownActive() external { windDownActive = true; }
+
+    function setWindDownActive() external {
+        windDownActive = true;
+    }
 }
 
 contract MockRevenueWD {
     uint256 public recognizedRevenueUsd;
     bool public frozen;
-    function setRevenue(uint256 r) external { recognizedRevenueUsd = r; }
-    function freeze() external { frozen = true; }
+
+    function setRevenue(uint256 r) external {
+        recognizedRevenueUsd = r;
+    }
+
+    function freeze() external {
+        frozen = true;
+    }
     function syncStablecoinRevenue() external {} // no-op: invariant tests don't model sync
 }
 
 contract MockRevenueLockWD {
     bool public frozenAtWindDown;
-    function freezeAtWindDown() external { frozenAtWindDown = true; }
+
+    function freezeAtWindDown() external {
+        frozenAtWindDown = true;
+    }
 }
 
 contract MockTreasuryWD {

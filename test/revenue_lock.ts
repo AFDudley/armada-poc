@@ -70,26 +70,38 @@ describe("RevenueLock", function () {
   }
 
   async function deployAll() {
-    [deployer, beneficiaryA, beneficiaryB, beneficiaryC, delegateeX, delegateeY, nonBeneficiary] =
-      await ethers.getSigners();
+    [
+      deployer,
+      beneficiaryA,
+      beneficiaryB,
+      beneficiaryC,
+      delegateeX,
+      delegateeY,
+      nonBeneficiary,
+    ] = await ethers.getSigners();
 
     // 1. Deploy TimelockController
-    const TimelockController = await ethers.getContractFactory("TimelockController");
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
     timelock = await TimelockController.deploy(
       2 * 24 * 60 * 60, // 2 days
       [],
       [],
-      deployer.address
+      deployer.address,
     );
     await timelock.waitForDeployment();
 
     // 2. Deploy ArmadaToken
     const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-    armToken = await ArmadaToken.deploy(deployer.address, await timelock.getAddress());
+    armToken = await ArmadaToken.deploy(
+      deployer.address,
+      await timelock.getAddress(),
+    );
     await armToken.waitForDeployment();
 
     // 3. Deploy RevenueCounter behind UUPS proxy
-    const MockFeeCollector = await ethers.getContractFactory("MockFeeCollector");
+    const MockFeeCollector =
+      await ethers.getContractFactory("MockFeeCollector");
     mockFeeCollector = await MockFeeCollector.deploy();
     await mockFeeCollector.waitForDeployment();
 
@@ -97,9 +109,14 @@ describe("RevenueLock", function () {
     const rcImpl = await RevenueCounter.deploy();
     await rcImpl.waitForDeployment();
 
-    const initData = RevenueCounter.interface.encodeFunctionData("initialize", [deployer.address]);
+    const initData = RevenueCounter.interface.encodeFunctionData("initialize", [
+      deployer.address,
+    ]);
     const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-    const rcProxy = await ERC1967Proxy.deploy(await rcImpl.getAddress(), initData);
+    const rcProxy = await ERC1967Proxy.deploy(
+      await rcImpl.getAddress(),
+      initData,
+    );
     await rcProxy.waitForDeployment();
     revenueCounter = RevenueCounter.attach(await rcProxy.getAddress());
 
@@ -113,7 +130,7 @@ describe("RevenueLock", function () {
       await revenueCounter.getAddress(),
       MAX_INCREASE_PER_DAY,
       [beneficiaryA.address, beneficiaryB.address, beneficiaryC.address],
-      [ALLOC_A, ALLOC_B, ALLOC_C]
+      [ALLOC_A, ALLOC_B, ALLOC_C],
     );
     await revenueLock.waitForDeployment();
 
@@ -150,9 +167,15 @@ describe("RevenueLock", function () {
 
   describe("Setup", function () {
     it("should have correct allocations", async function () {
-      expect(await revenueLock.allocation(beneficiaryA.address)).to.equal(ALLOC_A);
-      expect(await revenueLock.allocation(beneficiaryB.address)).to.equal(ALLOC_B);
-      expect(await revenueLock.allocation(beneficiaryC.address)).to.equal(ALLOC_C);
+      expect(await revenueLock.allocation(beneficiaryA.address)).to.equal(
+        ALLOC_A,
+      );
+      expect(await revenueLock.allocation(beneficiaryB.address)).to.equal(
+        ALLOC_B,
+      );
+      expect(await revenueLock.allocation(beneficiaryC.address)).to.equal(
+        ALLOC_C,
+      );
     });
 
     it("should have correct total allocation", async function () {
@@ -160,7 +183,9 @@ describe("RevenueLock", function () {
     });
 
     it("should hold the full ARM balance", async function () {
-      expect(await armToken.balanceOf(await revenueLock.getAddress())).to.equal(TOTAL_LOCK);
+      expect(await armToken.balanceOf(await revenueLock.getAddress())).to.equal(
+        TOTAL_LOCK,
+      );
     });
 
     it("should have 3 beneficiaries", async function () {
@@ -202,7 +227,9 @@ describe("RevenueLock", function () {
     it("releasable returns correct amount at 10% unlock", async function () {
       await attestRevenueWithBudget(REV_10K);
       const expected = (ALLOC_A * 1000n) / 10000n;
-      expect(await revenueLock.releasable(beneficiaryA.address)).to.equal(expected);
+      expect(await revenueLock.releasable(beneficiaryA.address)).to.equal(
+        expected,
+      );
     });
 
     it("releasable returns 0 for non-beneficiary", async function () {
@@ -223,21 +250,21 @@ describe("RevenueLock", function () {
   describe("Release", function () {
     it("reverts when revenue is zero", async function () {
       await expect(
-        revenueLock.connect(beneficiaryA).release(delegateeX.address)
+        revenueLock.connect(beneficiaryA).release(delegateeX.address),
       ).to.be.revertedWith("RevenueLock: nothing to release");
     });
 
     it("reverts for non-beneficiary", async function () {
       await attestRevenueWithBudget(REV_10K);
       await expect(
-        revenueLock.connect(nonBeneficiary).release(delegateeX.address)
+        revenueLock.connect(nonBeneficiary).release(delegateeX.address),
       ).to.be.revertedWith("RevenueLock: not a beneficiary");
     });
 
     it("reverts for zero delegatee", async function () {
       await attestRevenueWithBudget(REV_10K);
       await expect(
-        revenueLock.connect(beneficiaryA).release(ethers.ZeroAddress)
+        revenueLock.connect(beneficiaryA).release(ethers.ZeroAddress),
       ).to.be.revertedWith("RevenueLock: zero delegatee");
     });
 
@@ -248,7 +275,9 @@ describe("RevenueLock", function () {
       await revenueLock.connect(beneficiaryA).release(delegateeX.address);
 
       expect(await armToken.balanceOf(beneficiaryA.address)).to.equal(expected);
-      expect(await revenueLock.released(beneficiaryA.address)).to.equal(expected);
+      expect(await revenueLock.released(beneficiaryA.address)).to.equal(
+        expected,
+      );
     });
 
     it("sets delegation atomically on release", async function () {
@@ -256,7 +285,9 @@ describe("RevenueLock", function () {
 
       await revenueLock.connect(beneficiaryA).release(delegateeX.address);
 
-      expect(await armToken.delegates(beneficiaryA.address)).to.equal(delegateeX.address);
+      expect(await armToken.delegates(beneficiaryA.address)).to.equal(
+        delegateeX.address,
+      );
     });
 
     it("delegatee receives voting power after release", async function () {
@@ -275,7 +306,7 @@ describe("RevenueLock", function () {
       await revenueLock.connect(beneficiaryA).release(delegateeX.address);
 
       await expect(
-        revenueLock.connect(beneficiaryA).release(delegateeX.address)
+        revenueLock.connect(beneficiaryA).release(delegateeX.address),
       ).to.be.revertedWith("RevenueLock: nothing to release");
     });
 
@@ -291,15 +322,21 @@ describe("RevenueLock", function () {
       const totalEntitled = (ALLOC_A * 2500n) / 10000n;
       const secondRelease = totalEntitled - firstRelease;
 
-      expect(await armToken.balanceOf(beneficiaryA.address)).to.equal(firstRelease + secondRelease);
-      expect(await revenueLock.released(beneficiaryA.address)).to.equal(totalEntitled);
+      expect(await armToken.balanceOf(beneficiaryA.address)).to.equal(
+        firstRelease + secondRelease,
+      );
+      expect(await revenueLock.released(beneficiaryA.address)).to.equal(
+        totalEntitled,
+      );
     });
 
     it("releases full allocation at $1M", async function () {
       await attestRevenueWithBudget(REV_1M);
       await revenueLock.connect(beneficiaryA).release(delegateeX.address);
 
-      expect(await revenueLock.released(beneficiaryA.address)).to.equal(ALLOC_A);
+      expect(await revenueLock.released(beneficiaryA.address)).to.equal(
+        ALLOC_A,
+      );
       expect(await armToken.balanceOf(beneficiaryA.address)).to.equal(ALLOC_A);
       expect(await revenueLock.releasable(beneficiaryA.address)).to.equal(0);
     });
@@ -308,7 +345,9 @@ describe("RevenueLock", function () {
       await attestRevenueWithBudget(REV_10K);
       const expected = (ALLOC_A * 1000n) / 10000n;
 
-      await expect(revenueLock.connect(beneficiaryA).release(delegateeX.address))
+      await expect(
+        revenueLock.connect(beneficiaryA).release(delegateeX.address),
+      )
         .to.emit(revenueLock, "Released")
         .withArgs(beneficiaryA.address, expected, delegateeX.address, expected);
     });
@@ -316,11 +355,15 @@ describe("RevenueLock", function () {
     it("changes delegatee on subsequent release", async function () {
       await attestRevenueWithBudget(REV_10K);
       await revenueLock.connect(beneficiaryA).release(delegateeX.address);
-      expect(await armToken.delegates(beneficiaryA.address)).to.equal(delegateeX.address);
+      expect(await armToken.delegates(beneficiaryA.address)).to.equal(
+        delegateeX.address,
+      );
 
       await attestRevenueWithBudget(REV_50K);
       await revenueLock.connect(beneficiaryA).release(delegateeY.address);
-      expect(await armToken.delegates(beneficiaryA.address)).to.equal(delegateeY.address);
+      expect(await armToken.delegates(beneficiaryA.address)).to.equal(
+        delegateeY.address,
+      );
     });
   });
 
@@ -335,7 +378,9 @@ describe("RevenueLock", function () {
       // Only A releases
       await revenueLock.connect(beneficiaryA).release(delegateeX.address);
       const expectedA = (ALLOC_A * 4000n) / 10000n;
-      expect(await revenueLock.released(beneficiaryA.address)).to.equal(expectedA);
+      expect(await revenueLock.released(beneficiaryA.address)).to.equal(
+        expectedA,
+      );
 
       // B and C haven't released
       expect(await revenueLock.released(beneficiaryB.address)).to.equal(0);
@@ -344,7 +389,9 @@ describe("RevenueLock", function () {
       // B releases later
       await revenueLock.connect(beneficiaryB).release(delegateeY.address);
       const expectedB = (ALLOC_B * 4000n) / 10000n;
-      expect(await revenueLock.released(beneficiaryB.address)).to.equal(expectedB);
+      expect(await revenueLock.released(beneficiaryB.address)).to.equal(
+        expectedB,
+      );
     });
 
     it("late beneficiary gets full entitled amount on first release", async function () {
@@ -353,7 +400,9 @@ describe("RevenueLock", function () {
 
       await revenueLock.connect(beneficiaryC).release(delegateeX.address);
       const expected = (ALLOC_C * 6000n) / 10000n;
-      expect(await revenueLock.released(beneficiaryC.address)).to.equal(expected);
+      expect(await revenueLock.released(beneficiaryC.address)).to.equal(
+        expected,
+      );
     });
   });
 
@@ -369,12 +418,16 @@ describe("RevenueLock", function () {
       await revenueLock.connect(beneficiaryB).release(delegateeX.address);
       // C doesn't release
 
-      const lockBalance = await armToken.balanceOf(await revenueLock.getAddress());
+      const lockBalance = await armToken.balanceOf(
+        await revenueLock.getAddress(),
+      );
       const releasedA = await revenueLock.released(beneficiaryA.address);
       const releasedB = await revenueLock.released(beneficiaryB.address);
       const releasedC = await revenueLock.released(beneficiaryC.address);
 
-      expect(lockBalance + releasedA + releasedB + releasedC).to.equal(TOTAL_LOCK);
+      expect(lockBalance + releasedA + releasedB + releasedC).to.equal(
+        TOTAL_LOCK,
+      );
     });
 
     it("ARM balance is zero after all beneficiaries fully release", async function () {
@@ -384,7 +437,9 @@ describe("RevenueLock", function () {
       await revenueLock.connect(beneficiaryB).release(delegateeX.address);
       await revenueLock.connect(beneficiaryC).release(delegateeX.address);
 
-      expect(await armToken.balanceOf(await revenueLock.getAddress())).to.equal(0);
+      expect(await armToken.balanceOf(await revenueLock.getAddress())).to.equal(
+        0,
+      );
     });
   });
 
@@ -414,7 +469,9 @@ describe("RevenueLock", function () {
       // Release should work
       await revenueLock.connect(beneficiaryA).release(delegateeX.address);
       const expected = (ALLOC_A * 1000n) / 10000n;
-      expect(await revenueLock.released(beneficiaryA.address)).to.equal(expected);
+      expect(await revenueLock.released(beneficiaryA.address)).to.equal(
+        expected,
+      );
     });
   });
 
@@ -441,16 +498,22 @@ describe("RevenueLock", function () {
         const entitled = (ALLOC_A * bps) / 10000n;
         const expectedDelta = entitled - prevReleased;
 
-        expect(await revenueLock.releasable(beneficiaryA.address)).to.equal(expectedDelta);
+        expect(await revenueLock.releasable(beneficiaryA.address)).to.equal(
+          expectedDelta,
+        );
 
         await revenueLock.connect(beneficiaryA).release(delegateeX.address);
 
-        expect(await revenueLock.released(beneficiaryA.address)).to.equal(entitled);
+        expect(await revenueLock.released(beneficiaryA.address)).to.equal(
+          entitled,
+        );
         prevReleased = entitled;
       }
 
       // Fully released
-      expect(await revenueLock.released(beneficiaryA.address)).to.equal(ALLOC_A);
+      expect(await revenueLock.released(beneficiaryA.address)).to.equal(
+        ALLOC_A,
+      );
       expect(await revenueLock.releasable(beneficiaryA.address)).to.equal(0);
     });
   });
@@ -476,7 +539,9 @@ describe("RevenueLock", function () {
     });
 
     it("initializes MAX_REVENUE_INCREASE_PER_DAY to the spec-calibrated value", async function () {
-      expect(await revenueLock.MAX_REVENUE_INCREASE_PER_DAY()).to.equal(MAX_INCREASE_PER_DAY);
+      expect(await revenueLock.MAX_REVENUE_INCREASE_PER_DAY()).to.equal(
+        MAX_INCREASE_PER_DAY,
+      );
     });
 
     it("starts maxObservedRevenue at zero, even if counter has history", async function () {
@@ -566,8 +631,10 @@ describe("RevenueLock", function () {
     it("does NOT emit ObservedRevenueUpdated on a no-op sync", async function () {
       await time.increase(ONE_DAY);
       // Counter is at 0, ratchet is at 0 — no advance possible.
-      await expect(revenueLock.syncObservedRevenue())
-        .to.not.emit(revenueLock, "ObservedRevenueUpdated");
+      await expect(revenueLock.syncObservedRevenue()).to.not.emit(
+        revenueLock,
+        "ObservedRevenueUpdated",
+      );
     });
   });
 });

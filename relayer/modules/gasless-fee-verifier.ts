@@ -40,17 +40,21 @@ import { RelayError } from "../types";
  * `gaslessShield((address,uint256,uint256,address,uint8,bytes32,bytes32),bytes,((bytes32,(uint8,address,uint256),uint120),(bytes32[3],bytes32))[])`.
  * Pinned so a wrapper-signature refactor surfaces as a test failure rather than silent acceptance.
  */
-export const GASLESS_SHIELD_SELECTOR = ethers.id(
-  "gaslessShield((address,uint256,uint256,address,uint8,bytes32,bytes32),bytes,((bytes32,(uint8,address,uint256),uint120),(bytes32[3],bytes32))[])",
-).slice(0, 10);
+export const GASLESS_SHIELD_SELECTOR = ethers
+  .id(
+    "gaslessShield((address,uint256,uint256,address,uint8,bytes32,bytes32),bytes,((bytes32,(uint8,address,uint256),uint120),(bytes32[3],bytes32))[])",
+  )
+  .slice(0, 10);
 
 /**
  * Client wrapper entry:
  * `gaslessCrossChainShield((address,uint256,uint256,uint256,uint32,uint8,bytes32,bytes32),bytes,(bytes32,uint120,bytes32[3],bytes32,address),(bytes32,uint120,bytes32[3],bytes32,address))`.
  */
-export const GASLESS_CROSS_CHAIN_SHIELD_SELECTOR = ethers.id(
-  "gaslessCrossChainShield((address,uint256,uint256,uint256,uint32,uint8,bytes32,bytes32),bytes,(bytes32,uint120,bytes32[3],bytes32,address),(bytes32,uint120,bytes32[3],bytes32,address))",
-).slice(0, 10);
+export const GASLESS_CROSS_CHAIN_SHIELD_SELECTOR = ethers
+  .id(
+    "gaslessCrossChainShield((address,uint256,uint256,uint256,uint32,uint8,bytes32,bytes32),bytes,(bytes32,uint120,bytes32[3],bytes32,address),(bytes32,uint120,bytes32[3],bytes32,address))",
+  )
+  .slice(0, 10);
 
 const GASLESS_SHIELD_ABI = [
   "function gaslessShield((address user,uint256 deadline,uint256 nonce,address integrator,uint8 permitV,bytes32 permitR,bytes32 permitS) params, bytes intentSig, ((bytes32 npk,(uint8 tokenType,address tokenAddress,uint256 tokenSubID) token,uint120 value) preimage,(bytes32[3] encryptedBundle,bytes32 shieldKey) ciphertext)[] shieldRequests)",
@@ -62,7 +66,9 @@ const GASLESS_CROSS_CHAIN_SHIELD_ABI = [
 
 /** Interfaces hoisted to module scope — built once instead of per /relay request. */
 const GASLESS_SHIELD_IFACE = new ethers.Interface(GASLESS_SHIELD_ABI);
-const GASLESS_CROSS_CHAIN_SHIELD_IFACE = new ethers.Interface(GASLESS_CROSS_CHAIN_SHIELD_ABI);
+const GASLESS_CROSS_CHAIN_SHIELD_IFACE = new ethers.Interface(
+  GASLESS_CROSS_CHAIN_SHIELD_ABI,
+);
 
 // ============ Verifier Context ============
 
@@ -123,7 +129,10 @@ export function verifyGaslessFee(
   }
   let expectedNpk: bigint;
   try {
-    expectedNpk = ShieldNote.getNotePublicKey(ctx.wallet.masterPublicKey, feeShieldRandom);
+    expectedNpk = ShieldNote.getNotePublicKey(
+      ctx.wallet.masterPublicKey,
+      feeShieldRandom,
+    );
   } catch (e: any) {
     throw new RelayError(
       "INVALID_DATA",
@@ -151,13 +160,20 @@ export function verifyGaslessFee(
 /**
  * Decode the calldata and return the value of the note addressed to `expectedNpk`, or null if none.
  */
-function extractFeeNoteValue(selector: string, data: string, expectedNpk: bigint): bigint | null {
+function extractFeeNoteValue(
+  selector: string,
+  data: string,
+  expectedNpk: bigint,
+): bigint | null {
   if (selector === GASLESS_SHIELD_SELECTOR) {
     let decoded: ethers.Result;
     try {
       decoded = GASLESS_SHIELD_IFACE.decodeFunctionData("gaslessShield", data);
     } catch (e: any) {
-      throw new RelayError("INVALID_DATA", `Failed to decode gaslessShield calldata: ${e?.message ?? e}`);
+      throw new RelayError(
+        "INVALID_DATA",
+        `Failed to decode gaslessShield calldata: ${e?.message ?? e}`,
+      );
     }
     // decoded[2] = shieldRequests[]; each element is [preimage, ciphertext],
     // preimage = [npk, token, value]. Find the note whose npk is ours.
@@ -171,7 +187,10 @@ function extractFeeNoteValue(selector: string, data: string, expectedNpk: bigint
   if (selector === GASLESS_CROSS_CHAIN_SHIELD_SELECTOR) {
     let decoded: ethers.Result;
     try {
-      decoded = GASLESS_CROSS_CHAIN_SHIELD_IFACE.decodeFunctionData("gaslessCrossChainShield", data);
+      decoded = GASLESS_CROSS_CHAIN_SHIELD_IFACE.decodeFunctionData(
+        "gaslessCrossChainShield",
+        data,
+      );
     } catch (e: any) {
       throw new RelayError(
         "INVALID_DATA",
@@ -183,5 +202,8 @@ function extractFeeNoteValue(selector: string, data: string, expectedNpk: bigint
     if (BigInt(feeNote[0]) === expectedNpk) return BigInt(feeNote[1]);
     return null;
   }
-  throw new RelayError("INVALID_DATA", `Selector ${selector} is not a supported gasless wrapper entry`);
+  throw new RelayError(
+    "INVALID_DATA",
+    `Selector ${selector} is not a supported gasless wrapper entry`,
+  );
 }

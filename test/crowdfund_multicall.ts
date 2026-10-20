@@ -7,7 +7,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 const USDC = (n: number) => ethers.parseUnits(n.toString(), 6);
-const ARM  = (n: number) => ethers.parseUnits(n.toString(), 18);
+const ARM = (n: number) => ethers.parseUnits(n.toString(), 18);
 
 // Per-hop slot caps + invite budgets (mirrors ArmadaCrowdfund constants).
 const HOP0_CAP = USDC(15_000);
@@ -30,7 +30,8 @@ describe("Crowdfund Multicall", function () {
   let delegateAddr: SignerWithAddress;
 
   beforeEach(async function () {
-    [deployer, seed, treasury, outsider, delegateAddr] = await ethers.getSigners();
+    [deployer, seed, treasury, outsider, delegateAddr] =
+      await ethers.getSigners();
 
     const MockUSDCV2 = await ethers.getContractFactory("MockUSDCV2");
     usdc = await MockUSDCV2.deploy("Mock USDC", "USDC");
@@ -47,8 +48,8 @@ describe("Crowdfund Multicall", function () {
       await usdc.getAddress(),
       await armToken.getAddress(),
       treasury.address,
-      deployer.address,    // launchTeam
-      deployer.address,    // securityCouncil
+      deployer.address, // launchTeam
+      deployer.address, // securityCouncil
       openTimestamp,
     );
     await crowdfund.waitForDeployment();
@@ -72,8 +73,10 @@ describe("Crowdfund Multicall", function () {
   function seedSelfFillBundle(selfAddress: string): string[] {
     const iface = crowdfund.interface;
     const calls: string[] = [];
-    for (let k = 0; k < 3; k++) calls.push(iface.encodeFunctionData("invite", [selfAddress, 0]));
-    for (let k = 0; k < 6; k++) calls.push(iface.encodeFunctionData("invite", [selfAddress, 1]));
+    for (let k = 0; k < 3; k++)
+      calls.push(iface.encodeFunctionData("invite", [selfAddress, 0]));
+    for (let k = 0; k < 6; k++)
+      calls.push(iface.encodeFunctionData("invite", [selfAddress, 1]));
     calls.push(iface.encodeFunctionData("commit", [0, HOP0_CAP]));
     calls.push(iface.encodeFunctionData("commit", [1, HOP1_CAP * 3n]));
     calls.push(iface.encodeFunctionData("commit", [2, HOP2_CAP * 6n]));
@@ -93,7 +96,9 @@ describe("Crowdfund Multicall", function () {
   // catches it.
   it("seed wallet fills entire tree in one multicall", async () => {
     await usdc.mint(seed.address, SELF_FILL_TOTAL);
-    await usdc.connect(seed).approve(await crowdfund.getAddress(), SELF_FILL_TOTAL);
+    await usdc
+      .connect(seed)
+      .approve(await crowdfund.getAddress(), SELF_FILL_TOTAL);
 
     const calls = seedSelfFillBundle(seed.address);
     expect(calls.length).to.equal(12);
@@ -103,8 +108,12 @@ describe("Crowdfund Multicall", function () {
     expect(await crowdfund.getInvitesReceived(seed.address, 1)).to.equal(3);
     expect(await crowdfund.getInvitesReceived(seed.address, 2)).to.equal(6);
     expect(await crowdfund.getCommitment(seed.address, 0)).to.equal(HOP0_CAP);
-    expect(await crowdfund.getCommitment(seed.address, 1)).to.equal(HOP1_CAP * 3n);
-    expect(await crowdfund.getCommitment(seed.address, 2)).to.equal(HOP2_CAP * 6n);
+    expect(await crowdfund.getCommitment(seed.address, 1)).to.equal(
+      HOP1_CAP * 3n,
+    );
+    expect(await crowdfund.getCommitment(seed.address, 2)).to.equal(
+      HOP2_CAP * 6n,
+    );
     expect(await crowdfund.totalCommitted()).to.equal(SELF_FILL_TOTAL);
     expect(await usdc.balanceOf(seed.address)).to.equal(0n);
   });
@@ -122,7 +131,9 @@ describe("Crowdfund Multicall", function () {
     // Tx 1: approve. Allowance starts at 0; bumping to exactly the bundle total.
     const txApprove = await usdc.connect(seed).approve(cfAddr, SELF_FILL_TOTAL);
     await txApprove.wait();
-    expect(await usdc.allowance(seed.address, cfAddr)).to.equal(SELF_FILL_TOTAL);
+    expect(await usdc.allowance(seed.address, cfAddr)).to.equal(
+      SELF_FILL_TOTAL,
+    );
 
     // Tx 2: multicall. Single wallet signature.
     const calls = seedSelfFillBundle(seed.address);
@@ -159,7 +170,7 @@ describe("Crowdfund Multicall", function () {
     // All bundle state rolled back: zero invites stacked at hop-1/2.
     // Seed's hop-0 invitesReceived is set by addSeeds (initial state = 1);
     // hop-1 and hop-2 entries don't exist until the seed self-invites.
-    expect(await crowdfund.getInvitesReceived(seed.address, 0)).to.equal(1);  // initial seed state
+    expect(await crowdfund.getInvitesReceived(seed.address, 0)).to.equal(1); // initial seed state
     expect(await crowdfund.getInvitesReceived(seed.address, 1)).to.equal(0);
     expect(await crowdfund.getInvitesReceived(seed.address, 2)).to.equal(0);
     expect(await crowdfund.getCommitment(seed.address, 0)).to.equal(0n);
@@ -203,12 +214,18 @@ describe("Crowdfund Multicall", function () {
     // Expected order: 9× Invited, then 3× Committed (hop-0, hop-1, hop-2).
     const eventNames = parsed.map((p) => p.name);
     expect(eventNames).to.deep.equal([
-      "Invited", "Invited", "Invited",          // hop-1 self-invites
-      "Invited", "Invited", "Invited",
-      "Invited", "Invited", "Invited",          // hop-2 self-invites (issued from hop-1)
-      "Committed",                              // hop-0 commit
-      "Committed",                              // hop-1 commit
-      "Committed",                              // hop-2 commit
+      "Invited",
+      "Invited",
+      "Invited", // hop-1 self-invites
+      "Invited",
+      "Invited",
+      "Invited",
+      "Invited",
+      "Invited",
+      "Invited", // hop-2 self-invites (issued from hop-1)
+      "Committed", // hop-0 commit
+      "Committed", // hop-1 commit
+      "Committed", // hop-2 commit
     ]);
 
     // Spot-check the Committed event hops are in the right order.

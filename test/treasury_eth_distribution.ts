@@ -20,13 +20,17 @@ describe("Treasury ETH Distribution", function () {
 
   async function deployTreasury() {
     [deployer, stranger, recipient] = await ethers.getSigners();
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
     treasury = await ArmadaTreasuryGov.deploy(deployer.address);
     await treasury.waitForDeployment();
   }
 
   async function fundTreasury(amount: bigint) {
-    await deployer.sendTransaction({ to: await treasury.getAddress(), value: amount });
+    await deployer.sendTransaction({
+      to: await treasury.getAddress(),
+      value: amount,
+    });
   }
 
   // Initialize outflow config for ETH using the address(0) sentinel.
@@ -41,7 +45,13 @@ describe("Treasury ETH Distribution", function () {
     const bps = opts?.bps ?? 1000; // 10%
     const absolute = opts?.absolute ?? ETH("100"); // 100 ETH absolute cap
     const floor = opts?.floor ?? ETH("10"); // 10 ETH immutable floor
-    await treasury.initOutflowConfig(ETH_SENTINEL, window, bps, absolute, floor);
+    await treasury.initOutflowConfig(
+      ETH_SENTINEL,
+      window,
+      bps,
+      absolute,
+      floor,
+    );
   }
 
   beforeEach(async function () {
@@ -64,7 +74,9 @@ describe("Treasury ETH Distribution", function () {
 
       const after = await ethers.provider.getBalance(recipient.address);
       expect(after - before).to.equal(ETH("5"));
-      expect(await ethers.provider.getBalance(await treasury.getAddress())).to.equal(ETH("995"));
+      expect(
+        await ethers.provider.getBalance(await treasury.getAddress()),
+      ).to.equal(ETH("995"));
     });
 
     // WHY: getOutflowStatus reads via _effectiveParams + balanceOf. For ETH the contract
@@ -80,7 +92,7 @@ describe("Treasury ETH Distribution", function () {
 
       // 8 ETH used; 2 ETH headroom. 3 ETH next call should exceed the cap.
       await expect(
-        treasury.distributeETH(recipient.address, ETH("3"))
+        treasury.distributeETH(recipient.address, ETH("3")),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
   });
@@ -95,19 +107,19 @@ describe("Treasury ETH Distribution", function () {
 
     it("rejects zero recipient", async function () {
       await expect(
-        treasury.distributeETH(ethers.ZeroAddress, ETH("1"))
+        treasury.distributeETH(ethers.ZeroAddress, ETH("1")),
       ).to.be.revertedWith("ArmadaTreasuryGov: zero recipient");
     });
 
     it("rejects zero amount", async function () {
       await expect(
-        treasury.distributeETH(recipient.address, 0n)
+        treasury.distributeETH(recipient.address, 0n),
       ).to.be.revertedWith("ArmadaTreasuryGov: zero amount");
     });
 
     it("rejects non-owner caller", async function () {
       await expect(
-        treasury.connect(stranger).distributeETH(recipient.address, ETH("1"))
+        treasury.connect(stranger).distributeETH(recipient.address, ETH("1")),
       ).to.be.revertedWith("ArmadaTreasuryGov: not owner");
     });
 
@@ -119,7 +131,7 @@ describe("Treasury ETH Distribution", function () {
       await fundTreasury(ETH("100"));
       // No initOutflowConfig(address(0), ...)
       await expect(
-        treasury.distributeETH(recipient.address, ETH("1"))
+        treasury.distributeETH(recipient.address, ETH("1")),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow config required");
     });
   });
@@ -131,27 +143,35 @@ describe("Treasury ETH Distribution", function () {
     it("uses percentage limit on large treasury (pct > absolute)", async function () {
       // 1000 ETH treasury, 10% = 100 ETH > 50 ETH absolute → effective limit = 100 ETH
       await fundTreasury(ETH("1000"));
-      await initEthOutflow({ bps: 1000, absolute: ETH("50"), floor: ETH("10") });
+      await initEthOutflow({
+        bps: 1000,
+        absolute: ETH("50"),
+        floor: ETH("10"),
+      });
 
       // 90 ETH should succeed (under the 100 ETH pct limit)
       await treasury.distributeETH(recipient.address, ETH("90"));
 
       // 11 more would exceed (90 + 11 = 101 > 100)
       await expect(
-        treasury.distributeETH(recipient.address, ETH("11"))
+        treasury.distributeETH(recipient.address, ETH("11")),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
 
     it("uses absolute limit on small treasury (absolute > pct)", async function () {
       // 100 ETH treasury, 10% = 10 ETH < 50 ETH absolute → effective limit = 50 ETH
       await fundTreasury(ETH("100"));
-      await initEthOutflow({ bps: 1000, absolute: ETH("50"), floor: ETH("10") });
+      await initEthOutflow({
+        bps: 1000,
+        absolute: ETH("50"),
+        floor: ETH("10"),
+      });
 
       await treasury.distributeETH(recipient.address, ETH("40"));
 
       // 11 more would exceed (40 + 11 = 51 > 50)
       await expect(
-        treasury.distributeETH(recipient.address, ETH("11"))
+        treasury.distributeETH(recipient.address, ETH("11")),
       ).to.be.revertedWith("ArmadaTreasuryGov: outflow limit exceeded");
     });
 

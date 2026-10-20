@@ -1,43 +1,43 @@
 // ABOUTME: Connected-wallet pill with a dropdown menu (provider icon, full address, balance, copy + disconnect).
 // ABOUTME: Ported byte-identical from the armada-crowdfund mockup (Header/WalletPillMenu.tsx) — co-located as a Header sub-primitive.
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   ArrowRightOnRectangleIcon,
   ChevronDownIcon,
   ClipboardDocumentIcon,
   WalletIcon,
-} from '@heroicons/react/24/outline'
-import { CheckIcon } from '@heroicons/react/24/solid'
+} from "@heroicons/react/24/outline";
+import { CheckIcon } from "@heroicons/react/24/solid";
 import {
   WalletMetamask,
   WalletPhantom,
   WalletWalletConnect,
-} from '@web3icons/react'
-import buttonStyles from '../Button/Button.module.css'
-import { ArmadaSymbol } from '../ArmadaSymbol/ArmadaSymbol'
-import styles from './WalletPillMenu.module.css'
+} from "@web3icons/react";
+import buttonStyles from "../Button/Button.module.css";
+import { ArmadaSymbol } from "../ArmadaSymbol/ArmadaSymbol";
+import styles from "./WalletPillMenu.module.css";
 
 export interface WalletPillMenuProps {
   /** Truncated address shown on the pill and in the menu header. */
-  displayAddress: string
+  displayAddress: string;
   /** Full address copied to clipboard. */
-  copyAddress: string
-  walletProvider?: string
+  copyAddress: string;
+  walletProvider?: string;
   /** Optional wallet balance label (demo uses 0). */
-  usdcBalance?: number
-  onDisconnect?: () => void
+  usdcBalance?: number;
+  onDisconnect?: () => void;
   /** Dropdown horizontal anchor. `center` (default) centers the menu under the
    *  trigger — the mockup default. `right` anchors the menu's right edge to the
    *  trigger and opens leftward, so it can't overflow the viewport when the pill
    *  sits at a screen edge (e.g. a header right slot with no trailing CTA). */
-  align?: 'center' | 'right'
+  align?: "center" | "right";
   /**
    * Extra class applied to the trigger button so consumers can override its background, border,
    * or other Button-derived secondary-variant defaults without forking the component. Used by
    * armada-interface to swap the default transparent pill for a solid black background.
    */
-  triggerClassName?: string
+  triggerClassName?: string;
   /**
    * Optional content rendered inside the dropdown card, below the copy/disconnect actions.
    * Consumer-supplied. `armada-interface` uses this to surface a "Shielded identity" section
@@ -46,29 +46,35 @@ export interface WalletPillMenuProps {
    *
    * See packages/ui/src/components/CLAUDE.md "Approved deviations from byte-identical port".
    */
-  extraSection?: ReactNode
+  extraSection?: ReactNode;
   /**
    * Optional truncated shielded (0zk…) address to render as a second row beneath the EVM
    * address on the pill trigger. When supplied, the provider icon is replaced with the
    * `ArmadaSymbol` flotilla glyph. When undefined, the trigger renders the original
    * single-row EVM-only layout — crowdfund consumers are unaffected.
    */
-  shieldedAddress?: string
+  shieldedAddress?: string;
 }
 
-const PROVIDER_ICON_PX = 20
-const CARD_ICON_PX = 48
+const PROVIDER_ICON_PX = 20;
+const CARD_ICON_PX = 48;
 
-function WalletProviderIcon({ provider, size = PROVIDER_ICON_PX }: { provider?: string; size?: number }) {
+function WalletProviderIcon({
+  provider,
+  size = PROVIDER_ICON_PX,
+}: {
+  provider?: string;
+  size?: number;
+}) {
   switch (provider) {
-    case 'metamask':
-      return <WalletMetamask size={size} aria-hidden />
-    case 'phantom':
-      return <WalletPhantom size={size} aria-hidden />
-    case 'walletconnect':
-      return <WalletWalletConnect size={size} aria-hidden />
+    case "metamask":
+      return <WalletMetamask size={size} aria-hidden />;
+    case "phantom":
+      return <WalletPhantom size={size} aria-hidden />;
+    case "walletconnect":
+      return <WalletWalletConnect size={size} aria-hidden />;
     default:
-      return <WalletIcon width={size} height={size} aria-hidden />
+      return <WalletIcon width={size} height={size} aria-hidden />;
   }
 }
 
@@ -78,59 +84,59 @@ export function WalletPillMenu({
   walletProvider,
   usdcBalance = 0,
   onDisconnect,
-  align = 'center',
+  align = "center",
   triggerClassName,
   extraSection,
   shieldedAddress,
 }: WalletPillMenuProps) {
-  const [open, setOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-  const menuId = useId()
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
     const onPointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
-    }
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
+      if (e.key === "Escape") setOpen(false);
+    };
 
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   useEffect(() => {
     return () => {
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-    }
-  }, [])
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(copyAddress)
-      setCopied(true)
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-      copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(copyAddress);
+      setCopied(true);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
-      setCopied(false)
+      setCopied(false);
     }
-  }
+  };
 
   const handleDisconnect = () => {
-    setOpen(false)
-    onDisconnect?.()
-  }
+    setOpen(false);
+    onDisconnect?.();
+  };
 
-  const balanceLabel = `${usdcBalance.toLocaleString('en-US')} USDC`
+  const balanceLabel = `${usdcBalance.toLocaleString("en-US")} USDC`;
 
   return (
     <div className={styles.root} ref={rootRef}>
@@ -144,7 +150,9 @@ export function WalletPillMenu({
           styles.trigger,
           shieldedAddress && styles.triggerTwoRow,
           triggerClassName,
-        ].filter(Boolean).join(' ')}
+        ]
+          .filter(Boolean)
+          .join(" ")}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={menuId}
@@ -165,7 +173,12 @@ export function WalletPillMenu({
               <span className={styles.triggerIcon}>
                 <ArmadaSymbol size={14} />
               </span>
-              <span className={[styles.triggerLabel, styles.triggerShieldedLabel].join(' ')}>
+              <span
+                className={[
+                  styles.triggerLabel,
+                  styles.triggerShieldedLabel,
+                ].join(" ")}
+              >
                 {shieldedAddress}
               </span>
             </span>
@@ -179,7 +192,9 @@ export function WalletPillMenu({
           </>
         )}
         <ChevronDownIcon
-          className={[styles.chevron, open && styles.chevronOpen].filter(Boolean).join(' ')}
+          className={[styles.chevron, open && styles.chevronOpen]
+            .filter(Boolean)
+            .join(" ")}
           aria-hidden
         />
       </button>
@@ -187,13 +202,18 @@ export function WalletPillMenu({
       {open && (
         <div
           id={menuId}
-          className={[styles.menu, align === 'right' && styles.menuRight].filter(Boolean).join(' ')}
+          className={[styles.menu, align === "right" && styles.menuRight]
+            .filter(Boolean)
+            .join(" ")}
           role="menu"
         >
           <div className={styles.card} role="none">
             <div className={styles.cardIdentity}>
               <span className={styles.cardIcon}>
-                <WalletProviderIcon provider={walletProvider} size={CARD_ICON_PX} />
+                <WalletProviderIcon
+                  provider={walletProvider}
+                  size={CARD_ICON_PX}
+                />
               </span>
               <p className={styles.cardAddress}>{displayAddress}</p>
               <p className={styles.cardBalance}>{balanceLabel}</p>
@@ -211,15 +231,20 @@ export function WalletPillMenu({
                   copied && styles.actionBtnCopied,
                 ]
                   .filter(Boolean)
-                  .join(' ')}
+                  .join(" ")}
                 onClick={() => void handleCopy()}
               >
                 {copied ? (
                   <CheckIcon className={styles.actionIcon} aria-hidden />
                 ) : (
-                  <ClipboardDocumentIcon className={styles.actionIcon} aria-hidden />
+                  <ClipboardDocumentIcon
+                    className={styles.actionIcon}
+                    aria-hidden
+                  />
                 )}
-                <span className={styles.actionLabel}>{copied ? 'Copied' : 'Copy address'}</span>
+                <span className={styles.actionLabel}>
+                  {copied ? "Copied" : "Copy address"}
+                </span>
               </button>
 
               {onDisconnect && (
@@ -232,10 +257,13 @@ export function WalletPillMenu({
                     buttonStyles.lg,
                     styles.actionBtn,
                     styles.disconnect,
-                  ].join(' ')}
+                  ].join(" ")}
                   onClick={handleDisconnect}
                 >
-                  <ArrowRightOnRectangleIcon className={styles.actionIcon} aria-hidden />
+                  <ArrowRightOnRectangleIcon
+                    className={styles.actionIcon}
+                    aria-hidden
+                  />
                   <span className={styles.actionLabel}>Disconnect</span>
                 </button>
               )}
@@ -246,5 +274,5 @@ export function WalletPillMenu({
         </div>
       )}
     </div>
-  )
+  );
 }

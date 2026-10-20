@@ -6,7 +6,10 @@
  * invite-slots list, and the commit / confirmation steps when the Max out banner
  * is hoisted above their 500px card.
  */
-export function inviteStepNeedsRoom(step: string, hasMaxOutBanner: boolean): boolean {
-  if (step === 'invites') return true
-  return hasMaxOutBanner && (step === 'commit' || step === 'confirmation')
+export function inviteStepNeedsRoom(
+  step: string,
+  hasMaxOutBanner: boolean,
+): boolean {
+  if (step === "invites") return true;
+  return hasMaxOutBanner && (step === "commit" || step === "confirmation");
 }

@@ -91,7 +91,9 @@ async function main() {
     fs.readFileSync(cohortFile, "utf-8"),
   ) as Beneficiary[];
   if (!Array.isArray(beneficiaries) || beneficiaries.length === 0) {
-    throw new Error("Cohort file must contain a non-empty array of beneficiaries.");
+    throw new Error(
+      "Cohort file must contain a non-empty array of beneficiaries.",
+    );
   }
   for (const b of beneficiaries) {
     if (!b.address || !b.amount || !b.label) {
@@ -105,10 +107,13 @@ async function main() {
   const govFile = getGovernanceDeploymentFile();
   const gov = loadDeployment(govFile);
   if (!gov) {
-    throw new Error(`Governance deployment not found: ${govFile}. Deploy governance first.`);
+    throw new Error(
+      `Governance deployment not found: ${govFile}. Deploy governance first.`,
+    );
   }
   const armTokenAddress = gov.contracts.armToken as string;
-  const revenueCounterAddress = gov.contracts.revenueCounter as string | undefined;
+  const revenueCounterAddress = gov.contracts.revenueCounter as
+    string | undefined;
   if (!revenueCounterAddress) {
     throw new Error(
       `RevenueCounter address missing from ${govFile}. Governance deployment must include revenueCounter.`,
@@ -119,7 +124,9 @@ async function main() {
   const addresses = beneficiaries.map((b) => b.address);
   rejectAnvilAddresses(addresses, "RevenueLock cohort beneficiaries");
 
-  console.log(`Deploying RevenueLock cohort "${cohortName}" (env=${config.env})`);
+  console.log(
+    `Deploying RevenueLock cohort "${cohortName}" (env=${config.env})`,
+  );
   console.log(`  ARM token:       ${armTokenAddress}`);
   console.log(`  RevenueCounter:  ${revenueCounterAddress}`);
   console.log(`  Beneficiaries (${beneficiaries.length}):`);
@@ -129,7 +136,9 @@ async function main() {
     totalAllocation += amountWei;
     console.log(`    ${b.address} — ${b.amount} ARM (${b.label})`);
   }
-  console.log(`  Total allocation: ${ethers.formatUnits(totalAllocation, 18)} ARM`);
+  console.log(
+    `  Total allocation: ${ethers.formatUnits(totalAllocation, 18)} ARM`,
+  );
 
   // Deploy
   const addrArray = beneficiaries.map((b) => b.address);
@@ -138,8 +147,13 @@ async function main() {
   // $10k/day in 18-decimal USD. See PARAMETER_MANIFEST.md / issue #225 — rate cap on
   // the observed-revenue ratchet, defends against malicious RevenueCounter upgrades.
   // Configured in whole USD (config.revenueLockMaxIncreasePerDayUsd), scaled here.
-  const MAX_REVENUE_INCREASE_PER_DAY = ethers.parseUnits(config.revenueLockMaxIncreasePerDayUsd, 18);
-  console.log(`  MAX_REVENUE_INCREASE_PER_DAY: $${config.revenueLockMaxIncreasePerDayUsd}/day (${MAX_REVENUE_INCREASE_PER_DAY})`);
+  const MAX_REVENUE_INCREASE_PER_DAY = ethers.parseUnits(
+    config.revenueLockMaxIncreasePerDayUsd,
+    18,
+  );
+  console.log(
+    `  MAX_REVENUE_INCREASE_PER_DAY: $${config.revenueLockMaxIncreasePerDayUsd}/day (${MAX_REVENUE_INCREASE_PER_DAY})`,
+  );
 
   const RevenueLock = await ethers.getContractFactory("RevenueLock");
   const lock = await RevenueLock.deploy(
@@ -155,7 +169,9 @@ async function main() {
   // event backfill starts at the RevenueLock's first block (issue #324).
   const lockDeployBlock = lockReceipt!.blockNumber;
   const lockAddress = await lock.getAddress();
-  console.log(`  RevenueLock deployed: ${lockAddress} (block ${lockDeployBlock})`);
+  console.log(
+    `  RevenueLock deployed: ${lockAddress} (block ${lockDeployBlock})`,
+  );
 
   // Verify read-back
   const onchainTotal = await lock.totalAllocation();
@@ -189,8 +205,12 @@ async function main() {
   console.log("\nNext steps (via governance proposal):");
   console.log(`  1. armToken.addToWhitelist(${lockAddress})`);
   console.log(`  2. armToken.addAuthorizedDelegator(${lockAddress})`);
-  console.log(`  3. treasury.distribute(armToken, ${lockAddress}, ${ethers.formatUnits(totalAllocation, 18)} ARM)`);
-  console.log("\nOr use the 'Register Revenue Lock Cohort' template in the governance-ui.");
+  console.log(
+    `  3. treasury.distribute(armToken, ${lockAddress}, ${ethers.formatUnits(totalAllocation, 18)} ARM)`,
+  );
+  console.log(
+    "\nOr use the 'Register Revenue Lock Cohort' template in the governance-ui.",
+  );
 }
 
 main().catch((err) => {

@@ -1,39 +1,51 @@
 // ABOUTME: Container that renders the correct action panels based on phase and role.
 // ABOUTME: Gates write operations by connected wallet role and current contract phase.
 
-import type { Signer, JsonRpcProvider } from 'ethers'
-import type { CrowdfundEvent } from '@armada/crowdfund-shared'
-import type { AdminRole } from '@/hooks/useRole'
-import type { AdminState } from '@/hooks/useAdminState'
-import type { TreasuryBalances } from '@/hooks/useTreasuryBalances'
-import { ArmLoadPanel } from './ArmLoadPanel'
-import { SeedManager } from './SeedManager'
-import { LaunchTeamInvites } from './LaunchTeamInvites'
-import { FinalizePanel } from './FinalizePanel'
-import { SettlementSummary } from './SettlementSummary'
-import { TreasuryMonitor } from './TreasuryMonitor'
-import { ArmSweepPanel } from './ArmSweepPanel'
-import { CancelPanel } from './CancelPanel'
+import type { Signer, JsonRpcProvider } from "ethers";
+import type { CrowdfundEvent } from "@armada/crowdfund-shared";
+import type { AdminRole } from "@/hooks/useRole";
+import type { AdminState } from "@/hooks/useAdminState";
+import type { TreasuryBalances } from "@/hooks/useTreasuryBalances";
+import { ArmLoadPanel } from "./ArmLoadPanel";
+import { SeedManager } from "./SeedManager";
+import { LaunchTeamInvites } from "./LaunchTeamInvites";
+import { FinalizePanel } from "./FinalizePanel";
+import { SettlementSummary } from "./SettlementSummary";
+import { TreasuryMonitor } from "./TreasuryMonitor";
+import { ArmSweepPanel } from "./ArmSweepPanel";
+import { CancelPanel } from "./CancelPanel";
 
 export interface AdminActionsProps {
-  state: AdminState
-  role: AdminRole
-  signer: Signer | null
-  crowdfundAddress: string
-  treasury: TreasuryBalances
-  events: CrowdfundEvent[]
-  provider: JsonRpcProvider | null
-  armTokenAddress: string | null
-  treasuryAddress: string | null
+  state: AdminState;
+  role: AdminRole;
+  signer: Signer | null;
+  crowdfundAddress: string;
+  treasury: TreasuryBalances;
+  events: CrowdfundEvent[];
+  provider: JsonRpcProvider | null;
+  armTokenAddress: string | null;
+  treasuryAddress: string | null;
 }
 
-export function AdminActions({ state, role, signer, crowdfundAddress, treasury, events, provider, armTokenAddress, treasuryAddress }: AdminActionsProps) {
-  const isActive = state.phase === 0
-  const isFinalized = state.phase === 1
-  const isCanceled = state.phase === 2
-  const isLT = role === 'launch_team'
-  const isSC = role === 'security_council'
-  const ltWindowOpen = state.blockTimestamp >= state.windowStart && state.blockTimestamp <= state.launchTeamInviteEnd
+export function AdminActions({
+  state,
+  role,
+  signer,
+  crowdfundAddress,
+  treasury,
+  events,
+  provider,
+  armTokenAddress,
+  treasuryAddress,
+}: AdminActionsProps) {
+  const isActive = state.phase === 0;
+  const isFinalized = state.phase === 1;
+  const isCanceled = state.phase === 2;
+  const isLT = role === "launch_team";
+  const isSC = role === "security_council";
+  const ltWindowOpen =
+    state.blockTimestamp >= state.windowStart &&
+    state.blockTimestamp <= state.launchTeamInviteEnd;
 
   return (
     <div className="space-y-4">
@@ -44,7 +56,12 @@ export function AdminActions({ state, role, signer, crowdfundAddress, treasury, 
         <div className="space-y-3">
           {/* ARM loading — permissionless */}
           {!state.armLoaded && (
-            <ArmLoadPanel signer={signer} crowdfundAddress={crowdfundAddress} provider={provider} armTokenAddress={armTokenAddress} />
+            <ArmLoadPanel
+              signer={signer}
+              crowdfundAddress={crowdfundAddress}
+              provider={provider}
+              armTokenAddress={armTokenAddress}
+            />
           )}
 
           {/* Seed management — LT only, launch-team window (days 1-14) */}
@@ -87,7 +104,10 @@ export function AdminActions({ state, role, signer, crowdfundAddress, treasury, 
       {isFinalized && (
         <div className="space-y-3">
           <SettlementSummary state={state} events={events} />
-          <TreasuryMonitor treasury={treasury} treasuryAddress={treasuryAddress} />
+          <TreasuryMonitor
+            treasury={treasury}
+            treasuryAddress={treasuryAddress}
+          />
           <ArmSweepPanel
             signer={signer}
             crowdfundAddress={crowdfundAddress}
@@ -108,7 +128,10 @@ export function AdminActions({ state, role, signer, crowdfundAddress, treasury, 
           <div className="rounded border border-destructive/50 bg-destructive/10 p-3 text-destructive">
             Crowdfund has been canceled. All commitments are refundable.
           </div>
-          <TreasuryMonitor treasury={treasury} treasuryAddress={treasuryAddress} />
+          <TreasuryMonitor
+            treasury={treasury}
+            treasuryAddress={treasuryAddress}
+          />
           <ArmSweepPanel
             signer={signer}
             crowdfundAddress={crowdfundAddress}
@@ -129,11 +152,11 @@ export function AdminActions({ state, role, signer, crowdfundAddress, treasury, 
       )}
 
       {/* Observer role message */}
-      {role === 'observer' && (
+      {role === "observer" && (
         <div className="text-muted-foreground text-center py-2">
           Connect as launch team or security council to access admin actions.
         </div>
       )}
     </div>
-  )
+  );
 }

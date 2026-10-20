@@ -1,69 +1,79 @@
 // ABOUTME: Committer full-screen mobile menu — gradient panel with RainbowKit wallet block, nav + About link, and Participate/Claim.
 // ABOUTME: Mobile equivalent of the designer's HeaderMobileMenu, hosted inside AppHeader's full-screen Sheet.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRightOnRectangleIcon,
   CheckIcon,
   ClipboardDocumentIcon,
   WalletIcon,
   XMarkIcon,
-} from '@heroicons/react/24/outline'
-import { WalletMetamask, WalletPhantom, WalletWalletConnect } from '@web3icons/react'
-import { useAccount, useDisconnect } from 'wagmi'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { ArmadaLogo, Button as ArmadaButton } from '@armada/ui'
-import { Participate, fleetPng, fleetMp4 } from '@armada/crowdfund-shared'
-import type { Page } from '@/appNav'
-import { CROWDFUND_INFO_URL } from '@/config/socials'
-import styles from './CommitterMobileMenu.module.css'
+} from "@heroicons/react/24/outline";
+import {
+  WalletMetamask,
+  WalletPhantom,
+  WalletWalletConnect,
+} from "@web3icons/react";
+import { useAccount, useDisconnect } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ArmadaLogo, Button as ArmadaButton } from "@armada/ui";
+import { Participate, fleetPng, fleetMp4 } from "@armada/crowdfund-shared";
+import type { Page } from "@/appNav";
+import { CROWDFUND_INFO_URL } from "@/config/socials";
+import styles from "./CommitterMobileMenu.module.css";
 
-const ACTION_ICON_PX = 20
-const WALLET_ICON_PX = 48
+const ACTION_ICON_PX = 20;
+const WALLET_ICON_PX = 48;
 
 /** Map a wagmi connector id to the designer's `@web3icons` provider switch. */
 function detectWalletProvider(connectorId?: string): string | undefined {
-  if (!connectorId) return undefined
-  const id = connectorId.toLowerCase()
-  if (id.includes('metamask')) return 'metamask'
-  if (id.includes('phantom')) return 'phantom'
-  if (id.includes('walletconnect')) return 'walletconnect'
-  return undefined
+  if (!connectorId) return undefined;
+  const id = connectorId.toLowerCase();
+  if (id.includes("metamask")) return "metamask";
+  if (id.includes("phantom")) return "phantom";
+  if (id.includes("walletconnect")) return "walletconnect";
+  return undefined;
 }
 
-function WalletProviderIcon({ provider, size = WALLET_ICON_PX }: { provider?: string; size?: number }) {
+function WalletProviderIcon({
+  provider,
+  size = WALLET_ICON_PX,
+}: {
+  provider?: string;
+  size?: number;
+}) {
   switch (provider) {
-    case 'metamask':
-      return <WalletMetamask size={size} aria-hidden />
-    case 'phantom':
-      return <WalletPhantom size={size} aria-hidden />
-    case 'walletconnect':
-      return <WalletWalletConnect size={size} aria-hidden />
+    case "metamask":
+      return <WalletMetamask size={size} aria-hidden />;
+    case "phantom":
+      return <WalletPhantom size={size} aria-hidden />;
+    case "walletconnect":
+      return <WalletWalletConnect size={size} aria-hidden />;
     default:
-      return <WalletIcon width={size} height={size} aria-hidden />
+      return <WalletIcon width={size} height={size} aria-hidden />;
   }
 }
 
 /** Mockup convention is 6 chars before the ellipsis ("0x1234...abcd"). */
 function truncate6(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 export interface CommitterMobileMenuProps {
   /** Close the host Sheet (also called after every nav/action). */
-  onClose: () => void
-  current: Page
-  onNavigate: (page: Page) => void
-  onParticipate: () => void
+  onClose: () => void;
+  current: Page;
+  onNavigate: (page: Page) => void;
+  onParticipate: () => void;
   /** When false, Claim stays in the nav but is not navigable. */
-  claimAvailable: boolean
+  claimAvailable: boolean;
   /** When false (before the sale opens), Your position stays in the nav but
    *  is not navigable. */
-  myPositionEnabled: boolean
+  myPositionEnabled: boolean;
   /** Commit window is open — gates the Participate CTA (mirrors header chrome). */
-  participationEnabled: boolean
+  participationEnabled: boolean;
   /** Connected wallet USDC balance (6 decimals). */
-  usdcBalance: bigint
+  usdcBalance: bigint;
 }
 
 export function CommitterMobileMenu({
@@ -76,52 +86,77 @@ export function CommitterMobileMenu({
   participationEnabled,
   usdcBalance,
 }: CommitterMobileMenuProps) {
-  const { connector } = useAccount()
-  const { disconnect } = useDisconnect()
-  const [copied, setCopied] = useState(false)
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { connector } = useAccount();
+  const { disconnect } = useDisconnect();
+  const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-    }
-  }, [])
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const navigate = (page: Page) => {
-    onNavigate(page)
-    onClose()
-  }
+    onNavigate(page);
+    onClose();
+  };
 
   const navItemClass = (active: boolean) =>
-    [styles.navItem, active && styles.navItemActive].filter(Boolean).join(' ')
+    [styles.navItem, active && styles.navItemActive].filter(Boolean).join(" ");
 
   return (
     <div className={styles.panel}>
       <div className={styles.topBar}>
-        <ArmadaLogo variant="mark" markTone="white" className={styles.logoMark} />
+        <ArmadaLogo
+          variant="mark"
+          markTone="white"
+          className={styles.logoMark}
+        />
         <div className={styles.topBarActions}>
-          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close menu">
-            <XMarkIcon width={ACTION_ICON_PX} height={ACTION_ICON_PX} aria-hidden />
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={onClose}
+            aria-label="Close menu"
+          >
+            <XMarkIcon
+              width={ACTION_ICON_PX}
+              height={ACTION_ICON_PX}
+              aria-hidden
+            />
           </button>
         </div>
       </div>
 
       <div className={styles.scroll}>
         <ConnectButton.Custom>
-          {({ account, chain, mounted, authenticationStatus, openConnectModal, openChainModal }) => {
-            const isReady = mounted && authenticationStatus !== 'loading'
+          {({
+            account,
+            chain,
+            mounted,
+            authenticationStatus,
+            openConnectModal,
+            openChainModal,
+          }) => {
+            const isReady = mounted && authenticationStatus !== "loading";
             const isConnected =
               isReady &&
               account &&
               chain &&
-              (!authenticationStatus || authenticationStatus === 'authenticated')
+              (!authenticationStatus ||
+                authenticationStatus === "authenticated");
 
             if (!isConnected) {
               return (
                 <div
-                  className={[styles.walletBlock, styles.walletBlockDisconnected, styles.sectionSpacing]
+                  className={[
+                    styles.walletBlock,
+                    styles.walletBlockDisconnected,
+                    styles.sectionSpacing,
+                  ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                 >
                   <ArmadaButton
                     variant="primary"
@@ -130,20 +165,24 @@ export function CommitterMobileMenu({
                     showIcon={false}
                     className={styles.connectWalletBtn}
                     onClick={() => {
-                      openConnectModal()
-                      onClose()
+                      openConnectModal();
+                      onClose();
                     }}
                   />
                 </div>
-              )
+              );
             }
 
             if (chain.unsupported) {
               return (
                 <div
-                  className={[styles.walletBlock, styles.walletBlockDisconnected, styles.sectionSpacing]
+                  className={[
+                    styles.walletBlock,
+                    styles.walletBlockDisconnected,
+                    styles.sectionSpacing,
+                  ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                 >
                   <ArmadaButton
                     variant="primary"
@@ -152,33 +191,37 @@ export function CommitterMobileMenu({
                     showIcon={false}
                     className={styles.connectWalletBtn}
                     onClick={() => {
-                      openChainModal()
-                      onClose()
+                      openChainModal();
+                      onClose();
                     }}
                   />
                 </div>
-              )
+              );
             }
 
-            const provider = detectWalletProvider(connector?.id)
-            const displayAddress = account.displayName.startsWith('0x')
+            const provider = detectWalletProvider(connector?.id);
+            const displayAddress = account.displayName.startsWith("0x")
               ? truncate6(account.address)
-              : account.displayName
-            const balanceLabel = `${Number(usdcBalance / 1_000_000n).toLocaleString('en-US')} USDC`
+              : account.displayName;
+            const balanceLabel = `${Number(usdcBalance / 1_000_000n).toLocaleString("en-US")} USDC`;
 
             const handleCopy = async () => {
               try {
-                await navigator.clipboard.writeText(account.address)
-                setCopied(true)
-                if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-                copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
+                await navigator.clipboard.writeText(account.address);
+                setCopied(true);
+                if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+                copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
               } catch {
-                setCopied(false)
+                setCopied(false);
               }
-            }
+            };
 
             return (
-              <div className={[styles.walletBlock, styles.sectionSpacing].join(' ')}>
+              <div
+                className={[styles.walletBlock, styles.sectionSpacing].join(
+                  " ",
+                )}
+              >
                 <span className={styles.walletIcon}>
                   <WalletProviderIcon provider={provider} />
                 </span>
@@ -187,60 +230,82 @@ export function CommitterMobileMenu({
                 <div className={styles.walletActions}>
                   <button
                     type="button"
-                    className={[styles.roundActionBtn, copied && styles.roundActionBtnCopied]
+                    className={[
+                      styles.roundActionBtn,
+                      copied && styles.roundActionBtnCopied,
+                    ]
                       .filter(Boolean)
-                      .join(' ')}
+                      .join(" ")}
                     onClick={() => void handleCopy()}
-                    aria-label={copied ? 'Copied' : 'Copy address'}
+                    aria-label={copied ? "Copied" : "Copy address"}
                   >
                     {copied ? (
-                      <CheckIcon width={ACTION_ICON_PX} height={ACTION_ICON_PX} aria-hidden />
+                      <CheckIcon
+                        width={ACTION_ICON_PX}
+                        height={ACTION_ICON_PX}
+                        aria-hidden
+                      />
                     ) : (
-                      <ClipboardDocumentIcon width={ACTION_ICON_PX} height={ACTION_ICON_PX} aria-hidden />
+                      <ClipboardDocumentIcon
+                        width={ACTION_ICON_PX}
+                        height={ACTION_ICON_PX}
+                        aria-hidden
+                      />
                     )}
                   </button>
                   <button
                     type="button"
                     className={styles.roundActionBtn}
                     onClick={() => {
-                      disconnect()
-                      onClose()
+                      disconnect();
+                      onClose();
                     }}
                     aria-label="Disconnect"
                   >
-                    <ArrowRightOnRectangleIcon width={ACTION_ICON_PX} height={ACTION_ICON_PX} aria-hidden />
+                    <ArrowRightOnRectangleIcon
+                      width={ACTION_ICON_PX}
+                      height={ACTION_ICON_PX}
+                      aria-hidden
+                    />
                   </button>
                 </div>
               </div>
-            )
+            );
           }}
         </ConnectButton.Custom>
 
         <hr className={styles.separator} aria-hidden />
 
-        <nav className={[styles.nav, styles.sectionSpacing].join(' ')} aria-label="Main">
+        <nav
+          className={[styles.nav, styles.sectionSpacing].join(" ")}
+          aria-label="Main"
+        >
           <button
             type="button"
-            className={navItemClass(current === 'network')}
-            aria-current={current === 'network' ? 'page' : undefined}
-            onClick={() => navigate('network')}
+            className={navItemClass(current === "network")}
+            aria-current={current === "network" ? "page" : undefined}
+            onClick={() => navigate("network")}
           >
             Crowdfund
           </button>
           <button
             type="button"
             className={[
-              navItemClass(myPositionEnabled && current === 'my-position'),
+              navItemClass(myPositionEnabled && current === "my-position"),
               !myPositionEnabled && styles.navItemDisabled,
             ]
               .filter(Boolean)
-              .join(' ')}
-            aria-current={myPositionEnabled && current === 'my-position' ? 'page' : undefined}
+              .join(" ")}
+            aria-current={
+              myPositionEnabled && current === "my-position"
+                ? "page"
+                : undefined
+            }
             aria-disabled={!myPositionEnabled}
             disabled={!myPositionEnabled}
             onClick={() => {
-              if (!myPositionEnabled) return
-              navigate('my-position')
+              if (!myPositionEnabled) return;
+              navigate("my-position");
             }}
           >
             Your position
@@ -252,13 +317,13 @@ export function CommitterMobileMenu({
               !claimAvailable && styles.navItemDisabled,
             ]
               .filter(Boolean)
-              .join(' ')}
+              .join(" ")}
             aria-disabled={!claimAvailable}
             disabled={!claimAvailable}
             onClick={() => {
-              if (!claimAvailable) return
+              if (!claimAvailable) return;
               // Claim opens a modal — never mark Claim as the selected page tab.
-              navigate('claim')
+              navigate("claim");
             }}
           >
             Claim
@@ -282,12 +347,12 @@ export function CommitterMobileMenu({
             imageSrc={fleetPng}
             videoSrc={fleetMp4}
             onCtaClick={() => {
-              onParticipate()
-              onClose()
+              onParticipate();
+              onClose();
             }}
           />
         ) : null}
       </div>
     </div>
-  )
+  );
 }

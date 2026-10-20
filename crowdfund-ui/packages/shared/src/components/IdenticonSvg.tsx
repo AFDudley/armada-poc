@@ -3,30 +3,34 @@
 
 /// <reference path="../types/jazzicon.d.ts" />
 
-import { useEffect, useRef } from 'react'
-import jazzicon from '@metamask/jazzicon'
+import { useEffect, useRef } from "react";
+import jazzicon from "@metamask/jazzicon";
 
 export interface IdenticonSvgProps {
-  address: string
-  size?: number
-  className?: string
+  address: string;
+  size?: number;
+  className?: string;
 }
 
 /** Seed jazzicon with the first 8 hex chars of the address (same convention as metamask). */
 function addressSeed(addr: string): number {
-  const hex = addr.startsWith('0x') ? addr.slice(2, 10) : addr.slice(0, 8)
-  return parseInt(hex, 16) || 0
+  const hex = addr.startsWith("0x") ? addr.slice(2, 10) : addr.slice(0, 8);
+  return parseInt(hex, 16) || 0;
 }
 
-export function IdenticonSvg({ address, size = 32, className }: IdenticonSvgProps) {
-  const ref = useRef<HTMLDivElement>(null)
+export function IdenticonSvg({
+  address,
+  size = 32,
+  className,
+}: IdenticonSvgProps) {
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const child = jazzicon(size, addressSeed(address))
-    el.replaceChildren(child)
-  }, [address, size])
+    const el = ref.current;
+    if (!el) return;
+    const child = jazzicon(size, addressSeed(address));
+    el.replaceChildren(child);
+  }, [address, size]);
 
   return (
     <div
@@ -36,11 +40,11 @@ export function IdenticonSvg({ address, size = 32, className }: IdenticonSvgProp
       style={{
         width: size,
         height: size,
-        borderRadius: '50%',
-        overflow: 'hidden',
-        pointerEvents: 'none',
-        display: 'inline-block',
+        borderRadius: "50%",
+        overflow: "hidden",
+        pointerEvents: "none",
+        display: "inline-block",
       }}
     />
-  )
+  );
 }

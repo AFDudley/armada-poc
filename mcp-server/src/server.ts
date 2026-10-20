@@ -36,7 +36,7 @@ server.tool(
     return {
       content: [{ type: "text", text: JSON.stringify(report, null, 2) }],
     };
-  }
+  },
 );
 
 // ============================================================================
@@ -58,7 +58,7 @@ server.tool(
     return {
       content: [{ type: "text", text: JSON.stringify(report, null, 2) }],
     };
-  }
+  },
 );
 
 // ============================================================================
@@ -75,7 +75,9 @@ server.tool(
     chain: z
       .enum(ROLES)
       .optional()
-      .describe("Chain to query (defaults to hub, only relevant for privacy-pool)"),
+      .describe(
+        "Chain to query (defaults to hub, only relevant for privacy-pool)",
+      ),
   },
   async ({ component, chain }) => {
     const role = chain ?? "hub";
@@ -83,7 +85,7 @@ server.tool(
     return {
       content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
     };
-  }
+  },
 );
 
 // ============================================================================

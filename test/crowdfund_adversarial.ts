@@ -40,9 +40,15 @@ describe("Crowdfund Adversarial", function () {
   // Add $436K of hop-1 demand to clear the $1M projected-allocation minimum.
   // The helper stacks invites across the supplied wallets so it does not depend
   // on having 109 distinct Hardhat signers available in each fixture.
-  async function addHop1ForMinSale(seeds: SignerWithAddress[], hop1Pool: SignerWithAddress[]) {
+  async function addHop1ForMinSale(
+    seeds: SignerWithAddress[],
+    hop1Pool: SignerWithAddress[],
+  ) {
     const inviteSlots = 109;
-    const committedSlots = new Map<string, { signer: SignerWithAddress; slots: number }>();
+    const committedSlots = new Map<
+      string,
+      { signer: SignerWithAddress; slots: number }
+    >();
     for (let i = 0; i < inviteSlots; i++) {
       const inviter = seeds[i % seeds.length];
       const signer = hop1Pool[i % hop1Pool.length];
@@ -67,7 +73,9 @@ describe("Crowdfund Adversarial", function () {
       if (i === 111) {
         await crowdfund.launchTeamInvite(invitee.address, 0);
       } else {
-        await crowdfund.connect(seeds[i % seeds.length]).invite(invitee.address, 0);
+        await crowdfund
+          .connect(seeds[i % seeds.length])
+          .invite(invitee.address, 0);
       }
     }
     for (const invitee of hop1Invitees) {
@@ -100,7 +108,7 @@ describe("Crowdfund Adversarial", function () {
       treasuryAddr.address,
       deployer.address,
       securityCouncil.address, // securityCouncil
-      openTimestamp
+      openTimestamp,
     );
     await crowdfund.waitForDeployment();
     const cfAddr = await crowdfund.getAddress();
@@ -121,8 +129,7 @@ describe("Crowdfund Adversarial", function () {
   describe("Precision & Accounting Invariants", function () {
     it("sum of allocations + refunds == totalCommitted (70 seeds, pro-rata)", async function () {
       const seeds = allSigners.slice(1, 71); // 70 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       // All commit at max cap = 70 * $15K = $1.05M > MIN_SALE
       for (const s of seeds) {
@@ -147,7 +154,7 @@ describe("Crowdfund Adversarial", function () {
         sumAllocArm += alloc;
         sumRefund += refund;
         // Derive allocUsdc from: refund = committed - allocUsdc → allocUsdc = committed - refund
-        sumAllocUsdc += (USDC(15_000) - refund);
+        sumAllocUsdc += USDC(15_000) - refund;
       }
 
       // Also sum hop-1 allocations using each wallet's stacked commitment.
@@ -155,7 +162,8 @@ describe("Crowdfund Adversarial", function () {
         const [alloc, refund] = await crowdfund.computeAllocation(hop1.address);
         sumAllocArm += alloc;
         sumRefund += refund;
-        sumAllocUsdc += (await crowdfund.getCommitment(hop1.address, 1)) - refund;
+        sumAllocUsdc +=
+          (await crowdfund.getCommitment(hop1.address, 1)) - refund;
       }
 
       const totalCommitted = await crowdfund.totalCommitted();
@@ -170,7 +178,9 @@ describe("Crowdfund Adversarial", function () {
       // The difference is at most uniqueCommitters per oversubscribed hop (negligible dust).
       const totalParticipants = BigInt(seeds.length + hop1Pool.length);
       expect(sumAllocArm).to.be.lte(totalAllocated);
-      expect(sumAllocArm).to.be.gte(totalAllocated - totalParticipants * ARM(1));
+      expect(sumAllocArm).to.be.gte(
+        totalAllocated - totalParticipants * ARM(1),
+      );
 
       expect(sumAllocUsdc).to.be.lte(totalAllocatedUsdc);
       expect(sumAllocUsdc).to.be.gte(totalAllocatedUsdc - totalParticipants);
@@ -187,15 +197,16 @@ describe("Crowdfund Adversarial", function () {
     it("sum of allocations + refunds == totalCommitted (mixed hops, 100+ participants)", async function () {
       // Setup: 70 seeds → each invites up to 3 hop-1 addresses
       const seeds = allSigners.slice(1, 71); // 70 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       // Seeds invite hop-1 addresses (use signers 71-140)
       const hop1Addrs = allSigners.slice(71, 141);
       let hop1Count = 0;
       for (let i = 0; i < seeds.length && hop1Count < hop1Addrs.length; i++) {
         // Each seed invites 1 hop-1 address (to keep it manageable)
-        await crowdfund.connect(seeds[i]).invite(hop1Addrs[hop1Count].address, 0);
+        await crowdfund
+          .connect(seeds[i])
+          .invite(hop1Addrs[hop1Count].address, 0);
         hop1Count++;
       }
 
@@ -225,7 +236,7 @@ describe("Crowdfund Adversarial", function () {
         // Seeds are hop-0, hop1Addrs are hop-1
         const hop = seeds.includes(p) ? 0 : 1;
         const committed = await crowdfund.getCommitment(p.address, hop);
-        sumAllocUsdc += (committed - refund);
+        sumAllocUsdc += committed - refund;
         sumRefund += refund;
       }
 
@@ -238,8 +249,7 @@ describe("Crowdfund Adversarial", function () {
 
     it("contract ARM balance covers all allocations after finalization", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -259,8 +269,7 @@ describe("Crowdfund Adversarial", function () {
 
     it("after all claims, contract balances are non-negative", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -302,7 +311,6 @@ describe("Crowdfund Adversarial", function () {
     it("commit exactly at hop cap succeeds", async function () {
       await crowdfund.addSeeds([allSigners[1].address]);
 
-
       await fundAndApprove(allSigners[1], USDC(15_000));
       await crowdfund.connect(allSigners[1]).commit(0, USDC(15_000));
 
@@ -312,7 +320,6 @@ describe("Crowdfund Adversarial", function () {
 
     it("commit over hop cap succeeds (excess refunded at settlement)", async function () {
       await crowdfund.addSeeds([allSigners[1].address]);
-
 
       await fundAndApprove(allSigners[1], USDC(15_050));
       await crowdfund.connect(allSigners[1]).commit(0, USDC(15_000));
@@ -334,8 +341,7 @@ describe("Crowdfund Adversarial", function () {
       // For exact MIN_SALE: we'd need some seeds to commit less than cap.
       // Let's use 66 seeds at $15K ($990K) + 1 seed at $10K ($10K) = $1,000,000
       const seeds = allSigners.slice(1, 68); // 67 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       // 66 seeds at $15K
       for (let i = 0; i < 66; i++) {
@@ -365,8 +371,7 @@ describe("Crowdfund Adversarial", function () {
     it("totalCommitted 1 below MIN_SALE causes finalize to enter refundMode", async function () {
       // 66 seeds at $15K = $990K. 1 seed at $9,999.999999 = $999,999.999999 < $1M
       const seeds = allSigners.slice(1, 68);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (let i = 0; i < 66; i++) {
         await fundAndApprove(seeds[i], USDC(15_000));
@@ -392,8 +397,7 @@ describe("Crowdfund Adversarial", function () {
       // ELASTIC_TRIGGER = $1,500,000
       // Need 100 seeds at $15K each = $1,500,000
       const seeds = allSigners.slice(1, 101); // 100 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -413,8 +417,7 @@ describe("Crowdfund Adversarial", function () {
     it("totalCommitted 1 below ELASTIC_TRIGGER uses BASE_SALE", async function () {
       // 99 seeds at $15K = $1,485,000. 1 seed at $14,999.999999
       const seeds = allSigners.slice(1, 101);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (let i = 0; i < 99; i++) {
         await fundAndApprove(seeds[i], USDC(15_000));
@@ -440,8 +443,7 @@ describe("Crowdfund Adversarial", function () {
       // Without hop-1/hop-2 demand, totalAllocUsdc cannot reach MIN_SALE, so
       // finalization enters refundMode and all participants get full refunds.
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -467,7 +469,7 @@ describe("Crowdfund Adversarial", function () {
       // totalCommitted = $1,485K + $18K = $1,503K >= ELASTIC_TRIGGER ($1.5M)
       // cappedDemand = $1,485K + 3×$4K = $1,497K < ELASTIC_TRIGGER ($1.5M)
       const seeds = allSigners.slice(1, 100); // 99 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -496,8 +498,7 @@ describe("Crowdfund Adversarial", function () {
     // enter refundMode and transition to Phase.Finalized (not revert).
     it("finalize with all whitelisted but 0 committers enters refundMode", async function () {
       const seeds = allSigners.slice(1, 4);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       // Nobody commits — just fast-forward through the active window
       await time.increase(THREE_WEEKS + 1);
@@ -510,17 +511,16 @@ describe("Crowdfund Adversarial", function () {
     it("commit below MIN_COMMIT ($50 USDC) reverts", async function () {
       await crowdfund.addSeeds([allSigners[1].address]);
 
-
       await fundAndApprove(allSigners[1], USDC(50));
 
       // 1 wei reverts
       await expect(
-        crowdfund.connect(allSigners[1]).commit(0, 1n)
+        crowdfund.connect(allSigners[1]).commit(0, 1n),
       ).to.be.revertedWith("ArmadaCrowdfund: below minimum commitment");
 
       // $49.999999 reverts
       await expect(
-        crowdfund.connect(allSigners[1]).commit(0, USDC(50) - 1n)
+        crowdfund.connect(allSigners[1]).commit(0, USDC(50) - 1n),
       ).to.be.revertedWith("ArmadaCrowdfund: below minimum commitment");
 
       // Exactly $50 succeeds
@@ -533,7 +533,6 @@ describe("Crowdfund Adversarial", function () {
       const seed = allSigners[1];
       await crowdfund.addSeeds([seed.address]);
 
-
       // Seed invites self — creates (seed, 1) node
       await crowdfund.connect(seed).invite(seed.address, 0);
       expect(await crowdfund.isWhitelisted(seed.address, 1)).to.be.true;
@@ -545,12 +544,11 @@ describe("Crowdfund Adversarial", function () {
       const invitee = allSigners[2];
       await crowdfund.addSeeds([seed.address]);
 
-
       const windowEnd = await crowdfund.windowEnd();
       // Warp past windowEnd — invite should fail
       await time.increaseTo(windowEnd + 1n);
       await expect(
-        crowdfund.connect(seed).invite(invitee.address, 0)
+        crowdfund.connect(seed).invite(invitee.address, 0),
       ).to.be.revertedWith("ArmadaCrowdfund: window closed");
     });
 
@@ -558,7 +556,6 @@ describe("Crowdfund Adversarial", function () {
       const seed = allSigners[1];
       const invitee = allSigners[2];
       await crowdfund.addSeeds([seed.address]);
-
 
       const windowEnd = await crowdfund.windowEnd();
       // Warp to 2 seconds before windowEnd — next tx executes at windowEnd - 1
@@ -572,7 +569,6 @@ describe("Crowdfund Adversarial", function () {
     it("commit succeeds at window start", async function () {
       const seed = allSigners[1];
       await crowdfund.addSeeds([seed.address]);
-
 
       await fundAndApprove(seed, USDC(100));
       await crowdfund.connect(seed).commit(0, USDC(100));
@@ -590,7 +586,8 @@ describe("Crowdfund Adversarial", function () {
     it("commit outside active window reverts", async function () {
       // Deploy a fresh crowdfund to test outside-window behavior.
       // The shared beforeEach advances to windowStart, so we need an independent instance.
-      const ArmadaCrowdfund = await ethers.getContractFactory("ArmadaCrowdfund");
+      const ArmadaCrowdfund =
+        await ethers.getContractFactory("ArmadaCrowdfund");
       const futureOpen = (await time.latest()) + 600;
       const freshCf = await ArmadaCrowdfund.deploy(
         await usdc.getAddress(),
@@ -598,7 +595,7 @@ describe("Crowdfund Adversarial", function () {
         treasuryAddr.address,
         deployer.address,
         deployer.address,
-        futureOpen
+        futureOpen,
       );
       await freshCf.waitForDeployment();
       const freshCfAddr = await freshCf.getAddress();
@@ -616,9 +613,11 @@ describe("Crowdfund Adversarial", function () {
       // Advance past windowEnd so commit reverts
       await time.increase(THREE_WEEKS + 1);
       await fundAndApprove(allSigners[1], USDC(15_000));
-      await usdc.connect(allSigners[1]).approve(await freshCf.getAddress(), USDC(15_000));
+      await usdc
+        .connect(allSigners[1])
+        .approve(await freshCf.getAddress(), USDC(15_000));
       await expect(
-        freshCf.connect(allSigners[1]).commit(0, USDC(15_000))
+        freshCf.connect(allSigners[1]).commit(0, USDC(15_000)),
       ).to.be.revertedWith("ArmadaCrowdfund: not active window");
     });
 
@@ -628,18 +627,17 @@ describe("Crowdfund Adversarial", function () {
       await time.increase(THREE_WEEKS + 1); // past active window
 
       await expect(
-        crowdfund.connect(allSigners[1]).invite(allSigners[2].address, 0)
+        crowdfund.connect(allSigners[1]).invite(allSigners[2].address, 0),
       ).to.be.revertedWith("ArmadaCrowdfund: window closed");
     });
 
     it("finalize before window ends reverts", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
-
-      await expect(
-        crowdfund.finalize()
-      ).to.be.revertedWith("ArmadaCrowdfund: window not ended");
+      await expect(crowdfund.finalize()).to.be.revertedWith(
+        "ArmadaCrowdfund: window not ended",
+      );
     });
 
     it("addSeeds after the launch-team invite window reverts", async function () {
@@ -648,7 +646,7 @@ describe("Crowdfund Adversarial", function () {
       await time.increase(LAUNCH_TEAM_WINDOW + 1); // past launch team invite period
 
       await expect(
-        crowdfund.addSeeds([allSigners[2].address])
+        crowdfund.addSeeds([allSigners[2].address]),
       ).to.be.revertedWith("ArmadaCrowdfund: outside week-1 window");
     });
 
@@ -656,8 +654,7 @@ describe("Crowdfund Adversarial", function () {
     // revert in refundMode (no ARM to distribute), and claimRefund() must work.
     it("claim reverts in refundMode (should use claimRefund)", async function () {
       const seeds = allSigners.slice(1, 4);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       await fundAndApprove(seeds[0], USDC(15_000));
       await crowdfund.connect(seeds[0]).commit(0, USDC(15_000));
@@ -669,7 +666,7 @@ describe("Crowdfund Adversarial", function () {
 
       // claim() reverts because sale is in refund mode
       await expect(
-        crowdfund.connect(seeds[0]).claim(ethers.ZeroAddress)
+        crowdfund.connect(seeds[0]).claim(ethers.ZeroAddress),
       ).to.be.revertedWith("ArmadaCrowdfund: sale in refund mode");
 
       // claimRefund() works after finalize-to-refundMode
@@ -678,8 +675,7 @@ describe("Crowdfund Adversarial", function () {
 
     it("claimRefund when phase is Finalized (not refundMode) reverts — use claim() instead", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -695,7 +691,7 @@ describe("Crowdfund Adversarial", function () {
 
       // claimRefund no longer handles success-path refunds — those go through claim()
       await expect(
-        crowdfund.connect(seeds[0]).claimRefund()
+        crowdfund.connect(seeds[0]).claimRefund(),
       ).to.be.revertedWith("ArmadaCrowdfund: refund not available");
 
       // Instead, claim() handles both ARM + refund
@@ -704,14 +700,15 @@ describe("Crowdfund Adversarial", function () {
       const usdcAfter = await usdc.balanceOf(seeds[0].address);
 
       // Seeds at oversubscribed hop-0 should get a USDC refund (allocation < committed)
-      const [, refundAmount] = await crowdfund.computeAllocation(seeds[0].address);
+      const [, refundAmount] = await crowdfund.computeAllocation(
+        seeds[0].address,
+      );
       expect(usdcAfter - usdcBefore).to.equal(refundAmount);
     });
 
     it("non-admin can finalize (permissionless)", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -726,8 +723,7 @@ describe("Crowdfund Adversarial", function () {
 
     it("non-admin can sweep unallocated ARM (permissionless)", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -742,8 +738,7 @@ describe("Crowdfund Adversarial", function () {
 
     it("withdrawUnallocatedArm second call reverts when nothing to sweep", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -761,14 +756,14 @@ describe("Crowdfund Adversarial", function () {
       await crowdfund.withdrawUnallocatedArm();
 
       // Second sweep: nothing left (unclaimed ARM still owed)
-      await expect(
-        crowdfund.withdrawUnallocatedArm()
-      ).to.be.revertedWith("ArmadaCrowdfund: nothing to sweep");
+      await expect(crowdfund.withdrawUnallocatedArm()).to.be.revertedWith(
+        "ArmadaCrowdfund: nothing to sweep",
+      );
     });
 
     it("pro-rata refund amounts match computeAllocation exactly for each participant", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -782,7 +777,9 @@ describe("Crowdfund Adversarial", function () {
 
       // Verify exact refund amounts for 5 representative seeds via claim()
       for (let i = 0; i < 5; i++) {
-        const [, refundUsdc] = await crowdfund.computeAllocation(seeds[i].address);
+        const [, refundUsdc] = await crowdfund.computeAllocation(
+          seeds[i].address,
+        );
         const usdcBefore = await usdc.balanceOf(seeds[i].address);
         await crowdfund.connect(seeds[i]).claim(seeds[i].address);
         const usdcAfter = await usdc.balanceOf(seeds[i].address);
@@ -799,9 +796,9 @@ describe("Crowdfund Adversarial", function () {
       // Phase is still Active (window not ended, not finalized)
       expect(await crowdfund.phase()).to.equal(Phase.Active);
 
-      await expect(
-        crowdfund.withdrawUnallocatedArm()
-      ).to.be.revertedWith("ArmadaCrowdfund: not finalized or canceled");
+      await expect(crowdfund.withdrawUnallocatedArm()).to.be.revertedWith(
+        "ArmadaCrowdfund: not finalized or canceled",
+      );
     });
 
     // WHY: launchTeam is specified as a sentinel that "is not a participant and makes
@@ -813,20 +810,20 @@ describe("Crowdfund Adversarial", function () {
     // any participant — all of which contradict the spec.
     describe("launchTeam excluded from participant graph", function () {
       it("addSeed rejects launchTeam as a seed", async function () {
-        await expect(
-          crowdfund.addSeeds([deployer.address])
-        ).to.be.revertedWith("ArmadaCrowdfund: launchTeam cannot be a seed");
+        await expect(crowdfund.addSeeds([deployer.address])).to.be.revertedWith(
+          "ArmadaCrowdfund: launchTeam cannot be a seed",
+        );
       });
 
       it("launchTeamInvite rejects launchTeam as invitee at hop-1", async function () {
         await expect(
-          crowdfund.launchTeamInvite(deployer.address, 0)
+          crowdfund.launchTeamInvite(deployer.address, 0),
         ).to.be.revertedWith("ArmadaCrowdfund: launchTeam cannot be invitee");
       });
 
       it("launchTeamInvite rejects launchTeam as invitee at hop-2", async function () {
         await expect(
-          crowdfund.launchTeamInvite(deployer.address, 1)
+          crowdfund.launchTeamInvite(deployer.address, 1),
         ).to.be.revertedWith("ArmadaCrowdfund: launchTeam cannot be invitee");
       });
 
@@ -836,8 +833,10 @@ describe("Crowdfund Adversarial", function () {
       // cannot use the regular invite() path to issue invites after the launch-team window.
       it("invite rejects launchTeam as msg.sender", async function () {
         await expect(
-          crowdfund.connect(deployer).invite(allSigners[1].address, 0)
-        ).to.be.revertedWith("ArmadaCrowdfund: launchTeam cannot invite via regular path");
+          crowdfund.connect(deployer).invite(allSigners[1].address, 0),
+        ).to.be.revertedWith(
+          "ArmadaCrowdfund: launchTeam cannot invite via regular path",
+        );
       });
 
       // WHY: Closes the remaining route — a regular participant inviting launchTeam.
@@ -849,13 +848,14 @@ describe("Crowdfund Adversarial", function () {
       it("invite rejects launchTeam as invitee (called by a regular participant)", async function () {
         await crowdfund.addSeeds([allSigners[1].address]);
         await expect(
-          crowdfund.connect(allSigners[1]).invite(deployer.address, 0)
+          crowdfund.connect(allSigners[1]).invite(deployer.address, 0),
         ).to.be.revertedWith("ArmadaCrowdfund: launchTeam cannot be invitee");
       });
     });
 
     it("constructor rejects zero treasury address", async function () {
-      const ArmadaCrowdfund = await ethers.getContractFactory("ArmadaCrowdfund");
+      const ArmadaCrowdfund =
+        await ethers.getContractFactory("ArmadaCrowdfund");
       const localOpenTimestamp = (await time.latest()) + 300;
       await expect(
         ArmadaCrowdfund.deploy(
@@ -864,13 +864,14 @@ describe("Crowdfund Adversarial", function () {
           ethers.ZeroAddress,
           deployer.address,
           deployer.address,
-          localOpenTimestamp
-        )
+          localOpenTimestamp,
+        ),
       ).to.be.revertedWith("ArmadaCrowdfund: zero treasury");
     });
 
     it("constructor rejects zero securityCouncil address", async function () {
-      const ArmadaCrowdfund = await ethers.getContractFactory("ArmadaCrowdfund");
+      const ArmadaCrowdfund =
+        await ethers.getContractFactory("ArmadaCrowdfund");
       const localOpenTimestamp = (await time.latest()) + 300;
       await expect(
         ArmadaCrowdfund.deploy(
@@ -879,15 +880,14 @@ describe("Crowdfund Adversarial", function () {
           treasuryAddr.address,
           deployer.address,
           ethers.ZeroAddress,
-          localOpenTimestamp
-        )
+          localOpenTimestamp,
+        ),
       ).to.be.revertedWith("ArmadaCrowdfund: zero securityCouncil");
     });
 
     it("non-participant cannot claim", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -902,14 +902,13 @@ describe("Crowdfund Adversarial", function () {
 
       // outsider never committed
       await expect(
-        crowdfund.connect(allSigners[199]).claim(ethers.ZeroAddress)
+        crowdfund.connect(allSigners[199]).claim(ethers.ZeroAddress),
       ).to.be.revertedWith("ArmadaCrowdfund: no commitment");
     });
 
     it("whitelisted-but-uncommitted participant cannot claim", async function () {
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       // Only first 69 seeds commit, seeds[69] does not
       for (let i = 0; i < 69; i++) {
@@ -924,7 +923,7 @@ describe("Crowdfund Adversarial", function () {
       await crowdfund.finalize();
 
       await expect(
-        crowdfund.connect(seeds[69]).claim(ethers.ZeroAddress)
+        crowdfund.connect(seeds[69]).claim(ethers.ZeroAddress),
       ).to.be.revertedWith("ArmadaCrowdfund: no commitment");
     });
   });
@@ -941,7 +940,7 @@ describe("Crowdfund Adversarial", function () {
       // allocation total. The unused H0 capacity rolls into H1.
 
       const seeds = allSigners.slice(1, 38); // 37 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       // All 37 seeds commit $15K.
       for (const s of seeds) {
@@ -963,7 +962,9 @@ describe("Crowdfund Adversarial", function () {
       expect(hop1Ceiling).to.equal(USDC(465_000));
 
       // H1 is under-subscribed ($448K < $465K) → full allocation, no refund.
-      const [alloc, refund] = await crowdfund.computeAllocation(hop1Invitees[0].address);
+      const [alloc, refund] = await crowdfund.computeAllocation(
+        hop1Invitees[0].address,
+      );
       const allocArm = Number(alloc) / 1e18;
       expect(allocArm).to.be.closeTo(8_000, 1);
       expect(refund).to.equal(0n);
@@ -980,8 +981,7 @@ describe("Crowdfund Adversarial", function () {
       // Rollover flows unconditionally through hops regardless of committer count.
 
       const seeds = allSigners.slice(1, 69); // 68 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -1024,8 +1024,7 @@ describe("Crowdfund Adversarial", function () {
       // H1 demand clears MIN_SALE but does not receive H0 rollover.
 
       const seeds = allSigners.slice(1, 71); // 70 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -1040,7 +1039,9 @@ describe("Crowdfund Adversarial", function () {
 
       // Pro-rata: scale = $564K / $1.05M ≈ 0.53714.
       // Each $15K → about $8,057 allocation and $6,943 refund.
-      const [alloc, refund] = await crowdfund.computeAllocation(seeds[0].address);
+      const [alloc, refund] = await crowdfund.computeAllocation(
+        seeds[0].address,
+      );
       const allocArm = Number(alloc) / 1e18;
       expect(allocArm).to.be.closeTo(8_057, 1);
       expect(refund).to.be.closeTo(USDC(6_943), USDC(1));
@@ -1057,7 +1058,7 @@ describe("Crowdfund Adversarial", function () {
       // totalAllocatedUsdc + treasuryLeftoverUsdc must equal saleSize ($1.2M).
 
       const seeds = allSigners.slice(1, 38); // 37 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -1087,7 +1088,7 @@ describe("Crowdfund Adversarial", function () {
       // invites commit $468K, so both hops are oversubscribed.
 
       const seeds = allSigners.slice(1, 55); // 54 seeds
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -1102,9 +1103,15 @@ describe("Crowdfund Adversarial", function () {
       for (let h = 0; h < hop1Count; h++) {
         // Three different seeds invite the same hop-1 address (invite stacking).
         // Offsets of 0, 18, 36 mod 54 guarantee distinct seeds and ≤2 invites per seed.
-        await crowdfund.connect(seeds[h % seeds.length]).invite(hop1Pool[h].address, 0);
-        await crowdfund.connect(seeds[(h + 18) % seeds.length]).invite(hop1Pool[h].address, 0);
-        await crowdfund.connect(seeds[(h + 36) % seeds.length]).invite(hop1Pool[h].address, 0);
+        await crowdfund
+          .connect(seeds[h % seeds.length])
+          .invite(hop1Pool[h].address, 0);
+        await crowdfund
+          .connect(seeds[(h + 18) % seeds.length])
+          .invite(hop1Pool[h].address, 0);
+        await crowdfund
+          .connect(seeds[(h + 36) % seeds.length])
+          .invite(hop1Pool[h].address, 0);
 
         // Effective cap = 3 × $4K = $12K per hop-1 participant
         await fundAndApprove(hop1Pool[h], USDC(12_000));
@@ -1116,14 +1123,20 @@ describe("Crowdfund Adversarial", function () {
 
       // --- Verify hop-0 is oversubscribed with pro-rata ---
       // Hop-0 demand = $810K, ceiling = $564K.
-      const [, hop0Refund] = await crowdfund.computeAllocationAtHop(seeds[0].address, 0);
+      const [, hop0Refund] = await crowdfund.computeAllocationAtHop(
+        seeds[0].address,
+        0,
+      );
       // Each seed's H0 refund is roughly $4,556.
       expect(hop0Refund).to.be.gt(0n); // confirms oversubscription
       expect(hop0Refund).to.be.lt(USDC(5_000));
 
       // --- Verify hop-1 is oversubscribed with pro-rata ---
       // Hop-1 cappedDemand = $468K > hop-1 effective ceiling = $456K.
-      const [, hop1Refund] = await crowdfund.computeAllocationAtHop(hop1Pool[0].address, 1);
+      const [, hop1Refund] = await crowdfund.computeAllocationAtHop(
+        hop1Pool[0].address,
+        1,
+      );
       expect(hop1Refund).to.be.gt(0n); // confirms hop-1 oversubscription
       // Hop-1 refund per participant is about $308.
       expect(hop1Refund).to.be.lt(USDC(500)); // bounded refund
@@ -1135,13 +1148,13 @@ describe("Crowdfund Adversarial", function () {
       for (const s of seeds) {
         const [, refundUsdc] = await crowdfund.computeAllocation(s.address);
         const committed = await crowdfund.getCommitment(s.address, 0);
-        sumAllocUsdc += (committed - refundUsdc);
+        sumAllocUsdc += committed - refundUsdc;
         sumRefund += refundUsdc;
       }
       for (const h of hop1Pool) {
         const [, refundUsdc] = await crowdfund.computeAllocation(h.address);
         const committed = await crowdfund.getCommitment(h.address, 1);
-        sumAllocUsdc += (committed - refundUsdc);
+        sumAllocUsdc += committed - refundUsdc;
         sumRefund += refundUsdc;
       }
 
@@ -1166,7 +1179,7 @@ describe("Crowdfund Adversarial", function () {
     it("full refund after below-minimum finalize", async function () {
       // 3 seeds commit $15K each = $45K (well below MIN_SALE $1M)
       const seeds = allSigners.slice(1, 4);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -1190,7 +1203,7 @@ describe("Crowdfund Adversarial", function () {
     it("claimRefund reverts after successful finalize (not refundMode)", async function () {
       // 70 seeds commit $15K = $1.05M, plus 51 hop-1 at $4K → cappedDemand > MIN_SALE
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -1203,7 +1216,7 @@ describe("Crowdfund Adversarial", function () {
       await crowdfund.finalize();
 
       await expect(
-        crowdfund.connect(seeds[0]).claimRefund()
+        crowdfund.connect(seeds[0]).claimRefund(),
       ).to.be.revertedWith("ArmadaCrowdfund: refund not available");
     });
 
@@ -1212,7 +1225,7 @@ describe("Crowdfund Adversarial", function () {
     it("multiple participants claim refund after below-minimum finalize", async function () {
       // 3 seeds commit small amounts
       const seeds = allSigners.slice(1, 4);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -1241,8 +1254,7 @@ describe("Crowdfund Adversarial", function () {
     it("claim() rejects double-claim", async function () {
       // Deploy the attacker contract
       const seeds = allSigners.slice(1, 71);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
@@ -1261,14 +1273,13 @@ describe("Crowdfund Adversarial", function () {
 
       // Double claim should fail
       await expect(
-        crowdfund.connect(seeds[0]).claim(seeds[0].address)
+        crowdfund.connect(seeds[0]).claim(seeds[0].address),
       ).to.be.revertedWith("ArmadaCrowdfund: already claimed");
     });
 
     it("claimRefund() rejects double-refund", async function () {
       const seeds = allSigners.slice(1, 4);
-      await crowdfund.addSeeds(seeds.map(s => s.address));
-
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       await fundAndApprove(seeds[0], USDC(15_000));
       await crowdfund.connect(seeds[0]).commit(0, USDC(15_000));
@@ -1282,7 +1293,7 @@ describe("Crowdfund Adversarial", function () {
 
       // Double claimRefund fails
       await expect(
-        crowdfund.connect(seeds[0]).claimRefund()
+        crowdfund.connect(seeds[0]).claimRefund(),
       ).to.be.revertedWith("ArmadaCrowdfund: already claimed");
     });
 
@@ -1291,7 +1302,7 @@ describe("Crowdfund Adversarial", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
@@ -1314,7 +1325,7 @@ describe("Crowdfund Adversarial", function () {
       for (const s of seeds) {
         await fundAndApprove(s, USDC(15_000));
       }
-      await crowdfund.addSeeds(seeds.map(s => s.address));
+      await crowdfund.addSeeds(seeds.map((s) => s.address));
 
       for (const s of seeds) {
         await crowdfund.connect(s).commit(0, USDC(15_000));
@@ -1326,15 +1337,14 @@ describe("Crowdfund Adversarial", function () {
       await crowdfund.withdrawUnallocatedArm();
 
       // Second withdrawal reverts
-      await expect(
-        crowdfund.withdrawUnallocatedArm()
-      ).to.be.revertedWith("ArmadaCrowdfund: nothing to sweep");
+      await expect(crowdfund.withdrawUnallocatedArm()).to.be.revertedWith(
+        "ArmadaCrowdfund: nothing to sweep",
+      );
     });
 
     it("commit() is protected by nonReentrant", async function () {
       // Verify commit guard by confirming correct behavior under normal conditions
       await crowdfund.addSeeds([allSigners[1].address]);
-
 
       await fundAndApprove(allSigners[1], USDC(15_000));
       await crowdfund.connect(allSigners[1]).commit(0, USDC(10_000));

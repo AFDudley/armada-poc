@@ -2,58 +2,66 @@
 // ABOUTME: A real flow (no showcase) must never auto-complete into a fake success.
 // @vitest-environment jsdom
 
-import { render, screen, act, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import Step4Approve from './Step4Approve.js'
+import { render, screen, act, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import Step4Approve from "./Step4Approve.js";
 
 afterEach(() => {
-  vi.useRealTimers()
-})
+  vi.useRealTimers();
+});
 
-describe('Step4Approve showcase gate', () => {
-  it('shows a neutral preparing state and never auto-calls onDone without showcase', () => {
-    vi.useFakeTimers()
-    const onDone = vi.fn()
-    render(<Step4Approve onDone={onDone} />)
+describe("Step4Approve showcase gate", () => {
+  it("shows a neutral preparing state and never auto-calls onDone without showcase", () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    render(<Step4Approve onDone={onDone} />);
 
-    expect(screen.getAllByText('Preparing transaction…').length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText("Preparing transaction…").length,
+    ).toBeGreaterThan(0);
 
     // Advance well past the canned animation window — onDone must NOT fire.
     act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(onDone).not.toHaveBeenCalled()
-  })
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(onDone).not.toHaveBeenCalled();
+  });
 
-  it('runs the canned animation and calls onDone in showcase mode', () => {
-    vi.useFakeTimers()
-    const onDone = vi.fn()
-    render(<Step4Approve onDone={onDone} showcase amount={1000} />)
+  it("runs the canned animation and calls onDone in showcase mode", () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    render(<Step4Approve onDone={onDone} showcase amount={1000} />);
 
     act(() => {
-      vi.advanceTimersByTime(4_500)
-    })
-    expect(onDone).toHaveBeenCalled()
-  })
+      vi.advanceTimersByTime(4_500);
+    });
+    expect(onDone).toHaveBeenCalled();
+  });
 
-  it('renders Back + Retry on an errored row and fires their callbacks', () => {
-    const onBack = vi.fn()
-    const onRetry = vi.fn()
+  it("renders Back + Retry on an errored row and fires their callbacks", () => {
+    const onBack = vi.fn();
+    const onRetry = vi.fn();
     render(
       <Step4Approve
         onDone={vi.fn()}
         onBack={onBack}
         onRetry={onRetry}
-        txs={[{ label: 'Commit', status: 'error', errorMessage: 'Transaction reverted' }]}
+        txs={[
+          {
+            label: "Commit",
+            status: "error",
+            errorMessage: "Transaction reverted",
+          },
+        ]}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(onBack).toHaveBeenCalledOnce()
-    expect(onRetry).toHaveBeenCalledOnce()
-  })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(onBack).toHaveBeenCalledOnce();
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
 
-  it('hides Back while a transaction is in flight', () => {
+  it("hides Back while a transaction is in flight", () => {
     // Back resets the pipeline and reopens Review with Confirm enabled — doing
     // that mid-transaction invites a second approve+commit.
     const { rerender } = render(
@@ -61,47 +69,47 @@ describe('Step4Approve showcase gate', () => {
         onDone={vi.fn()}
         onBack={vi.fn()}
         txs={[
-          { label: 'Approve 1,000 USDC', status: 'done' },
-          { label: 'Commit participation', status: 'loading' },
+          { label: "Approve 1,000 USDC", status: "done" },
+          { label: "Commit participation", status: "loading" },
         ]}
       />,
-    )
-    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+    );
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
 
     // Still building the pipeline (no rows yet) is in flight too.
-    rerender(<Step4Approve onDone={vi.fn()} onBack={vi.fn()} />)
-    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
-  })
+    rerender(<Step4Approve onDone={vi.fn()} onBack={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  });
 
-  it('offers Back once nothing is in flight', () => {
-    const onBack = vi.fn()
+  it("offers Back once nothing is in flight", () => {
+    const onBack = vi.fn();
     render(
       <Step4Approve
         onDone={vi.fn()}
         onBack={onBack}
         txs={[
-          { label: 'Approve 1,000 USDC', status: 'pending' },
-          { label: 'Commit participation', status: 'pending' },
+          { label: "Approve 1,000 USDC", status: "pending" },
+          { label: "Commit participation", status: "pending" },
         ]}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-    expect(onBack).toHaveBeenCalledOnce()
-  })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalledOnce();
+  });
 
-  it('renders controlled tx rows without auto-completing', () => {
-    vi.useFakeTimers()
-    const onDone = vi.fn()
+  it("renders controlled tx rows without auto-completing", () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
     render(
       <Step4Approve
         onDone={onDone}
-        txs={[{ label: 'Commit participation', status: 'loading' }]}
+        txs={[{ label: "Commit participation", status: "loading" }]}
       />,
-    )
-    expect(screen.getByText('Commit participation')).toBeTruthy()
+    );
+    expect(screen.getByText("Commit participation")).toBeTruthy();
     act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(onDone).not.toHaveBeenCalled()
-  })
-})
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(onDone).not.toHaveBeenCalled();
+  });
+});

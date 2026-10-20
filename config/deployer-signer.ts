@@ -19,12 +19,14 @@ export function resolveDeployerSigner(env: NodeJS.ProcessEnv): DeployerSigner {
   if (privateKey && ledgerAddress) {
     throw new Error(
       "Set DEPLOYER_PRIVATE_KEY or DEPLOYER_LEDGER_ADDRESS, not both. For a Ledger deploy, " +
-      "remove DEPLOYER_PRIVATE_KEY from config/secrets.env."
+        "remove DEPLOYER_PRIVATE_KEY from config/secrets.env.",
     );
   }
   if (ledgerAddress) {
     if (!ADDRESS.test(ledgerAddress)) {
-      throw new Error(`DEPLOYER_LEDGER_ADDRESS must be a 0x-prefixed 20-byte address, got "${ledgerAddress}"`);
+      throw new Error(
+        `DEPLOYER_LEDGER_ADDRESS must be a 0x-prefixed 20-byte address, got "${ledgerAddress}"`,
+      );
     }
     return { kind: "ledger", address: ledgerAddress };
   }

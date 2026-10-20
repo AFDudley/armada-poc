@@ -1,8 +1,8 @@
 // ABOUTME: Shared sonner Toaster mount themed against @armada/ui design tokens.
 // ABOUTME: Surfaces, text, borders, and status tints come from `--semantic-color-*` / `--primitives-*`, matching the designer's modal/header chrome.
 
-import { Toaster } from 'sonner'
-import styles from './CrowdfundToaster.module.css'
+import { Toaster } from "sonner";
+import styles from "./CrowdfundToaster.module.css";
 
 export function CrowdfundToaster() {
   return (
@@ -24,5 +24,5 @@ export function CrowdfundToaster() {
         },
       }}
     />
-  )
+  );
 }

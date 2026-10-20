@@ -174,7 +174,10 @@ const PROCESSED_SET_WARN_THRESHOLD = 10_000;
  * check is the safety net (submitRelay returns 'already-processed', the message is then
  * marked processed under v2). One wasted RPC call per stale message, not a real issue.
  */
-function migrateToCurrent(oldPayload: unknown, oldVersion: number): PendingStateData {
+function migrateToCurrent(
+  oldPayload: unknown,
+  oldVersion: number,
+): PendingStateData {
   if (oldVersion !== 1 && oldVersion !== 2) {
     throw new Error(
       `pending-store: cannot migrate from version ${oldVersion} — no migrator defined for that path.`,
@@ -186,7 +189,9 @@ function migrateToCurrent(oldPayload: unknown, oldVersion: number): PendingState
     updatedAt?: unknown;
   };
   if (!Array.isArray(candidate.pending)) {
-    throw new Error(`pending-store: v${oldVersion} migration failed — 'pending' is not an array.`);
+    throw new Error(
+      `pending-store: v${oldVersion} migration failed — 'pending' is not an array.`,
+    );
   }
   if (typeof candidate.updatedAt !== "number") {
     throw new Error(
@@ -197,15 +202,23 @@ function migrateToCurrent(oldPayload: unknown, oldVersion: number): PendingState
   // v1 pending entries predate dedupKey; back-fill it from sourceTxHash. v2+ already carry it.
   const migratedPending = candidate.pending.map((raw, idx) => {
     if (typeof raw !== "object" || raw === null) {
-      throw new Error(`pending-store: v${oldVersion} migration failed — pending[${idx}] is not an object.`);
+      throw new Error(
+        `pending-store: v${oldVersion} migration failed — pending[${idx}] is not an object.`,
+      );
     }
-    const r = raw as Partial<PersistedPendingMessage> & { sourceTxHash?: string };
+    const r = raw as Partial<PersistedPendingMessage> & {
+      sourceTxHash?: string;
+    };
     if (typeof r.sourceTxHash !== "string") {
       throw new Error(
         `pending-store: v${oldVersion} migration failed — pending[${idx}].sourceTxHash missing or non-string.`,
       );
     }
-    if (oldVersion === 1) return { ...r, dedupKey: `${r.sourceTxHash}:0` } as PersistedPendingMessage;
+    if (oldVersion === 1)
+      return {
+        ...r,
+        dedupKey: `${r.sourceTxHash}:0`,
+      } as PersistedPendingMessage;
     return r as PersistedPendingMessage;
   });
 
@@ -239,7 +252,11 @@ function validate(
   chainName: string,
   path: string,
 ): PendingStateData {
-  const candidate = parsed as { pending?: unknown; processed?: unknown; updatedAt?: unknown };
+  const candidate = parsed as {
+    pending?: unknown;
+    processed?: unknown;
+    updatedAt?: unknown;
+  };
   if (!Array.isArray(candidate.pending)) {
     throw new Error(
       `pending-store: invalid 'pending' field for chain '${chainName}' at ${path}. Expected an array. Delete to reset.`,

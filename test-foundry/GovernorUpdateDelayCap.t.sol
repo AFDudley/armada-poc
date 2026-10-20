@@ -38,11 +38,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         armToken = new ArmadaToken(deployer, address(timelock));
         treasury = new ArmadaTreasuryGov(address(timelock));
 
-        governor = _deployGovernorProxy(
-            address(armToken),
-            payable(address(timelock)),
-            address(treasury)
-        );
+        governor = _deployGovernorProxy(address(armToken), payable(address(timelock)), address(treasury));
 
         // Give alice well above the 0.1% proposal threshold so she can propose.
         address[] memory whitelist = new address[](3);
@@ -69,9 +65,11 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
 
     // ======== Helpers ========
 
-    function _singleAction(address target, bytes memory data) internal pure returns (
-        address[] memory targets, uint256[] memory values, bytes[] memory calldatas
-    ) {
+    function _singleAction(address target, bytes memory data)
+        internal
+        pure
+        returns (address[] memory targets, uint256[] memory values, bytes[] memory calldatas)
+    {
         targets = new address[](1);
         values = new uint256[](1);
         calldatas = new bytes[](1);
@@ -119,9 +117,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
             _singleAction(address(timelock), _updateDelayCalldata(2 days + 1));
 
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(ArmadaGovernor.Gov_UpdateDelayExceedsCap.selector, 2 days + 1, 2 days)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_UpdateDelayExceedsCap.selector, 2 days + 1, 2 days));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "updateDelay 2d+1");
     }
 
@@ -157,9 +153,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         calldatas[1] = _updateDelayCalldata(30 days);
 
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(ArmadaGovernor.Gov_UpdateDelayExceedsCap.selector, 30 days, 2 days)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ArmadaGovernor.Gov_UpdateDelayExceedsCap.selector, 30 days, 2 days));
         governor.propose(ProposalType.Extended, targets, values, calldatas, "batch brick");
     }
 
@@ -323,9 +317,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
     function test_propose_grantRole_notBlocked() public {
         bytes32 role = timelock.PROPOSER_ROLE();
         address backup = address(0xBAC4);
-        bytes memory data = abi.encodeWithSelector(
-            timelock.grantRole.selector, role, backup
-        );
+        bytes memory data = abi.encodeWithSelector(timelock.grantRole.selector, role, backup);
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             _singleAction(address(timelock), data);
         vm.prank(alice);
@@ -351,22 +343,16 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
     // queueable type's executionDelay below _minDelay either. Both axes that
     // could produce `_minDelay > executionDelay` are sealed.
     function test_setProposalTypeParams_belowMinExecutionDelay_reverts() public {
-        ProposalParams memory bad = ProposalParams({
-            votingDelay: 2 days,
-            votingPeriod: 14 days,
-            executionDelay: 1 days,
-            quorumBps: 3000
-        });
-        bytes memory data = abi.encodeWithSelector(
-            governor.setProposalTypeParams.selector, ProposalType.Extended, bad
-        );
+        ProposalParams memory bad =
+            ProposalParams({votingDelay: 2 days, votingPeriod: 14 days, executionDelay: 1 days, quorumBps: 3000});
+        bytes memory data = abi.encodeWithSelector(governor.setProposalTypeParams.selector, ProposalType.Extended, bad);
         (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
             _singleAction(address(governor), data);
 
         vm.prank(alice);
         uint256 id = governor.propose(ProposalType.Extended, targets, values, calldatas, "bad executionDelay 1d");
 
-        (, , uint256 voteStart, uint256 voteEnd, , , , , ) = governor.getProposal(id);
+        (,, uint256 voteStart, uint256 voteEnd,,,,,) = governor.getProposal(id);
         if (block.timestamp <= voteStart) vm.warp(voteStart + 1);
         vm.prank(alice);
         governor.castVote(id, 1);
@@ -402,7 +388,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         vm.prank(alice);
         uint256 id = governor.propose(ProposalType.Standard, targets, values, calldatas, "std snapshot 2d");
 
-        (, , uint256 voteStart, uint256 voteEnd, , , , , ) = governor.getProposal(id);
+        (,, uint256 voteStart, uint256 voteEnd,,,,,) = governor.getProposal(id);
         if (block.timestamp <= voteStart) vm.warp(voteStart + 1);
         vm.prank(alice);
         governor.castVote(id, 1);
@@ -430,7 +416,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         vm.prank(alice);
         uint256 id = governor.propose(ProposalType.Extended, targets, values, calldatas, "ext snapshot 7d");
 
-        (, , uint256 voteStart, uint256 voteEnd, , , , , ) = governor.getProposal(id);
+        (,, uint256 voteStart, uint256 voteEnd,,,,,) = governor.getProposal(id);
         if (block.timestamp <= voteStart) vm.warp(voteStart + 1);
         vm.prank(alice);
         governor.castVote(id, 1);
@@ -457,7 +443,7 @@ contract GovernorUpdateDelayCapTest is Test, GovernorDeployHelper {
         vm.prank(alice);
         uint256 id = governor.propose(ProposalType.Extended, targets, values, calldatas, "ext snapshot 7d, minDelay 2d");
 
-        (, , uint256 voteStart, uint256 voteEnd, , , , , ) = governor.getProposal(id);
+        (,, uint256 voteStart, uint256 voteEnd,,,,,) = governor.getProposal(id);
         if (block.timestamp <= voteStart) vm.warp(voteStart + 1);
         vm.prank(alice);
         governor.castVote(id, 1);

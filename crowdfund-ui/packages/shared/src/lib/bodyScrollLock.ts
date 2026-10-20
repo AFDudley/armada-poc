@@ -3,20 +3,20 @@
 
 /** Saved page styles + scroll position from before the first active lock. */
 interface SavedPage {
-  htmlOverflow: string
-  htmlOverscroll: string
-  bodyOverflow: string
-  bodyOverscroll: string
-  bodyPosition: string
-  bodyTop: string
-  bodyLeft: string
-  bodyRight: string
-  bodyWidth: string
-  scrollY: number
+  htmlOverflow: string;
+  htmlOverscroll: string;
+  bodyOverflow: string;
+  bodyOverscroll: string;
+  bodyPosition: string;
+  bodyTop: string;
+  bodyLeft: string;
+  bodyRight: string;
+  bodyWidth: string;
+  scrollY: number;
 }
 
-let activeLocks = 0
-let saved: SavedPage | null = null
+let activeLocks = 0;
+let saved: SavedPage | null = null;
 
 /**
  * Lock page scroll; returns a release function (safe to call more than once).
@@ -26,10 +26,10 @@ let saved: SavedPage | null = null
  * one lock, and the page is restored only when none remain.
  */
 export function lockBodyScroll(): () => void {
-  const html = document.documentElement
-  const body = document.body
+  const html = document.documentElement;
+  const body = document.body;
   if (activeLocks === 0) {
-    const scrollY = window.scrollY
+    const scrollY = window.scrollY;
     saved = {
       htmlOverflow: html.style.overflow,
       htmlOverscroll: html.style.overscrollBehavior,
@@ -41,36 +41,36 @@ export function lockBodyScroll(): () => void {
       bodyRight: body.style.right,
       bodyWidth: body.style.width,
       scrollY,
-    }
-    html.style.overflow = 'hidden'
-    html.style.overscrollBehavior = 'none'
-    body.style.overflow = 'hidden'
-    body.style.overscrollBehavior = 'none'
-    body.style.position = 'fixed'
-    body.style.top = `-${scrollY}px`
-    body.style.left = '0'
-    body.style.right = '0'
-    body.style.width = '100%'
+    };
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
   }
-  activeLocks += 1
+  activeLocks += 1;
 
-  let released = false
+  let released = false;
   return () => {
-    if (released) return
-    released = true
-    activeLocks -= 1
-    if (activeLocks > 0 || !saved) return
-    const prev = saved
-    saved = null
-    html.style.overflow = prev.htmlOverflow
-    html.style.overscrollBehavior = prev.htmlOverscroll
-    body.style.overflow = prev.bodyOverflow
-    body.style.overscrollBehavior = prev.bodyOverscroll
-    body.style.position = prev.bodyPosition
-    body.style.top = prev.bodyTop
-    body.style.left = prev.bodyLeft
-    body.style.right = prev.bodyRight
-    body.style.width = prev.bodyWidth
-    window.scrollTo(0, prev.scrollY)
-  }
+    if (released) return;
+    released = true;
+    activeLocks -= 1;
+    if (activeLocks > 0 || !saved) return;
+    const prev = saved;
+    saved = null;
+    html.style.overflow = prev.htmlOverflow;
+    html.style.overscrollBehavior = prev.htmlOverscroll;
+    body.style.overflow = prev.bodyOverflow;
+    body.style.overscrollBehavior = prev.bodyOverscroll;
+    body.style.position = prev.bodyPosition;
+    body.style.top = prev.bodyTop;
+    body.style.left = prev.bodyLeft;
+    body.style.right = prev.bodyRight;
+    body.style.width = prev.bodyWidth;
+    window.scrollTo(0, prev.scrollY);
+  };
 }

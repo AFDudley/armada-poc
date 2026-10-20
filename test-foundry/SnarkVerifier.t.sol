@@ -35,8 +35,7 @@ contract SnarkHarness {
 ///      from a deployed pool and the public inputs assembled as PrivacyPool.verify does. It was
 ///      checked on-chain (testing mode off) when captured by scripts/capture/capture-snark-fixture.ts.
 contract SnarkVerifierTest is Test {
-    uint256 internal constant PRIME_Q =
-        21888242871839275222246405745257275088696311157297823662689037894645226208583;
+    uint256 internal constant PRIME_Q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
     SnarkHarness internal harness;
     /// @dev abi.encode(VerifyingKey, SnarkProof, uint256[]) from the fixture. Kept encoded because
@@ -146,12 +145,16 @@ contract SnarkVerifierTest is Test {
     function test_icLengthMismatchReverts() public {
         (VerifyingKey memory vk, SnarkProof memory proof, uint256[] memory inputs) = _load();
         uint256[] memory short_ = new uint256[](inputs.length - 1);
-        for (uint256 i = 0; i < short_.length; i++) short_[i] = inputs[i];
+        for (uint256 i = 0; i < short_.length; i++) {
+            short_[i] = inputs[i];
+        }
         vm.expectRevert("Snark: IC length does not match input count");
         harness.verify(vk, proof, short_);
 
         uint256[] memory long_ = new uint256[](inputs.length + 1);
-        for (uint256 i = 0; i < inputs.length; i++) long_[i] = inputs[i];
+        for (uint256 i = 0; i < inputs.length; i++) {
+            long_[i] = inputs[i];
+        }
         vm.expectRevert("Snark: IC length does not match input count");
         harness.verify(vk, proof, long_);
     }
@@ -199,7 +202,7 @@ contract PrivacyPoolVerifyRealProofTest is Test, PoseidonLinker {
     function setUp() public {
         _linkRealPoseidon(); // pool initialisation builds the Merkle tree
         string memory json = vm.readFile("test-foundry/fixtures/snark/armada-transfer-1x2.json");
-        (VerifyingKey memory vk, , ) =
+        (VerifyingKey memory vk,,) =
             abi.decode(vm.parseJsonBytes(json, ".encoded"), (VerifyingKey, SnarkProof, uint256[]));
         encodedTransaction = vm.parseJsonBytes(json, ".encodedTransaction");
 

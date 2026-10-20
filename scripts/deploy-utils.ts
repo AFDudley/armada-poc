@@ -27,18 +27,20 @@ import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signer
 // "test test test test test test test test test test test junk"
 // These private keys are public knowledge. Deploying trust-anchor roles to these
 // addresses on any non-local network is a critical, unrecoverable misconfiguration.
-export const ANVIL_DEFAULT_ADDRESSES: ReadonlySet<string> = new Set([
-  "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // #0
-  "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // #1
-  "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", // #2
-  "0x90F79bf6EB2c4f870365E785982E1f101E93b906", // #3  (note: #5 in some tooling)
-  "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65", // #4
-  "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc", // #5
-  "0x976EA74026E726554dB657fA54763abd0C3a0aa9", // #6
-  "0x14dC79964da2C08dA15Fd353d30d9CBa38d7A966", // #7
-  "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f", // #8
-  "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720", // #9
-].map(a => a.toLowerCase()));
+export const ANVIL_DEFAULT_ADDRESSES: ReadonlySet<string> = new Set(
+  [
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // #0
+    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // #1
+    "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", // #2
+    "0x90F79bf6EB2c4f870365E785982E1f101E93b906", // #3  (note: #5 in some tooling)
+    "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65", // #4
+    "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc", // #5
+    "0x976EA74026E726554dB657fA54763abd0C3a0aa9", // #6
+    "0x14dC79964da2C08dA15Fd353d30d9CBa38d7A966", // #7
+    "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f", // #8
+    "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720", // #9
+  ].map((a) => a.toLowerCase()),
+);
 
 /**
  * Reject addresses that match well-known Anvil/Hardhat default accounts.
@@ -51,13 +53,15 @@ export const ANVIL_DEFAULT_ADDRESSES: ReadonlySet<string> = new Set([
 export function rejectAnvilAddresses(addresses: string[], label: string): void {
   if (isLocal()) return;
 
-  const violations = addresses.filter(a => ANVIL_DEFAULT_ADDRESSES.has(a.toLowerCase()));
+  const violations = addresses.filter((a) =>
+    ANVIL_DEFAULT_ADDRESSES.has(a.toLowerCase()),
+  );
   if (violations.length > 0) {
     throw new Error(
       `CRITICAL: ${label} contains Anvil/Hardhat default address(es) on a non-local environment!\n` +
-      `  Offending: ${violations.join(", ")}\n` +
-      `  These private keys are publicly known. Deploying with them would be an unrecoverable loss.\n` +
-      `  Fix: Set real addresses via environment config (see config/networks.ts).`
+        `  Offending: ${violations.join(", ")}\n` +
+        `  These private keys are publicly known. Deploying with them would be an unrecoverable loss.\n` +
+        `  Fix: Set real addresses via environment config (see config/networks.ts).`,
     );
   }
 }
@@ -79,7 +83,9 @@ export async function retryReadOnLag<T>(
       return await check();
     } catch (err) {
       if (attempt >= attempts) throw err;
-      console.log(`   ${description}: read-back failed (possible RPC lag) — retry ${attempt}/${attempts - 1} in ${delayMs / 1000}s...`);
+      console.log(
+        `   ${description}: read-back failed (possible RPC lag) — retry ${attempt}/${attempts - 1} in ${delayMs / 1000}s...`,
+      );
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
@@ -112,9 +118,10 @@ export async function createNonceManager(
     };
   }
 
-  let nonce = expectedStartNonce === undefined
-    ? await signer.getNonce()
-    : await awaitExpectedNonce(() => signer.getNonce(), expectedStartNonce);
+  let nonce =
+    expectedStartNonce === undefined
+      ? await signer.getNonce()
+      : await awaitExpectedNonce(() => signer.getNonce(), expectedStartNonce);
 
   console.log(`  [nonce-manager] Starting nonce: ${nonce}`);
 
@@ -142,7 +149,7 @@ export function crowdfundHandoffNonce(
   if (govDeployment.deployerNonceAfterGovernance === undefined) {
     throw new Error(
       "Governance manifest has no deployerNonceAfterGovernance; a hardened crowdfund stage must " +
-      "follow a governance stage that recorded it."
+        "follow a governance stage that recorded it.",
     );
   }
   return govDeployment.deployerNonceAfterGovernance;
@@ -161,21 +168,26 @@ export async function awaitExpectedNonce(
   attempts = 8,
   delayMs = 5000,
 ): Promise<number> {
-  const nonce = await retryReadOnLag("Deployer nonce", async () => {
-    const current = await readNonce();
-    if (current < expected) {
-      throw new Error(
-        `Deployer nonce ${current} is behind the ${expected} the previous stage ended at ` +
-        `(the RPC node is behind)`
-      );
-    }
-    return current;
-  }, attempts, delayMs);
+  const nonce = await retryReadOnLag(
+    "Deployer nonce",
+    async () => {
+      const current = await readNonce();
+      if (current < expected) {
+        throw new Error(
+          `Deployer nonce ${current} is behind the ${expected} the previous stage ended at ` +
+            `(the RPC node is behind)`,
+        );
+      }
+      return current;
+    },
+    attempts,
+    delayMs,
+  );
   if (nonce > expected) {
     throw new Error(
       `Deployer nonce is ${nonce}, but the previous stage ended at ${expected}: the deployer key ` +
-      `sent ${nonce - expected} transaction(s) outside this deploy. Do not send anything else; ` +
-      `investigate with ${INTERRUPTED_LAUNCH_RUNBOOK}.`
+        `sent ${nonce - expected} transaction(s) outside this deploy. Do not send anything else; ` +
+        `investigate with ${INTERRUPTED_LAUNCH_RUNBOOK}.`,
     );
   }
   return nonce;
@@ -192,7 +204,11 @@ const DEPLOYMENTS_DIR = path.join(__dirname, "..", "deployments");
  * Walks the object tree and checks any 0x-prefixed string that looks like an address.
  * Warns on zero addresses, throws on malformed addresses.
  */
-function validateManifestAddresses(data: any, filename: string, prefix = ""): void {
+function validateManifestAddresses(
+  data: any,
+  filename: string,
+  prefix = "",
+): void {
   for (const [key, value] of Object.entries(data)) {
     const path = prefix ? `${prefix}.${key}` : key;
     if (typeof value === "string" && value.startsWith("0x")) {
@@ -200,14 +216,20 @@ function validateManifestAddresses(data: any, filename: string, prefix = ""): vo
       if (value.length === 42) {
         if (!/^0x[0-9a-fA-F]{40}$/.test(value)) {
           throw new Error(
-            `Malformed address in ${filename} at ${path}: "${value}"`
+            `Malformed address in ${filename} at ${path}: "${value}"`,
           );
         }
         if (value === "0x0000000000000000000000000000000000000000") {
-          console.warn(`  [manifest] WARNING: zero address in ${filename} at ${path}`);
+          console.warn(
+            `  [manifest] WARNING: zero address in ${filename} at ${path}`,
+          );
         }
       }
-    } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    } else if (
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value)
+    ) {
       validateManifestAddresses(value, filename, path);
     }
   }
@@ -235,12 +257,15 @@ export const INTERRUPTED_LAUNCH_RUNBOOK = "docs/interrupted-launch-recovery.md";
  * `dir`). Their presence means an earlier launch already sent transactions; re-running
  * would deploy a second stack and overwrite the record of the first.
  */
-export function assertNoPriorLaunch(filenames: string[], dir: string = DEPLOYMENTS_DIR): void {
+export function assertNoPriorLaunch(
+  filenames: string[],
+  dir: string = DEPLOYMENTS_DIR,
+): void {
   const existing = filenames.filter((f) => fs.existsSync(path.join(dir, f)));
   if (existing.length > 0) {
     throw new Error(
       `Existing launch manifest(s) found in deployments/: ${existing.join(", ")}. ` +
-      `An earlier run already sent transactions. Do not re-run; follow ${INTERRUPTED_LAUNCH_RUNBOOK}.`
+        `An earlier run already sent transactions. Do not re-run; follow ${INTERRUPTED_LAUNCH_RUNBOOK}.`,
     );
   }
 }
@@ -250,21 +275,34 @@ export function assertNoPriorLaunch(filenames: string[], dir: string = DEPLOYMEN
  * 40-character SHA equal to HEAD in `repoDir` and the working tree is clean (hardhat compiles
  * the working tree, so local edits would deploy code that is in no commit). Returns HEAD.
  */
-export function assertDeployCommit(expectedCommit: string, repoDir: string = process.cwd()): string {
+export function assertDeployCommit(
+  expectedCommit: string,
+  repoDir: string = process.cwd(),
+): string {
   if (!/^[0-9a-f]{40}$/i.test(expectedCommit)) {
-    throw new Error(`DEPLOY_COMMIT must be a full 40-character commit SHA, got "${expectedCommit}"`);
+    throw new Error(
+      `DEPLOY_COMMIT must be a full 40-character commit SHA, got "${expectedCommit}"`,
+    );
   }
   // execFileSync (no shell): nothing user-supplied is interpreted.
   const git = (...args: string[]) =>
-    execFileSync("git", args, { cwd: repoDir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+    execFileSync("git", args, {
+      cwd: repoDir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
 
   const head = git("rev-parse", "HEAD");
   if (head.toLowerCase() !== expectedCommit.toLowerCase()) {
-    throw new Error(`Refusing to deploy: HEAD is ${head}, DEPLOY_COMMIT is ${expectedCommit}`);
+    throw new Error(
+      `Refusing to deploy: HEAD is ${head}, DEPLOY_COMMIT is ${expectedCommit}`,
+    );
   }
   const dirty = git("status", "--porcelain", "--untracked-files=all");
   if (dirty) {
-    throw new Error(`Refusing to deploy: the working tree is not clean (hardhat compiles the working tree):\n${dirty}`);
+    throw new Error(
+      `Refusing to deploy: the working tree is not clean (hardhat compiles the working tree):\n${dirty}`,
+    );
   }
   return head;
 }
@@ -292,12 +330,14 @@ export function resolveCrowdfundOpenMinLead(raw: string | undefined): number {
   if (raw === undefined) return CROWDFUND_OPEN_MIN_LEAD_SECONDS;
   // Plain digits only: parseInt would read "1h" as 1 and "5400.5" as 5400.
   if (!/^\d+$/.test(raw)) {
-    throw new Error(`CROWDFUND_OPEN_MIN_LEAD_SECONDS must be whole seconds like 3600, got "${raw}"`);
+    throw new Error(
+      `CROWDFUND_OPEN_MIN_LEAD_SECONDS must be whole seconds like 3600, got "${raw}"`,
+    );
   }
   const lead = Number(raw);
   if (lead < CROWDFUND_OPEN_MIN_LEAD_FLOOR_SECONDS) {
     throw new Error(
-      `CROWDFUND_OPEN_MIN_LEAD_SECONDS must be at least ${CROWDFUND_OPEN_MIN_LEAD_FLOOR_SECONDS}, got ${raw}`
+      `CROWDFUND_OPEN_MIN_LEAD_SECONDS must be at least ${CROWDFUND_OPEN_MIN_LEAD_FLOOR_SECONDS}, got ${raw}`,
     );
   }
   return lead;
@@ -321,21 +361,26 @@ export function resolveCrowdfundOpenTimestamp(
 
   const parsedMs = Date.parse(openTime);
   // The round-trip rejects calendar overflow (e.g. month 13) that Date.parse may normalize.
-  if (!ISO_UTC_SECONDS.test(openTime) || Number.isNaN(parsedMs) ||
-      new Date(parsedMs).toISOString() !== openTime.replace("Z", ".000Z")) {
-    throw new Error(`CROWDFUND_OPEN_TIME must be ISO 8601 UTC like 2026-10-08T17:00:00Z, got "${openTime}"`);
+  if (
+    !ISO_UTC_SECONDS.test(openTime) ||
+    Number.isNaN(parsedMs) ||
+    new Date(parsedMs).toISOString() !== openTime.replace("Z", ".000Z")
+  ) {
+    throw new Error(
+      `CROWDFUND_OPEN_TIME must be ISO 8601 UTC like 2026-10-08T17:00:00Z, got "${openTime}"`,
+    );
   }
   const openTs = parsedMs / 1000;
   if (openTs < now + minLeadSeconds) {
     throw new Error(
       `CROWDFUND_OPEN_TIME ${openTime} must be at least ${minLeadSeconds}s after now ` +
-      `(${new Date(now * 1000).toISOString()})`
+        `(${new Date(now * 1000).toISOString()})`,
     );
   }
   if (openTs > now + CROWDFUND_OPEN_MAX_LEAD_SECONDS) {
     throw new Error(
       `CROWDFUND_OPEN_TIME ${openTime} must be at most ${CROWDFUND_OPEN_MAX_LEAD_SECONDS / 86400} days after now ` +
-      `(${new Date(now * 1000).toISOString()})`
+        `(${new Date(now * 1000).toISOString()})`,
     );
   }
   return openTs;
@@ -345,7 +390,11 @@ export function resolveCrowdfundOpenTimestamp(
  * Save a deployment manifest to the deployments directory (or `dir`).
  * Creates the directory if it does not exist.
  */
-export function saveDeployment(filename: string, data: any, dir: string = DEPLOYMENTS_DIR): void {
+export function saveDeployment(
+  filename: string,
+  data: any,
+  dir: string = DEPLOYMENTS_DIR,
+): void {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -360,16 +409,23 @@ export function saveDeployment(filename: string, data: any, dir: string = DEPLOY
  * part-way therefore leaves the addresses it created and trips the mainnet re-run guard.
  * The stage's final saveDeployment replaces it without the marker.
  */
-export function saveDeploymentInProgress(filename: string, data: object, dir: string = DEPLOYMENTS_DIR): void {
+export function saveDeploymentInProgress(
+  filename: string,
+  data: object,
+  dir: string = DEPLOYMENTS_DIR,
+): void {
   saveDeployment(filename, { ...data, inProgress: true }, dir);
 }
 
 /** Throw if `manifest` comes from a stage that did not finish (see saveDeploymentInProgress). */
-export function assertDeploymentComplete(manifest: any, filename: string): void {
+export function assertDeploymentComplete(
+  manifest: any,
+  filename: string,
+): void {
   if (manifest?.inProgress) {
     throw new Error(
       `${filename} is from a deploy stage that did not finish (inProgress: true). ` +
-      `Do not build on it; follow ${INTERRUPTED_LAUNCH_RUNBOOK}.`
+        `Do not build on it; follow ${INTERRUPTED_LAUNCH_RUNBOOK}.`,
     );
   }
 }
@@ -398,7 +454,6 @@ export async function timelockCall(
   description: string,
   nm: NonceManager,
 ): Promise<boolean> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { ethers } = require("hardhat");
   if (isLocal()) {
     const rpcUrl = process.env.HUB_RPC || "http://localhost:8545";
@@ -426,11 +481,13 @@ export async function timelockCall(
     }
 
     await jsonRpc("anvil_impersonateAccount", [timelockAddr]);
-    const txHash = await jsonRpc("eth_sendTransaction", [{
-      from: timelockAddr,
-      to: targetAddr,
-      data: calldata,
-    }]);
+    const txHash = await jsonRpc("eth_sendTransaction", [
+      {
+        from: timelockAddr,
+        to: targetAddr,
+        data: calldata,
+      },
+    ]);
     let receipt = null;
     while (!receipt) {
       receipt = await jsonRpc("eth_getTransactionReceipt", [txHash]);
@@ -444,7 +501,10 @@ export async function timelockCall(
   }
 
   // Non-local: real schedule + wait + execute.
-  const timelock = await ethers.getContractAt("TimelockController", timelockAddr);
+  const timelock = await ethers.getContractAt(
+    "TimelockController",
+    timelockAddr,
+  );
   const ZERO_BYTES32 = "0x" + "00".repeat(32);
   // Deterministic salt derived from (description, target, calldata) so re-running the script
   // produces the same operation id (idempotency via isOperationDone / isOperationPending).
@@ -460,7 +520,13 @@ export async function timelockCall(
     ),
   );
   const value = 0n;
-  const opId: string = await timelock.hashOperation(targetAddr, value, calldata, ZERO_BYTES32, salt);
+  const opId: string = await timelock.hashOperation(
+    targetAddr,
+    value,
+    calldata,
+    ZERO_BYTES32,
+    salt,
+  );
 
   if (await timelock.isOperationDone(opId)) {
     console.log(`   ${description}: already executed (idempotent skip)`);
@@ -470,15 +536,24 @@ export async function timelockCall(
   let readyTimestamp: bigint;
   if (await timelock.isOperationPending(opId)) {
     readyTimestamp = await timelock.getTimestamp(opId);
-    console.log(`   ${description}: already scheduled (ready at ${readyTimestamp})`);
+    console.log(
+      `   ${description}: already scheduled (ready at ${readyTimestamp})`,
+    );
   } else {
     const minDelay: bigint = await timelock.getMinDelay();
     console.log(`   ${description}: scheduling (delay = ${minDelay}s)...`);
     const scheduleTx = await timelock.schedule(
-      targetAddr, value, calldata, ZERO_BYTES32, salt, minDelay, nm.override()
+      targetAddr,
+      value,
+      calldata,
+      ZERO_BYTES32,
+      salt,
+      minDelay,
+      nm.override(),
     );
     const scheduleReceipt = await scheduleTx.wait();
-    if (!scheduleReceipt) throw new Error(`schedule returned no receipt for ${description}`);
+    if (!scheduleReceipt)
+      throw new Error(`schedule returned no receipt for ${description}`);
     readyTimestamp = await timelock.getTimestamp(opId);
   }
 
@@ -489,10 +564,12 @@ export async function timelockCall(
     const nowChain = BigInt(block?.timestamp ?? 0);
     if (nowChain >= readyTimestamp) break;
     const remaining = readyTimestamp - nowChain;
-    console.log(`   ${description}: waiting ${remaining}s for timelock delay to elapse...`);
+    console.log(
+      `   ${description}: waiting ${remaining}s for timelock delay to elapse...`,
+    );
     // Sleep up to 30s at a time so we surface progress on longer delays.
     const sleepSec = Number(remaining) > 30 ? 30 : Number(remaining);
-    await new Promise(resolve => setTimeout(resolve, sleepSec * 1000));
+    await new Promise((resolve) => setTimeout(resolve, sleepSec * 1000));
   }
 
   // The execute's gas estimation can transiently revert "TimelockController: operation is not
@@ -505,7 +582,12 @@ export async function timelockCall(
     try {
       console.log(`   ${description}: executing...`);
       const executeTx = await timelock.execute(
-        targetAddr, value, calldata, ZERO_BYTES32, salt, executeOverride
+        targetAddr,
+        value,
+        calldata,
+        ZERO_BYTES32,
+        salt,
+        executeOverride,
       );
       const executeReceipt = await executeTx.wait();
       if (!executeReceipt || executeReceipt.status === 0) {
@@ -516,9 +598,13 @@ export async function timelockCall(
     } catch (err) {
       const msg = String((err as { message?: string })?.message ?? err);
       if (!/not ready/i.test(msg) || attempt >= 8) throw err;
-      console.log(`   ${description}: not ready on this RPC node (lag) — retry ${attempt}/8 in 15s...`);
+      console.log(
+        `   ${description}: not ready on this RPC node (lag) — retry ${attempt}/8 in 15s...`,
+      );
       await new Promise((resolve) => setTimeout(resolve, 15000));
     }
   }
-  throw new Error(`Timelock execute did not complete after retries: ${description}`);
+  throw new Error(
+    `Timelock execute did not complete after retries: ${description}`,
+  );
 }

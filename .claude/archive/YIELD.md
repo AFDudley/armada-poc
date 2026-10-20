@@ -149,11 +149,11 @@ function shield(
     address integrator
 ) external {
     USDC.transferFrom(msg.sender, address(this), amount);
-    
+
     uint256 fee = calculateFee(amount, integrator);
     uint256 netAmount = amount - fee;
     distributeFee(fee, integrator);
-    
+
     railgun.shield(USDC, netAmount, npk);
 }
 ```
@@ -169,16 +169,16 @@ function shieldToYield(
     address integrator
 ) external {
     USDC.transferFrom(msg.sender, address(this), amount);
-    
+
     // Same fee as regular shield
     uint256 fee = calculateFee(amount, integrator);
     uint256 netAmount = amount - fee;
     distributeFee(fee, integrator);
-    
+
     // Deposit to yield vault
     USDC.approve(address(yieldVault), netAmount);
     uint256 shares = yieldVault.deposit(netAmount, address(this));
-    
+
     // Shield the shares
     railgun.shield(SHARE_TOKEN, shares, npk);
 }
@@ -197,11 +197,11 @@ function completeShield(
     bytes calldata proof
 ) external {
     PendingDeposit storage dep = pendingDeposits[depositId];
-    
+
     uint256 fee = calculateFee(dep.amount, dep.integrator);
     uint256 netAmount = dep.amount - fee;
     distributeFee(fee, dep.integrator);
-    
+
     if (toYield) {
         USDC.approve(address(yieldVault), netAmount);
         uint256 shares = yieldVault.deposit(netAmount, address(this));
@@ -239,12 +239,12 @@ function lend(
     bytes calldata npk
 ) external onlyRelayer {
     railgun.unshieldTo(unshieldProof, USDC, amount, address(this));
-    
+
     USDC.approve(address(yieldVault), amount);
     uint256 shares = yieldVault.deposit(amount, address(this));
-    
+
     railgun.shield(SHARE_TOKEN, shares, npk);
-    
+
     emit Lend(amount, shares);
 }
 ```
@@ -274,12 +274,12 @@ function redeem(
     bytes calldata npk
 ) external onlyRelayer {
     railgun.unshieldTo(unshieldProof, SHARE_TOKEN, shares, address(this));
-    
+
     // Yield fee applied internally by vault
     uint256 usdc = yieldVault.redeem(shares, address(this), address(this));
-    
+
     railgun.shield(USDC, usdc, npk);
-    
+
     emit Redeem(shares, usdc);
 }
 ```
@@ -305,12 +305,12 @@ function redeemAndUnshield(
     address recipient
 ) external onlyRelayer {
     railgun.unshieldTo(unshieldProof, SHARE_TOKEN, shares, address(this));
-    
+
     // Yield fee applied internally by vault
     uint256 usdc = yieldVault.redeem(shares, address(this), address(this));
-    
+
     USDC.transfer(recipient, usdc);
-    
+
     emit RedeemAndUnshield(shares, usdc, recipient);
 }
 ```
@@ -327,14 +327,14 @@ function redeemAndUnshieldCCTP(
     bytes32 recipient
 ) external onlyRelayer {
     railgun.unshieldTo(unshieldProof, SHARE_TOKEN, shares, address(this));
-    
+
     // Yield fee applied internally by vault
     uint256 usdc = yieldVault.redeem(shares, address(this), address(this));
-    
+
     // Burn via CCTP
     USDC.approve(address(cctpMessenger), usdc);
     cctpMessenger.depositForBurn(usdc, destChain, recipient, address(USDC));
-    
+
     emit RedeemAndUnshieldCCTP(shares, usdc, destChain, recipient);
 }
 ```
@@ -351,34 +351,34 @@ The vault tracks deposits to calculate yield at redemption:
 contract ArmadaYieldVault is ERC4626 {
     IERC4626 public aaveVault;
     uint256 public constant YIELD_FEE_BPS = 1000; // 10%
-    
+
     uint256 public totalPrincipal;
-    
+
     function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
         totalPrincipal += assets;
-        
+
         USDC.approve(address(aaveVault), assets);
         uint256 aaveShares = aaveVault.deposit(assets, address(this));
-        
+
         shares = aaveShares;
         _mint(receiver, shares);
     }
-    
+
     function redeem(uint256 shares, address receiver, address owner) public override returns (uint256 assets) {
         _burn(owner, shares);
-        
+
         uint256 principalPortion = (shares * totalPrincipal) / totalSupply();
         totalPrincipal -= principalPortion;
-        
+
         assets = aaveVault.redeem(shares, address(this), address(this));
-        
+
         if (assets > principalPortion) {
             uint256 yield = assets - principalPortion;
             uint256 fee = (yield * YIELD_FEE_BPS) / 10000;
             USDC.transfer(treasury, fee);
             assets -= fee;
         }
-        
+
         USDC.transfer(receiver, assets);
     }
 }

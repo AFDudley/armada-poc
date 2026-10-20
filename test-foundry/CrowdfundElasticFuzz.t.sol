@@ -18,8 +18,8 @@ contract CrowdfundElasticFuzzTest is Test {
 
     uint256 constant ARM_FUNDING = 1_800_000 * 1e18;
     uint256 constant BASE_SALE = 1_200_000 * 1e6;
-    uint256 constant MAX_SALE  = 1_800_000 * 1e6;
-    uint256 constant MIN_SALE  = 1_000_000 * 1e6;
+    uint256 constant MAX_SALE = 1_800_000 * 1e6;
+    uint256 constant MIN_SALE = 1_000_000 * 1e6;
     uint256 constant ELASTIC_TRIGGER = 1_500_000 * 1e6;
     uint256 constant HOP0_CAP = 15_000 * 1e6;
     uint256 constant HOP1_CAP = 4_000 * 1e6;
@@ -40,9 +40,7 @@ contract CrowdfundElasticFuzzTest is Test {
 
     /// @notice Deploy a fresh crowdfund with a given number of seeds
     function _deployCrowdfund(uint256 numSeeds) internal returns (ArmadaCrowdfund cf, address[] memory seeds) {
-        cf = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp
-        );
+        cf = new ArmadaCrowdfund(address(usdc), address(armToken), treasury, admin, admin, block.timestamp);
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();
 
@@ -154,11 +152,7 @@ contract CrowdfundElasticFuzzTest is Test {
     /// @notice Fuzz mixed hops: seeds invite hop-1 participants, varying commits across hops.
     ///         Seeds always commit full cap to guarantee MIN_SALE is reachable; hop-1 commit
     ///         amount is fuzzed to explore the elastic trigger boundary.
-    function testFuzz_elasticExpansion_mixedHops(
-        uint256 numHop0,
-        uint256 numHop1,
-        uint256 commitH1
-    ) public {
+    function testFuzz_elasticExpansion_mixedHops(uint256 numHop0, uint256 numHop1, uint256 commitH1) public {
         // Need at least 67 seeds at $15K to reach MIN_SALE ($1,005,000 > $1M)
         numHop0 = bound(numHop0, 67, 120);
         numHop1 = bound(numHop1, 0, 20);
@@ -167,9 +161,7 @@ contract CrowdfundElasticFuzzTest is Test {
         // Limit hop-1 to not exceed hop-0 count (each seed invites at most one hop-1)
         if (numHop1 > numHop0) numHop1 = numHop0;
 
-        uint256 expectedCappedDemand =
-            HOP0_CAP * numHop0 +
-            _min(commitH1, HOP1_CAP) * numHop1;
+        uint256 expectedCappedDemand = HOP0_CAP * numHop0 + _min(commitH1, HOP1_CAP) * numHop1;
 
         (ArmadaCrowdfund cf, address[] memory seeds) = _deployCrowdfund(numHop0);
 

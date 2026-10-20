@@ -11,7 +11,7 @@ import "./cctp/MockUSDCV2.sol";
 contract Faucet {
     MockUSDCV2 public immutable usdc;
 
-    uint256 public constant USDC_AMOUNT = 1000 * 1e6;  // 1000 USDC (6 decimals)
+    uint256 public constant USDC_AMOUNT = 1000 * 1e6; // 1000 USDC (6 decimals)
     uint256 public constant ETH_AMOUNT = 1 ether;
 
     // No cooldown for local devnet - set to 0
@@ -43,10 +43,7 @@ contract Faucet {
     }
 
     function _drip(address recipient) internal {
-        require(
-            block.timestamp >= lastFaucetTime[recipient] + COOLDOWN,
-            "Cooldown not elapsed"
-        );
+        require(block.timestamp >= lastFaucetTime[recipient] + COOLDOWN, "Cooldown not elapsed");
 
         lastFaucetTime[recipient] = block.timestamp;
 

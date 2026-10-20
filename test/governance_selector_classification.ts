@@ -21,16 +21,28 @@ describe("Governance Selector Classification", function () {
     // initialize(). We still need non-zero addresses for the proxy call
     // because initialize() stores them.
 
-    const TimelockController = await ethers.getContractFactory("TimelockController");
-    const timelock = await TimelockController.deploy(2 * 86400, [], [], deployer.address);
+    const TimelockController =
+      await ethers.getContractFactory("TimelockController");
+    const timelock = await TimelockController.deploy(
+      2 * 86400,
+      [],
+      [],
+      deployer.address,
+    );
     await timelock.waitForDeployment();
 
     const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-    const token = await ArmadaToken.deploy(deployer.address, await timelock.getAddress());
+    const token = await ArmadaToken.deploy(
+      deployer.address,
+      await timelock.getAddress(),
+    );
     await token.waitForDeployment();
 
-    const ArmadaTreasuryGov = await ethers.getContractFactory("ArmadaTreasuryGov");
-    const treasury = await ArmadaTreasuryGov.deploy(await timelock.getAddress());
+    const ArmadaTreasuryGov =
+      await ethers.getContractFactory("ArmadaTreasuryGov");
+    const treasury = await ArmadaTreasuryGov.deploy(
+      await timelock.getAddress(),
+    );
     await treasury.waitForDeployment();
 
     governor = await deployGovernorProxy(
@@ -52,10 +64,22 @@ describe("Governance Selector Classification", function () {
       ["fullDeauthorizeAdapter(address)", "tightening — fully removes adapter"],
       ["setRevenueThreshold(uint256)", "operational wind-down parameter"],
       ["setWindDownDeadline(uint256)", "operational wind-down parameter"],
-      ["addRevenue(uint256)", "routine non-stablecoin revenue attestation (increment)"],
-      ["attestRevenue(uint256)", "non-stablecoin revenue attestation (SET, error correction)"],
-      ["distributeETH(address,uint256)", "ETH distribution mirrors distribute() classification"],
-      ["removeStewardBudgetToken(address)", "tightening — revokes a steward spending authority"],
+      [
+        "addRevenue(uint256)",
+        "routine non-stablecoin revenue attestation (increment)",
+      ],
+      [
+        "attestRevenue(uint256)",
+        "non-stablecoin revenue attestation (SET, error correction)",
+      ],
+      [
+        "distributeETH(address,uint256)",
+        "ETH distribution mirrors distribute() classification",
+      ],
+      [
+        "removeStewardBudgetToken(address)",
+        "tightening — revokes a steward spending authority",
+      ],
     ];
 
     for (const [sig, reason] of standardSelectors) {

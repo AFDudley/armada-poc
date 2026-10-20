@@ -15,11 +15,7 @@ interface IVerifierModule {
      * @param _commitments Number of commitments in the circuit
      * @param _verifyingKey The verification key to set
      */
-    function setVerificationKey(
-        uint256 _nullifiers,
-        uint256 _commitments,
-        VerifyingKey calldata _verifyingKey
-    ) external;
+    function setVerificationKey(uint256 _nullifiers, uint256 _commitments, VerifyingKey calldata _verifyingKey) external;
 
     /**
      * @notice Get a verification key for a specific circuit configuration
@@ -27,10 +23,7 @@ interface IVerifierModule {
      * @param _commitments Number of commitments
      * @return The verification key
      */
-    function getVerificationKey(
-        uint256 _nullifiers,
-        uint256 _commitments
-    ) external view returns (VerifyingKey memory);
+    function getVerificationKey(uint256 _nullifiers, uint256 _commitments) external view returns (VerifyingKey memory);
 
     /**
      * @notice Verify a transaction's SNARK proof

@@ -23,7 +23,13 @@ contract ArmadaFeeModuleHandler is Test {
     uint256 public ghost_totalArmadaFees;
     uint256 public ghost_totalIntegratorVolume;
 
-    constructor(ArmadaFeeModule _feeModule, address _owner, address _privacyPool, address _yieldVault, address _integrator) {
+    constructor(
+        ArmadaFeeModule _feeModule,
+        address _owner,
+        address _privacyPool,
+        address _yieldVault,
+        address _integrator
+    ) {
         feeModule = _feeModule;
         owner = _owner;
         privacyPool = _privacyPool;
@@ -73,7 +79,7 @@ contract ArmadaFeeModuleHandler is Test {
 
     function calculateFee(uint256 amount) public view returns (uint256 totalFee) {
         amount = bound(amount, 0, 10_000_000_000e6);
-        (, , totalFee) = feeModule.calculateShieldFee(address(0), amount);
+        (,, totalFee) = feeModule.calculateShieldFee(address(0), amount);
     }
 }
 
@@ -93,10 +99,8 @@ contract ArmadaFeeModuleInvariantTest is Test {
     function setUp() public {
         // Deploy proxy
         ArmadaFeeModule impl = new ArmadaFeeModule();
-        bytes memory initData = abi.encodeCall(
-            ArmadaFeeModule.initialize,
-            (owner, treasury, privacyPool, yieldVault, USDC)
-        );
+        bytes memory initData =
+            abi.encodeCall(ArmadaFeeModule.initialize, (owner, treasury, privacyPool, yieldVault, USDC));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         feeModule = ArmadaFeeModule(address(proxy));
 
@@ -136,10 +140,10 @@ contract ArmadaFeeModuleInvariantTest is Test {
     /// @notice totalFee from calculateShieldFee never exceeds input amount
     function invariant_fee_never_exceeds_amount() public view {
         uint256 amount = 1_000_000e6;
-        (, , uint256 totalFee) = feeModule.calculateShieldFee(address(0), amount);
+        (,, uint256 totalFee) = feeModule.calculateShieldFee(address(0), amount);
         assertLe(totalFee, amount);
 
-        (, , uint256 totalFee2) = feeModule.calculateShieldFee(integrator, amount);
+        (,, uint256 totalFee2) = feeModule.calculateShieldFee(integrator, amount);
         assertLe(totalFee2, amount);
     }
 }

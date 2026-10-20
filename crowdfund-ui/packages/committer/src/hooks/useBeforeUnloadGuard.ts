@@ -1,7 +1,7 @@
 // ABOUTME: Registers a native beforeunload leave-confirmation while a tx pipeline is in flight.
 // ABOUTME: Warns the user before they refresh or close the tab mid-transaction; removed when idle.
 
-import { useEffect } from 'react'
+import { useEffect } from "react";
 
 /**
  * While `active` is true, register a `beforeunload` handler that triggers the
@@ -11,13 +11,13 @@ import { useEffect } from 'react'
  */
 export function useBeforeUnloadGuard(active: boolean): void {
   useEffect(() => {
-    if (!active) return
+    if (!active) return;
     const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
+      e.preventDefault();
       // Legacy browsers require returnValue to be set to trigger the prompt.
-      e.returnValue = ''
-    }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [active])
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [active]);
 }

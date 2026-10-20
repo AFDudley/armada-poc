@@ -22,21 +22,14 @@ interface IPrivacyPoolClient is IMessageHandlerV2 {
      * @param npk Note public key
      * @param nonce CCTP message nonce
      */
-    event CrossChainShieldInitiated(
-        uint256 amount,
-        bytes32 indexed npk,
-        uint64 nonce
-    );
+    event CrossChainShieldInitiated(uint256 amount, bytes32 indexed npk, uint64 nonce);
 
     /**
      * @notice Emitted when an unshield is received from Hub
      * @param recipient Address receiving the USDC
      * @param amount Amount of USDC received
      */
-    event UnshieldReceived(
-        address indexed recipient,
-        uint256 amount
-    );
+    event UnshieldReceived(address indexed recipient, uint256 amount);
 
     /**
      * @notice Emitted when Hub pool configuration is updated

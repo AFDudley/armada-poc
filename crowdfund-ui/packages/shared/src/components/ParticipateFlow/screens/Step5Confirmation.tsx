@@ -1,93 +1,99 @@
 // ABOUTME: Final confirmation screen — pinned check + title chrome, one summary table (amount, ARM, tx hash), useful links, FAQ.
 // ABOUTME: Ported from the armada-crowdfund demo; POC props (maxedOut / isAdditionalCommit / invite CTAs) preserved, tx hash comes from the live commit.
 
-import { Fragment } from 'react'
-import { CheckCircleIcon } from '@heroicons/react/24/solid'
-import { Button } from '@armada/ui'
-import styles from './Step5Confirmation.module.css'
-import { FlowChrome } from '../FlowChrome'
-import type { ParticipateStepBarProps } from '../participateFlowSteps'
-import { WhatHappensNextSlider } from './WhatHappensNextSlider'
-import { UsefulLinks } from '../../UsefulLinks/UsefulLinks'
-import { MaxOutBanner, type Step2MaxOutOption } from './Step2Commit'
+import { Fragment } from "react";
+import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import { Button } from "@armada/ui";
+import styles from "./Step5Confirmation.module.css";
+import { FlowChrome } from "../FlowChrome";
+import type { ParticipateStepBarProps } from "../participateFlowSteps";
+import { WhatHappensNextSlider } from "./WhatHappensNextSlider";
+import { UsefulLinks } from "../../UsefulLinks/UsefulLinks";
+import { MaxOutBanner, type Step2MaxOutOption } from "./Step2Commit";
 
 export interface Step5ConfirmationProps extends ParticipateStepBarProps {
   /** When false (e.g. Hop-2 with no invite capacity), hide Invite and promote View position. */
-  canInvite?: boolean
-  onInvite?: () => void
-  onViewPosition?: () => void
+  canInvite?: boolean;
+  onInvite?: () => void;
+  onViewPosition?: () => void;
   /** Shown as secondary when `canInvite` is false. */
-  onBackToCrowdfund?: () => void
+  onBackToCrowdfund?: () => void;
   /** Close control in the top chrome (preferred over the modal-level X). */
-  onClose?: () => void
+  onClose?: () => void;
   /** @deprecated View your position now shows whenever `onViewPosition` is set. */
-  showViewPositionButton?: boolean
-  amount?: number
-  estimatedArm?: number
+  showViewPositionButton?: boolean;
+  amount?: number;
+  estimatedArm?: number;
   /** User committed more USDC in a follow-up visit (not first participation). */
-  isAdditionalCommit?: boolean
-  totalCommittedUsdc?: number
+  isAdditionalCommit?: boolean;
+  totalCommittedUsdc?: number;
   /** User was already at their maximum on entry — they didn't commit anything
    *  this visit. Swaps in "already fully committed" copy (no amount added). */
-  maxedOut?: boolean
+  maxedOut?: boolean;
   /** Commit tx hash shown in the summary table. Row is hidden when omitted. */
-  txHash?: string
+  txHash?: string;
   /** Block-explorer base URL (no trailing slash). Hash renders as plain text when omitted. */
-  explorerBaseUrl?: string
+  explorerBaseUrl?: string;
   /** Commit-window countdown — forwarded to What happens next. */
-  daysLeft?: number
-  secondsLeft?: number
-  endsAt?: number | Date | null
+  daysLeft?: number;
+  secondsLeft?: number;
+  endsAt?: number | Date | null;
   /** Max out offer. Desktop flows hoist it above the card; this renders the
    *  in-card copy, which only shows on mobile (`inShell`). */
-  maxOut?: Step2MaxOutOption
+  maxOut?: Step2MaxOutOption;
 }
 
-type SummaryRow = { label: string; value: string; accent?: boolean }
+type SummaryRow = { label: string; value: string; accent?: boolean };
 
 function formatUsd(value: number) {
-  return value.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  })
+  });
 }
 
 function truncateMiddle(value: string, head = 6, tail = 4): string {
-  if (value.length <= head + tail + 1) return value
-  return `${value.slice(0, head)}…${value.slice(-tail)}`
+  if (value.length <= head + tail + 1) return value;
+  return `${value.slice(0, head)}…${value.slice(-tail)}`;
 }
 
 function summaryRows(opts: {
-  maxedOut: boolean
-  isAdditionalCommit: boolean
-  formattedAmount: string
-  formattedTotal: string
-  estimatedArm: number
+  maxedOut: boolean;
+  isAdditionalCommit: boolean;
+  formattedAmount: string;
+  formattedTotal: string;
+  estimatedArm: number;
 }): SummaryRow[] {
-  const { maxedOut, isAdditionalCommit, formattedAmount, formattedTotal, estimatedArm } = opts
-  const armValue = `Up to ${estimatedArm.toLocaleString()} ARM`
+  const {
+    maxedOut,
+    isAdditionalCommit,
+    formattedAmount,
+    formattedTotal,
+    estimatedArm,
+  } = opts;
+  const armValue = `Up to ${estimatedArm.toLocaleString()} ARM`;
 
   if (maxedOut) {
     return [
-      { label: 'Committed the maximum', value: `${formattedTotal} USDC` },
-      { label: 'EST. ARM reserved', value: armValue, accent: true },
-    ]
+      { label: "Committed the maximum", value: `${formattedTotal} USDC` },
+      { label: "EST. ARM reserved", value: armValue, accent: true },
+    ];
   }
 
   if (isAdditionalCommit) {
     return [
-      { label: 'Added', value: `${formattedAmount} USDC` },
-      { label: 'Total committed', value: `${formattedTotal} USDC` },
-      { label: 'EST. ARM reserved', value: armValue, accent: true },
-    ]
+      { label: "Added", value: `${formattedAmount} USDC` },
+      { label: "Total committed", value: `${formattedTotal} USDC` },
+      { label: "EST. ARM reserved", value: armValue, accent: true },
+    ];
   }
 
   return [
-    { label: 'Committed', value: `${formattedAmount} USDC` },
-    { label: 'EST. ARM reserved', value: armValue, accent: true },
-  ]
+    { label: "Committed", value: `${formattedAmount} USDC` },
+    { label: "EST. ARM reserved", value: armValue, accent: true },
+  ];
 }
 
 export default function Step5Confirmation({
@@ -108,27 +114,27 @@ export default function Step5Confirmation({
   endsAt = null,
   maxOut,
 }: Step5ConfirmationProps) {
-  const formattedAmount = formatUsd(amount)
-  const totalCommitted = totalCommittedUsdc ?? estimatedArm
-  const formattedTotal = formatUsd(totalCommitted)
+  const formattedAmount = formatUsd(amount);
+  const totalCommitted = totalCommittedUsdc ?? estimatedArm;
+  const formattedTotal = formatUsd(totalCommitted);
   // Unlike the crowdfund mockup, a maxed-out participant keeps the Invite CTA:
   // the committer reaches this screen via the "already fully committed"
   // shortcut, where spending a free invite slot is the only way forward.
-  const showInvite = canInvite && Boolean(onInvite)
-  const shouldShowViewPosition = Boolean(onViewPosition)
-  const showTxHash = !maxedOut && Boolean(txHash)
+  const showInvite = canInvite && Boolean(onInvite);
+  const shouldShowViewPosition = Boolean(onViewPosition);
+  const showTxHash = !maxedOut && Boolean(txHash);
 
   const headline = maxedOut
-    ? 'Already committed'
+    ? "Already committed"
     : isAdditionalCommit
-      ? 'Commit updated'
-      : 'Commit successful'
+      ? "Commit updated"
+      : "Commit successful";
 
   const subline = maxedOut
-    ? 'You’re already fully committed for this hop. Below, find useful information for the next steps.'
+    ? "You’re already fully committed for this hop. Below, find useful information for the next steps."
     : isAdditionalCommit
-      ? 'Welcome back, sailor. Below, find useful information for the next steps.'
-      : 'Welcome on board, sailor. Below, find useful information for the next steps.'
+      ? "Welcome back, sailor. Below, find useful information for the next steps."
+      : "Welcome on board, sailor. Below, find useful information for the next steps.";
 
   const rows = summaryRows({
     maxedOut,
@@ -136,7 +142,7 @@ export default function Step5Confirmation({
     formattedAmount,
     formattedTotal,
     estimatedArm,
-  })
+  });
 
   return (
     <div className={styles.shell} data-flow-shell>
@@ -167,7 +173,13 @@ export default function Step5Confirmation({
                 {i > 0 ? <div className={styles.divider} aria-hidden /> : null}
                 <div className={styles.summaryRow}>
                   <span className={styles.summaryLabel}>{row.label}</span>
-                  <span className={row.accent ? styles.summaryValueAccent : styles.summaryValue}>
+                  <span
+                    className={
+                      row.accent
+                        ? styles.summaryValueAccent
+                        : styles.summaryValue
+                    }
+                  >
                     {row.value}
                   </span>
                 </div>
@@ -187,7 +199,10 @@ export default function Step5Confirmation({
                       title={txHash}
                     >
                       {truncateMiddle(txHash!)}
-                      <span className={styles.visuallyHidden}> (opens in a new tab)</span>
+                      <span className={styles.visuallyHidden}>
+                        {" "}
+                        (opens in a new tab)
+                      </span>
                     </a>
                   ) : (
                     <span className={styles.summaryValue} title={txHash}>
@@ -201,7 +216,11 @@ export default function Step5Confirmation({
 
           <UsefulLinks headingId="step5-useful-links" />
 
-          <WhatHappensNextSlider daysLeft={daysLeft} secondsLeft={secondsLeft} endsAt={endsAt} />
+          <WhatHappensNextSlider
+            daysLeft={daysLeft}
+            secondsLeft={secondsLeft}
+            endsAt={endsAt}
+          />
         </div>
         <div className={styles.contentFade} aria-hidden />
       </div>
@@ -252,5 +271,5 @@ export default function Step5Confirmation({
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -22,7 +22,10 @@ import { buildPoseidon } from "circomlibjs";
 
 // Load Poseidon bytecode for deployment
 const poseidonBytecode = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "lib", "poseidon_bytecode.json"), "utf-8")
+  fs.readFileSync(
+    path.join(__dirname, "..", "lib", "poseidon_bytecode.json"),
+    "utf-8",
+  ),
 );
 
 // Import artifact loading for verification keys
@@ -34,13 +37,19 @@ import {
 // CCTP Domain IDs
 // Compute CCTPBindingLib.encode(recipient, domain, maxFee) — the adaptParams commitment that binds the
 // cross-chain unshield destination into the proof (#364/#378). Must match the Solidity library.
-const CCTP_BINDING_DOMAIN_TAG = ethers.keccak256(ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"));
-function encodeCctpBinding(recipient: string, domain: number, maxFee: bigint): string {
+const CCTP_BINDING_DOMAIN_TAG = ethers.keccak256(
+  ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"),
+);
+function encodeCctpBinding(
+  recipient: string,
+  domain: number,
+  maxFee: bigint,
+): string {
   return ethers.keccak256(
     ethers.AbiCoder.defaultAbiCoder().encode(
       ["bytes32", "address", "uint32", "uint256"],
-      [CCTP_BINDING_DOMAIN_TAG, recipient, domain, maxFee]
-    )
+      [CCTP_BINDING_DOMAIN_TAG, recipient, domain, maxFee],
+    ),
   );
 }
 
@@ -114,21 +123,30 @@ describe("Privacy Pool Integration", function () {
     await hubUsdc.waitForDeployment();
 
     // Deploy MockMessageTransmitterV2
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.hub, relayerAddress);
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
+    hubMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.hub,
+      relayerAddress,
+    );
     await hubMessageTransmitter.waitForDeployment();
 
     // Deploy MockTokenMessengerV2
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     hubTokenMessenger = await MockTokenMessengerV2.deploy(
       await hubMessageTransmitter.getAddress(),
       await hubUsdc.getAddress(),
-      DOMAINS.hub
+      DOMAINS.hub,
     );
     await hubTokenMessenger.waitForDeployment();
 
     // Link CCTP contracts
-    await hubMessageTransmitter.setTokenMessenger(await hubTokenMessenger.getAddress());
+    await hubMessageTransmitter.setTokenMessenger(
+      await hubTokenMessenger.getAddress(),
+    );
     await hubUsdc.addMinter(await hubTokenMessenger.getAddress());
 
     // Deploy PoseidonT3 library (required by MerkleModule)
@@ -191,12 +209,15 @@ describe("Privacy Pool Integration", function () {
       await hubUsdc.getAddress(),
       DOMAINS.hub,
       deployerAddress,
-      treasuryAddress
+      treasuryAddress,
     );
 
     // Deploy CCTPHookRouter for hub
     const CCTPHookRouter = await ethers.getContractFactory("CCTPHookRouter");
-    hubHookRouter = await CCTPHookRouter.deploy(await hubMessageTransmitter.getAddress(), await hubTokenMessenger.getAddress());
+    hubHookRouter = await CCTPHookRouter.deploy(
+      await hubMessageTransmitter.getAddress(),
+      await hubTokenMessenger.getAddress(),
+    );
     await hubHookRouter.waitForDeployment();
 
     // Load verification keys for SNARK proof verification
@@ -216,25 +237,35 @@ describe("Privacy Pool Integration", function () {
     await clientUsdc.waitForDeployment();
 
     // Deploy MockMessageTransmitterV2
-    const MockMessageTransmitterV2 = await ethers.getContractFactory("MockMessageTransmitterV2");
-    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(DOMAINS.client, relayerAddress);
+    const MockMessageTransmitterV2 = await ethers.getContractFactory(
+      "MockMessageTransmitterV2",
+    );
+    clientMessageTransmitter = await MockMessageTransmitterV2.deploy(
+      DOMAINS.client,
+      relayerAddress,
+    );
     await clientMessageTransmitter.waitForDeployment();
 
     // Deploy MockTokenMessengerV2
-    const MockTokenMessengerV2 = await ethers.getContractFactory("MockTokenMessengerV2");
+    const MockTokenMessengerV2 = await ethers.getContractFactory(
+      "MockTokenMessengerV2",
+    );
     clientTokenMessenger = await MockTokenMessengerV2.deploy(
       await clientMessageTransmitter.getAddress(),
       await clientUsdc.getAddress(),
-      DOMAINS.client
+      DOMAINS.client,
     );
     await clientTokenMessenger.waitForDeployment();
 
     // Link CCTP contracts
-    await clientMessageTransmitter.setTokenMessenger(await clientTokenMessenger.getAddress());
+    await clientMessageTransmitter.setTokenMessenger(
+      await clientTokenMessenger.getAddress(),
+    );
     await clientUsdc.addMinter(await clientTokenMessenger.getAddress());
 
     // Deploy PrivacyPoolClient
-    const PrivacyPoolClient = await ethers.getContractFactory("PrivacyPoolClient");
+    const PrivacyPoolClient =
+      await ethers.getContractFactory("PrivacyPoolClient");
     privacyPoolClient = await PrivacyPoolClient.deploy();
     await privacyPoolClient.waitForDeployment();
     clientAddress = await privacyPoolClient.getAddress();
@@ -247,12 +278,15 @@ describe("Privacy Pool Integration", function () {
       DOMAINS.client,
       DOMAINS.hub,
       ethers.ZeroHash, // Will be set in linkDeployments
-      deployerAddress
+      deployerAddress,
     );
 
     // Deploy CCTPHookRouter for client
     const CCTPHookRouter = await ethers.getContractFactory("CCTPHookRouter");
-    clientHookRouter = await CCTPHookRouter.deploy(await clientMessageTransmitter.getAddress(), await clientTokenMessenger.getAddress());
+    clientHookRouter = await CCTPHookRouter.deploy(
+      await clientMessageTransmitter.getAddress(),
+      await clientTokenMessenger.getAddress(),
+    );
     await clientHookRouter.waitForDeployment();
 
     console.log("  PrivacyPoolClient:", clientAddress);
@@ -272,11 +306,23 @@ describe("Privacy Pool Integration", function () {
     await privacyPoolClient.setHubPool(DOMAINS.hub, hubPoolBytes32);
 
     // Configure CCTP TokenMessenger remotes
-    const hubTmBytes32 = ethers.zeroPadValue(await hubTokenMessenger.getAddress(), 32);
-    const clientTmBytes32 = ethers.zeroPadValue(await clientTokenMessenger.getAddress(), 32);
+    const hubTmBytes32 = ethers.zeroPadValue(
+      await hubTokenMessenger.getAddress(),
+      32,
+    );
+    const clientTmBytes32 = ethers.zeroPadValue(
+      await clientTokenMessenger.getAddress(),
+      32,
+    );
 
-    await hubTokenMessenger.setRemoteTokenMessenger(DOMAINS.client, clientTmBytes32);
-    await clientTokenMessenger.setRemoteTokenMessenger(DOMAINS.hub, hubTmBytes32);
+    await hubTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.client,
+      clientTmBytes32,
+    );
+    await clientTokenMessenger.setRemoteTokenMessenger(
+      DOMAINS.hub,
+      hubTmBytes32,
+    );
 
     // Set hookRouter on PrivacyPool and PrivacyPoolClient
     await privacyPool.setHookRouter(await hubHookRouter.getAddress());
@@ -284,14 +330,23 @@ describe("Privacy Pool Integration", function () {
 
     // Pin the CCTP destinationCaller (hook router) on-chain (#64). The
     // destinationCaller arg is no longer passed per-call; it is fixed here.
-    await privacyPoolClient.setHubHookRouter(ethers.zeroPadValue(await hubHookRouter.getAddress(), 32));
-    await privacyPool.setRemoteHookRouter(DOMAINS.client, ethers.zeroPadValue(await clientHookRouter.getAddress(), 32));
+    await privacyPoolClient.setHubHookRouter(
+      ethers.zeroPadValue(await hubHookRouter.getAddress(), 32),
+    );
+    await privacyPool.setRemoteHookRouter(
+      DOMAINS.client,
+      ethers.zeroPadValue(await clientHookRouter.getAddress(), 32),
+    );
 
     // Set mock MessageTransmitter relayer to hookRouter
     // (so hookRouter can call receiveMessage on mock)
     // setRelayer() requires msg.sender == current relayer
-    await hubMessageTransmitter.connect(relayer).setRelayer(await hubHookRouter.getAddress());
-    await clientMessageTransmitter.connect(relayer).setRelayer(await clientHookRouter.getAddress());
+    await hubMessageTransmitter
+      .connect(relayer)
+      .setRelayer(await hubHookRouter.getAddress());
+    await clientMessageTransmitter
+      .connect(relayer)
+      .setRelayer(await clientHookRouter.getAddress());
 
     console.log("  Linking complete");
   }
@@ -316,7 +371,8 @@ describe("Privacy Pool Integration", function () {
 
       // npk must be < SNARK_SCALAR_FIELD (21888242871839275222246405745257275088548364400416034343698204186575808495617)
       // Use a simple value that's definitely in range
-      const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+      const SNARK_SCALAR_FIELD =
+        21888242871839275222246405745257275088548364400416034343698204186575808495617n;
       const rawNpk = BigInt(ethers.keccak256(ethers.toUtf8Bytes("alice-npk")));
       const validNpk = rawNpk % SNARK_SCALAR_FIELD;
       const npk = ethers.zeroPadValue(ethers.toBeHex(validNpk), 32);
@@ -346,12 +402,14 @@ describe("Privacy Pool Integration", function () {
 
       // Execute shield
       const treasuryBalanceBefore = await hubUsdc.balanceOf(treasuryAddress);
-      const tx = await privacyPool.connect(alice).shield([shieldRequest], ethers.ZeroAddress);
+      const tx = await privacyPool
+        .connect(alice)
+        .shield([shieldRequest], ethers.ZeroAddress);
       await tx.wait();
 
       // 50 bps fee: base = 100 - (100 * 50 / 10000) = 99.50 USDC, fee = 0.50 USDC
-      const EXPECTED_FEE = SHIELD_AMOUNT * 50n / 10000n; // 500000 (0.50 USDC)
-      const EXPECTED_BASE = SHIELD_AMOUNT - EXPECTED_FEE;  // 99500000 (99.50 USDC)
+      const EXPECTED_FEE = (SHIELD_AMOUNT * 50n) / 10000n; // 500000 (0.50 USDC)
+      const EXPECTED_BASE = SHIELD_AMOUNT - EXPECTED_FEE; // 99500000 (99.50 USDC)
 
       // Verify pool received base amount
       const poolBalance = await hubUsdc.balanceOf(privacyPoolAddress);
@@ -359,7 +417,9 @@ describe("Privacy Pool Integration", function () {
 
       // Verify treasury received fee
       const treasuryBalanceAfter = await hubUsdc.balanceOf(treasuryAddress);
-      expect(treasuryBalanceAfter - treasuryBalanceBefore).to.equal(EXPECTED_FEE);
+      expect(treasuryBalanceAfter - treasuryBalanceBefore).to.equal(
+        EXPECTED_FEE,
+      );
 
       // Verify merkle root changed (tree number should still be 0)
       const treeNumber = await privacyPool.treeNumber();
@@ -395,18 +455,22 @@ describe("Privacy Pool Integration", function () {
       // Execute cross-chain shield
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
-        0,               // maxFee = 0 (no CCTP fee for this test)
-        0,               // minFinalityThreshold = 0 (use contract default)
+        0, // maxFee = 0 (no CCTP fee for this test)
+        0, // minFinalityThreshold = 0 (use contract default)
         npk,
         encryptedBundle,
         shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
 
       // Check event was emitted
       const event = receipt?.logs.find((log: any) => {
         try {
-          return privacyPoolClient.interface.parseLog(log)?.name === "CrossChainShieldInitiated";
+          return (
+            privacyPoolClient.interface.parseLog(log)?.name ===
+            "CrossChainShieldInitiated"
+          );
         } catch {
           return false;
         }
@@ -434,8 +498,11 @@ describe("Privacy Pool Integration", function () {
       await clientUsdc.connect(alice).approve(clientAddress, SHIELD_AMOUNT);
 
       // Create shield parameters
-      const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
-      const rawNpk = BigInt(ethers.keccak256(ethers.toUtf8Bytes("alice-cctp-fee-note")));
+      const SNARK_SCALAR_FIELD =
+        21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+      const rawNpk = BigInt(
+        ethers.keccak256(ethers.toUtf8Bytes("alice-cctp-fee-note")),
+      );
       const validNpk = rawNpk % SNARK_SCALAR_FIELD;
       const npk = ethers.zeroPadValue(ethers.toBeHex(validNpk), 32);
       const encryptedBundle: [string, string, string] = [
@@ -448,12 +515,13 @@ describe("Privacy Pool Integration", function () {
       // Execute cross-chain shield with maxFee
       const tx = await privacyPoolClient.connect(alice).crossChainShield(
         SHIELD_AMOUNT,
-        MAX_FEE,         // maxFee = 1 USDC (CCTP relayer fee)
-        0,               // minFinalityThreshold = 0 (use contract default)
+        MAX_FEE, // maxFee = 1 USDC (CCTP relayer fee)
+        0, // minFinalityThreshold = 0 (use contract default)
         npk,
         encryptedBundle,
         shieldKey,
-        ethers.ZeroAddress);
+        ethers.ZeroAddress,
+      );
       const receipt = await tx.wait();
 
       // Extract MessageSent(bytes) event — contains the full encoded MessageV2
@@ -475,7 +543,8 @@ describe("Privacy Pool Integration", function () {
       // Record balances before relay
       const poolBalanceBefore = await hubUsdc.balanceOf(privacyPoolAddress);
       const hookRouterAddress = await hubHookRouter.getAddress();
-      const hookRouterBalanceBefore = await hubUsdc.balanceOf(hookRouterAddress);
+      const hookRouterBalanceBefore =
+        await hubUsdc.balanceOf(hookRouterAddress);
       const treasuryBalanceBefore = await hubUsdc.balanceOf(treasuryAddress);
       const merkleRootBefore = await privacyPool.merkleRoot();
 
@@ -484,7 +553,7 @@ describe("Privacy Pool Integration", function () {
 
       // CCTP mints (SHIELD_AMOUNT - MAX_FEE) to pool, then shield fee is deducted
       const amountAfterCCTP = SHIELD_AMOUNT - MAX_FEE; // 49 USDC
-      const shieldFeeAmount = amountAfterCCTP * 50n / 10000n; // 0.50% of 49 USDC
+      const shieldFeeAmount = (amountAfterCCTP * 50n) / 10000n; // 0.50% of 49 USDC
       const poolNetReceived = amountAfterCCTP - shieldFeeAmount;
 
       // Verify: PrivacyPool kept base amount (after shield fee deduction)
@@ -494,11 +563,15 @@ describe("Privacy Pool Integration", function () {
       // Verify: CCTP fee was minted to hookRouter (msg.sender of receiveMessage in mock)
       // In real CCTP, the fee goes to the relayer EOA. In mock, it goes to msg.sender of receiveMessage.
       const hookRouterBalanceAfter = await hubUsdc.balanceOf(hookRouterAddress);
-      expect(hookRouterBalanceAfter - hookRouterBalanceBefore).to.equal(MAX_FEE);
+      expect(hookRouterBalanceAfter - hookRouterBalanceBefore).to.equal(
+        MAX_FEE,
+      );
 
       // Verify: Treasury received shield fee
       const treasuryBalanceAfter = await hubUsdc.balanceOf(treasuryAddress);
-      expect(treasuryBalanceAfter - treasuryBalanceBefore).to.equal(shieldFeeAmount);
+      expect(treasuryBalanceAfter - treasuryBalanceBefore).to.equal(
+        shieldFeeAmount,
+      );
 
       // Verify: Merkle root changed (commitment was inserted)
       const merkleRootAfter = await privacyPool.merkleRoot();
@@ -526,8 +599,11 @@ describe("Privacy Pool Integration", function () {
       await hubUsdc.mint(aliceAddress, SHIELD_AMOUNT);
       await hubUsdc.connect(alice).approve(privacyPoolAddress, SHIELD_AMOUNT);
 
-      const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
-      const rawNpk = BigInt(ethers.keccak256(ethers.toUtf8Bytes("alice-unshield-test-npk")));
+      const SNARK_SCALAR_FIELD =
+        21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+      const rawNpk = BigInt(
+        ethers.keccak256(ethers.toUtf8Bytes("alice-unshield-test-npk")),
+      );
       const validNpk = rawNpk % SNARK_SCALAR_FIELD;
       const npk = ethers.zeroPadValue(ethers.toBeHex(validNpk), 32);
 
@@ -551,7 +627,9 @@ describe("Privacy Pool Integration", function () {
         },
       };
 
-      await privacyPool.connect(alice).shield([shieldRequest], ethers.ZeroAddress);
+      await privacyPool
+        .connect(alice)
+        .shield([shieldRequest], ethers.ZeroAddress);
     });
 
     after(async function () {
@@ -570,14 +648,20 @@ describe("Privacy Pool Integration", function () {
       const tokenId = BigInt(usdcAddress); // For ERC20: bytes32(uint256(uint160(tokenAddress)))
       const valueBigInt = BigInt(UNSHIELD_AMOUNT);
 
-      const commitmentHash = poseidon([F.e(npkBigInt), F.e(tokenId), F.e(valueBigInt)]);
+      const commitmentHash = poseidon([
+        F.e(npkBigInt),
+        F.e(tokenId),
+        F.e(valueBigInt),
+      ]);
       const commitmentHashBytes32 = ethers.zeroPadValue(
         ethers.toBeHex(BigInt(F.toString(commitmentHash))),
-        32
+        32,
       );
 
       // Use a unique nullifier
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes("unshield-nullifier-1"));
+      const nullifier = ethers.keccak256(
+        ethers.toUtf8Bytes("unshield-nullifier-1"),
+      );
 
       // Construct the Transaction struct
       const transaction = {
@@ -613,13 +697,15 @@ describe("Privacy Pool Integration", function () {
       // Record balances before
       const recipientBalanceBefore = await clientUsdc.balanceOf(bobAddress);
       const clientHookRouterAddress = await clientHookRouter.getAddress();
-      const hookRouterBalanceBefore = await clientUsdc.balanceOf(clientHookRouterAddress);
+      const hookRouterBalanceBefore = await clientUsdc.balanceOf(
+        clientHookRouterAddress,
+      );
 
       // Execute atomic cross-chain unshield with maxFee
       const tx = await privacyPool.atomicCrossChainUnshield(
         transaction,
         DOMAINS.client,
-        bobAddress,         // finalRecipient on client chain
+        bobAddress, // finalRecipient on client chain
         MAX_FEE,
         ethers.ZeroHash,
       );
@@ -642,15 +728,23 @@ describe("Privacy Pool Integration", function () {
       expect(encodedMessage).to.not.be.undefined;
 
       // Relay the message to client chain via CCTPHookRouter (atomically calls receiveMessage + hook)
-      await clientHookRouter.connect(relayer).relayWithHook(encodedMessage, "0x");
+      await clientHookRouter
+        .connect(relayer)
+        .relayWithHook(encodedMessage, "0x");
 
       // Verify: Recipient (Bob) received UNSHIELD_AMOUNT - MAX_FEE on client chain
       const recipientBalanceAfter = await clientUsdc.balanceOf(bobAddress);
-      expect(recipientBalanceAfter - recipientBalanceBefore).to.equal(UNSHIELD_AMOUNT - MAX_FEE);
+      expect(recipientBalanceAfter - recipientBalanceBefore).to.equal(
+        UNSHIELD_AMOUNT - MAX_FEE,
+      );
 
       // Verify: CCTP fee was minted to hookRouter (msg.sender of receiveMessage in mock)
-      const hookRouterBalanceAfter = await clientUsdc.balanceOf(clientHookRouterAddress);
-      expect(hookRouterBalanceAfter - hookRouterBalanceBefore).to.equal(MAX_FEE);
+      const hookRouterBalanceAfter = await clientUsdc.balanceOf(
+        clientHookRouterAddress,
+      );
+      expect(hookRouterBalanceAfter - hookRouterBalanceBefore).to.equal(
+        MAX_FEE,
+      );
     });
   });
 
@@ -662,7 +756,8 @@ describe("Privacy Pool Integration", function () {
     // arbitrary source contracts are accepted. Legitimate flows are covered by the tests above; these
     // exercise the rejection paths.
     const SRC_AUTH_AMOUNT = ethers.parseUnits("10", 6);
-    const SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+    const SNARK_SCALAR_FIELD =
+      21888242871839275222246405745257275088548364400416034343698204186575808495617n;
     const clientBytes32 = () => ethers.zeroPadValue(clientAddress, 32);
 
     // Produce a genuine cross-chain shield message from the client pool. Its burn messageSender is the
@@ -672,7 +767,10 @@ describe("Privacy Pool Integration", function () {
       await clientUsdc.mint(aliceAddress, SRC_AUTH_AMOUNT);
       await clientUsdc.connect(alice).approve(clientAddress, SRC_AUTH_AMOUNT);
       const npk = ethers.zeroPadValue(
-        ethers.toBeHex(BigInt(ethers.keccak256(ethers.toUtf8Bytes("src-auth-npk"))) % SNARK_SCALAR_FIELD),
+        ethers.toBeHex(
+          BigInt(ethers.keccak256(ethers.toUtf8Bytes("src-auth-npk"))) %
+            SNARK_SCALAR_FIELD,
+        ),
         32,
       );
       const encryptedBundle: [string, string, string] = [
@@ -681,9 +779,17 @@ describe("Privacy Pool Integration", function () {
         ethers.keccak256(ethers.toUtf8Bytes("enc3")),
       ];
       const shieldKey = ethers.keccak256(ethers.toUtf8Bytes("src-auth-key"));
-      const tx = await privacyPoolClient.connect(alice).crossChainShield(
-        SRC_AUTH_AMOUNT, 0, 0, npk, encryptedBundle, shieldKey, ethers.ZeroAddress,
-      );
+      const tx = await privacyPoolClient
+        .connect(alice)
+        .crossChainShield(
+          SRC_AUTH_AMOUNT,
+          0,
+          0,
+          npk,
+          encryptedBundle,
+          shieldKey,
+          ethers.ZeroAddress,
+        );
       const receipt = await tx.wait();
       for (const log of receipt!.logs) {
         try {
@@ -715,7 +821,10 @@ describe("Privacy Pool Integration", function () {
     // match, so the shield is rejected.
     it("hub rejects cross-chain shield from an untrusted source pool", async function () {
       const message = await buildClientShieldMessage();
-      await privacyPool.setRemotePool(DOMAINS.client, ethers.zeroPadValue(bobAddress, 32)); // wrong pool
+      await privacyPool.setRemotePool(
+        DOMAINS.client,
+        ethers.zeroPadValue(bobAddress, 32),
+      ); // wrong pool
       await expect(
         hubHookRouter.connect(relayer).relayWithHook(message, "0x"),
       ).to.be.revertedWith("PrivacyPool: untrusted source pool");
@@ -727,33 +836,49 @@ describe("Privacy Pool Integration", function () {
     it("client rejects cross-chain unshield from an untrusted source pool", async function () {
       const coder = ethers.AbiCoder.defaultAbiCoder();
       // CCTPPayload{ messageType: UNSHIELD(1), data: "0x" } — data unused, the auth check reverts first.
-      const hookData = coder.encode(["tuple(uint8 messageType, bytes data)"], [[1, "0x"]]);
+      const hookData = coder.encode(
+        ["tuple(uint8 messageType, bytes data)"],
+        [[1, "0x"]],
+      );
       // BurnMessageV2 with messageSender = bob (NOT the hubPool).
       const messageBody = ethers.solidityPacked(
-        ["uint32", "bytes32", "bytes32", "uint256", "bytes32", "uint256", "uint256", "uint256", "bytes"],
         [
-          1,                                                    // version
+          "uint32",
+          "bytes32",
+          "bytes32",
+          "uint256",
+          "bytes32",
+          "uint256",
+          "uint256",
+          "uint256",
+          "bytes",
+        ],
+        [
+          1, // version
           ethers.zeroPadValue(await clientUsdc.getAddress(), 32), // burnToken
-          ethers.zeroPadValue(clientAddress, 32),               // mintRecipient
-          SRC_AUTH_AMOUNT,                                      // amount
-          ethers.zeroPadValue(bobAddress, 32),                 // messageSender (untrusted)
-          0,                                                   // maxFee
-          0,                                                   // feeExecuted
-          0,                                                   // expirationBlock
+          ethers.zeroPadValue(clientAddress, 32), // mintRecipient
+          SRC_AUTH_AMOUNT, // amount
+          ethers.zeroPadValue(bobAddress, 32), // messageSender (untrusted)
+          0, // maxFee
+          0, // feeExecuted
+          0, // expirationBlock
           hookData,
         ],
       );
 
       const tmAddress = await clientTokenMessenger.getAddress();
       // Fund via setBalance — the mock TokenMessenger has no receive()/fallback to accept a transfer.
-      await ethers.provider.send("hardhat_setBalance", [tmAddress, "0x56BC75E2D63100000"]); // 100 ETH
+      await ethers.provider.send("hardhat_setBalance", [
+        tmAddress,
+        "0x56BC75E2D63100000",
+      ]); // 100 ETH
       const tmSigner = await ethers.getImpersonatedSigner(tmAddress);
 
       await expect(
         privacyPoolClient.connect(tmSigner).handleReceiveFinalizedMessage(
-          DOMAINS.hub,      // remoteDomain (matches hubDomain)
-          ethers.ZeroHash,  // envelope sender (unused for auth)
-          2000,             // finalityThresholdExecuted = STANDARD
+          DOMAINS.hub, // remoteDomain (matches hubDomain)
+          ethers.ZeroHash, // envelope sender (unused for auth)
+          2000, // finalityThresholdExecuted = STANDARD
           messageBody,
         ),
       ).to.be.revertedWith("PrivacyPoolClient: untrusted source pool");

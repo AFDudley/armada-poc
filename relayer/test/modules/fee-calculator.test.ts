@@ -6,7 +6,10 @@ import type { ethers } from "ethers";
 import { FeeCalculator } from "../../modules/fee-calculator";
 
 /** Fake provider that records getFeeData calls and returns a fixed gas price. */
-function stubProvider(gasPrice: bigint): { provider: ethers.JsonRpcProvider; calls: () => number } {
+function stubProvider(gasPrice: bigint): {
+  provider: ethers.JsonRpcProvider;
+  calls: () => number;
+} {
   let count = 0;
   const provider = {
     getFeeData: async () => {
@@ -85,7 +88,8 @@ describe("FeeCalculator", () => {
     // the relayer still nets the floor after the on-chain shield fee on the fee note.
     const grossUp = (net: bigint) => (net * 10000n + 9949n) / 9950n;
     for (const [key, fee] of Object.entries(fees)) {
-      const expected = key === "shield" || key === "shieldXchain" ? grossUp(10_000n) : 10_000n;
+      const expected =
+        key === "shield" || key === "shieldXchain" ? grossUp(10_000n) : 10_000n;
       expect(BigInt(fee)).to.equal(expected);
     }
   });
