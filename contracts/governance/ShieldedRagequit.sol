@@ -76,8 +76,8 @@ contract ShieldedRagequit {
     /// @param npk The caller's note public key; the payout note is created at this npk
     /// @param tokens The treasury tokens to receive a pro-rata payout
     function ragequit(uint256 armAmount, bytes32 npk, address[] calldata tokens) external {
-        // c1: burn the caller's ARM via ArmadaToken.burnFrom (callable only by this shaman).
-        armToken.burnFrom(msg.sender, armAmount);
+        // c1: burn the caller's ARM via ArmadaToken.burn (callable only by this shaman).
+        armToken.burn(msg.sender, armAmount);
 
         // c4: compute the bounded payout per token from balances read in this same
         // transaction. The bound is `armAmount * safe.balanceOf(token) / totalSupply()`.

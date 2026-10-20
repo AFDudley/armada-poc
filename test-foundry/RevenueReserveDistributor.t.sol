@@ -249,8 +249,10 @@ contract RevenueReserveDistributorTest is RevenueReserveDistributorFixture {
         assertEq(token.getVotes(outsider), 300e18);
         assertEq(token.delegates(alice), outsider);
         assertEq(token.delegates(bob), address(0));
-        vm.roll(block.number + 1);
-        assertEq(token.getPastVotes(address(distributor), block.number - 1), 0);
+        // ARM votes are checkpointed by timestamp (ERC-6372), so advance time, not just the
+        // block number, before reading a past-vote value.
+        vm.warp(block.timestamp + 1);
+        assertEq(token.getPastVotes(address(distributor), block.timestamp - 1), 0);
     }
 
     // WHY: ERC20 payouts do not call recipients, even when a recipient reverts on every call.

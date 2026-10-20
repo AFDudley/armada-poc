@@ -255,10 +255,10 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
     // c7 · The burn on ArmadaToken is only callable by ShieldedRagequit; other callers revert.
     function test_BurnOnlyCallableByShieldedRagequit() public {
         address stranger = address(0x7E23D);
-        // A non-shaman caller of burnFrom must revert (not authorized burner).
+        // A non-shaman caller of burn must revert (not authorized burner).
         vm.prank(stranger);
-        try arm.burnFrom(stranger, 1) {
-            revert("c7: burnFrom should have reverted for non-shaman");
+        try arm.burn(stranger, 1) {
+            revert("c7: burn should have reverted for non-shaman");
         } catch {
             // expected revert
         }

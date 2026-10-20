@@ -1,13 +1,17 @@
 // ABOUTME: Deploys one Baal (HausDAO feat/baalZodiac, vendored at lib/baal) backed by one
 // ABOUTME: Gnosis Safe (vendored at lib/safe-contracts): the Safe's sole owner is the Baal,
-// ABOUTME: threshold 1, no human owner at any point, and Baal's registered shares token
-// ABOUTME: is deployed/configured as "ARM" (see the BaalSharesToken finding note below).
+// ABOUTME: threshold 1, no human owner at any point, and Baal's registered shares token is
+// ABOUTME: G1's ArmadaToken (ARM); the loot token is a frozen BaalLootToken with zero supply.
 
 /**
- * Summon Baal + Safe (G2/arp-1f1)
+ * Summon Baal + Safe (G2/arp-1f1; shares-token correction arp-932)
  *
- * Deploys:
- * - BaalSharesToken ("ARM") and BaalSharesToken ("LOOT") — see FINDING below
+ * Deploys / wires:
+ * - ArmadaToken (G1's ARM) as Baal's registered SHARES token — loaded from the governance
+ *   deployment, not deployed here (the crowdfund distributes this same ARM and ShieldedRagequit
+ *   burns it, so Baal vote power is the holder's ARM balance).
+ * - BaalLootToken ("Armada Loot"/LOOT) as Baal's loot token — its mint reverts forever, so the
+ *   loot supply is zero at every moment (no loot holder can use Baal's native ragequit).
  * - Gnosis Safe (GnosisSafe template + GnosisSafeProxyFactory + MultiSend, vendored)
  * - Baal (template + zodiac ModuleProxyFactory clone, vendored)
  *
@@ -19,24 +23,20 @@
  * 3. Call safe.setup(owners=[baalClone], threshold=1, ...), enabling the Baal as a Safe
  *    module in the same call (BaalSummoner.configureSafe's own pattern) — the Safe's FIRST
  *    and ONLY owner, from its very first owner-bearing state, is the Baal contract.
- * 4. Call baal.setUp(...), registering the ARM/LOOT BaalSharesToken as Baal's shares/loot
- *    token, with the Safe as Baal's avatar.
- * 5. Transfer ownership of the ARM/LOOT tokens to the Baal (so only Baal can mint/burn/
- *    pause them going forward — BaalSummoner.deployTokens does this for its own freshly
- *    deployed tokens; this script does the same for the tokens it brings).
+ * 4. Call baal.setUp(...), registering G1's ArmadaToken as Baal's shares token and the
+ *    BaalLootToken as its loot token, with the Safe as Baal's avatar.
+ * 5. Transfer ownership of the LOOT token to the Baal. ArmadaToken (shares) is a plain
+ *    non-upgradeable ERC20 with no ownership to transfer; Baal only READS it (paused,
+ *    name, symbol, getVotes, getPastVotes, totalSupply), and ARM's burn is gated to the
+ *    ShieldedRagequit shaman (G3), so Baal can neither mint nor burn ARM.
  *
- * FINDING (read before changing this script or G1's ArmadaToken):
- *   G1's ArmadaToken (contracts/governance/ArmadaToken.sol) CANNOT be Baal's shares token
- *   directly. The vendored Baal core (lib/baal/contracts/Baal.sol) calls sharesToken.paused(),
- *   .pause(), .unpause(), .mint(), .burn() — functions ArmadaToken does not implement (it is
- *   a fixed-supply, non-upgradeable ERC20Votes with no owner-gated mint/burn/pause surface;
- *   see docs/tasks/G1-arm-shares-token.md). BaalSummoner.sol's own comment on bring-your-own
- *   tokens confirms this is by design: "tokens need to be baalTokens". So this script deploys
- *   contracts/governance/BaalSharesToken.sol (a minimal ERC20Votes implementing exactly the
- *   function surface Baal calls), configured name="ARM" symbol="ARM", as the token actually
- *   registered on Baal. G1's real ArmadaToken is deployed separately by deploy_governance.ts
- *   and recorded here (field g1ArmToken) for cross-reference only — it is NOT Baal's shares
- *   token and this script does not call any of its ARM-token functions.
+ * DESIGN (lab book decision 3: there is ONE ARM token, and it is the Baal shares token):
+ *   ArmadaToken implements the surface Baal reads on its shares token — paused() (always
+ *   false), the ERC-6372 timestamp vote clock (CLOCK_MODE() = "mode=timestamp", clock() =
+ *   block.timestamp, so getPastVotes(voter, prop.votingStarts) reads the right weight), and
+ *   getVotes/getPastVotes from delegated ARM. Its public mint reverts and its burn is callable
+ *   only by the ShieldedRagequit shaman, so Baal cannot inflate or burn ARM. The loot token is
+ *   a frozen BaalLootToken (mint reverts, supply zero forever).
  *
  * Usage (local):
  *   npx hardhat run scripts/summon-baal-safe.ts --network hub
@@ -121,8 +121,9 @@ async function main() {
   console.log(`Chain ID: ${chainId}`);
   console.log("");
 
-  // 0. Cross-reference G1's real ArmadaToken (not what gets registered on Baal — see the
-  //    FINDING note above the imports).
+  // 0. Load G1's ArmadaToken from the governance deployment. It IS Baal's shares token
+  //    (lab book decision 3: one ARM token). The crowdfund distributes this same ARM and
+  //    ShieldedRagequit burns it, so Baal vote power is the holder's ARM balance.
   const govFilename = getGovernanceDeploymentFile();
   const govDeployment = loadDeployment(govFilename);
   if (!govDeployment) {
@@ -131,10 +132,8 @@ async function main() {
     );
   }
   assertDeploymentComplete(govDeployment, govFilename);
-  const g1ArmTokenAddress: string = govDeployment.contracts.armToken;
-  console.log(
-    `0. G1 ArmadaToken (reference only, not Baal's shares token): ${g1ArmTokenAddress}`,
-  );
+  const armTokenAddress: string = govDeployment.contracts.armToken;
+  console.log(`0. ARM shares token (G1 ArmadaToken): ${armTokenAddress}`);
 
   // Ensure the vendored Baal/Safe forge artifacts are current (forge-out/ is not committed).
   console.log(
@@ -186,21 +185,17 @@ async function main() {
     );
   }
 
-  // 1. Deploy the ARM/LOOT BaalSharesToken (see FINDING above). Owner starts as the
-  //    deployer (OZ Ownable default); transferred to the Baal clone in step 6.
-  console.log("1. Deploying BaalSharesToken (ARM, LOOT)...");
-  const BaalSharesToken = await ethers.getContractFactory("BaalSharesToken");
-  const armToken = await BaalSharesToken.deploy("ARM", "ARM", nm.override());
-  await armToken.deploymentTransaction()!.wait();
-  const armTokenAddress = await armToken.getAddress();
+  // 1. Deploy the frozen BaalLootToken as Baal's loot token. Its mint reverts forever, so the
+  //    loot supply is zero at every moment; no loot holder can use Baal's native ragequit.
+  //    Owner starts as the deployer; transferred to the Baal clone in step 7.
+  console.log("1. Deploying BaalLootToken (frozen loot, zero supply)...");
   recordProgress({ armToken: armTokenAddress });
-  console.log(`   ARM (BaalSharesToken): ${armTokenAddress}`);
-
-  const lootToken = await BaalSharesToken.deploy("LOOT", "LOOT", nm.override());
+  const BaalLootToken = await ethers.getContractFactory("BaalLootToken");
+  const lootToken = await BaalLootToken.deploy(nm.override());
   await lootToken.deploymentTransaction()!.wait();
   const lootTokenAddress = await lootToken.getAddress();
   recordProgress({ lootToken: lootTokenAddress });
-  console.log(`   LOOT (BaalSharesToken): ${lootTokenAddress}`);
+  console.log(`   LOOT (BaalLootToken): ${lootTokenAddress}`);
 
   // 2. Deploy the vendored Gnosis Safe template + factory + multisend library.
   console.log("2. Deploying Gnosis Safe (template, factory, multisend)...");
@@ -384,13 +379,12 @@ async function main() {
   await baalSetupTx.wait();
   console.log(`   Baal.sharesToken() registered: ${armTokenAddress}`);
 
-  // 7. Transfer ownership of ARM/LOOT to the Baal — only Baal can mint/burn/pause them
-  //    going forward (mirrors BaalSummoner.deployTokens's own transferOwnership-to-Baal step
-  //    for freshly-deployed tokens).
-  console.log("7. Transferring ARM/LOOT ownership to the Baal...");
-  await (await armToken.transferOwnership(baalAddress, nm.override())).wait();
+  // 7. Transfer ownership of the LOOT token to the Baal — only Baal can pause it (its mint
+  //    and burn always revert). ArmadaToken (shares) is a plain non-upgradeable ERC20 with no
+  //    ownership to transfer; Baal only reads it and ARM's burn is the ShieldedRagequit shaman.
+  console.log("7. Transferring LOOT ownership to the Baal...");
   await (await lootToken.transferOwnership(baalAddress, nm.override())).wait();
-  console.log(`   ARM/LOOT owner: ${baalAddress}`);
+  console.log(`   LOOT owner: ${baalAddress}`);
 
   // ============ Read back and print the three facts ============
   const finalOwners: string[] = await (safe as any).getOwners();
@@ -411,8 +405,8 @@ async function main() {
   console.log(`Safe human owner count: ${humanOwnersFinal.length}`);
   console.log(`Baal address: ${baalAddress}`);
   console.log(`Baal registered shares token: ${registeredSharesToken}`);
-  console.log(`ARM token (deployed by this script): ${armTokenAddress}`);
-  console.log(`G1 ArmadaToken (reference only): ${g1ArmTokenAddress}`);
+  console.log(`ARM shares token (G1 ArmadaToken): ${armTokenAddress}`);
+  console.log(`Loot token (frozen BaalLootToken): ${lootTokenAddress}`);
 
   const resultJson = {
     safeAddress,
@@ -426,7 +420,7 @@ async function main() {
     armToken: armTokenAddress,
     sharesTokenIsArm:
       registeredSharesToken.toLowerCase() === armTokenAddress.toLowerCase(),
-    g1ArmToken: g1ArmTokenAddress,
+    g1ArmToken: armTokenAddress,
     ownerHistory,
   };
   console.log(`DEPLOY_RESULT_JSON=${JSON.stringify(resultJson)}`);
@@ -443,7 +437,7 @@ async function main() {
       armToken: armTokenAddress,
       lootToken: lootTokenAddress,
       multisend: multisendAddress,
-      g1ArmToken: g1ArmTokenAddress,
+      g1ArmToken: armTokenAddress,
     },
     ownerHistory,
     timestamp: new Date().toISOString(),

@@ -4,6 +4,7 @@
 pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title ArmadaToken — ARM governance token with delegation and transfer restrictions
 /// @notice ERC20Votes provides Compound-style delegation and voting power checkpoints.
@@ -52,7 +53,7 @@ contract ArmadaToken is ERC20Votes {
 
     // ============ Authorized Burner State ============
 
-    /// @notice The G3 burn gate: addresses authorized to call burnFrom (only ShieldedRagequit,
+    /// @notice The G3 burn gate: addresses authorized to call burn (only ShieldedRagequit,
     ///          registered by the deployer one-shot via initBurners, or the timelock via addBurner).
     mapping(address => bool) public authorizedBurner;
     /// @notice One-shot deployer lock for the authorizedBurner registry.
@@ -158,7 +159,7 @@ contract ArmadaToken is ERC20Votes {
         emit AuthorizedDelegatorAdded(delegator);
     }
 
-    /// @notice Register the addresses authorized to call burnFrom (G3). Deployer-only, one-shot.
+    /// @notice Register the addresses authorized to call burn (G3). Deployer-only, one-shot.
     ///         Mirrors the one-shot authorized-caller pattern of addAuthorizedDelegator; only
     ///         ShieldedRagequit may be registered as the sole authorized burner.
     function initBurners(address[] calldata burners) external {
@@ -172,7 +173,7 @@ contract ArmadaToken is ERC20Votes {
         emit BurnersInitialized(burners);
     }
 
-    /// @notice Authorize an address to call burnFrom. Timelock-only, add-only (mirrors
+    /// @notice Authorize an address to call burn. Timelock-only, add-only (mirrors
     ///         addAuthorizedDelegator).
     function addBurner(address burner) external {
         require(msg.sender == timelock, "ArmadaToken: not timelock");
@@ -181,13 +182,41 @@ contract ArmadaToken is ERC20Votes {
         emit BurnerAdded(burner);
     }
 
-    /// @notice Burns `armAmount` of the caller's own ARM (G3). Only callable by an authorized
-    ///         burner (ShieldedRagequit); any other caller reverts. The holder's ARM is destroyed
-    ///         and totalSupply is reduced.
-    function burnFrom(address account, uint256 amount) external {
+    /// @notice IBaalToken `burn` entry point (G3): destroys `amount` of `account`'s ARM.
+    ///         Only callable by an authorized burner (the ShieldedRagequit shaman); any other
+    ///         caller reverts, including a call from the Baal. Baal's native ragequit calls
+    ///         sharesToken.burn, so it reverts for ARM and cannot move ARM or Safe assets —
+    ///         ShieldedRagequit stays the one exit (lab book decisions 20-21).
+    function burn(address account, uint256 amount) external {
         require(authorizedBurner[msg.sender], "ArmadaToken: not authorized burner");
         require(account != address(0), "ArmadaToken: zero address");
         _burn(account, amount);
+    }
+
+    /// @notice ARM has a fixed supply minted once in the constructor; there is no later mint
+    ///         path. This public mint always reverts, so a Baal mintShares proposal that calls
+    ///         sharesToken.mint cannot inflate ARM (lab book decision 3).
+    function mint(address, uint256) external pure {
+        revert("ArmadaToken: minting disabled");
+    }
+
+    /// @notice Baal reads sharesToken.paused() during setUp and admin config. ARM is never
+    ///         Baal-pausable; its transfer control is the allowlist, so this is always false.
+    function paused() external pure returns (bool) {
+        return false;
+    }
+
+    /// @notice ARM measures vote time by block TIMESTAMP, not block number (ERC-6372). Baal
+    ///         reads getPastVotes(voter, prop.votingStarts) where votingStarts is a block
+    ///         timestamp, so the vote checkpoints must be timestamp-keyed.
+    function clock() public view override returns (uint48) {
+        return SafeCast.toUint48(block.timestamp);
+    }
+
+    /// @notice ERC-6372 machine-readable clock mode. Must agree with clock().
+    function CLOCK_MODE() public view override returns (string memory) {
+        require(clock() == block.timestamp, "ArmadaToken: broken clock mode");
+        return "mode=timestamp";
     }
 
     /// @notice Remove the deployer from the transfer whitelist. Deployer-only, callable once.
