@@ -1,0 +1,75 @@
+{
+  "id": "derived-arp-6cc",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. GOVERNANCE.md, committed at integrated 1f07f220, states the ShieldedRagequit bound as \"armAmount * safe.balanceOf(token) / armToken.totalSupply()\", one value per listed token in one call.\nWhat holds now? Describe the current, observed state. ShieldedRagequit.sol:80 calls armToken.burn(msg.sender, armAmount) first. ShieldedRagequit.sol:96 then computes payout = armAmount * safeBal / armToken.totalSupply() inside the per-token loop. The burn at line 80 has already lowered armToken.totalSupply() by armAmount before the loop at line 96 reads it. With a starting supply of 100 and a Safe balance of 100 for one token, a call that burns 50 reads a post-burn totalSupply() of 50, and the computed payout is 50 * 100 / 50 = 100.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. test-foundry/ShieldedRagequit.t.sol, lines 171-177, computes its expected value as armAmt * usdc.balanceOf(address(safe)) / arm.totalSupply(), with arm.totalSupply() read in the assertion after the ragequit call at line 173 has already run and already burned the ARM.\nWhat constraints apply? State them in plain prose. Observed at armada-poc integrated 1f07f220. ShieldedRagequit.sol is unchanged since commit afbb81b5.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/ShieldedRagequit.sol, test-foundry/ShieldedRagequit.t.sol.",
+  "restatement": "GOVERNANCE.md states the ragequit bound as armAmount * safe.balanceOf(token) / armToken.totalSupply(). The supply in that formula is the supply before the call burns the caller's ARM. Today ShieldedRagequit.sol burns at line 80 first and reads totalSupply() at line 96 after the burn. So the divisor is too small and the caller gets too much. Example: supply 100, Safe balance 100, burn 50. The contract pays 50 * 100 / 50 = 100, which is the full Safe balance, not 50. The fix must make the contract use the pre-burn supply for every listed token in the call. The test in test-foundry/ShieldedRagequit.t.sol (lines 171-177) reads arm.totalSupply() after the ragequit, so it agrees with the defect. The fix must make the test compute its expected value from the supply before the call.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "For each listed token, ShieldedRagequit.ragequit pays exactly armAmount * safe.balanceOf(token) / armToken.totalSupply(), where totalSupply() is the value before the call burns armAmount. With a starting supply of 100 and a Safe balance of 100 for one token, a call that burns 50 pays 50, not 100."
+    },
+    {
+      "id": "c2",
+      "text": "When one call lists several tokens, every token's payout uses the same pre-burn totalSupply() as its divisor, so each payout is armAmount * safe.balanceOf(token) / (supply before the call)."
+    },
+    {
+      "id": "c3",
+      "text": "test-foundry/ShieldedRagequit.t.sol test_RagequitCreatesOwnedNoteAtCallerNpk computes its expected payout from arm.totalSupply() read before the ragequit call, not after it, and passes against the corrected contract."
+    }
+  ],
+  "goal": "ShieldedRagequit pays each listed token as armAmount * safe.balanceOf(token) / armToken.totalSupply(), with totalSupply() read before the burn, and the Foundry tests check that pre-burn bound.",
+  "acceptance_criteria": [
+    "Start with 100 ARM in supply and 100 USDC in the treasury Safe. A holder burns 50 ARM through ragequit. The holder receives a note worth 50 USDC, not 100. The test also catches every single-token change to the contract's logic.",
+    "A holder ragequits with two treasury tokens in one call. Each token's payout equals the burned amount times that token's Safe balance, divided by the ARM supply before the call. The test catches every single-token change to the contract's logic.",
+    "The existing note-at-caller test records the ARM supply before the ragequit call, computes the expected payout from that number, and passes against the corrected contract. It catches every single-token change to the contract's logic."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "Start with 100 ARM in supply and 100 USDC in the treasury Safe. A holder burns 50 ARM through ragequit. The holder receives a note worth 50 USDC, not 100. The test also catches every single-token change to the contract's logic."
+    },
+    {
+      "id": "c2",
+      "text": "A holder ragequits with two treasury tokens in one call. Each token's payout equals the burned amount times that token's Safe balance, divided by the ARM supply before the call. The test catches every single-token change to the contract's logic."
+    },
+    {
+      "id": "c3",
+      "text": "The existing note-at-caller test records the ARM supply before the ragequit call, computes the expected payout from that number, and passes against the corrected contract. It catches every single-token change to the contract's logic."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "Start with 100 ARM in supply and 100 USDC in the treasury Safe. A holder burns 50 ARM through ragequit. The holder receives a note worth 50 USDC, not 100. The test also catches every single-token change to the contract's logic.",
+      "proves": "The payout divisor is the supply before the burn, as GOVERNANCE.md states, with the concrete 100/100/50 \u2192 50 case.",
+      "restatement_clause_id": "c1",
+      "test": "test_RagequitPayoutUsesPreBurnSupply",
+      "mutation_targets": [
+        "contracts/governance/ShieldedRagequit.sol"
+      ],
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A holder ragequits with two treasury tokens in one call. Each token's payout equals the burned amount times that token's Safe balance, divided by the ARM supply before the call. The test catches every single-token change to the contract's logic.",
+      "proves": "All tokens in one call use the same pre-burn supply, so the bound holds per token.",
+      "restatement_clause_id": "c2",
+      "test": "test_RagequitMultiTokenPayoutsUsePreBurnSupply",
+      "mutation_targets": [
+        "contracts/governance/ShieldedRagequit.sol"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "The existing note-at-caller test records the ARM supply before the ragequit call, computes the expected payout from that number, and passes against the corrected contract. It catches every single-token change to the contract's logic.",
+      "proves": "The existing test no longer agrees with the post-burn defect and checks the pre-burn bound.",
+      "restatement_clause_id": "c3",
+      "test": "test_RagequitCreatesOwnedNoteAtCallerNpk",
+      "mutation_targets": [
+        "contracts/governance/ShieldedRagequit.sol"
+      ],
+      "clause_id": "c3"
+    }
+  ],
+  "criticality": "critical"
+}
