@@ -49,6 +49,8 @@ import { execFileSync } from "child_process";
 import {
   getGovernanceDeploymentFile,
   getBaalSafeDeploymentFile,
+  getPrivacyPoolDeploymentFile,
+  getChainRole,
 } from "../config/networks";
 import {
   createNonceManager,
@@ -62,7 +64,7 @@ const REPO_ROOT = path.join(__dirname, "..");
 const FORGE_OUT_DIR = path.join(REPO_ROOT, "forge-out");
 
 interface ForgeArtifact {
-  abi: unknown[];
+  abi: any[];
   bytecode: { object: string };
 }
 
@@ -74,18 +76,19 @@ function loadForgeArtifact(
   sourceFile: string,
   contractName: string,
 ): ForgeArtifact {
-  const artifactPath = path.join(
-    FORGE_OUT_DIR,
-    sourceFile,
-    `${contractName}.json`,
-  );
-  if (!fs.existsSync(artifactPath)) {
-    throw new Error(
-      `Forge artifact not found: ${artifactPath}. Run 'forge build' first (this script does so automatically).`,
-    );
+  // The forge build produces version-specific artifacts (e.g. `GnosisSafe.0.8.20.json`).
+  const versionSuffixes = [".0.8.20", ".0.8.17", ""];
+  for (const suffix of versionSuffixes) {
+    const artifactPath = path.join(FORGE_OUT_DIR, sourceFile, `${contractName}${suffix}.json`);
+    if (fs.existsSync(artifactPath)) {
+      const parsed = JSON.parse(fs.readFileSync(artifactPath, "utf-8"));
+      return { abi: parsed.abi, bytecode: parsed.bytecode };
+    }
   }
-  const parsed = JSON.parse(fs.readFileSync(artifactPath, "utf-8"));
-  return { abi: parsed.abi, bytecode: parsed.bytecode };
+  const fallbackPath = path.join(FORGE_OUT_DIR, sourceFile, `${contractName}.json`);
+  throw new Error(
+    `Forge artifact not found: ${fallbackPath}. Run 'forge build' first (this script does so automatically).`,
+  );
 }
 
 interface BaalSafeDeployment {
@@ -94,13 +97,14 @@ interface BaalSafeDeployment {
   deployBlock: number;
   contracts: {
     safe: string;
-    safeTemplate: string;
+    safeTemplate?: string;
     baal: string;
     baalTemplate: string;
     armToken: string;
     lootToken: string;
     multisend: string;
     g1ArmToken: string;
+    shieldedRagequit?: string;
   };
   ownerHistory: Array<{
     step: string;
@@ -133,12 +137,25 @@ async function main() {
   }
   assertDeploymentComplete(govDeployment, govFilename);
   const armTokenAddress: string = govDeployment.contracts.armToken;
+  const safeAddress: string = govDeployment.contracts.treasury;
   console.log(`0. ARM shares token (G1 ArmadaToken): ${armTokenAddress}`);
+  console.log(`   Safe (treasury, from governance): ${safeAddress}`);
+
+  // Read the pool address from the privacy pool deployment manifest (needed for ShieldedRagequit).
+  const role = getChainRole(chainId);
+  if (!role) {
+    console.error(`Unknown chain ID: ${chainId}`);
+    process.exit(1);
+  }
+  const poolFilename = getPrivacyPoolDeploymentFile(role);
+  const poolDeployment = loadDeployment(poolFilename);
+  const poolAddress: string = poolDeployment?.contracts.privacyPool;
+  if (poolAddress) {
+    console.log(`   PrivacyPool: ${poolAddress}`);
+  }
 
   // Ensure the vendored Baal/Safe forge artifacts are current (forge-out/ is not committed).
-  console.log(
-    "   Running 'forge build' to refresh vendored contract artifacts...",
-  );
+  console.log("   Running 'forge build' to refresh vendored contract artifacts...");
   execFileSync("forge", ["build"], { cwd: REPO_ROOT, stdio: "inherit" });
 
   const outputFile = getBaalSafeDeploymentFile();
@@ -171,13 +188,14 @@ async function main() {
     try {
       owners = await safeForRead.getOwners();
     } catch {
-      owners = []; // Safe not yet initialized (threshold == 0) — getOwners() on an empty
-      // linked list returns [] in practice, but guard defensively in case of revert.
+      owners = [];
     }
     const humanOwners: string[] = [];
     for (const owner of owners) {
       const code = await ethers.provider.getCode(owner);
-      if (code === "0x") humanOwners.push(owner); // no deployed code => an EOA/human key
+      if (code === "0x") {
+        humanOwners.push(owner);
+      }
     }
     ownerHistory.push({ step, owners, humanOwners });
     console.log(
@@ -187,7 +205,6 @@ async function main() {
 
   // 1. Deploy the frozen BaalLootToken as Baal's loot token. Its mint reverts forever, so the
   //    loot supply is zero at every moment; no loot holder can use Baal's native ragequit.
-  //    Owner starts as the deployer; transferred to the Baal clone in step 7.
   console.log("1. Deploying BaalLootToken (frozen loot, zero supply)...");
   recordProgress({ armToken: armTokenAddress });
   const BaalLootToken = await ethers.getContractFactory("BaalLootToken");
@@ -197,76 +214,16 @@ async function main() {
   recordProgress({ lootToken: lootTokenAddress });
   console.log(`   LOOT (BaalLootToken): ${lootTokenAddress}`);
 
-  // 2. Deploy the vendored Gnosis Safe template + factory + multisend library.
-  console.log("2. Deploying Gnosis Safe (template, factory, multisend)...");
-  const safeArtifact = loadForgeArtifact("GnosisSafe.sol", "GnosisSafe");
-  const safeFactoryArtifact = loadForgeArtifact(
-    "GnosisSafeProxyFactory.sol",
-    "GnosisSafeProxyFactory",
-  );
-  const multisendArtifact = loadForgeArtifact("MultiSend.sol", "MultiSend");
-
-  const SafeTemplateFactory = new ethers.ContractFactory(
-    safeArtifact.abi,
-    safeArtifact.bytecode.object,
-    deployer,
-  );
-  const safeTemplate = await SafeTemplateFactory.deploy(nm.override());
-  await safeTemplate.deploymentTransaction()!.wait();
-  const safeTemplateAddress = await safeTemplate.getAddress();
-  recordProgress({ safeTemplate: safeTemplateAddress });
-  console.log(`   GnosisSafe template: ${safeTemplateAddress}`);
-
-  const SafeProxyFactoryFactory = new ethers.ContractFactory(
-    safeFactoryArtifact.abi,
-    safeFactoryArtifact.bytecode.object,
-    deployer,
-  );
-  const safeProxyFactory = await SafeProxyFactoryFactory.deploy(nm.override());
-  await safeProxyFactory.deploymentTransaction()!.wait();
-  console.log(
-    `   GnosisSafeProxyFactory: ${await safeProxyFactory.getAddress()}`,
-  );
-
-  const MultiSendFactory = new ethers.ContractFactory(
-    multisendArtifact.abi,
-    multisendArtifact.bytecode.object,
-    deployer,
-  );
-  const multisend = await MultiSendFactory.deploy(nm.override());
-  await multisend.deploymentTransaction()!.wait();
-  const multisendAddress = await multisend.getAddress();
-  recordProgress({ multisend: multisendAddress });
-  console.log(`   MultiSend: ${multisendAddress}`);
-
-  // 3. Deploy the Safe proxy with EMPTY setup data: no owner of any kind exists yet.
-  console.log("3. Deploying the Safe proxy (uninitialized — no owners yet)...");
-  const createProxyTx = await (safeProxyFactory as any).createProxy(
-    safeTemplateAddress,
-    "0x",
-    nm.override(),
-  );
-  const createProxyReceipt = await createProxyTx.wait();
-  const proxyCreationEvent = createProxyReceipt!.logs
-    .map((log: any) => {
-      try {
-        return safeProxyFactory.interface.parseLog(log);
-      } catch {
-        return null;
-      }
-    })
-    .find((parsed: any) => parsed?.name === "ProxyCreation");
-  const safeAddress: string = proxyCreationEvent!.args.proxy;
+  // 2. The Safe is already deployed by deploy_governance.ts (the treasury + ArmadaToken's
+  //    immutable timelock). Summon reuses it — no second Safe is deployed here.
+  console.log("2. Reusing the Safe from the governance manifest...");
   recordProgress({ safe: safeAddress });
-  console.log(`   Safe proxy (uninitialized): ${safeAddress}`);
-  await recordOwnerHistory("safe-proxy-created", safeAddress);
+  await recordOwnerHistory("safe-reused-from-governance", safeAddress);
 
   // 4. Deploy the vendored Baal template + zodiac ModuleProxyFactory, then clone the
   //    template — Baal's constructor disables initializers on the template itself, so
   //    setUp() must run against a clone's fresh storage (mirrors BaalSummoner._summonBaal).
-  console.log(
-    "4. Deploying Baal (template, zodiac ModuleProxyFactory, clone)...",
-  );
+  console.log("4. Deploying Baal (template, zodiac ModuleProxyFactory, clone)...");
   const baalArtifact = loadForgeArtifact("Baal.sol", "Baal");
   const moduleProxyFactoryArtifact = loadForgeArtifact(
     "ModuleProxyFactory.sol",
@@ -282,26 +239,20 @@ async function main() {
   await baalTemplate.deploymentTransaction()!.wait();
   const baalTemplateAddress = await baalTemplate.getAddress();
   recordProgress({ baalTemplate: baalTemplateAddress });
-  console.log(`   Baal template: ${baalTemplateAddress}`);
 
   const ModuleProxyFactoryFactory = new ethers.ContractFactory(
     moduleProxyFactoryArtifact.abi,
     moduleProxyFactoryArtifact.bytecode.object,
     deployer,
   );
-  const moduleProxyFactory = await ModuleProxyFactoryFactory.deploy(
-    nm.override(),
-  );
+  const moduleProxyFactory = await ModuleProxyFactoryFactory.deploy(nm.override());
   await moduleProxyFactory.deploymentTransaction()!.wait();
-  console.log(
-    `   zodiac ModuleProxyFactory: ${await moduleProxyFactory.getAddress()}`,
-  );
 
   const avatarGetterSelector = ethers.id("avatar()").slice(0, 10);
   const deployModuleTx = await (moduleProxyFactory as any).deployModule(
     baalTemplateAddress,
     avatarGetterSelector,
-    0, // saltNonce
+    0,
     nm.override(),
   );
   const deployModuleReceipt = await deployModuleTx.wait();
@@ -318,12 +269,25 @@ async function main() {
   recordProgress({ baal: baalAddress });
   console.log(`   Baal clone: ${baalAddress}`);
 
+  // 4.5 Deploy the MultiSend library (needed for the Safe's setup + Baal's initialization
+  //      multisend data). A fresh library is deployed here; the governance deploy's multisend is
+  //      a separate contract (the multisend is a stateless library, so two instances are fine).
+  const safeArtifact = loadForgeArtifact("GnosisSafe.sol", "GnosisSafe");
+  const multisendArtifact = loadForgeArtifact("MultiSend.sol", "MultiSend");
+  const MultiSendFactory = new ethers.ContractFactory(
+    multisendArtifact.abi,
+    multisendArtifact.bytecode.object,
+    deployer,
+  );
+  const multisend = await MultiSendFactory.deploy(nm.override());
+  await multisend.deploymentTransaction()!.wait();
+  const multisendAddress = await multisend.getAddress();
+  console.log(`   MultiSend library: ${multisendAddress}`);
+  recordProgress({ multisend: multisendAddress });
+
   // 5. Call safe.setup(owners=[baal], threshold=1, ...), enabling Baal as a Safe module in
   //    the same call (BaalSummoner.configureSafe's own pattern). This is the Safe's FIRST
   //    owner-bearing state, and its only owner is the Baal contract — never a human key.
-  console.log(
-    "5. Setting the Safe's sole owner to the Baal, threshold 1, enabling Baal as a module...",
-  );
   const safe = new ethers.Contract(safeAddress, safeArtifact.abi, deployer);
   const enableBaalModuleCall = new ethers.Interface([
     "function enableModule(address module)",
@@ -359,7 +323,6 @@ async function main() {
   //    Baal.setUp decodes (loot, shares, multisend, avatar, forwarder, initMultisendData);
   //    the multisend data is a real no-op multiSend(bytes("")) call, not raw empty bytes
   //    (raw empty bytes hits MultiSend's nonexistent fallback and reverts).
-  console.log("6. Registering ARM as Baal's shares token...");
   const baal = new ethers.Contract(baalAddress, baalArtifact.abi, deployer);
   const noOpMultisend = new ethers.Interface([
     "function multiSend(bytes transactions)",
@@ -375,6 +338,7 @@ async function main() {
       noOpMultisend,
     ],
   );
+  console.log(`   Baal.setUp initParams (length ${baalInitParams.length} bytes)`);
   const baalSetupTx = await (baal as any).setUp(baalInitParams, nm.override());
   await baalSetupTx.wait();
   console.log(`   Baal.sharesToken() registered: ${armTokenAddress}`);
@@ -386,6 +350,40 @@ async function main() {
   await (await lootToken.transferOwnership(baalAddress, nm.override())).wait();
   console.log(`   LOOT owner: ${baalAddress}`);
 
+  // 8. Deploy ShieldedRagequit (the one Baal manager shaman, with ARM burn authority).
+  //    Constructor: (armToken, baal, safe, pool). The pool address comes from the privacy pool
+  //    deployment manifest; if the pool is not yet deployed, the check will flag it.
+  console.log("8. Deploying ShieldedRagequit (one Baal manager shaman)...");
+  if (!poolAddress) {
+    throw new Error(
+      "PrivacyPool deployment not found; deploy the hub pool before summoning Baal + Safe."
+    );
+  }
+  const ShieldedRagequit = await ethers.getContractFactory("ShieldedRagequit");
+  const ragequit = await ShieldedRagequit.deploy(
+    armTokenAddress,
+    baalAddress,
+    safeAddress,
+    poolAddress,
+    nm.override(),
+  );
+  await ragequit.deploymentTransaction()!.wait();
+  const ragequitAddress = await ragequit.getAddress();
+  recordProgress({ shieldedRagequit: ragequitAddress });
+  console.log(`   ShieldedRagequit: ${ragequitAddress}`);
+
+  // 9. Register ShieldedRagequit as the one Baal manager shaman and as the ARM burn authority.
+  //    Baal.setShamans is baalOnly (the avatar/Safe must call it). ArmadaToken.initBurners
+  //    is deployer-only, one-shot.
+  console.log("9. Registering ShieldedRagequit as manager shaman + ARM burner...");
+  const baalForSet = new ethers.Contract(baalAddress, baalArtifact.abi, deployer);
+  await (await baalForSet.setShamans([ragequitAddress], [2], nm.override())).wait();
+  console.log(`   Baal.shamans(${ragequitAddress}) = manager role (permission 2)`);
+
+  const armTokenContract = await ethers.getContractAt("ArmadaToken", armTokenAddress);
+  await (await armTokenContract.initBurners([ragequitAddress], nm.override())).wait();
+  console.log(`   ArmadaToken.authorizedBurner(${ragequitAddress}) = true`);
+
   // ============ Read back and print the three facts ============
   const finalOwners: string[] = await (safe as any).getOwners();
   const finalThreshold: bigint = await (safe as any).getThreshold();
@@ -394,7 +392,9 @@ async function main() {
   const humanOwnersFinal: string[] = [];
   for (const owner of finalOwners) {
     const code = await ethers.provider.getCode(owner);
-    if (code === "0x") humanOwnersFinal.push(owner);
+    if (code === "0x") {
+      humanOwnersFinal.push(owner);
+    }
   }
 
   console.log("");
@@ -428,16 +428,16 @@ async function main() {
   const deployment: BaalSafeDeployment = {
     chainId,
     deployer: deployer.address,
-    deployBlock: createProxyReceipt!.blockNumber,
+    deployBlock: deployModuleReceipt!.blockNumber,
     contracts: {
       safe: safeAddress,
-      safeTemplate: safeTemplateAddress,
       baal: baalAddress,
       baalTemplate: baalTemplateAddress,
       armToken: armTokenAddress,
       lootToken: lootTokenAddress,
       multisend: multisendAddress,
       g1ArmToken: armTokenAddress,
+      shieldedRagequit: ragequitAddress,
     },
     ownerHistory,
     timestamp: new Date().toISOString(),
