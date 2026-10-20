@@ -5,7 +5,7 @@ out = "forge-out"
 libs = ["node_modules", "lib"]
 
 # Solidity config matching hardhat.config.ts
-solc_version = "0.8.20"
+# Per-path compiler versions mirror hardhat.config.ts: see compilation_restrictions at the end.
 evm_version = "london"
 
 # The vendored GnosisSafe (lib/safe-contracts, G2/arp-1f1) has execTransaction/checkSignatures
@@ -14,7 +14,6 @@ evm_version = "london"
 # exact equality — grep confirms no assertEq on a gas value), so this is safe project-wide.
 optimizer = true
 optimizer_runs = 200
-via_ir = true
 
 # Remappings for OpenZeppelin (existing) plus the vendored Baal/Safe dependencies
 # under lib/ (Baal feat/baalZodiac + Gnosis Safe, and their transitive deps zodiac + opengsn).
@@ -56,3 +55,29 @@ fail_on_revert = false
 # does not trip this, so the actual test suite is unaffected either way.
 [lint]
 lint_on_build = false
+
+# Mirrors hardhat.config.ts: the privacy pool, yield, fees, CCTP and other out-of-scope contracts stay
+# on 0.8.17; audit-scope governance and crowdfund contracts, and the vendored Hedgey lockup they
+# deploy, compile with 0.8.20 (the highest version that satisfies the bound below). A file shared by
+# both sides (for example contracts/governance/IFeeCollector.sol) compiles in each version.
+[[profile.default.compilation_restrictions]]
+paths = "{contracts/privacy-pool,contracts/yield,contracts/cctp,contracts/fees,contracts/periphery,contracts/aave-mock,contracts/test}/**"
+version = "=0.8.17"
+
+[[profile.default.compilation_restrictions]]
+paths = "contracts/{Faucet,GaslessShieldWrapper,GaslessShieldWrapperClient}.sol"
+version = "=0.8.17"
+
+[[profile.default.compilation_restrictions]]
+paths = "{contracts/governance,contracts/crowdfund,lib,test-foundry,script,node_modules}/**"
+version = "<=0.8.20"
+
+# The vendored Hedgey lockup (pragma ^0.8.20) hits "stack too deep" in TokenLockupPlans.sol
+# without the IR pipeline. Only compilation units that contain Hedgey sources use it.
+[[profile.default.compilation_restrictions]]
+paths = "lib/hedgey/**"
+via_ir = true
+
+[[profile.default.additional_compiler_profiles]]
+name = "via-ir"
+via_ir = true

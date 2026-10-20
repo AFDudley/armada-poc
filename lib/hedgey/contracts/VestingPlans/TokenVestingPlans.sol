@@ -12,7 +12,7 @@ import '../sharedContracts/VestingStorage.sol';
 
 /// @title TokenVestingPlans - An efficient way to allocate tokens to employees that vest over time
 /// @notice This contract allows people to grant tokens to beneficiaries that vest over time with the added functionalities;
-/// Each vesting plan is a unique NFT, leveraging the backbone of the ERC721 contract to represent a unique vesting plan 
+/// Each vesting plan is a unique NFT, leveraging the backbone of the ERC721 contract to represent a unique vesting plan
 /// 1. Revokable: plans can be revoked and unvested tokens returned to the company (vesting admin)
 /// 2. Soul Bound: plans are by default soul bound and not transferable, however can be transferred by an admin in emergencies
 /// 3. Governance optimized for snapshot voting: These are built to allow beneficiaries to vote with their unvested tokens on snapshot, or delegate them to other delegatees
@@ -33,7 +33,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
 
   /****CORE EXTERNAL FUNCTIONS*********************************************************************************************************************************************/
 
-  /// @notice function to create a vesting plan. 
+  /// @notice function to create a vesting plan.
   /// @dev this function will pull the tokens into this contract for escrow, increment the planIds, mint an NFT to the recipient, and create the storage Plan and map it to the newly minted NFT token ID in storage
   /// @param recipient the address of the recipient and beneficiary of the plan
   /// @param token the address of the ERC20 token
@@ -41,9 +41,9 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /// @param start the start date of the vesting plan, unix time
   /// @param cliff a cliff date which is a discrete date where tokens are not vested until this date, and then vest in a large single chunk on the cliff date
   /// @param rate the amount of tokens that vest in a single period
-  /// @param period the amount of time in between each vesting time stamp, in seconds. A period of 1 means that tokens vest every second in a 'streaming' style. 
+  /// @param period the amount of time in between each vesting time stamp, in seconds. A period of 1 means that tokens vest every second in a 'streaming' style.
   /// @param vestingAdmin is the address of an administrator in charge of revoking the plan, pulling back any unvested tokens to the vestingAdmin address
-  /// @param adminTransferOBO is an optional toggle to allow the vestingAdmin to transfer a plan and NFT to another wallet on behalf of (OBO) a beneficiary. To be used only for emergencies. 
+  /// @param adminTransferOBO is an optional toggle to allow the vestingAdmin to transfer a plan and NFT to another wallet on behalf of (OBO) a beneficiary. To be used only for emergencies.
   function createPlan(
     address recipient,
     address token,
@@ -82,7 +82,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /// @notice function for a beneficiary to redeem vested tokens from a group of plans
   /// @dev this will call an internal function for processing the actual redemption of tokens, which will withdraw vested tokens and deliver them to the beneficiary
   /// @dev this function will redeem all claimable and vested tokens up to the current block.timestamp
-  /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped. 
+  /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped.
   function redeemPlans(uint256[] memory planIds) external nonReentrant {
     _redeemPlans(planIds, block.timestamp);
   }
@@ -109,7 +109,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     _redeemPlans(planIds, block.timestamp);
   }
 
-  /// @notice the function for a vestingAdmin to revoke vesting plans. 
+  /// @notice the function for a vestingAdmin to revoke vesting plans.
   /// @dev this will call an internal function to revoke plans, whereby unvested tokens will be returned to the vestingAdmin, and any tokens that are vested will be delivered to the beneficiary(s)
   /// @param planIds is the array of the plan ids to be redeemed. the caller must be the vesting admin for all of the plans.
   function revokePlans(uint256[] memory planIds) external nonReentrant {
@@ -131,11 +131,11 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   }
 
   /****EXTERNAL VOTING & DELEGATION FUNCTIONS*********************************************************************************************************************************************/
-  /// @notice delegation functions do not move any tokens and do not alter any information about the vesting plan object. 
-  /// the specifically delegate the NFTs using the ERC721Delegate.sol extension. 
+  /// @notice delegation functions do not move any tokens and do not alter any information about the vesting plan object.
+  /// the specifically delegate the NFTs using the ERC721Delegate.sol extension.
   /// Use the dedicated snapshot strategy 'hedgey-delegate' to leverage the delegation functions for voting with snapshot
-  
-  /// @notice function to delegate an individual NFT tokenId to another wallet address. 
+
+  /// @notice function to delegate an individual NFT tokenId to another wallet address.
   /// @dev by default all plans are self delegated, this allows for the owner of a plan to delegate their NFT to a different address. This calls the internal _delegateToken function from ERC721Delegate.sol contract
   /// @param planId is the token Id of the NFT and vesting plan to be delegated
   /// @param delegatee is the address that the plan will be delegated to
@@ -144,8 +144,8 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   }
 
   /// @notice functeion to delegate multiple plans to multiple delegates in a single transaction
-  /// @dev this also calls the internal _delegateToken function from ERC721Delegate.sol to delegate an NFT to another wallet. 
-  /// @dev this function iterates through the array of plans and delegatees, delegating each individual NFT. 
+  /// @dev this also calls the internal _delegateToken function from ERC721Delegate.sol to delegate an NFT to another wallet.
+  /// @dev this function iterates through the array of plans and delegatees, delegating each individual NFT.
   /// @param planIds is the array of planIds that will be delegated
   /// @param delegatees is the array of addresses that each corresponding planId will be delegated to
   function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
@@ -158,7 +158,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /// @notice function to delegate all plans related to a specific token to a single delegatee address
   /// @dev this function pulls the balances of a wallet, checks that the token in the vesting plan matches the token input param, and then delegates it to the delegatee
   /// @param token is the address of the ERC20 tokens that are locked in the vesting plans desired to be delegated
-  /// @param delegatee is the address of the delegate that all of the NFTs / plans will be delegated to. 
+  /// @param delegatee is the address of the delegate that all of the NFTs / plans will be delegated to.
   function delegateAll(address token, address delegatee) external {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
@@ -217,11 +217,11 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
 
   /// @notice the internal function to revoke a vesting plan
   /// @dev this is called by the external revokePlans function, which inputs the msg.sender as the vestingAdmin and the planId from the inputs
-  /// this function checks that the vestingAdmin is the vestingAdmin, and that there is actually a revokable balance. 
+  /// this function checks that the vestingAdmin is the vestingAdmin, and that there is actually a revokable balance.
   /// The function then withdraws the unvested tokens that are revoked, delivering them to the vestingAdmin
-  /// the function then transfers the vested balances to the plan beneficiary. 
-  /// finally the function deletes the plan held in storage and burns the NFT. 
-  /// @param vestingAdmin is the vestingAdmin address 
+  /// the function then transfers the vested balances to the plan beneficiary.
+  /// finally the function deletes the plan held in storage and burns the NFT.
+  /// @param vestingAdmin is the vestingAdmin address
   /// @param planId is the id of the plan and NFT
   function _revokePlan(address vestingAdmin, uint256 planId) internal {
     Plan memory plan = plans[planId];
@@ -235,7 +235,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     TransferHelper.withdrawTokens(plan.token, holder, balance);
     emit PlanRevoked(planId, balance, remainder);
   }
-  
+
   /****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   /// @notice this function will pull all of the unclaimed tokens for a specific holder across all of their plans, based on a single ERC20 token
@@ -255,7 +255,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
 
   /// @notice this function will pull all of the tokens locked in vesting plans where the NFT has been delegated to a specific delegatee wallet address
   /// this is useful for the snapshot strategy hedgey-delegate, polling this function based on the wallet signed into snapshot
-  /// by default all NFTs are self-delegated when they are minted. 
+  /// by default all NFTs are self-delegated when they are minted.
   /// @param delegatee is the address of the delegate where NFTs have been delegated to
   /// @param token is the address of the ERC20 token that is locked in vesting plans and has been delegated
   function delegatedBalances(address delegatee, address token) external view returns (uint256 delegatedBalance) {
@@ -272,9 +272,9 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
 
   /// @notice special function to transfer an NFT that overrides the normal ERC721 transferFrom function.
-  /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT. 
-  /// the vesting plan must have the adminTransferOBO toggle turned on to true for this function to be called. 
-  /// this functin cannot be called by the owner / beneficiary of the NFT and vesting plan. 
+  /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT.
+  /// the vesting plan must have the adminTransferOBO toggle turned on to true for this function to be called.
+  /// this functin cannot be called by the owner / beneficiary of the NFT and vesting plan.
   /// the to address cannot be the vestingAdmin address
   /// @param from is the address the NFT and plan is transferred from
   /// @param to is the address where the NFT and plan is being transferred to
@@ -287,7 +287,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     emit PlanTransferredByVestingAdmin(tokenId, from, to);
   }
 
-  /// @notice vesting plans are not transferable, with the exception of the above method. 
+  /// @notice vesting plans are not transferable, with the exception of the above method.
   function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal override {
     revert('!transferrable');
   }

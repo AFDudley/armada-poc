@@ -22,7 +22,7 @@ abstract contract ERC721Delegate is ERC721, IERC721Delegate {
 
   // Mapping from token id to position in the allTokens array
   mapping(uint256 => uint256) private _allTokensIndex;
-  
+
   // Mapping if a token has been transferred
   mapping(uint256 => bool) public wasTransferred;
 
@@ -60,7 +60,7 @@ abstract contract ERC721Delegate is ERC721, IERC721Delegate {
     return _allTokens[index];
   }
 
-  
+
 
   /**
    * @dev See {ERC721-_beforeTokenTransfer}.

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 interface IDelegateNFT {
- 
+
  function delegateTokens(address delegate, uint256[] memory tokenIds) external;
 
  function delegateAllNFTs(address delegate) external;
