@@ -1,0 +1,100 @@
+{
+  "id": "derived-arp-133",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. armada-poc has no license-hygiene check. scripts/check-license-hygiene.sh does not exist. .github/workflows/ci.yml has no license-hygiene job. The exophial gate command in .exophial/config.yaml does not run it. Operator order 2026-10-20.\nWhat holds now? Describe the current, observed state. scripts/check-license-hygiene.sh exists. ci.yml lines 12-19 define a license-hygiene job that runs it. .exophial/config.yaml line 27 runs it in the gate command, and line 14 names it in a comment.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Count matches of license-hygiene or license hygiene (case-insensitive) in the tracked tree with git grep; report the count as JSON field matches. Report whether scripts/check-license-hygiene.sh exists as JSON field script_exists. Expected: matches 0, script_exists false.\nWhat constraints apply? State them in plain prose. Change only these three files. Keep every other CI job and gate step unchanged. Reference commit 167c5ad4 on branch exo/drop-license-check holds the exact change.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) armada-poc scripts/check-license-hygiene.sh, .github/workflows/ci.yml, .exophial/config.yaml",
+  "restatement": "The license-hygiene check must be removed from armada-poc. The script scripts/check-license-hygiene.sh must not exist. The CI workflow .github/workflows/ci.yml must not define a license-hygiene job. The exophial gate in .exophial/config.yaml must not run or name it. Every other CI job and gate step stays unchanged. The tracked tree must hold zero case-insensitive matches of license-hygiene or license hygiene, and script_exists must be false.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "scripts/check-license-hygiene.sh does not exist (script_exists is false)."
+    },
+    {
+      "id": "c2",
+      "text": ".github/workflows/ci.yml has no license-hygiene job and no match of license-hygiene or license hygiene (case-insensitive)."
+    },
+    {
+      "id": "c3",
+      "text": ".exophial/config.yaml does not run or name license-hygiene or license hygiene (case-insensitive) in the gate command or in any comment."
+    },
+    {
+      "id": "c4",
+      "text": "Every other CI job and gate step stays unchanged; ci.yml still defines its jobs and config.yaml still defines the gate command."
+    }
+  ],
+  "goal": "Remove the license-hygiene script, its CI job, and its exophial gate step, and nothing else.",
+  "acceptance_criteria": [
+    "The file scripts/check-license-hygiene.sh is not present in the repository.",
+    "The CI workflow file contains no mention of license-hygiene or license hygiene in any letter case.",
+    "The exophial config file contains no mention of license-hygiene or license hygiene in any letter case, in the gate command or in comments.",
+    "The CI workflow still has its jobs section and the exophial config still has its gate command."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The file scripts/check-license-hygiene.sh is not present in the repository."
+    },
+    {
+      "id": "c2",
+      "text": "The CI workflow file contains no mention of license-hygiene or license hygiene in any letter case."
+    },
+    {
+      "id": "c3",
+      "text": "The exophial config file contains no mention of license-hygiene or license hygiene in any letter case, in the gate command or in comments."
+    },
+    {
+      "id": "c4",
+      "text": "The CI workflow still has its jobs section and the exophial config still has its gate command."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "file_absent",
+      "description": "The file scripts/check-license-hygiene.sh is not present in the repository.",
+      "proves": "The license-hygiene script is gone (script_exists false).",
+      "restatement_clause_id": "c1",
+      "path": "scripts/check-license-hygiene.sh",
+      "clause_id": "c1"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The CI workflow file contains no mention of license-hygiene or license hygiene in any letter case.",
+      "proves": "The CI license-hygiene job is removed.",
+      "restatement_clause_id": "c2",
+      "pattern": "[Ll][Ii][Cc][Ee][Nn][Ss][Ee][-_ ][Hh][Yy][Gg][Ii][Ee][Nn][Ee]",
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The exophial config file contains no mention of license-hygiene or license hygiene in any letter case, in the gate command or in comments.",
+      "proves": "The gate no longer runs or names the license-hygiene check.",
+      "restatement_clause_id": "c3",
+      "pattern": "[Ll][Ii][Cc][Ee][Nn][Ss][Ee][-_ ][Hh][Yy][Gg][Ii][Ee][Nn][Ee]",
+      "files": [
+        ".exophial/config.yaml"
+      ],
+      "clause_id": "c3"
+    },
+    {
+      "type": "grep",
+      "description": "The CI workflow still has its jobs section and the exophial config still has its gate command.",
+      "proves": "The change did not remove the other CI jobs or the gate.",
+      "restatement_clause_id": "c4",
+      "pattern": "^jobs:",
+      "additional_patterns": [
+        "gate"
+      ],
+      "files": [
+        ".github/workflows/ci.yml",
+        ".exophial/config.yaml"
+      ],
+      "count": {
+        "unit": "files_without_match",
+        "op": "eq",
+        "value": 0
+      },
+      "clause_id": "c4"
+    }
+  ]
+}
