@@ -1,0 +1,192 @@
+{
+  "id": "derived-arp-a76",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. A Baal manager shaman named ShieldedRagequit must let any caller burn armAmount of their own ARM and receive, as a contract-owned note to their own npk, exactly burned/totalSupply times the Safe's balance of each listed token, with no treasury signature and no quorum, and never more than that bound. It is the only shaman Baal registers. Source: armada-laconic labbook 2026-10-18-treasury-governance-baal-safe-shielded 3 decisions 12,13,14,15,16,20,21 and 4 the G3 check; P2-CONTRACT items 1,2,3 and 6; the committed brief armada-poc docs/tasks/G3-shielded-ragequit.md.\nWhat holds now? Describe the current, observed state. No ShieldedRagequit contract exists. ArmadaToken has no burn. There is no path for a holder to exit the treasury for a pro-rata contract-owned note, and no test proves the exit is unblockable by a captured majority or bounded against over-payment.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run forge test --match-path test-foundry/ShieldedRagequit.t.sol. ragequit must burn the caller's ARM and reduce totalSupply; create a contract-owned note at the caller's npk with the bounded payout, read via preimageOf; succeed with no Safe signature and no Baal proposal; revert a crafted call that claims more than the bound; revert a call from a caller that holds no ARM, creating no note and leaving the Safe balances and ARM totalSupply unchanged; and leave Baal's shaman list holding exactly ShieldedRagequit. A check reads the test pass/fail output and fails if the exit pays more than burned/totalSupply times treasury, if it needs the treasury's signature or a proposal, if a non-holder caller receives any note, or if the shaman list is not exactly ShieldedRagequit. Plus, using armada-sdk, a built exit proof for the resulting note must verify on-chain through PrivacyPool.transact.\nWhat constraints apply? State them in plain prose. Depends on G2 (Baal and Safe summon, merged) and P2b (merged; transactOwned, preimageOf, the owner-derived npk binding the spent note to the Safe). Add a burn to ArmadaToken callable only by ShieldedRagequit, mirroring the one-shot authorized-caller pattern. Compute the payout bound from balances read inside the same transaction, holding for every call ordering including two ragequits in one block. SafeERC20 for every token call; emit an event for every holdings change. Follow the committed brief docs/tasks/G3-shielded-ragequit.md deliverables in full.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/ShieldedRagequit.sol, contracts/governance/ArmadaToken.sol (burn), contracts/privacy-pool/PrivacyPool.sol (transactOwned)",
+  "restatement": "Armada needs a treasury exit that a captured majority cannot block and that cannot over-pay. A new Baal manager shaman, ShieldedRagequit (contracts/governance/ShieldedRagequit.sol), lets any ARM holder call ragequit(armAmount, npk, tokens). The call burns armAmount of the caller's own ARM through a new ArmadaToken burn function. Only ShieldedRagequit can call that burn function, which follows the one-shot authorized-caller pattern of addAuthorizedDelegator. For each listed token, the call pays exactly armAmount * safe.balanceOf(token) / armToken.totalSupply(), never more. The contract reads these balances inside the same transaction. It pays through PrivacyPool.transactOwned as a contract-owned note at the caller's npk, debited from a Safe-owned pool note. The call needs no Safe signature and no Baal proposal. A caller with no ARM gets a revert, no note, and no change to Safe balances or ARM totalSupply. The bound holds for every call order, including two ragequits in one block. Every holdings change emits RagequitExecuted. Every token call uses SafeERC20. ShieldedRagequit is the only shaman that Baal registers. An armada-sdk exit proof (planSpend + prove) for the resulting payout note verifies on-chain through PrivacyPool.transact. This proves that the payout is a real, spendable note. The work follows docs/tasks/G3-shielded-ragequit.md in full.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "ragequit burns armAmount of the caller's ARM and reduces ARM totalSupply by armAmount."
+    },
+    {
+      "id": "c2",
+      "text": "ragequit creates a contract-owned note at the caller's npk with payout exactly armAmount * safe.balanceOf(token) / armToken.totalSupply() for each listed token, confirmed by reading preimageOf on the resulting commitment."
+    },
+    {
+      "id": "c3",
+      "text": "ragequit succeeds with no Safe signature and no Baal proposal; an exit that needs the treasury's signature or a proposal fails the check."
+    },
+    {
+      "id": "c4",
+      "text": "A crafted call that claims more than burned/totalSupply times the Safe's balance of a token reverts."
+    },
+    {
+      "id": "c5",
+      "text": "A ragequit call from a caller that holds no ARM reverts, creates no note, and leaves the Safe balances and ARM totalSupply unchanged."
+    },
+    {
+      "id": "c6",
+      "text": "Baal's shaman list holds exactly one entry, ShieldedRagequit."
+    },
+    {
+      "id": "c7",
+      "text": "ArmadaToken's burn is callable only by ShieldedRagequit; any other caller reverts."
+    },
+    {
+      "id": "c8",
+      "text": "The payout bound holds for every call ordering, including two ragequits in the same block against the same token: the total paid never exceeds each holder's burned/totalSupply share of the Safe balance read in that holder's transaction."
+    },
+    {
+      "id": "c9",
+      "text": "Every ragequit holdings change emits RagequitExecuted(holder, armBurned, npk, tokens, payouts) with the actual values."
+    },
+    {
+      "id": "c10",
+      "text": "Using armada-sdk planSpend and prove, an exit proof built for the ragequit payout note verifies on-chain through PrivacyPool.transact, and the spend conserves value: the spent payout value equals the sum of the spend outputs."
+    }
+  ],
+  "goal": "Any ARM holder can exit the Baal/Safe treasury alone for an exact, bounded pro-rata share. The share arrives as a spendable shielded note, and no majority can block the exit.",
+  "acceptance_criteria": [
+    "After a holder exits, the holder's ARM balance and the total ARM supply both fall by exactly the amount the holder gave up.",
+    "After an exit, the pool records a new note for the holder's own key, and its amount equals the holder's exact share of the treasury.",
+    "A holder exits with one direct call, and no treasury signer and no governance vote takes part.",
+    "An attempt to take more than the holder's fair share is refused, and the treasury keeps its funds.",
+    "A caller with no ARM who tries to exit is refused, gets no note, and the treasury balances and total ARM supply stay the same.",
+    "After setup, the governance contract lists exactly one special-power module, and it is the exit module.",
+    "Any account other than the exit module that tries to destroy ARM is refused.",
+    "Two holders exit one after the other in the same block. Each holder gets no more than a fair share of the balance present at that holder's exit. The treasury never pays out more than it held.",
+    "Each exit publishes a public record. The record names the holder, the amount burned, the destination key, the tokens, and the amounts paid.",
+    "The holder's wallet builds a spend for the payout note that the exit created. The pool accepts that spend on-chain. The value that the spend consumes equals the value that it creates."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "After a holder exits, the holder's ARM balance and the total ARM supply both fall by exactly the amount the holder gave up."
+    },
+    {
+      "id": "c2",
+      "text": "After an exit, the pool records a new note for the holder's own key, and its amount equals the holder's exact share of the treasury."
+    },
+    {
+      "id": "c3",
+      "text": "A holder exits with one direct call, and no treasury signer and no governance vote takes part."
+    },
+    {
+      "id": "c4",
+      "text": "An attempt to take more than the holder's fair share is refused, and the treasury keeps its funds."
+    },
+    {
+      "id": "c5",
+      "text": "A caller with no ARM who tries to exit is refused, gets no note, and the treasury balances and total ARM supply stay the same."
+    },
+    {
+      "id": "c6",
+      "text": "After setup, the governance contract lists exactly one special-power module, and it is the exit module."
+    },
+    {
+      "id": "c7",
+      "text": "Any account other than the exit module that tries to destroy ARM is refused."
+    },
+    {
+      "id": "c8",
+      "text": "Two holders exit one after the other in the same block. Each holder gets no more than a fair share of the balance present at that holder's exit. The treasury never pays out more than it held."
+    },
+    {
+      "id": "c9",
+      "text": "Each exit publishes a public record. The record names the holder, the amount burned, the destination key, the tokens, and the amounts paid."
+    },
+    {
+      "id": "c10",
+      "text": "The holder's wallet builds a spend for the payout note that the exit created. The pool accepts that spend on-chain. The value that the spend consumes equals the value that it creates."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c1",
+      "test": "test_RagequitBurnsCallerArm",
+      "description": "After a holder exits, the holder's ARM balance and the total ARM supply both fall by exactly the amount the holder gave up.",
+      "proves": "The exit really destroys the holder's ARM, so the holder cannot exit twice with the same tokens.",
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c2",
+      "test": "test_RagequitCreatesOwnedNoteAtCallerNpk",
+      "description": "After an exit, the pool records a new note for the holder's own key, and its amount equals the holder's exact share of the treasury.",
+      "proves": "The holder receives the exact pro-rata share as a shielded note owned by the holder.",
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c3",
+      "test": "test_RagequitNeedsNoSafeSignatureOrProposal",
+      "description": "A holder exits with one direct call, and no treasury signer and no governance vote takes part.",
+      "proves": "No treasury signer or voting majority can block a holder's exit.",
+      "clause_id": "c3"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c4",
+      "test": "test_RagequitRevertsWhenClaimExceedsBound",
+      "description": "An attempt to take more than the holder's fair share is refused, and the treasury keeps its funds.",
+      "proves": "The exit never pays more than the burned share of the treasury.",
+      "clause_id": "c4"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c5",
+      "test": "test_RagequitRevertsForNonHolder",
+      "description": "A caller with no ARM who tries to exit is refused, gets no note, and the treasury balances and total ARM supply stay the same.",
+      "proves": "Only real holders can take funds out of the treasury.",
+      "clause_id": "c5"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c6",
+      "test": "test_BaalShamanListIsOnlyShieldedRagequit",
+      "description": "After setup, the governance contract lists exactly one special-power module, and it is the exit module.",
+      "proves": "No other module has the special powers that the exit module has.",
+      "clause_id": "c6"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c7",
+      "test": "test_BurnOnlyCallableByShieldedRagequit",
+      "description": "Any account other than the exit module that tries to destroy ARM is refused.",
+      "proves": "No other account can destroy holders' ARM.",
+      "clause_id": "c7"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c8",
+      "test": "test_TwoRagequitsSameBlockStayWithinBound",
+      "description": "Two holders exit one after the other in the same block. Each holder gets no more than a fair share of the balance present at that holder's exit. The treasury never pays out more than it held.",
+      "proves": "Call order cannot let a holder take more than the holder's share.",
+      "clause_id": "c8"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c9",
+      "test": "test_RagequitEmitsRagequitExecuted",
+      "description": "Each exit publishes a public record. The record names the holder, the amount burned, the destination key, the tokens, and the amounts paid.",
+      "proves": "Each change to treasury holdings can be seen and audited.",
+      "clause_id": "c9"
+    },
+    {
+      "type": "metamorphic",
+      "restatement_clause_id": "c10",
+      "relation_class": "conservation",
+      "run": [
+        "bash",
+        "scripts/verify-ragequit-exit-proof.sh"
+      ],
+      "description": "The holder's wallet builds a spend for the payout note that the exit created. The pool accepts that spend on-chain. The value that the spend consumes equals the value that it creates.",
+      "proves": "The payout note is a real, spendable shielded note and is not only a record with the right size.",
+      "clause_id": "c10"
+    }
+  ],
+  "criticality": "critical",
+  "declared_new_entrypoints": [
+    "scripts/verify-ragequit-exit-proof.sh"
+  ]
+}
