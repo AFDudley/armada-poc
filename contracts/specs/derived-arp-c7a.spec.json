@@ -1,0 +1,243 @@
+{
+  "id": "derived-arp-c7a",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. ArmadaCrowdfund.finalize must create one Safe-owned shielded note for the sale proceeds in the same call, instead of sending the proceeds USDC to the treasury address. Source: armada-laconic labbook 2026-10-18-treasury-governance-baal-safe-shielded 3 decision 16 and 4 the G5 check; P2-CONTRACT item 6; the committed brief armada-poc docs/tasks/G5-hedgey-crowdfund-shielded-proceeds.md.\nWhat holds now? Describe the current, observed state. ArmadaCrowdfund.finalize pays proceedsPush with usdc.safeTransfer(treasury, proceedsPush), so the proceeds rest at the treasury public address, one hop from any tainted committer's USDC. No test proves the proceeds become a Safe-owned note.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run forge test --match-path test-foundry/CrowdfundShieldedProceeds.t.sol. After finalize, the pool holds a Safe-owned note for proceedsPush, read via preimageOf, and the treasury address USDC balance is unchanged by finalize. A check reads the test pass/fail output and fails if the proceeds sit at the treasury public address after finalize.\nWhat constraints apply? State them in plain prose. Depends on G1 (ArmadaToken, merged) and P2b (merged; the pool shield path, the Safe owner-derived npk, and preimageOf). Change only the proceeds transfer to a shield to the Safe's npk; keep the treasury immutable, which still receives the unsold-ARM sweep, and keep finalize nonReentrant. SafeERC20 and forceApprove before the pool call. Follow the committed brief docs/tasks/G5-hedgey-crowdfund-shielded-proceeds.md.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/crowdfund/ArmadaCrowdfund.sol finalize",
+  "restatement": "When ArmadaCrowdfund.finalize runs, the USDC sale proceeds (proceedsPush) must not be sent to the public treasury address. In the same call, finalize must shield that amount into the privacy pool as one note owned by the Safe, using the Safe's owner-derived npk. After finalize, the pool holds a Safe-owned note for proceedsPush, readable through preimageOf. The treasury USDC balance does not change because of finalize. The change is limited to the proceeds transfer. The treasury stays immutable and still receives the unsold-ARM sweep. finalize stays nonReentrant. The code uses SafeERC20 and forceApprove before the pool call. The forge test at test-foundry/CrowdfundShieldedProceeds.t.sol proves this and fails if the proceeds sit at the treasury public address after finalize.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "After finalize, the pool holds one Safe-owned note for proceedsPush, created in the same finalize call and read via preimageOf."
+    },
+    {
+      "id": "c2",
+      "text": "The treasury address USDC balance is unchanged by finalize, so the proceeds do not sit at the treasury public address after finalize."
+    },
+    {
+      "id": "c3",
+      "text": "The treasury stays immutable and still receives the unsold-ARM sweep, and finalize stays nonReentrant."
+    },
+    {
+      "id": "c4",
+      "text": "The pool call uses SafeERC20 and forceApprove before the shield to the Safe's npk, so no approval is left open after finalize."
+    },
+    {
+      "id": "c5",
+      "text": "The forge test test-foundry/CrowdfundShieldedProceeds.t.sol runs with forge test --match-path test-foundry/CrowdfundShieldedProceeds.t.sol and every test passes."
+    }
+  ],
+  "goal": "ArmadaCrowdfund.finalize shields the sale proceeds into the privacy pool as one Safe-owned note in the same call, so the proceeds never rest at the public treasury address.",
+  "acceptance_criteria": [
+    "Run the crowdfund shielded-proceeds tests. After finalize, the pool holds exactly one Safe-owned note whose amount equals the sale proceeds.",
+    "Run the same tests and read the treasury USDC balance before and after finalize. The balance change is zero.",
+    "Run the same tests. The treasury still gets the unsold-ARM sweep, the treasury address is unchanged, and a reentrant call into finalize is rejected.",
+    "Run the same tests and read the crowdfund's USDC allowance to the pool after finalize. The allowance is zero.",
+    "Run the forge test file. At least one test runs and none fail."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "Run the crowdfund shielded-proceeds tests. After finalize, the pool holds exactly one Safe-owned note whose amount equals the sale proceeds."
+    },
+    {
+      "id": "c2",
+      "text": "Run the same tests and read the treasury USDC balance before and after finalize. The balance change is zero."
+    },
+    {
+      "id": "c3",
+      "text": "Run the same tests. The treasury still gets the unsold-ARM sweep, the treasury address is unchanged, and a reentrant call into finalize is rejected."
+    },
+    {
+      "id": "c4",
+      "text": "Run the same tests and read the crowdfund's USDC allowance to the pool after finalize. The allowance is zero."
+    },
+    {
+      "id": "c5",
+      "text": "Run the forge test file. At least one test runs and none fail."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "behavior",
+      "description": "Run the crowdfund shielded-proceeds tests. After finalize, the pool holds exactly one Safe-owned note whose amount equals the sale proceeds.",
+      "proves": "The proceeds become a Safe-owned shielded note in the same finalize call.",
+      "restatement_clause_id": "c1",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-crowdfund-shielded-proceeds.sh",
+        "args": [
+          "test-foundry/CrowdfundShieldedProceeds.t.sol"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "safe_note_count",
+          "op": "eq",
+          "value": 1
+        },
+        {
+          "observe": "stdout_json",
+          "field": "safe_note_amount_matches_proceeds",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c1"
+    },
+    {
+      "type": "behavior",
+      "description": "Run the same tests and read the treasury USDC balance before and after finalize. The balance change is zero.",
+      "proves": "The proceeds do not rest at the public treasury address after finalize.",
+      "restatement_clause_id": "c2",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-crowdfund-shielded-proceeds.sh",
+        "args": [
+          "test-foundry/CrowdfundShieldedProceeds.t.sol"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "treasury_usdc_delta",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "Run the same tests. The treasury still gets the unsold-ARM sweep, the treasury address is unchanged, and a reentrant call into finalize is rejected.",
+      "proves": "Only the proceeds payout changed. The treasury stays fixed and finalize stays guarded.",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-crowdfund-shielded-proceeds.sh",
+        "args": [
+          "test-foundry/CrowdfundShieldedProceeds.t.sol"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "treasury_receives_unsold_arm_sweep",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "treasury_address_unchanged",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "reentrant_finalize_reverts",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "Run the same tests and read the crowdfund's USDC allowance to the pool after finalize. The allowance is zero.",
+      "proves": "The pool call uses a safe approval and leaves no open approval behind.",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-crowdfund-shielded-proceeds.sh",
+        "args": [
+          "test-foundry/CrowdfundShieldedProceeds.t.sol"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "pool_allowance_after_finalize",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c4"
+    },
+    {
+      "type": "behavior",
+      "description": "Run the forge test file. At least one test runs and none fail.",
+      "proves": "The named forge test exists, runs, and passes.",
+      "restatement_clause_id": "c5",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-crowdfund-shielded-proceeds.sh",
+        "args": [
+          "test-foundry/CrowdfundShieldedProceeds.t.sol"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "tests_passed",
+          "op": "gt",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "tests_failed",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c5"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/check-crowdfund-shielded-proceeds.sh"
+  ]
+}
