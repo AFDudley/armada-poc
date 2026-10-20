@@ -92,3 +92,6 @@ nodes/
 
 # Agent scratch space (throwaway analysis, scratch worktrees, TMPDIR)
 .scratch/
+
+# omp worker-session router config dropped into each worktree by the omp harness
+.omp-config.yml
