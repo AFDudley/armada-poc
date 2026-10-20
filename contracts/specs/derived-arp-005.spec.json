@@ -1,0 +1,415 @@
+{
+  "id": "derived-arp-005",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. RevenueLock must release ARM to beneficiaries in proportion to the pool's cumulativeFees for one named asset, with no rate-limit ratchet, no wind-down freeze, and no admin path, so every unlock corresponds to real USDC that ARM holders own. Source: armada-laconic labbook 2026-10-18-treasury-governance-baal-safe-shielded 3 decision 22 and 4 the G4 check; P2-CONTRACT items 4 and 5; the committed brief armada-poc docs/tasks/G4-revenuelock-cumulativefees.md.\nWhat holds now? Describe the current, observed state. RevenueLock reads RevenueCounter.recognizedRevenueUsd, which the owner can raise for free via addRevenue/attestRevenue. It applies a MAX_REVENUE_INCREASE_PER_DAY ratchet and a wind-down freeze. No test proves release entitlement tracks the pool's cumulativeFees, and no test proves that a non-fee-paying caller cannot raise the release source.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run forge test --match-path test-foundry/RevenueLock.t.sol. The release entitlement must track pool.cumulativeFees(asset), not a separate attestation call. A check reads the test pass/fail output and must fail if any function on RevenueLock or a pool test double lets a non-fee-paying caller raise the release source, if a beneficiary releases ARM beyond the milestone the real cumulativeFees(asset) supports, or if releasable and release disagree bit-for-bit on the amount. The existing RevenueLock invariant and reserve-distributor suites must still pass.\nWhat constraints apply? State them in plain prose. Depends on G1 (ArmadaToken, merged) and P2b (the pool's cumulativeFees(asset) and feeRecipient). Delete the ratchet (maxObservedRevenue, MAX_REVENUE_INCREASE_PER_DAY, the sync path) and the wind-down freeze; cumulativeFees is monotonic by the pool's own construction. Keep the milestone step function and its constants unchanged. Do not edit RevenueCounter.sol or RevenueReserveDistributor.sol. Follow the committed brief docs/tasks/G4-revenuelock-cumulativefees.md deliverables.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/RevenueLock.sol",
+  "restatement": "RevenueLock in contracts/governance/RevenueLock.sol must decide how much ARM beneficiaries can release only from pool.cumulativeFees(asset) for one named asset. That figure is real USDC fees the pool collected, so every unlock matches money ARM holders own. The owner-raisable RevenueCounter.recognizedRevenueUsd source, the MAX_REVENUE_INCREASE_PER_DAY ratchet (with maxObservedRevenue and the sync path) and the wind-down freeze are deleted. The milestone step function and its constants stay as they are. RevenueCounter.sol and RevenueReserveDistributor.sol are not edited. No caller who pays no fees can raise the release source. No beneficiary can release past the milestone the real cumulativeFees(asset) supports. releasable and release give the same amount bit-for-bit. The command forge test --match-path test-foundry/RevenueLock.t.sol proves this, and the existing RevenueLock invariant and reserve-distributor suites still pass.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "RevenueLock release entitlement is read from pool.cumulativeFees(asset) for one named asset, not from RevenueCounter.recognizedRevenueUsd or any separate attestation call."
+    },
+    {
+      "id": "c2",
+      "text": "The ratchet (maxObservedRevenue, MAX_REVENUE_INCREASE_PER_DAY, the sync path) and the wind-down freeze are deleted from RevenueLock."
+    },
+    {
+      "id": "c3",
+      "text": "No function on RevenueLock or a pool test double lets a non-fee-paying caller raise the release source."
+    },
+    {
+      "id": "c4",
+      "text": "A beneficiary cannot release ARM beyond the milestone the real cumulativeFees(asset) supports."
+    },
+    {
+      "id": "c5",
+      "text": "releasable and release agree bit-for-bit on the amount."
+    },
+    {
+      "id": "c6",
+      "text": "The milestone step function and its constants are unchanged."
+    },
+    {
+      "id": "c7",
+      "text": "RevenueCounter.sol and RevenueReserveDistributor.sol are not edited."
+    },
+    {
+      "id": "c8",
+      "text": "The existing RevenueLock invariant suite and the reserve-distributor suite still pass."
+    },
+    {
+      "id": "c9",
+      "text": "forge test --match-path test-foundry/RevenueLock.t.sol passes with tests covering entitlement tracking cumulativeFees(asset)."
+    }
+  ],
+  "goal": "RevenueLock releases ARM only in step with the pool's real cumulativeFees for one named asset, with no ratchet, no freeze and no admin path.",
+  "acceptance_criteria": [
+    "The tool reports how many times RevenueLock reads the pool's cumulativeFees figure and how many times it reads the owner-raisable recognized revenue figure. It reads cumulativeFees and never the other.",
+    "The tool counts uses of the daily-increase cap, the observed-revenue tracker, the sync path and the wind-down freeze in RevenueLock. The count is zero.",
+    "A test where an account that paid no fees tries every way to raise the release source. None of them changes what can be released.",
+    "A test where fees stop at a given level. A beneficiary tries to release more than that level supports and is refused or gets only the supported amount.",
+    "A test compares the amount releasable with the amount actually released across many fee levels. The two amounts are identical.",
+    "The milestone step table and its constants show no changed lines compared with the main branch.",
+    "RevenueCounter.sol and RevenueReserveDistributor.sol show no changes compared with the main branch.",
+    "The existing RevenueLock invariant tests and the reserve-distributor tests all pass.",
+    "Running forge test on the RevenueLock test file passes with no failures, and tests exist."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The tool reports how many times RevenueLock reads the pool's cumulativeFees figure and how many times it reads the owner-raisable recognized revenue figure. It reads cumulativeFees and never the other."
+    },
+    {
+      "id": "c2",
+      "text": "The tool counts uses of the daily-increase cap, the observed-revenue tracker, the sync path and the wind-down freeze in RevenueLock. The count is zero."
+    },
+    {
+      "id": "c3",
+      "text": "A test where an account that paid no fees tries every way to raise the release source. None of them changes what can be released."
+    },
+    {
+      "id": "c4",
+      "text": "A test where fees stop at a given level. A beneficiary tries to release more than that level supports and is refused or gets only the supported amount."
+    },
+    {
+      "id": "c5",
+      "text": "A test compares the amount releasable with the amount actually released across many fee levels. The two amounts are identical."
+    },
+    {
+      "id": "c6",
+      "text": "The milestone step table and its constants show no changed lines compared with the main branch."
+    },
+    {
+      "id": "c7",
+      "text": "RevenueCounter.sol and RevenueReserveDistributor.sol show no changes compared with the main branch."
+    },
+    {
+      "id": "c8",
+      "text": "The existing RevenueLock invariant tests and the reserve-distributor tests all pass."
+    },
+    {
+      "id": "c9",
+      "text": "Running forge test on the RevenueLock test file passes with no failures, and tests exist."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "behavior",
+      "description": "The tool reports how many times RevenueLock reads the pool's cumulativeFees figure and how many times it reads the owner-raisable recognized revenue figure. It reads cumulativeFees and never the other.",
+      "proves": "Release entitlement comes from the pool's cumulativeFees and not from the free-to-raise attestation.",
+      "restatement_clause_id": "c1",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "source-is-cumulative-fees"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "cumulative_fees_reads",
+          "op": "ge",
+          "value": 1
+        },
+        {
+          "observe": "stdout_json",
+          "field": "recognized_revenue_reads",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 120,
+      "clause_id": "c1"
+    },
+    {
+      "type": "behavior",
+      "description": "The tool counts uses of the daily-increase cap, the observed-revenue tracker, the sync path and the wind-down freeze in RevenueLock. The count is zero.",
+      "proves": "The ratchet and the wind-down freeze are deleted.",
+      "restatement_clause_id": "c2",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "ratchet-and-freeze-removed"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "remaining_uses",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 120,
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "A test where an account that paid no fees tries every way to raise the release source. None of them changes what can be released.",
+      "proves": "No non-fee-paying caller can raise the release source.",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "non-fee-payer-cannot-raise"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "failed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passed",
+          "op": "ge",
+          "value": 1
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "A test where fees stop at a given level. A beneficiary tries to release more than that level supports and is refused or gets only the supported amount.",
+      "proves": "Release never exceeds what the real cumulativeFees supports.",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "no-release-beyond-milestone"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "failed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passed",
+          "op": "ge",
+          "value": 1
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c4"
+    },
+    {
+      "type": "behavior",
+      "description": "A test compares the amount releasable with the amount actually released across many fee levels. The two amounts are identical.",
+      "proves": "releasable and release agree bit-for-bit.",
+      "restatement_clause_id": "c5",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "releasable-equals-release"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "failed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passed",
+          "op": "ge",
+          "value": 1
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c5"
+    },
+    {
+      "type": "behavior",
+      "description": "The milestone step table and its constants show no changed lines compared with the main branch.",
+      "proves": "The milestone step function and constants are unchanged.",
+      "restatement_clause_id": "c6",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "milestone-constants-unchanged"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "changed_lines",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 120,
+      "clause_id": "c6"
+    },
+    {
+      "type": "behavior",
+      "description": "RevenueCounter.sol and RevenueReserveDistributor.sol show no changes compared with the main branch.",
+      "proves": "The two protected contracts were not edited.",
+      "restatement_clause_id": "c7",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "protected-files-unchanged"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "changed_files",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 120,
+      "clause_id": "c7"
+    },
+    {
+      "type": "behavior",
+      "description": "The existing RevenueLock invariant tests and the reserve-distributor tests all pass.",
+      "proves": "Existing suites still pass after the change.",
+      "restatement_clause_id": "c8",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "existing-suites"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "failed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passed",
+          "op": "ge",
+          "value": 1
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c8"
+    },
+    {
+      "type": "behavior",
+      "description": "Running forge test on the RevenueLock test file passes with no failures, and tests exist.",
+      "proves": "The full RevenueLock test file passes, including entitlement tracking cumulativeFees(asset).",
+      "restatement_clause_id": "c9",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-revenuelock.sh",
+        "args": [
+          "full-file"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "failed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passed",
+          "op": "ge",
+          "value": 1
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 600,
+      "clause_id": "c9"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/check-revenuelock.sh"
+  ]
+}
