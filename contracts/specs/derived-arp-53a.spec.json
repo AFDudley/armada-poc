@@ -1,0 +1,447 @@
+{
+  "id": "derived-arp-53a",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. ArmadaToken must be the Baal shares ERC20 with three enforced invariants: (1) a fixed 12,000,000e18 supply minted exactly once with no second mint path; (2) non-upgradeable code, with no proxy, no delegatecall in its runtime bytecode, and no _authorizeUpgrade-style path; (3) a transfer allowlist that only the timelock extends, that blocks every non-whitelisted transfer while transferable is false, that never blocks a mint (from==address(0)), and that lets the timelock alone call setTransferable(true) with no windDownContract dependency. Source: armada-laconic labbook 2026-10-18-treasury-governance-baal-safe-shielded \u00a73 decisions 3,4,5 and \u00a74 the G1 check; the committed brief armada-poc docs/tasks/G1-arm-shares-token.md.\nWhat holds now? Describe the current, observed state. The source at armada-poc integrated meets these invariants, but no test proves them. A mutation that adds a second _mint call, converts the token to a proxy, or lets a non-whitelisted holder transfer, passes the current forge suite with no failure. The invariants are therefore unenforced.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run forge test. No test asserts, over its per-test pass/fail output: exactly one _mint call site in ArmadaToken.sol; the deployed runtime bytecode is immutable non-proxy code (no delegatecall); initWhitelist (deployer, one-shot) and addToWhitelist (timelock-only, add-only) gate as specified and a non-timelock caller reverts; a transfer from a non-whitelisted holder reverts with 'ArmadaToken: transfers restricted'; a mint (from==address(0)) is not blocked; setTransferable(true) succeeds from the timelock with windDownContract never set. A check reads forge test output and fails if any of these six assertions is absent, or passes under the mutation that breaks its invariant.\nWhat constraints apply? State them in plain prose. The labbook decisions 3-5 describe code that armada-poc already has; if any property is not met, that is an escalation to the husband, not a silent contract edit. No windDownContract may be set in any test or deploy. Do not change circulatingSupplyOf, delegateOnBehalf/transferAndDelegate, or noDelegation. The existing forge suite must still pass unchanged. Follow the committed brief docs/tasks/G1-arm-shares-token.md for the deliverables.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/ArmadaToken.sol",
+  "restatement": "The ArmadaToken contract (contracts/governance/ArmadaToken.sol) must have its three design invariants enforced by the forge test suite, so a change that breaks one makes a test fail. The invariants: (1) a fixed supply of 12,000,000e18 is minted exactly once, with one _mint call site; (2) the code is non-upgradeable, with no proxy, no delegatecall in the runtime bytecode and no upgrade-authorization path; (3) the transfer allowlist is extended only by the timelock, blocks every non-whitelisted transfer while transferable is false, never blocks a mint, and lets the timelock alone call setTransferable(true) without any windDownContract. The contract already meets these now, so the work adds tests and does not edit the contract. A check reads the forge per-test results and fails if any of the six assertions is missing, or if it still passes when a mutation breaks its invariant. If the contract fails any invariant, the worker escalates and does not edit the contract.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "A forge test asserts that ArmadaToken.sol has exactly one _mint call site and that the fixed 12,000,000e18 supply is minted once."
+    },
+    {
+      "id": "c2",
+      "text": "A forge test asserts that the deployed runtime bytecode of ArmadaToken is immutable non-proxy code with no delegatecall."
+    },
+    {
+      "id": "c3",
+      "text": "A forge test asserts that initWhitelist (deployer, one-shot) and addToWhitelist (timelock-only, add-only) gate as specified, and that a non-timelock caller reverts."
+    },
+    {
+      "id": "c4",
+      "text": "A forge test asserts that a transfer from a non-whitelisted holder reverts with 'ArmadaToken: transfers restricted' while transferable is false."
+    },
+    {
+      "id": "c5",
+      "text": "A forge test asserts that a mint (from==address(0)) is not blocked by the transfer restriction."
+    },
+    {
+      "id": "c6",
+      "text": "A forge test asserts that setTransferable(true) succeeds from the timelock while windDownContract is never set."
+    },
+    {
+      "id": "c7",
+      "text": "A check reads forge test per-test pass/fail output and fails if any of the six assertions is absent, or if an assertion passes under the mutation that breaks its invariant (second _mint call, proxy conversion, non-whitelisted transfer allowed)."
+    },
+    {
+      "id": "c8",
+      "text": "The existing forge suite still passes unchanged, no windDownContract is set in any test or deploy, and circulatingSupplyOf, delegateOnBehalf/transferAndDelegate and noDelegation are not changed."
+    }
+  ],
+  "goal": "Add forge tests that prove the six ArmadaToken invariants, plus a check that reads forge test output and confirms each assertion exists and catches its breaking mutation.",
+  "acceptance_criteria": [
+    "The checker reports that the single-mint test exists, passes on the real contract, and fails when a second _mint call is added.",
+    "The checker reports that the non-proxy bytecode test exists, passes on the real contract, and fails when the token is turned into a proxy.",
+    "The checker reports that the whitelist access tests exist, pass on the real contract, and fail when a non-timelock caller is allowed to extend the allowlist.",
+    "The checker reports that the restricted-transfer test exists, passes on the real contract, and fails when a non-whitelisted holder is allowed to transfer.",
+    "The checker reports that the mint-not-blocked test exists, passes on the real contract, and fails when the restriction also blocks minting.",
+    "The checker reports that the timelock-enables-transfers test exists, passes with windDownContract never set, and fails when setTransferable requires a windDownContract.",
+    "Run over all six assertions, the checker finds none missing and none that survive their breaking mutation.",
+    "The full existing forge suite passes, no test or deploy sets windDownContract, and the protected delegation and supply functions are unchanged."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The checker reports that the single-mint test exists, passes on the real contract, and fails when a second _mint call is added."
+    },
+    {
+      "id": "c2",
+      "text": "The checker reports that the non-proxy bytecode test exists, passes on the real contract, and fails when the token is turned into a proxy."
+    },
+    {
+      "id": "c3",
+      "text": "The checker reports that the whitelist access tests exist, pass on the real contract, and fail when a non-timelock caller is allowed to extend the allowlist."
+    },
+    {
+      "id": "c4",
+      "text": "The checker reports that the restricted-transfer test exists, passes on the real contract, and fails when a non-whitelisted holder is allowed to transfer."
+    },
+    {
+      "id": "c5",
+      "text": "The checker reports that the mint-not-blocked test exists, passes on the real contract, and fails when the restriction also blocks minting."
+    },
+    {
+      "id": "c6",
+      "text": "The checker reports that the timelock-enables-transfers test exists, passes with windDownContract never set, and fails when setTransferable requires a windDownContract."
+    },
+    {
+      "id": "c7",
+      "text": "Run over all six assertions, the checker finds none missing and none that survive their breaking mutation."
+    },
+    {
+      "id": "c8",
+      "text": "The full existing forge suite passes, no test or deploy sets windDownContract, and the protected delegation and supply functions are unchanged."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "behavior",
+      "description": "The checker reports that the single-mint test exists, passes on the real contract, and fails when a second _mint call is added.",
+      "proves": "The one-time 12,000,000e18 mint with exactly one _mint call site is enforced by a test that catches a second mint path.",
+      "restatement_clause_id": "c1",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check-armada-token-invariants.py",
+        "args": [
+          "--assertion",
+          "single-mint",
+          "--mutate",
+          "second-mint"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passes_unmutated",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "fails_under_mutation",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c1"
+    },
+    {
+      "type": "behavior",
+      "description": "The checker reports that the non-proxy bytecode test exists, passes on the real contract, and fails when the token is turned into a proxy.",
+      "proves": "The no-proxy, no-delegatecall, non-upgradeable property is enforced by a test that catches a proxy conversion.",
+      "restatement_clause_id": "c2",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check-armada-token-invariants.py",
+        "args": [
+          "--assertion",
+          "non-proxy-bytecode",
+          "--mutate",
+          "proxy"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passes_unmutated",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "fails_under_mutation",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "The checker reports that the whitelist access tests exist, pass on the real contract, and fail when a non-timelock caller is allowed to extend the allowlist.",
+      "proves": "initWhitelist is deployer one-shot, addToWhitelist is timelock-only and add-only, and a non-timelock caller reverts, all enforced by a test.",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check-armada-token-invariants.py",
+        "args": [
+          "--assertion",
+          "whitelist-gating",
+          "--mutate",
+          "open-add-to-whitelist"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passes_unmutated",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "fails_under_mutation",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "The checker reports that the restricted-transfer test exists, passes on the real contract, and fails when a non-whitelisted holder is allowed to transfer.",
+      "proves": "A non-whitelisted transfer reverts with 'ArmadaToken: transfers restricted' while transferable is false, enforced by a test.",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check-armada-token-invariants.py",
+        "args": [
+          "--assertion",
+          "restricted-transfer-reverts",
+          "--mutate",
+          "allow-non-whitelisted-transfer"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passes_unmutated",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "fails_under_mutation",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c4"
+    },
+    {
+      "type": "behavior",
+      "description": "The checker reports that the mint-not-blocked test exists, passes on the real contract, and fails when the restriction also blocks minting.",
+      "proves": "A mint (from==address(0)) is never blocked by the transfer restriction, enforced by a test.",
+      "restatement_clause_id": "c5",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check-armada-token-invariants.py",
+        "args": [
+          "--assertion",
+          "mint-not-blocked",
+          "--mutate",
+          "block-mint"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passes_unmutated",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "fails_under_mutation",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c5"
+    },
+    {
+      "type": "behavior",
+      "description": "The checker reports that the timelock-enables-transfers test exists, passes with windDownContract never set, and fails when setTransferable requires a windDownContract.",
+      "proves": "Only the timelock can call setTransferable(true), with no windDownContract dependency, enforced by a test.",
+      "restatement_clause_id": "c6",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check-armada-token-invariants.py",
+        "args": [
+          "--assertion",
+          "timelock-set-transferable",
+          "--mutate",
+          "require-wind-down-contract"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "passes_unmutated",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "fails_under_mutation",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "clause_id": "c6"
+    },
+    {
+      "type": "behavior",
+      "description": "Run over all six assertions, the checker finds none missing and none that survive their breaking mutation.",
+      "proves": "The overall check fails when any of the six assertions is absent or passes under its breaking mutation, and succeeds only when all six are present and catch their mutations.",
+      "restatement_clause_id": "c7",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check-armada-token-invariants.py",
+        "args": [
+          "--all"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "assertions_missing",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "mutations_surviving",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 1800,
+      "clause_id": "c7"
+    },
+    {
+      "type": "behavior",
+      "description": "The full existing forge suite passes, no test or deploy sets windDownContract, and the protected delegation and supply functions are unchanged.",
+      "proves": "The new tests break nothing existing, set no windDownContract, and leave circulatingSupplyOf, delegateOnBehalf/transferAndDelegate and noDelegation untouched.",
+      "restatement_clause_id": "c8",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check-armada-token-invariants.py",
+        "args": [
+          "--regression"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "existing_suite_failures",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "wind_down_contract_set_count",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "protected_functions_changed",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 1800,
+      "clause_id": "c8"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/check-armada-token-invariants.py"
+  ]
+}
