@@ -79,13 +79,21 @@ function loadForgeArtifact(
   // The forge build produces version-specific artifacts (e.g. `GnosisSafe.0.8.20.json`).
   const versionSuffixes = [".0.8.20", ".0.8.17", ""];
   for (const suffix of versionSuffixes) {
-    const artifactPath = path.join(FORGE_OUT_DIR, sourceFile, `${contractName}${suffix}.json`);
+    const artifactPath = path.join(
+      FORGE_OUT_DIR,
+      sourceFile,
+      `${contractName}${suffix}.json`,
+    );
     if (fs.existsSync(artifactPath)) {
       const parsed = JSON.parse(fs.readFileSync(artifactPath, "utf-8"));
       return { abi: parsed.abi, bytecode: parsed.bytecode };
     }
   }
-  const fallbackPath = path.join(FORGE_OUT_DIR, sourceFile, `${contractName}.json`);
+  const fallbackPath = path.join(
+    FORGE_OUT_DIR,
+    sourceFile,
+    `${contractName}.json`,
+  );
   throw new Error(
     `Forge artifact not found: ${fallbackPath}. Run 'forge build' first (this script does so automatically).`,
   );
@@ -155,7 +163,9 @@ async function main() {
   }
 
   // Ensure the vendored Baal/Safe forge artifacts are current (forge-out/ is not committed).
-  console.log("   Running 'forge build' to refresh vendored contract artifacts...");
+  console.log(
+    "   Running 'forge build' to refresh vendored contract artifacts...",
+  );
   execFileSync("forge", ["build"], { cwd: REPO_ROOT, stdio: "inherit" });
 
   const outputFile = getBaalSafeDeploymentFile();
@@ -223,7 +233,9 @@ async function main() {
   // 4. Deploy the vendored Baal template + zodiac ModuleProxyFactory, then clone the
   //    template — Baal's constructor disables initializers on the template itself, so
   //    setUp() must run against a clone's fresh storage (mirrors BaalSummoner._summonBaal).
-  console.log("4. Deploying Baal (template, zodiac ModuleProxyFactory, clone)...");
+  console.log(
+    "4. Deploying Baal (template, zodiac ModuleProxyFactory, clone)...",
+  );
   const baalArtifact = loadForgeArtifact("Baal.sol", "Baal");
   const moduleProxyFactoryArtifact = loadForgeArtifact(
     "ModuleProxyFactory.sol",
@@ -245,7 +257,9 @@ async function main() {
     moduleProxyFactoryArtifact.bytecode.object,
     deployer,
   );
-  const moduleProxyFactory = await ModuleProxyFactoryFactory.deploy(nm.override());
+  const moduleProxyFactory = await ModuleProxyFactoryFactory.deploy(
+    nm.override(),
+  );
   await moduleProxyFactory.deploymentTransaction()!.wait();
 
   const avatarGetterSelector = ethers.id("avatar()").slice(0, 10);
@@ -319,47 +333,37 @@ async function main() {
   await setupTx.wait();
   await recordOwnerHistory("safe-setup-complete", safeAddress);
 
-  // 6. Register ARM/LOOT as Baal's shares/loot token, now that the Safe (avatar) exists.
-  //    Baal.setUp decodes (loot, shares, multisend, avatar, forwarder, initMultisendData);
-  //    the multisend data is a real no-op multiSend(bytes("")) call, not raw empty bytes
-  //    (raw empty bytes hits MultiSend's nonexistent fallback and reverts).
-  const baal = new ethers.Contract(baalAddress, baalArtifact.abi, deployer);
-  const noOpMultisend = new ethers.Interface([
-    "function multiSend(bytes transactions)",
-  ]).encodeFunctionData("multiSend", ["0x"]);
-  const baalInitParams = ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address", "address", "address", "address", "address", "bytes"],
-    [
-      lootTokenAddress,
-      armTokenAddress,
-      multisendAddress,
-      safeAddress,
-      ethers.ZeroAddress,
-      noOpMultisend,
-    ],
-  );
-  console.log(`   Baal.setUp initParams (length ${baalInitParams.length} bytes)`);
-  const baalSetupTx = await (baal as any).setUp(baalInitParams, nm.override());
-  await baalSetupTx.wait();
-  console.log(`   Baal.sharesToken() registered: ${armTokenAddress}`);
-
-  // 7. Transfer ownership of the LOOT token to the Baal — only Baal can pause it (its mint
-  //    and burn always revert). ArmadaToken (shares) is a plain non-upgradeable ERC20 with no
-  //    ownership to transfer; Baal only reads it and ARM's burn is the ShieldedRagequit shaman.
-  console.log("7. Transferring LOOT ownership to the Baal...");
-  await (await lootToken.transferOwnership(baalAddress, nm.override())).wait();
-  console.log(`   LOOT owner: ${baalAddress}`);
-
-  // 8. Deploy ShieldedRagequit (the one Baal manager shaman, with ARM burn authority).
-  //    Constructor: (armToken, baal, safe, pool). The pool address comes from the privacy pool
-  //    deployment manifest; if the pool is not yet deployed, the check will flag it.
-  console.log("8. Deploying ShieldedRagequit (one Baal manager shaman)...");
+  // 5.5 Deploy ShieldedRagequit BEFORE Baal.setUp, so its address is registered as the manager
+  //     shaman inside the setUp init multisend. Baal.setShamans is baalOnly (msg.sender must be
+  //     the avatar — the Safe). The only path where the Safe is the caller is the setUp init
+  //     multisend, which Baal runs through the Safe module (execTransactionFromModule), so the
+  //     sub-call to setShamans sees msg.sender == the Safe. A post-setUp setShamans from the
+  //     deployer reverts "!baal". Constructor: (armToken, baal, safe, pool). The Baal clone
+  //     address is already known (deployModule above).
+  console.log("5.5 Deploying ShieldedRagequit (one Baal manager shaman)...");
   if (!poolAddress) {
     throw new Error(
-      "PrivacyPool deployment not found; deploy the hub pool before summoning Baal + Safe."
+      "PrivacyPool deployment not found; deploy the hub pool before summoning Baal + Safe.",
     );
   }
-  const ShieldedRagequit = await ethers.getContractFactory("ShieldedRagequit");
+  // ShieldedRagequit links the PoseidonT4 library (it hashes the contract-owned payout note).
+  // Deploy a fresh PoseidonT4 (a stateless hash library) and link it, as deploy_privacy_pool does.
+  const poseidonBytecode: { PoseidonT4: { bytecode: string } } = JSON.parse(
+    fs.readFileSync(
+      path.join(REPO_ROOT, "lib", "poseidon_bytecode.json"),
+      "utf-8",
+    ),
+  );
+  const poseidonT4Tx = await deployer.sendTransaction({
+    data: poseidonBytecode.PoseidonT4.bytecode,
+    ...nm.override(),
+  });
+  const poseidonT4Receipt = await poseidonT4Tx.wait();
+  const poseidonT4Address = poseidonT4Receipt!.contractAddress!;
+  console.log(`   PoseidonT4 (for ShieldedRagequit): ${poseidonT4Address}`);
+  const ShieldedRagequit = await ethers.getContractFactory("ShieldedRagequit", {
+    libraries: { PoseidonT4: poseidonT4Address },
+  });
   const ragequit = await ShieldedRagequit.deploy(
     armTokenAddress,
     baalAddress,
@@ -372,16 +376,64 @@ async function main() {
   recordProgress({ shieldedRagequit: ragequitAddress });
   console.log(`   ShieldedRagequit: ${ragequitAddress}`);
 
-  // 9. Register ShieldedRagequit as the one Baal manager shaman and as the ARM burn authority.
-  //    Baal.setShamans is baalOnly (the avatar/Safe must call it). ArmadaToken.initBurners
-  //    is deployer-only, one-shot.
-  console.log("9. Registering ShieldedRagequit as manager shaman + ARM burner...");
-  const baalForSet = new ethers.Contract(baalAddress, baalArtifact.abi, deployer);
-  await (await baalForSet.setShamans([ragequitAddress], [2], nm.override())).wait();
-  console.log(`   Baal.shamans(${ragequitAddress}) = manager role (permission 2)`);
+  // 6. Register ARM/LOOT as Baal's shares/loot token, now that the Safe (avatar) exists, and
+  //    register ShieldedRagequit as the one manager shaman (permission 2). Baal.setUp decodes
+  //    (loot, shares, multisend, avatar, forwarder, initMultisendData) and runs the init
+  //    multisend through the Safe module, so setShamans inside it passes baalOnly
+  //    (msg.sender == the Safe). The init multisend MUST be a real multiSend(bytes) call, not
+  //    raw empty bytes (raw empty bytes hits MultiSend's nonexistent fallback and reverts).
+  const baal = new ethers.Contract(baalAddress, baalArtifact.abi, deployer);
+  const setShamansCall = new ethers.Interface([
+    "function setShamans(address[] _shamans, uint256[] _permissions)",
+  ]).encodeFunctionData("setShamans", [[ragequitAddress], [2]]);
+  const setShamansMultisendEntry = ethers.solidityPacked(
+    ["uint8", "address", "uint256", "uint256", "bytes"],
+    [0, baalAddress, 0, ethers.getBytes(setShamansCall).length, setShamansCall],
+  );
+  const initMultisend = new ethers.Interface([
+    "function multiSend(bytes transactions)",
+  ]).encodeFunctionData("multiSend", [setShamansMultisendEntry]);
+  const baalInitParams = ethers.AbiCoder.defaultAbiCoder().encode(
+    ["address", "address", "address", "address", "address", "bytes"],
+    [
+      lootTokenAddress,
+      armTokenAddress,
+      multisendAddress,
+      safeAddress,
+      ethers.ZeroAddress,
+      initMultisend,
+    ],
+  );
+  console.log(
+    `   Baal.setUp initParams (length ${baalInitParams.length} bytes)`,
+  );
+  const baalSetupTx = await baal.getFunction("setUp")(
+    baalInitParams,
+    nm.override(),
+  );
+  await baalSetupTx.wait();
+  console.log(`   Baal.sharesToken() registered: ${armTokenAddress}`);
+  console.log(
+    `   Baal.shamans(${ragequitAddress}) = manager role (permission 2, via setUp init multisend)`,
+  );
 
-  const armTokenContract = await ethers.getContractAt("ArmadaToken", armTokenAddress);
-  await (await armTokenContract.initBurners([ragequitAddress], nm.override())).wait();
+  // 7. Transfer ownership of the LOOT token to the Baal — only Baal can pause it (its mint
+  //    and burn always revert). ArmadaToken (shares) is a plain non-upgradeable ERC20 with no
+  //    ownership to transfer; Baal only reads it and ARM's burn is the ShieldedRagequit shaman.
+  console.log("7. Transferring LOOT ownership to the Baal...");
+  await (await lootToken.transferOwnership(baalAddress, nm.override())).wait();
+  console.log(`   LOOT owner: ${baalAddress}`);
+
+  // 8. Register ShieldedRagequit as the ARM burn authority. ArmadaToken.initBurners is
+  //    deployer-only and one-shot; the same deployer EOA ran deploy_governance.
+  console.log("8. Registering ShieldedRagequit as the ARM burner...");
+  const armTokenContract = await ethers.getContractAt(
+    "ArmadaToken",
+    armTokenAddress,
+  );
+  await (
+    await armTokenContract.initBurners([ragequitAddress], nm.override())
+  ).wait();
   console.log(`   ArmadaToken.authorizedBurner(${ragequitAddress}) = true`);
 
   // ============ Read back and print the three facts ============

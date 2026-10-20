@@ -29,7 +29,7 @@ import { execFileSync } from "child_process";
 import {
   getNetworkConfig,
   getChainRole,
-  getChainByRole,
+  getCCTPDeploymentFile,
   getGovernanceDeploymentFile,
   getPrivacyPoolDeploymentFile,
   isLocal,
@@ -38,7 +38,8 @@ import {
   createNonceManager,
   loadDeployment,
   rejectAnvilAddresses,
-  saveDeployment,  saveDeploymentInProgress,
+  saveDeployment,
+  saveDeploymentInProgress,
   assertDeploymentComplete,
 } from "./deploy-utils";
 import {
@@ -57,19 +58,32 @@ interface ForgeArtifact {
   bytecode: { object: string };
 }
 
-function loadForgeArtifact(sourceFile: string, contractName: string): ForgeArtifact {
+function loadForgeArtifact(
+  sourceFile: string,
+  contractName: string,
+): ForgeArtifact {
   // The forge build produces version-specific artifacts (e.g. `GnosisSafe.0.8.20.json`).
   // Try the higher version first, then the lower.
   const versionSuffixes = [".0.8.20", ".0.8.17", ""];
   for (const suffix of versionSuffixes) {
-    const artifactPath = path.join(FORGE_OUT_DIR, sourceFile, `${contractName}${suffix}.json`);
+    const artifactPath = path.join(
+      FORGE_OUT_DIR,
+      sourceFile,
+      `${contractName}${suffix}.json`,
+    );
     if (fs.existsSync(artifactPath)) {
       const parsed = JSON.parse(fs.readFileSync(artifactPath, "utf-8"));
       return { abi: parsed.abi, bytecode: parsed.bytecode };
     }
   }
-  const fallbackPath = path.join(FORGE_OUT_DIR, sourceFile, `${contractName}.json`);
-  throw new Error(`Forge artifact not found: ${fallbackPath}. Run 'forge build' first.`);
+  const fallbackPath = path.join(
+    FORGE_OUT_DIR,
+    sourceFile,
+    `${contractName}.json`,
+  );
+  throw new Error(
+    `Forge artifact not found: ${fallbackPath}. Run 'forge build' first.`,
+  );
 }
 
 interface GovernanceDeployment {
@@ -125,7 +139,10 @@ async function main() {
     deployer: deployer.address,
     contracts: {},
   };
-  const recordProgress = (contracts: Record<string, string>, extra: object = {}) => {
+  const recordProgress = (
+    contracts: Record<string, string>,
+    extra: object = {},
+  ) => {
     Object.assign(progress.contracts, contracts);
     Object.assign(progress, extra);
     saveDeploymentInProgress(outputFile, progress);
@@ -133,7 +150,9 @@ async function main() {
   recordProgress({});
 
   // Ensure the vendored Baal/Safe forge artifacts are current.
-  console.log("Running 'forge build' to refresh vendored contract artifacts...");
+  console.log(
+    "Running 'forge build' to refresh vendored contract artifacts...",
+  );
   execFileSync("forge", ["build"], { cwd: REPO_ROOT, stdio: "inherit" });
 
   // 1. Deploy the vendored Gnosis Safe (template, factory, multisend).
@@ -191,13 +210,22 @@ async function main() {
   const safeAddress: string = proxyCreationEvent!.args.proxy;
   // The Safe is the treasury AND ArmadaToken's immutable timelock (Baal-era wiring).
   const governanceDeployBlock = createProxyReceipt!.blockNumber;
-  recordProgress({ treasury: safeAddress }, { deployBlock: governanceDeployBlock });
-  console.log(`   GnosisSafe proxy (the treasury): ${safeAddress} (block ${governanceDeployBlock})`);
+  recordProgress(
+    { treasury: safeAddress },
+    { deployBlock: governanceDeployBlock },
+  );
+  console.log(
+    `   GnosisSafe proxy (the treasury): ${safeAddress} (block ${governanceDeployBlock})`,
+  );
 
   // 3. Deploy ArmadaToken (ARM) with the Safe as the immutable timelock.
   console.log("3. Deploying ArmadaToken (ARM, Safe as immutable timelock)...");
   const ArmadaToken = await ethers.getContractFactory("ArmadaToken");
-  const armToken = await ArmadaToken.deploy(deployer.address, safeAddress, nm.override());
+  const armToken = await ArmadaToken.deploy(
+    deployer.address,
+    safeAddress,
+    nm.override(),
+  );
   await armToken.deploymentTransaction()!.wait();
   const armTokenAddress = await armToken.getAddress();
   recordProgress({ armToken: armTokenAddress });
@@ -206,7 +234,10 @@ async function main() {
   // 4. Deploy AdapterRegistry (standalone, owned by the Safe — the executor).
   console.log("4. Deploying AdapterRegistry...");
   const AdapterRegistry = await ethers.getContractFactory("AdapterRegistry");
-  const adapterRegistry = await AdapterRegistry.deploy(safeAddress, nm.override());
+  const adapterRegistry = await AdapterRegistry.deploy(
+    safeAddress,
+    nm.override(),
+  );
   await adapterRegistry.deploymentTransaction()!.wait();
   const adapterRegistryAddress = await adapterRegistry.getAddress();
   recordProgress({ adapterRegistry: adapterRegistryAddress });
@@ -214,8 +245,14 @@ async function main() {
 
   // 5. Deploy ShieldPauseController (Baal era: the governor + timelock args are the Safe).
   console.log("5. Deploying ShieldPauseController...");
-  const ShieldPauseController = await ethers.getContractFactory("ShieldPauseController");
-  const shieldPause = await ShieldPauseController.deploy(safeAddress, safeAddress, nm.override());
+  const ShieldPauseController = await ethers.getContractFactory(
+    "ShieldPauseController",
+  );
+  const shieldPause = await ShieldPauseController.deploy(
+    safeAddress,
+    safeAddress,
+    nm.override(),
+  );
   await shieldPause.deploymentTransaction()!.wait();
   const shieldPauseAddress = await shieldPause.getAddress();
   recordProgress({ shieldPauseController: shieldPauseAddress });
@@ -227,9 +264,15 @@ async function main() {
   const revenueCounterImpl = await RevenueCounter.deploy(nm.override());
   await revenueCounterImpl.deploymentTransaction()!.wait();
   const revenueCounterImplAddress = await revenueCounterImpl.getAddress();
-  const initData = RevenueCounter.interface.encodeFunctionData("initialize", [safeAddress]);
+  const initData = RevenueCounter.interface.encodeFunctionData("initialize", [
+    safeAddress,
+  ]);
   const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-  const revenueCounterProxy = await ERC1967Proxy.deploy(revenueCounterImplAddress, initData, nm.override());
+  const revenueCounterProxy = await ERC1967Proxy.deploy(
+    revenueCounterImplAddress,
+    initData,
+    nm.override(),
+  );
   await revenueCounterProxy.deploymentTransaction()!.wait();
   const revenueCounterAddress = await revenueCounterProxy.getAddress();
   recordProgress({ revenueCounter: revenueCounterAddress });
@@ -237,12 +280,18 @@ async function main() {
 
   // 7. Deploy RevenueLock (immutable — holds team + airdrop ARM, reads pool cumulativeFees).
   console.log("7. Deploying RevenueLock...");
-  const revenueLockAllocation = ethers.parseUnits(config.armDistribution.revenueLock, 18);
+  const revenueLockAllocation = ethers.parseUnits(
+    config.armDistribution.revenueLock,
+    18,
+  );
   const beneficiaryConfig = config.revenueLockBeneficiaries;
   let revenueReserveDistributor: string | undefined;
   let reserveDeploymentTransaction: string | undefined;
   if (config.revenueReserve) {
-    rejectAnvilAddresses([config.revenueReserve.allocator], "Reserve allocator");
+    rejectAnvilAddresses(
+      [config.revenueReserve.allocator],
+      "Reserve allocator",
+    );
     if (!isLocal()) {
       await assertAllocatorMultisig(config.revenueReserve.allocator);
       assertAllocatorDistinct(config.revenueReserve.allocator, [
@@ -257,7 +306,9 @@ async function main() {
     config.revenueReserve,
   );
   if (config.revenueReserve) {
-    const Distributor = await ethers.getContractFactory("RevenueReserveDistributor");
+    const Distributor = await ethers.getContractFactory(
+      "RevenueReserveDistributor",
+    );
     const reserve = await Distributor.deploy(
       armTokenAddress,
       config.revenueReserve.allocator,
@@ -265,23 +316,34 @@ async function main() {
       nm.override(),
     );
     await reserve.deploymentTransaction()!.wait();
+    revenueReserveDistributor = await reserve.getAddress();
     reserveDeploymentTransaction = reserve.deploymentTransaction()!.hash;
+    recordProgress(
+      { revenueReserveDistributor },
+      {
+        revenueReserveDistributorDeploymentTransaction:
+          reserveDeploymentTransaction,
+      },
+    );
     // The Reserve distributor holds the reserve cap amount of ARM and distributes it
     // via a revenue-gated release curve.
+    console.log(`   Reserve distributor: ${revenueReserveDistributor}`);
   }
-  const { addresses: revenueLockBeneficiaries, amounts: revenueLockAmounts } = revenueLockSchedule(
-    beneficiaryConfig,
-    revenueReserveDistributor
-      ? { address: revenueReserveDistributor, cap: reserveCap }
-      : undefined,
-  );
+  const { addresses: revenueLockBeneficiaries, amounts: revenueLockAmounts } =
+    revenueLockSchedule(
+      beneficiaryConfig,
+      revenueReserveDistributor
+        ? { address: revenueReserveDistributor, cap: reserveCap }
+        : undefined,
+    );
   // Guard: reject Anvil default addresses on non-local environments.
   rejectAnvilAddresses(revenueLockBeneficiaries, "RevenueLock beneficiaries");
 
-  const MAX_REVENUE_INCREASE_PER_DAY = ethers.parseUnits(config.revenueLockMaxIncreasePerDayUsd, 18);
-
   // The pool address comes from the privacy pool deployment manifest (the PrivacyPool contract).
-  // The asset is the USDC token.
+  // The asset is the USDC token the pool holds — read it from the CCTP manifest, the same
+  // source deploy_privacy_pool uses, so RevenueLock.cumulativeFees(asset) reads the pool's
+  // own asset. getChainByRole(role).usdc is empty on a local chain (the mock USDC is only in
+  // the CCTP manifest), which would make RevenueLock read an empty asset.
   const poolFilename = getPrivacyPoolDeploymentFile(role);
   const poolDeployment = loadDeployment(poolFilename);
   if (!poolDeployment) {
@@ -290,7 +352,14 @@ async function main() {
     );
   }
   const poolAddress = poolDeployment.contracts.privacyPool;
-  const assetAddress = getChainByRole(role).usdc;
+  const cctpFilename = getCCTPDeploymentFile(role);
+  const cctpDeployment = loadDeployment(cctpFilename);
+  if (!cctpDeployment) {
+    throw new Error(
+      `CCTP deployment not found (${cctpFilename}). Run deploy_cctp first.`,
+    );
+  }
+  const assetAddress = cctpDeployment.contracts.usdc;
   console.log(`   USDC asset: ${assetAddress}`);
   const RevenueLock = await ethers.getContractFactory("RevenueLock");
   const revenueLockContract = await RevenueLock.deploy(
@@ -310,19 +379,35 @@ async function main() {
     revenueLockBeneficiaries,
     revenueLockAmounts.map((amount) => amount.toString()),
   ];
-  const revenueLockDeploymentTransaction = revenueLockContract.deploymentTransaction()!.hash;
-  recordProgress({ revenueLock: revenueLockAddress }, {
-    revenueLockConstructorArgs,
-    revenueLockDeploymentTransaction: revenueLockDeploymentTransaction,
-  });
+  const revenueLockDeploymentTransaction =
+    revenueLockContract.deploymentTransaction()!.hash;
+  recordProgress(
+    { revenueLock: revenueLockAddress },
+    {
+      revenueLockConstructorArgs,
+      revenueLockDeploymentTransaction: revenueLockDeploymentTransaction,
+    },
+  );
   console.log(`   RevenueLock: ${revenueLockAddress}`);
+
+  // 7.5 Configure the ARM one-shot deployer setters that belong to the governance deploy.
+  //     initNoDelegation marks the treasury (the Safe) as non-delegating, before any ARM
+  //     transfer reaches it (deploy_crowdfund defers the transfers and calls initWhitelist).
+  //     initWhitelist and initAuthorizedDelegators stay deferred to deploy_crowdfund, which
+  //     has the crowdfund and cohort addresses. Each setter has its own one-shot lock.
+  console.log("7.5 Configuring ARM one-shot setters (initNoDelegation)...");
+  await (await armToken.initNoDelegation([safeAddress], nm.override())).wait();
+  console.log(`   initNoDelegation: [${safeAddress}] (treasury)`);
 
   // 8. Save the complete Baal-era manifest.
   const deployment: GovernanceDeployment = {
     revenueLockConstructorArgs,
     revenueLockDeploymentTransaction,
     ...(reserveDeploymentTransaction
-      ? { revenueReserveDistributorDeploymentTransaction: reserveDeploymentTransaction }
+      ? {
+          revenueReserveDistributorDeploymentTransaction:
+            reserveDeploymentTransaction,
+        }
       : {}),
     chainId,
     deployer: deployer.address,
@@ -345,7 +430,9 @@ async function main() {
   console.log(`\nDeployment saved to: deployments/${outputFile}`);
   console.log("\n=== Baal-era governance deployment complete ===");
   console.log(`Treasury (Gnosis Safe): ${safeAddress}`);
-  console.log("Next: run summon-baal-safe.ts to summon the Baal (reusing this Safe), then the six readers.");
+  console.log(
+    "Next: run summon-baal-safe.ts to summon the Baal (reusing this Safe), then the six readers.",
+  );
 }
 
 main()

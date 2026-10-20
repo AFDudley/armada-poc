@@ -22,6 +22,7 @@ import {
   getChainRole,
   getCCTPDeploymentFile,
   getCrowdfundDeploymentFile,
+  getPrivacyPoolDeploymentFile,
   getGovernanceDeploymentFile,
   isLocal,
 } from "../config/networks";
@@ -132,6 +133,18 @@ async function main() {
   const usdcAddress: string = cctpDeployment.contracts.usdc;
   console.log(`   USDC (shared): ${usdcAddress}`);
 
+  // 2.5 Load the PrivacyPool address (ArmadaCrowdfund shields its proceeds to the Safe through
+  //     the pool — G5-shield). The pool is deployed by deploy_privacy_pool.
+  const poolFilename = getPrivacyPoolDeploymentFile(role);
+  const poolDeployment = loadDeployment(poolFilename);
+  if (!poolDeployment) {
+    throw new Error(
+      `PrivacyPool deployment not found (${poolFilename}). Run deploy_privacy_pool first.`,
+    );
+  }
+  const poolAddress: string = poolDeployment.contracts.privacyPool;
+  console.log(`   PrivacyPool: ${poolAddress}`);
+
   // 3. Deploy ArmadaCrowdfund (treasury is the immutable destination).
   console.log("3. Deploying ArmadaCrowdfund...");
   const ArmadaCrowdfund = await ethers.getContractFactory("ArmadaCrowdfund");
@@ -187,6 +200,7 @@ async function main() {
     launchTeamAddress,
     securityCouncilAddress,
     openTimestamp,
+    poolAddress,
     nm.override(),
   );
   const crowdfundReceipt = await crowdfund.deploymentTransaction()!.wait();

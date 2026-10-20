@@ -9,16 +9,16 @@ gone. This document describes the contracts that remain.
 Baal is the DAO. It holds proposals, voting and execution. ARM is the Baal shares token
 (see `ARM_TOKEN.md`): one ARM is one vote.
 
-The Gnosis Safe is the treasury. The Safe holds every protocol asset. The Safe has one
-owner, the Baal contract, and its threshold is one. No human is a Safe owner. A treasury
-move is an ordinary Baal proposal that Baal executes through the Safe. There is no
-separate steward role and no veto contract.
+The Gnosis Safe is the treasury. The Safe holds every protocol asset.
+The Baal is the Safe's sole owner, and its threshold is one. No human is a Safe owner.
+A treasury move is an ordinary Baal proposal that Baal executes through the Safe. There is
+no separate steward role and no veto contract.
 
 `scripts/summon-baal-safe.ts` deploys Baal and the Safe and wires them (chunk G2).
 
 ## ShieldedRagequit
 
-`contracts/governance/ShieldedRagequit.sol` lets any ARM holder exit at any time. The
+`contracts/governance/ShieldedRagequit.sol` is the one exit from the DAO. It lets any ARM holder exit at any time. The
 holder calls `ragequit`, which burns their ARM and pays a bounded pro-rata share of the
 treasury. The payout is a contract-owned note at the holder's note public key, paid
 through the pool's contract-owned spend path. The bound is

@@ -27,6 +27,9 @@ import * as fs from "fs";
 import {
   getNetworkConfig,
   getGovernanceDeploymentFile,
+  getChainRole,
+  getCCTPDeploymentFile,
+  getPrivacyPoolDeploymentFile,
 } from "../config/networks";
 import {
   createNonceManager,
@@ -140,26 +143,38 @@ async function main() {
     `  Total allocation: ${ethers.formatUnits(totalAllocation, 18)} ARM`,
   );
 
-  // Deploy
+  // Deploy — the G4 RevenueLock reads the pool cumulativeFees(asset). Resolve the pool and its
+  // USDC asset from the privacy-pool and CCTP manifests (the sources deploy_governance uses), so
+  // the cohort lock reads the same fee source as the main RevenueLock.
+  const role = getChainRole(chainId);
+  if (!role) {
+    throw new Error(`Unknown chain ID: ${chainId}`);
+  }
+  const poolFile = getPrivacyPoolDeploymentFile(role);
+  const poolDeployment = loadDeployment(poolFile);
+  if (!poolDeployment) {
+    throw new Error(
+      `PrivacyPool deployment not found: ${poolFile}. Run deploy_privacy_pool first.`,
+    );
+  }
+  const poolAddress = poolDeployment.contracts.privacyPool as string;
+  const cctpFile = getCCTPDeploymentFile(role);
+  const cctpDeployment = loadDeployment(cctpFile);
+  if (!cctpDeployment) {
+    throw new Error(
+      `CCTP deployment not found: ${cctpFile}. Run deploy_cctp first.`,
+    );
+  }
+  const assetAddress = cctpDeployment.contracts.usdc as string;
+
   const addrArray = beneficiaries.map((b) => b.address);
   const amountArray = beneficiaries.map((b) => ethers.parseUnits(b.amount, 18));
-
-  // $10k/day in 18-decimal USD. See PARAMETER_MANIFEST.md / issue #225 — rate cap on
-  // the observed-revenue ratchet, defends against malicious RevenueCounter upgrades.
-  // Configured in whole USD (config.revenueLockMaxIncreasePerDayUsd), scaled here.
-  const MAX_REVENUE_INCREASE_PER_DAY = ethers.parseUnits(
-    config.revenueLockMaxIncreasePerDayUsd,
-    18,
-  );
-  console.log(
-    `  MAX_REVENUE_INCREASE_PER_DAY: $${config.revenueLockMaxIncreasePerDayUsd}/day (${MAX_REVENUE_INCREASE_PER_DAY})`,
-  );
 
   const RevenueLock = await ethers.getContractFactory("RevenueLock");
   const lock = await RevenueLock.deploy(
     armTokenAddress,
-    revenueCounterAddress,
-    MAX_REVENUE_INCREASE_PER_DAY,
+    poolAddress,
+    assetAddress,
     addrArray,
     amountArray,
     nm.override(),
