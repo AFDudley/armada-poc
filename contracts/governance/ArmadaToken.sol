@@ -122,9 +122,9 @@ contract ArmadaToken is ERC20Votes {
     // ============ Governance Functions ============
 
     /// @notice Authorize a contract to call delegateOnBehalf. Timelock-only, add-only (no removal).
-    ///         Mirrors the addToWhitelist pattern to allow governance to authorize new delegators
-    ///         (e.g. follow-on RevenueLock cohorts or replacement Crowdfund instances) after
-    ///         deployment without requiring token redeployment.
+    ///         Mirrors the initWhitelist construction-allowlist pattern to let governance authorize
+    ///         new delegators (e.g. follow-on RevenueLock cohorts or replacement Crowdfund instances)
+    ///         after deployment without requiring token redeployment.
     function addAuthorizedDelegator(address delegator) external {
         require(msg.sender == timelock, "ArmadaToken: not timelock");
         require(delegator != address(0), "ArmadaToken: zero address");
