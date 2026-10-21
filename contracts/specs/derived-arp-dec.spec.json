@@ -1,0 +1,95 @@
+{
+  "id": "derived-arp-dec",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. On the deployed Hub PrivacyPool, every owner-gated function must reject a call from a non-owner and leave the pool state unchanged. The owner is the verification-key authority; a non-owner who could call setVerificationKey or setTestingMode could install a forged verifying key or turn on testing mode and drain every pool user's shielded funds.\nWhat holds now? Describe the current, observed state. The PoolOwnerAuthorityTest suite asserts the owner gate only on setVerificationKey (via _exerciseOwnerKeyPath) and the initialize re-init guard. The other owner-gated functions have no non-owner-rejection test: setRemotePool, setVerificationKeyOwned, setShieldFee, setTestingMode, and the remaining require(msg.sender == owner) functions.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Add a forge test that, for each owner-gated external function on PrivacyPool, pranks a non-owner with vm.prank, calls the function, asserts it reverts, and asserts the gated state is unchanged. Flip any msg.sender == owner to != in that function and the matching assertion turns red (the mutant is killed).\nWhat constraints apply? State them in plain prose. Tests only; change no contract code. The owner-authority behaviour already exists; this adds the missing non-owner-rejection coverage.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/privacy-pool/PrivacyPool.sol owner-gated external functions",
+  "restatement": "The Hub PrivacyPool owner controls the verification keys, testing mode, fees, remote pools, hook routers, the blocklist, and other pool settings. If a non-owner can call one of these functions, that caller can install a forged verifying key or turn on testing mode and drain the shielded funds of all pool users. contracts/privacy-pool/PrivacyPool.sol already guards each of these functions with require(msg.sender == owner, \"PrivacyPool: Only owner\"). The PoolOwnerAuthorityTest suite in test-foundry/HubPoolOwnerGuard.t.sol proves the guard only for setVerificationKey and for the initialize re-init guard. This request adds forge tests to that suite. For each owner-gated external function, a test pranks a non-owner with vm.prank, calls the function, and asserts that the call reverts. A test also reads the gated state back and asserts that it keeps its prior value. The 14 owner-gated functions are setRemotePool, setRemoteHookRouter, addToBlocklist, removeFromBlocklist, setVerificationKey, setVerificationKeyOwned, setShieldFee, setFeeRecipient, setTestingMode, setAdapterRegistry, setHookRouter, setDefaultFinalityThreshold, setShieldPauseContract, and setFeeModule. If a person flips any msg.sender == owner to != in one of these functions, a matching test must fail, so the tests kill the mutant. The change adds tests only and changes no contract code.",
+  "restatement_clauses": [
+    {
+      "id": "C1",
+      "text": "For each owner-gated external function on PrivacyPool, a forge test pranks a non-owner with vm.prank, calls the function, and asserts it reverts. Flip any msg.sender == owner to != in that function and the matching assertion turns red (the mutant is killed)."
+    },
+    {
+      "id": "C2",
+      "text": "Each non-owner-rejection test asserts that the gated state is unchanged after the rejected call (for example, the remote pool, shield fee, fee recipient, testing mode flag, verification key, blocklist entry, adapter registry, hook router, finality threshold, shield-pause contract, or fee module keeps its prior value)."
+    },
+    {
+      "id": "C3",
+      "text": "The coverage includes every one of the 14 owner-gated functions: setRemotePool, setRemoteHookRouter, addToBlocklist, removeFromBlocklist, setVerificationKey, setVerificationKeyOwned, setShieldFee, setFeeRecipient, setTestingMode, setAdapterRegistry, setHookRouter, setDefaultFinalityThreshold, setShieldPauseContract, setFeeModule \u2014 not only setVerificationKey."
+    },
+    {
+      "id": "C4",
+      "text": "Tests only; change no contract code. The owner-authority behaviour already exists in contracts/privacy-pool/PrivacyPool.sol; this adds the missing non-owner-rejection coverage."
+    }
+  ],
+  "goal": "Forge tests prove that every owner-gated function on the Hub PrivacyPool rejects a non-owner call and leaves the pool state unchanged, and the tests fail when any owner check is flipped.",
+  "acceptance_criteria": [
+    "The new tests that call each owner-only pool setting from a non-owner account pass on the current pool. When the checker flips an owner check in the pool, for example msg.sender == owner to !=, these tests fail.",
+    "The new tests read each guarded pool setting back after a non-owner call is rejected and find its prior value. When the checker breaks an owner check so that the non-owner call writes the setting, the read-back fails.",
+    "The checker flips the owner check in each of the 14 owner-only pool functions, one at a time. The full set of new non-owner tests fails for every one of the 14 flips, so no owner-only function is left without a test.",
+    "The whole pool owner-authority test suite, old tests and new tests together, passes against the existing pool contract. The checker mutates that existing contract, and the suite catches each mutation."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The new tests that call each owner-only pool setting from a non-owner account pass on the current pool. When the checker flips an owner check in the pool, for example msg.sender == owner to !=, these tests fail."
+    },
+    {
+      "id": "c2",
+      "text": "The new tests read each guarded pool setting back after a non-owner call is rejected and find its prior value. When the checker breaks an owner check so that the non-owner call writes the setting, the read-back fails."
+    },
+    {
+      "id": "c3",
+      "text": "The checker flips the owner check in each of the 14 owner-only pool functions, one at a time. The full set of new non-owner tests fails for every one of the 14 flips, so no owner-only function is left without a test."
+    },
+    {
+      "id": "c4",
+      "text": "The whole pool owner-authority test suite, old tests and new tests together, passes against the existing pool contract. The checker mutates that existing contract, and the suite catches each mutation."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C1",
+      "test": "test_PoolOwnerAuthority_NonOwnerReverts",
+      "mutation_targets": [
+        "contracts/privacy-pool/PrivacyPool.sol"
+      ],
+      "description": "The new tests that call each owner-only pool setting from a non-owner account pass on the current pool. When the checker flips an owner check in the pool, for example msg.sender == owner to !=, these tests fail.",
+      "proves": "A non-owner call to any owner-only pool function reverts, and the revert tests catch a flipped owner check.",
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C2",
+      "test": "test_PoolOwnerAuthority_NonOwnerStateUnchanged",
+      "mutation_targets": [
+        "contracts/privacy-pool/PrivacyPool.sol"
+      ],
+      "description": "The new tests read each guarded pool setting back after a non-owner call is rejected and find its prior value. When the checker breaks an owner check so that the non-owner call writes the setting, the read-back fails.",
+      "proves": "A rejected non-owner call leaves the pool setting at its prior value, and the read-back catches a broken owner check that lets the write through.",
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C3",
+      "test": "test_PoolOwnerAuthority_NonOwner",
+      "mutation_targets": [
+        "contracts/privacy-pool/PrivacyPool.sol"
+      ],
+      "description": "The checker flips the owner check in each of the 14 owner-only pool functions, one at a time. The full set of new non-owner tests fails for every one of the 14 flips, so no owner-only function is left without a test.",
+      "proves": "The non-owner coverage reaches all 14 owner-gated functions, not only setVerificationKey.",
+      "clause_id": "c3"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C4",
+      "test": "test_PoolOwnerAuthority_",
+      "mutation_targets": [
+        "contracts/privacy-pool/PrivacyPool.sol"
+      ],
+      "description": "The whole pool owner-authority test suite, old tests and new tests together, passes against the existing pool contract. The checker mutates that existing contract, and the suite catches each mutation.",
+      "proves": "The existing, unchanged pool contract already has the owner-authority behaviour, so the request needs tests only and no contract change.",
+      "clause_id": "c4"
+    }
+  ],
+  "criticality": "critical"
+}
