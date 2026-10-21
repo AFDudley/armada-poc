@@ -1,0 +1,39 @@
+status: completed
+pebble_id: arp-63a.5
+summary: >
+  Made the production ArmadaCrowdfund deploy check refuse to start a
+  mainnet deploy unless the window duration is exactly 21 days (1814400
+  seconds), while non-mainnet (local/fixturenet) configs may use a short
+  window. Changes: scripts/deploy_crowdfund.ts now exports
+  CROWDFUND_PRODUCTION_WINDOW_SECONDS (= 21*24*60*60) and
+  checkCrowdfundWindow(env, windowDuration) which rejects any non-21-day
+  mainnet duration before a transaction is sent (deploy_started=false) and
+  names the duration in the error; the check is wired into main() before
+  ArmadaCrowdfund.deploy() so a wrong value stops the deploy. main() is
+  guarded (require.main / argv check) so a plain import by the c5 mocha
+  test does not trigger the deploy. Added scripts/verify_crowdfund_window_check.sh
+  (the c1-c4 behavior oracles: production-value mainnet reports 1814400;
+  check mainnet 1209600 -> rejected/no deploy/error names duration; check
+  mainnet 1814400 -> accepted; check local 3600 -> accepted). Added
+  test/deploy-crowdfund-window-check.test.ts (c5), a mocha test importing
+  the check from the deploy script; it proves the check rejects a non-21-day
+  mainnet value and accepts 21 days, and is mutation-gated on
+  scripts/deploy_crowdfund.ts (mutating the check's comparison or a
+  true/false value fails the test). Verified at branch tip 851437ce9edfe0a51658b25179823a81b97522f9.
+cost: "~40k tokens"
+commits:
+  - "851437ce9edfe0a51658b25179823a81b97522f9"
+verify_transcript:
+  hooks:
+    - name: "c5 mocha test (npx mocha -r ts-node/register test/deploy-crowdfund-window-check.test.ts)"
+      outcome: passed
+      duration_s: 5.2
+    - name: "c2/c3/c4 verify oracle (bash scripts/verify_crowdfund_window_check.sh)"
+      outcome: passed
+      duration_s: 0.1
+e2e_gate:
+  spec: contracts/specs/derived-arp-63a.5.spec.json
+  command: "npx mocha -r ts-node/register test/deploy-crowdfund-window-check.test.ts"
+  result: passed
+  ran_at_sha: "851437ce9edfe0a51658b25179823a81b97522f9"
+  mocks_in_path: false
