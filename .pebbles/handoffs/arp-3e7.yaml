@@ -1,0 +1,68 @@
+status: completed
+pebble_id: arp-3e7
+summary: >
+  Reconciliation pass (not a fresh task): inspected branch worker/arp-3e7 and confirmed it is
+  already rebased onto the current integrated tip 9ba5436a (merge-base equals integrated tip, so
+  the rebase is clean and the COLLISION is resolved). Squashed the redundant handoff commits into
+  a single handoff commit on top of the accepted ragequit fix (f0af48cc). Re-ran the typed
+  acceptance gate and the three spec-named acceptance tests at f0af48cc — all GREEN (466 foundry
+  tests passed, 0 failed; 3/3 spec tests passed). The handoff's commits field lists the fix commit
+  (f0af48cc); the tip handoff commit that carries this record cannot self-reference its own SHA.
+cost: "~80k tokens"
+commits:
+  - "f0af48ccb5e636602f422a083213ae4804f37836"
+verify_transcript:
+  hooks:
+    - name: "full acceptance gate (npm ci + pre-commit + anvil + compile + check:sizes + tsc + forge test)"
+      outcome: passed
+      duration_s: 130
+    - name: "forge test --match-test test_RagequitSucceedsForNonWhitelistedHolderWhileRestricted|test_TransferStillRestrictedForNonWhitelistedHolderWhileRestricted|test_BurnOnlyCallableByShieldedRagequit"
+      outcome: passed
+      duration_s: 4
+e2e_gate:
+  spec: "contracts/specs/derived-arp-3e7.spec.json"
+  command: 'forge test --offline --match-test "test_RagequitSucceedsForNonWhitelistedHolderWhileRestricted|test_TransferStillRestrictedForNonWhitelistedHolderWhileRestricted|test_BurnOnlyCallableByShieldedRagequit"'
+  result: passed
+  ran_at_sha: "f0af48ccb5e636602f422a083213ae4804f37836"
+  mocks_in_path: false
+discrimination:
+  - mechanism: mutation_kill
+    oracle: 'forge test --match-test "test_RagequitSucceedsForNonWhitelistedHolderWhileRestricted|test_TransferStillRestrictedForNonWhitelistedHolderWhileRestricted" (the c1/c2 acceptance tests)'
+    target: "contracts/governance/ArmadaToken.sol"
+    perturbation: "Inverted the _beforeTokenTransfer guard from 'if (!transferable && to != address(0))' to 'if (!transferable && to == address(0))', flipping which transfers are restricted while transferable is false."
+    took:
+      applied:
+        observable: "re-read contracts/governance/ArmadaToken.sol line 287 after writing"
+        moved:
+          - "if (!transferable && to (transferable = true)"
+          - "if (!transferable && to != address(0))"
+      observed:
+        observable: "forge test exit code for the c1/c2 spec tests"
+        moved:
+          - "0"
+          - "1"
+    assertions_fired:
+      - assertion: "test_RagequitSucceedsForNonWhitelistedHolderWhileRestricted (c1) - the exit burn reverts with 'ArmadaToken: transfers restricted'"
+        moved:
+          - "pass"
+          - "fail"
+      - assertion: "test_TransferStillRestrictedForNonWhitelistedHolderWhileRestricted (c2) - an ordinary transfer by a non-whitelisted holder no longer reverts as expected"
+        moved:
+          - "pass"
+          - "fail"
+    pinned_at:
+      - "contracts/governance/ArmadaToken.sol"
+      - "test-foundry/ShieldedRagequit.t.sol"
+    exit_code_before: 0
+    exit_code_after: 1
+    reverted: restored_and_verified
+    negative_control:
+      variant: "test_BurnOnlyCallableByShieldedRagequit (c3) - the authorized-burner gate is independent of the transfer-restriction guard, so it must stay green under the same inversion"
+      applied:
+        observable: "re-read test-foundry/ShieldedRagequit.t.sol: c3 test's expectRevert for 'ArmadaToken: not authorized burner'"
+        moved:
+          - "c3 test run on the unmutated contract: c3 passes (exit 0)"
+          - "c3 test run on the inverted guard: c3 still passes (exit 0)"
+      observable: "forge test exit code for test_BurnOnlyCallableByShieldedRagequit"
+      unmoved: "0"
+      exit_code: 0
