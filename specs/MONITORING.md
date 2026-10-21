@@ -579,7 +579,7 @@ Each alert must include:
 
 **What:** Alert on every `ProposalCreated` event from the governor with `proposalType == 3` (Steward), from deploy onward.
 
-**Why:** The initial steward and its USDC budget ($60,000 per 30 days) are set at deploy (GOVERNANCE.md §Election). During the sale nobody holds voting power, so a steward spend proposal created then cannot be voted down and the steward cannot be removed; it queues against the empty treasury and pays out once `finalize()` pushes the proceeds. The Security Council veto is the defence, and it only works on **Queued** proposals. The launch-team policy is no steward proposals before the post-finalize quiet period ends, so any steward proposal before then is unexpected.
+**Why:** The initial steward and its USDC budget ($60,000 per 30 days) are set at deploy. During the sale nobody holds voting power, so a steward spend proposal created then cannot be voted down and the steward cannot be removed; it queues against the empty treasury and pays out once `finalize()` pushes the proceeds. The Security Council veto is the defence, and it only works on **Queued** proposals. The launch-team policy is no steward proposals before the post-finalize quiet period ends, so any steward proposal before then is unexpected.
 
 **Signal:** `ProposalCreated(proposalId, proposer, proposalType = 3, …)`; then `ProposalQueued(proposalId, …)` for the same id.
 

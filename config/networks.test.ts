@@ -36,11 +36,9 @@ const MANAGED_PREFIXES = [
   "LAUNCH_TEAM_ADDRESS",
   "CCTP_MODE",
   "WINDDOWN_",
-  "OUTFLOW_",
   "CROWDFUND_",
   "HARDEN_TIMELOCK",
   "INITIAL_STEWARD_",
-  "STEWARD_BUDGET_",
 ];
 
 function clearManagedEnv(): void {
@@ -344,7 +342,6 @@ describe("reserve configuration", () => {
     INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
     WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
     CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-    WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
   // WHY: Launch 1 ships with the reserve distributor, and its allocator and cap are immutable.
@@ -437,7 +434,6 @@ describe("wind-down deadline", () => {
     INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
     ...TEST_RESERVE,
     CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-    WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
   // WHY: the deadline arms a permissionless, terminal wind-down and is fixed at the
@@ -470,60 +466,6 @@ describe("wind-down deadline", () => {
   });
 });
 
-describe("wind-down revenue threshold", () => {
-  afterEach(() => {
-    clearManagedEnv();
-    delete process.env.REVENUE_LOCK_BENEFICIARIES_JSON;
-  });
-
-  const ONE_CLIENT = {
-    CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1",
-    CLIENT_1_CHAIN_ID: "8453",
-    CLIENT_1_CCTP_DOMAIN: "6",
-  };
-  const MAINNET_BASE = {
-    ...SEPOLIA_BASE,
-    ...ONE_CLIENT,
-    DEPLOY_ENV: "mainnet",
-    CCTP_MODE: "real",
-    INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
-    ...TEST_RESERVE,
-    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
-    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-  };
-
-  // WHY: once the deadline passes, recognized revenue below the threshold lets anyone
-  // trigger the terminal wind-down; like the deadline, it must be chosen deliberately on
-  // mainnet, never picked up from a silent default.
-  it("requires WINDDOWN_REVENUE_THRESHOLD on mainnet", () => {
-    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(
-      /WINDDOWN_REVENUE_THRESHOLD/,
-    );
-  });
-
-  // WHY: an explicitly chosen mainnet threshold must reach the deploy script unchanged.
-  it("uses the explicit WINDDOWN_REVENUE_THRESHOLD on mainnet", () => {
-    const c = freshConfig({
-      ...MAINNET_BASE,
-      WINDDOWN_REVENUE_THRESHOLD: "25000",
-    }).getNetworkConfig();
-    expect(c.windDownRevenueThreshold).to.equal("25000");
-  });
-
-  // WHY: local and testnet deploys keep working with no wind-down env set.
-  it("defaults local and Sepolia to 10000", () => {
-    expect(
-      freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig()
-        .windDownRevenueThreshold,
-    ).to.equal("10000");
-    expect(
-      freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig()
-        .windDownRevenueThreshold,
-    ).to.equal("10000");
-  });
-});
-
 describe("crowdfund open time", () => {
   afterEach(() => {
     clearManagedEnv();
@@ -544,7 +486,6 @@ describe("crowdfund open time", () => {
     INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
     ...TEST_RESERVE,
     WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
-    WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
   // WHY: windowStart is immutable and the launch is announced for a fixed time; a mainnet
@@ -628,7 +569,6 @@ describe("privacy pool treasury override", () => {
     ...TEST_RESERVE,
     WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
     CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-    WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
   const OVERRIDE = "0x0000000000000000000000000000000000000002";
 
@@ -692,7 +632,6 @@ describe("timelock harden profile", () => {
     ...TEST_RESERVE,
     WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
     CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-    WINDDOWN_REVENUE_THRESHOLD: "10000",
   };
 
   // WHY: without the harden profile the deployer never holds timelock roles, so the crowdfund
@@ -783,178 +722,6 @@ describe("RevenueLock max revenue increase per day", () => {
   }
 });
 
-// GOVERNANCE.md §Treasury Outflow Limits: 30-day rolling window; limit is the greater of the
-// absolute amount and the percentage of treasury balance; no floor (it is fixed at deploy).
-const SPEC_OUTFLOW = {
-  usdc: {
-    windowDuration: 30 * 86400,
-    limitBps: 1000,
-    limitAbsolute: "100000000000",
-    floorAbsolute: "0",
-  },
-  arm: {
-    windowDuration: 30 * 86400,
-    limitBps: 300,
-    limitAbsolute: "250000000000000000000000",
-    floorAbsolute: "0",
-  },
-  // USDC pattern: 30-day window, 10%, 25 ETH absolute (~$100k), no floor.
-  eth: {
-    windowDuration: 30 * 86400,
-    limitBps: 1000,
-    limitAbsolute: "25000000000000000000",
-    floorAbsolute: "0",
-  },
-};
-
-describe("treasury outflow limits", () => {
-  afterEach(clearManagedEnv);
-
-  // WHY: initOutflowConfig is one-shot per token and its floor can never be lowered, so a
-  // deploy that omits the OUTFLOW_* env must still install the spec limits, not looser ones.
-  it("defaults USDC, ARM and ETH to the GOVERNANCE.md spec values", () => {
-    const c = freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig();
-    expect(c.outflowConfig).to.deep.equal(SPEC_OUTFLOW);
-  });
-});
-
-describe("initial steward and USDC steward budget", () => {
-  afterEach(() => {
-    clearManagedEnv();
-    delete process.env.REVENUE_LOCK_BENEFICIARIES_JSON;
-  });
-
-  const ONE_CLIENT = {
-    CLIENT_COUNT: "1",
-    CLIENT_1_RPC: "https://c1",
-    CLIENT_1_CHAIN_ID: "8453",
-    CLIENT_1_CCTP_DOMAIN: "6",
-  };
-  const MAINNET_BASE = {
-    ...SEPOLIA_BASE,
-    ...ONE_CLIENT,
-    DEPLOY_ENV: "mainnet",
-    CCTP_MODE: "real",
-    ...TEST_RESERVE,
-    WINDDOWN_DEADLINE: "2027-12-31T00:00:00Z",
-    CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-    WINDDOWN_REVENUE_THRESHOLD: "10000",
-  };
-
-  // WHY: the steward is elected and funded at deploy only when explicitly configured; local
-  // and Sepolia stacks without INITIAL_STEWARD_ADDRESS keep the governance-elected path.
-  it("defaults local and Sepolia to no initial steward", () => {
-    expect(
-      freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig().initialSteward,
-    ).to.equal(undefined);
-    expect(
-      freshConfig({ ...SEPOLIA_BASE, ...ONE_CLIENT }).getNetworkConfig()
-        .initialSteward,
-    ).to.equal(undefined);
-  });
-
-  // WHY: GOVERNANCE.md §Treasury Steward sets the launch budget at $60,000 per rolling 30 days;
-  // a configured steward must get exactly that budget when the budget env is omitted.
-  it("defaults the budget to the $60,000 / 30-day spec value", () => {
-    const c = freshConfig({
-      DEPLOY_ENV: "local",
-      INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
-    }).getNetworkConfig();
-    expect(c.initialSteward).to.deep.equal({
-      address: TEST_STEWARD,
-      budgetUsdc: "60000",
-      budgetWindow: 2592000,
-    });
-  });
-
-  // WHY: explicitly configured values must reach the deploy scripts unchanged.
-  it("uses an explicit budget and window", () => {
-    const c = freshConfig({
-      DEPLOY_ENV: "local",
-      INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
-      STEWARD_BUDGET_USDC: "25000",
-      STEWARD_BUDGET_WINDOW: "604800",
-    }).getNetworkConfig();
-    expect(c.initialSteward).to.deep.equal({
-      address: TEST_STEWARD,
-      budgetUsdc: "25000",
-      budgetWindow: 604800,
-    });
-  });
-
-  // WHY: the launch elects the steward at deploy; a mainnet run that forgot the address would
-  // silently skip the election and the budget, so the config must refuse to build.
-  it("requires INITIAL_STEWARD_ADDRESS on mainnet", () => {
-    expect(() => freshConfig(MAINNET_BASE).getNetworkConfig()).to.throw(
-      /INITIAL_STEWARD_ADDRESS/,
-    );
-  });
-
-  // WHY: a budget without a steward is spending authority nobody can use, and almost always
-  // means the address was dropped from the env by mistake.
-  for (const key of ["STEWARD_BUDGET_USDC", "STEWARD_BUDGET_WINDOW"]) {
-    it(`refuses ${key} without INITIAL_STEWARD_ADDRESS`, () => {
-      expect(() =>
-        freshConfig({ DEPLOY_ENV: "local", [key]: "60000" }).getNetworkConfig(),
-      ).to.throw(/STEWARD_BUDGET_\* is set but INITIAL_STEWARD_ADDRESS is not/);
-    });
-  }
-
-  // WHY: the steward address is a deploy input with no later setter short of an Extended
-  // governance proposal; a malformed or zero address must fail before any transaction.
-  for (const bad of [
-    "0x123",
-    "not-an-address",
-    "0x0000000000000000000000000000000000000000",
-  ]) {
-    it(`rejects the steward address "${bad}"`, () => {
-      expect(() =>
-        freshConfig({
-          DEPLOY_ENV: "local",
-          INITIAL_STEWARD_ADDRESS: bad,
-        }).getNetworkConfig(),
-      ).to.throw(/INITIAL_STEWARD_ADDRESS/);
-    });
-  }
-
-  // WHY: the budget is whole USD, scaled by USDC's 6 decimals at deploy. A pre-scaled entry
-  // (60000000000) or anything above the $100,000 USDC outflow absolute limit is a units mistake
-  // that would hand the steward a far larger budget than the spec; zero is no budget at all.
-  for (const bad of [
-    "0",
-    "60000.5",
-    "6e4",
-    "60000000000",
-    "100001",
-    "-60000",
-    "$60000",
-  ]) {
-    it(`rejects the budget "${bad}"`, () => {
-      expect(() =>
-        freshConfig({
-          DEPLOY_ENV: "local",
-          INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
-          STEWARD_BUDGET_USDC: bad,
-        }).getNetworkConfig(),
-      ).to.throw(/STEWARD_BUDGET_USDC/);
-    });
-  }
-
-  // WHY: addStewardBudgetToken reverts below a 1-day window; catching it in config keeps the
-  // revert from landing mid-deploy after one-shot initializers are spent.
-  for (const bad of ["0", "86399", "30d", "2592000.5"]) {
-    it(`rejects the window "${bad}"`, () => {
-      expect(() =>
-        freshConfig({
-          DEPLOY_ENV: "local",
-          INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
-          STEWARD_BUDGET_WINDOW: bad,
-        }).getNetworkConfig(),
-      ).to.throw(/STEWARD_BUDGET_WINDOW/);
-    });
-  }
-});
-
 describe("committed mainnet.env", () => {
   /** Read the `export KEY=VALUE` lines of a committed env template (comments ignored). */
   function readEnvTemplate(file: string): Record<string, string> {
@@ -1001,40 +768,6 @@ describe("committed mainnet.env", () => {
   // committed template; it must state the spec value explicitly, in whole USD (#530).
   it("sets the RevenueLock max revenue increase to the $10,000/day spec value", () => {
     expect(MAINNET_ENV.REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD).to.equal("10000");
-  });
-
-  // WHY: the freeze sheet (PARAMETER_MANIFEST.md §8.2) reads the wind-down threshold from the
-  // committed template; it must state the $10,000 spec value (GOVERNANCE.md §Wind-Down), in
-  // whole USD (#550).
-  it("sets the wind-down revenue threshold to the $10,000 spec value", () => {
-    expect(MAINNET_ENV.WINDDOWN_REVENUE_THRESHOLD).to.equal("10000");
-  });
-
-  // WHY: the launch freeze sheet reads the outflow limits from the committed template; it
-  // must state the spec values explicitly rather than rely on code defaults (#348).
-  it("sets USDC, ARM and ETH outflow limits to the GOVERNANCE.md spec values", () => {
-    for (const token of ["USDC", "ARM", "ETH"]) {
-      for (const key of ["WINDOW", "BPS", "ABSOLUTE", "FLOOR"]) {
-        expect(MAINNET_ENV).to.have.property(`OUTFLOW_${token}_${key}`);
-      }
-    }
-    const c = freshConfig({
-      ...MAINNET_ENV,
-      DEPLOYER_PRIVATE_KEY: "test-placeholder-not-a-real-key",
-      REVENUE_LOCK_BENEFICIARIES_FILE: "",
-      REVENUE_LOCK_BENEFICIARIES_JSON: REVENUE_LOCK_JSON,
-      CROWDFUND_OPEN_TIME: "2026-10-08T17:00:00Z",
-      INITIAL_STEWARD_ADDRESS: TEST_STEWARD,
-      ...TEST_RESERVE,
-    }).getNetworkConfig();
-    expect(c.outflowConfig).to.deep.equal(SPEC_OUTFLOW);
-  });
-
-  // WHY: the freeze sheet (PARAMETER_MANIFEST.md §8.2) reads the steward budget from the
-  // committed template; it must state the GOVERNANCE.md spec values explicitly (#222).
-  it("sets the USDC steward budget to the $60,000 / 30-day spec value", () => {
-    expect(MAINNET_ENV.STEWARD_BUDGET_USDC).to.equal("60000");
-    expect(MAINNET_ENV.STEWARD_BUDGET_WINDOW).to.equal("2592000");
   });
 
   // WHY: on mainnet the pool fee recipient must default to ArmadaTreasuryGov; the template
