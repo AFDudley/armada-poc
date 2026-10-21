@@ -1,0 +1,65 @@
+status: completed
+pebble_id: arp-aba
+summary: >
+  Made contracts/governance/ArmadaToken.sol carry no wind-down concept and
+  a fixed-at-construction transfer allowlist. Removed windDownContract /
+  windDownContractSet / setWindDownContract / addToWhitelist /
+  WhitelistAdded / WindDownContractSet, so the allowlist is set once at
+  construction via initWhitelist (one-shot, deployer) and the timelock has
+  no add-path after deployment. Updated the G1 brief
+  docs/tasks/G1-arm-shares-token.md S3/S5/acceptance to match. Added the
+  c6 mutation-gated forge test test_allowlistFixedAtConstruction in
+  test-foundry/ArmadaTokenShares.t.sol, and adapted the Hedgey lockup and
+  crowdfund recovery tests to whitelist the lockup and the fuzz crowdfund
+  at construction. Verified: c6 test passes on the base contract, fails
+  under the mutation that re-adds addToWhitelist to ArmadaToken.sol
+  (proof of discrimination), and the full forge suite (469 tests) stays
+  green.
+cost: "~35k tokens"
+commits:
+  - "55c67516"
+verify_transcript:
+  hooks:
+    - name: "forge test --match-test test_allowlistFixedAtConstruction (c6 baseline)"
+      outcome: passed
+      duration_s: 3
+    - name: "forge test (full suite, 469 tests)"
+      outcome: passed
+      duration_s: 47
+e2e_gate:
+  spec: contracts/specs/derived-arp-aba.spec.json
+  command: "forge test --match-test test_allowlistFixedAtConstruction"
+  result: passed
+  ran_at_sha: "55c67516"
+  mocks_in_path: false
+discrimination:
+  - mechanism: mutation_kill
+    oracle: "forge test --match-test test_allowlistFixedAtConstruction"
+    target: "contracts/governance/ArmadaToken.sol: re-add the removed addToWhitelist setter (c6 mutation target)"
+    perturbation: >
+      Temporarily re-added the addToWhitelist(address) function and the
+      WhitelistAdded event to contracts/governance/ArmadaToken.sol
+      (the c6 mutation target), then re-ran the c6 test; restored the
+      file afterward.
+    took:
+      applied:
+        observable: "grep 'function addToWhitelist' contracts/governance/ArmadaToken.sol"
+        moved:
+          - "absent (0 matches)"
+          - "present (1 match)"
+      observed:
+        observable: "forge test --match-test test_allowlistFixedAtConstruction"
+        moved:
+          - "PASS (1 passed, 0 failed)"
+          - "FAIL: the timelock cannot add a new address after deployment (0 passed, 1 failed)"
+    assertions_fired:
+      - assertion: "assertFalse(ok, 'the timelock cannot add a new address after deployment')"
+        moved:
+          - "passes (ok==false)"
+          - "fails (ok==true)"
+    pinned_at:
+      - "contracts/governance/ArmadaToken.sol"
+      - "test-foundry/ArmadaTokenShares.t.sol"
+    exit_code_before: 0
+    exit_code_after: 1
+    reverted: true
