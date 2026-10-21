@@ -162,6 +162,263 @@ contract PoolOwnerAuthorityTest is Test, PoseidonLinker {
         require(stored.alpha1.y == key.alpha1.y, "c4: verification key not stored (y)");
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // NON-OWNER REJECTION — every owner-gated function (arp-dec)
+    // ══════════════════════════════════════════════════════════════════════════
+    //
+    // For each of the 14 owner-gated external functions on PrivacyPool, a pranked
+    // non-owner call must revert, and each gated state keeps its prior value. The
+    // test names use the spec's oracle prefixes:
+    //   test_PoolOwnerAuthority_NonOwnerReverts_<fn>          (C1)
+    //   test_PoolOwnerAuthority_NonOwnerStateUnchanged_<fn>  (C2)
+    //   The same tests are matched by the C3 prefix `..._NonOwner` and the C4 suite
+    //   prefix `..._` (the whole PoolOwnerAuthority suite, old + new).
+
+    // ── setRemotePool ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setRemotePool() public {
+        vm.prank(stranger);
+        try pool.setRemotePool(1, bytes32(0x0000000000000000000000000000000000000000000000000000000000000001)) {
+            fail("setRemotePool: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setRemotePool() public {
+        require(pool.remotePools(1) == bytes32(0), "setRemotePool: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setRemotePool(1, bytes32(0x0000000000000000000000000000000000000000000000000000000000000001)) {
+            fail("setRemotePool: non-owner call must revert");
+        } catch {}
+        require(pool.remotePools(1) == bytes32(0), "setRemotePool: gated state must stay at prior value");
+    }
+
+    // ── setRemoteHookRouter ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setRemoteHookRouter() public {
+        vm.prank(stranger);
+        try pool.setRemoteHookRouter(2, bytes32(0x0000000000000000000000000000000000000000000000000000000000000002)) {
+            fail("setRemoteHookRouter: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setRemoteHookRouter() public {
+        require(pool.remoteHookRouters(2) == bytes32(0), "setRemoteHookRouter: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setRemoteHookRouter(2, bytes32(0x0000000000000000000000000000000000000000000000000000000000000002)) {
+            fail("setRemoteHookRouter: non-owner call must revert");
+        } catch {}
+        require(pool.remoteHookRouters(2) == bytes32(0), "setRemoteHookRouter: gated state must stay at prior value");
+    }
+
+    // ── addToBlocklist ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_addToBlocklist() public {
+        vm.prank(stranger);
+        try pool.addToBlocklist(_addrArray(address(0x21))) {
+            fail("addToBlocklist: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_addToBlocklist() public {
+        require(!pool.tokenBlocklist(address(0x21)), "addToBlocklist: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.addToBlocklist(_addrArray(address(0x21))) {
+            fail("addToBlocklist: non-owner call must revert");
+        } catch {}
+        require(!pool.tokenBlocklist(address(0x21)), "addToBlocklist: gated state must stay at prior value");
+    }
+
+    // ── removeFromBlocklist ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_removeFromBlocklist() public {
+        vm.prank(stranger);
+        try pool.removeFromBlocklist(_addrArray(address(0x21))) {
+            fail("removeFromBlocklist: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_removeFromBlocklist() public {
+        // The owner (this test contract) blocks the token first, so the gated state
+        // starts blocked; a rejected non-owner removal must leave it still blocked.
+        pool.addToBlocklist(_addrArray(address(0x21)));
+        require(pool.tokenBlocklist(address(0x21)), "removeFromBlocklist: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.removeFromBlocklist(_addrArray(address(0x21))) {
+            fail("removeFromBlocklist: non-owner call must revert");
+        } catch {}
+        require(pool.tokenBlocklist(address(0x21)), "removeFromBlocklist: gated state must stay at prior value");
+    }
+
+    // ── setVerificationKey ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setVerificationKey() public {
+        vm.prank(stranger);
+        try pool.setVerificationKey(1, 1, _makeKey()) {
+            fail("setVerificationKey: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setVerificationKey() public {
+        require(pool.getVerificationKey(1, 1).alpha1.x == 0, "setVerificationKey: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setVerificationKey(1, 1, _makeKey()) {
+            fail("setVerificationKey: non-owner call must revert");
+        } catch {}
+        require(pool.getVerificationKey(1, 1).alpha1.x == 0, "setVerificationKey: gated state must stay at prior value");
+    }
+
+    // ── setVerificationKeyOwned ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setVerificationKeyOwned() public {
+        vm.prank(stranger);
+        try pool.setVerificationKeyOwned(1, 1, _makeKey()) {
+            fail("setVerificationKeyOwned: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setVerificationKeyOwned() public {
+        require(_verifyOwnedReverts(), "setVerificationKeyOwned: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setVerificationKeyOwned(1, 1, _makeKey()) {
+            fail("setVerificationKeyOwned: non-owner call must revert");
+        } catch {}
+        require(_verifyOwnedReverts(), "setVerificationKeyOwned: gated state must stay at prior value");
+    }
+
+    // ── setShieldFee ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setShieldFee() public {
+        vm.prank(stranger);
+        try pool.setShieldFee(10) {
+            fail("setShieldFee: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setShieldFee() public {
+        require(pool.shieldFee() == 0, "setShieldFee: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setShieldFee(10) {
+            fail("setShieldFee: non-owner call must revert");
+        } catch {}
+        require(pool.shieldFee() == 0, "setShieldFee: gated state must stay at prior value");
+    }
+
+    // ── setFeeRecipient ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setFeeRecipient() public {
+        vm.prank(stranger);
+        try pool.setFeeRecipient(bytes32(0x0000000000000000000000000000000000000000000000000000000000000110)) {
+            fail("setFeeRecipient: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setFeeRecipient() public {
+        require(pool.feeRecipient() == bytes32(0), "setFeeRecipient: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setFeeRecipient(bytes32(0x0000000000000000000000000000000000000000000000000000000000000110)) {
+            fail("setFeeRecipient: non-owner call must revert");
+        } catch {}
+        require(pool.feeRecipient() == bytes32(0), "setFeeRecipient: gated state must stay at prior value");
+    }
+
+    // ── setTestingMode ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setTestingMode() public {
+        vm.prank(stranger);
+        try pool.setTestingMode(true) {
+            fail("setTestingMode: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setTestingMode() public {
+        require(!pool.testingMode(), "setTestingMode: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setTestingMode(true) {
+            fail("setTestingMode: non-owner call must revert");
+        } catch {}
+        require(!pool.testingMode(), "setTestingMode: gated state must stay at prior value");
+    }
+
+    // ── setAdapterRegistry ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setAdapterRegistry() public {
+        vm.prank(stranger);
+        try pool.setAdapterRegistry(address(0x3)) {
+            fail("setAdapterRegistry: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setAdapterRegistry() public {
+        require(pool.adapterRegistry() == address(0), "setAdapterRegistry: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setAdapterRegistry(address(0x3)) {
+            fail("setAdapterRegistry: non-owner call must revert");
+        } catch {}
+        require(pool.adapterRegistry() == address(0), "setAdapterRegistry: gated state must stay at prior value");
+    }
+
+    // ── setHookRouter ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setHookRouter() public {
+        vm.prank(stranger);
+        try pool.setHookRouter(address(0x4)) {
+            fail("setHookRouter: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setHookRouter() public {
+        require(pool.hookRouter() == address(0), "setHookRouter: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setHookRouter(address(0x4)) {
+            fail("setHookRouter: non-owner call must revert");
+        } catch {}
+        require(pool.hookRouter() == address(0), "setHookRouter: gated state must stay at prior value");
+    }
+
+    // ── setDefaultFinalityThreshold ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setDefaultFinalityThreshold() public {
+        vm.prank(stranger);
+        try pool.setDefaultFinalityThreshold(2000) {
+            fail("setDefaultFinalityThreshold: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setDefaultFinalityThreshold() public {
+        require(pool.defaultFinalityThreshold() == 0, "setDefaultFinalityThreshold: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setDefaultFinalityThreshold(2000) {
+            fail("setDefaultFinalityThreshold: non-owner call must revert");
+        } catch {}
+        require(
+            pool.defaultFinalityThreshold() == 0, "setDefaultFinalityThreshold: gated state must stay at prior value"
+        );
+    }
+
+    // ── setShieldPauseContract ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setShieldPauseContract() public {
+        vm.prank(stranger);
+        try pool.setShieldPauseContract(address(0x5)) {
+            fail("setShieldPauseContract: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setShieldPauseContract() public {
+        require(pool.shieldPauseContract() == address(0), "setShieldPauseContract: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setShieldPauseContract(address(0x5)) {
+            fail("setShieldPauseContract: non-owner call must revert");
+        } catch {}
+        require(
+            pool.shieldPauseContract() == address(0), "setShieldPauseContract: gated state must stay at prior value"
+        );
+    }
+
+    // ── setFeeModule ───────────────────────────────────────────────────────────────────
+    function test_PoolOwnerAuthority_NonOwnerReverts_setFeeModule() public {
+        vm.prank(stranger);
+        try pool.setFeeModule(address(0x6)) {
+            fail("setFeeModule: non-owner call must revert");
+        } catch {}
+    }
+
+    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setFeeModule() public {
+        require(pool.feeModule() == address(0), "setFeeModule: pre-state must be at prior value");
+        vm.prank(stranger);
+        try pool.setFeeModule(address(0x6)) {
+            fail("setFeeModule: non-owner call must revert");
+        } catch {}
+        require(pool.feeModule() == address(0), "setFeeModule: gated state must stay at prior value");
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     /// @dev Exercises the owner-gated setVerificationKey path end-to-end: a non-owner call
@@ -237,4 +494,42 @@ contract PoolOwnerAuthorityTest is Test, PoseidonLinker {
         }
         return failed;
     }
+
+    function _addrArray(address _a) internal pure returns (address[] memory) {
+        address[] memory arr = new address[](1);
+        arr[0] = _a;
+        return arr;
+    }
+
+    /// @dev Reads the verifyOwned view on the pool; reports whether it reverts (owned
+    ///      verification key [1][1] is unset). Used as the observable for the internal
+    ///      owned-key state (no public getter).
+    function _verifyOwnedReverts() public returns (bool) {
+        Transaction memory t = _makeTransaction();
+        try pool.verifyOwned(t) {
+            return false;
+        } catch {
+            return true;
+        }
+    }
+
+    /// @dev Builds a minimal Transaction with 1 nullifier and 1 commitment (matching the
+    ///      owned key slot [1][1]) so verifyOwned reads the owned-key state.
+    function _makeTransaction() internal pure returns (Transaction memory) {
+        Transaction memory t;
+        t.merkleRoot = bytes32(0);
+        t.nullifiers = new bytes32[](1);
+        t.commitments = new bytes32[](1);
+        t.boundParams.treeNumber = 0;
+        t.boundParams.minGasPrice = 0;
+        t.boundParams.unshield = UnshieldType.NONE;
+        t.boundParams.chainID = 0;
+        t.boundParams.adaptContract = address(0);
+        t.boundParams.adaptParams = bytes32(0);
+        t.boundParams.commitmentCiphertext = new CommitmentCiphertext[](0);
+        t.unshieldPreimage = CommitmentPreimage(bytes32(0), TokenData(TokenType.ERC20, address(0), 0), 0);
+        return t;
+    }
 }
+
+/// @dev Builds a 1-element address array for the blocklist tests.

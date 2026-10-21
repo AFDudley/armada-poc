@@ -29,6 +29,7 @@ ALLOWED_FILES=(
   "governance-ui/src/config/accounts.ts"  # Anvil test account keys (publicly known)
   "lib/sdk/test-transfer.ts"  # Fixed test-vector placeholder keys (not real secrets)
   "lib/poseidon_bytecode.json"  # Generated Poseidon bytecode fixture (public constants, not keys)
+  "test-foundry/HubPoolOwnerGuard.t.sol"  # Forge tests: bytes32/address literals are test fixtures, not keys
 )
 
 # Directories whose entire contents are known non-secret data: captured differential test vectors
