@@ -49,8 +49,9 @@ contract ArmadaToken is ERC20Votes {
 
     // ============ Authorized Burner State ============
 
-    /// @notice The G3 burn gate: addresses authorized to call burn (only ShieldedRagequit,
-    ///          registered by the deployer one-shot via initBurners, or the timelock via addBurner).
+    /// @notice The G3 burn gate: addresses authorized to call burn. The deployer registers
+    ///          ShieldedRagequit one-shot via initBurners. After that, the set is frozen; no
+    ///          address (the timelock/Safe included) can add a burner (E5, "No clawback").
     mapping(address => bool) public authorizedBurner;
     /// @notice One-shot deployer lock for the authorizedBurner registry.
     bool public burnersInitialized;
@@ -64,7 +65,6 @@ contract ArmadaToken is ERC20Votes {
     event AuthorizedDelegatorsInitialized(address[] delegators);
     event AuthorizedDelegatorAdded(address indexed delegator);
     event BurnersInitialized(address[] burners);
-    event BurnerAdded(address indexed burner);
 
     // ============ Constructor ============
 
@@ -145,15 +145,6 @@ contract ArmadaToken is ERC20Votes {
         }
         burnersInitialized = true;
         emit BurnersInitialized(burners);
-    }
-
-    /// @notice Authorize an address to call burn. Timelock-only, add-only (mirrors
-    ///         addAuthorizedDelegator).
-    function addBurner(address burner) external {
-        require(msg.sender == timelock, "ArmadaToken: not timelock");
-        if (authorizedBurner[burner]) return;
-        authorizedBurner[burner] = true;
-        emit BurnerAdded(burner);
     }
 
     /// @notice IBaalToken `burn` entry point (G3): destroys `amount` of `account`'s ARM.
