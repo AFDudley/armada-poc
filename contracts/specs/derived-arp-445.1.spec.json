@@ -1,0 +1,115 @@
+{
+  "id": "derived-arp-445.1",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. ShieldedRagequit is the only address that ever calls ArmadaToken.burn. The set of authorized burners cannot change after deploy. ARM_TOKEN.md names the holder of every remaining ArmadaToken power that is gated to the timelock address.\nWhat holds now? Describe the current, observed state. At armada-poc integrated (1f07f220), ArmadaToken.sol declares an immutable timelock address (line 18). Four functions require msg.sender == timelock: addToWhitelist (line 142-143), addAuthorizedDelegator (line 154-155), addBurner (line 178-179), and setTransferable (line 236-237, which also accepts windDownContract). scripts/deploy_governance.ts line 211 and line 422 pass the Safe's address as timelockController, which the constructor call at line 222 stores as ArmadaToken's immutable timelock. addBurner (line 178) adds an address to the authorizedBurner mapping with no cap on the count and with no removal function. burn (line 190) requires only authorizedBurner[msg.sender] (line 191) and takes no allowance or signature from the account whose balance it reduces (line 190-193). Root ARM_TOKEN.md (as of integrated) states transfer-gate rules for addToWhitelist and setTransferable but does not name the Safe, or any address, as the holder of the timelock role, and does not mention burn or addBurner. specs/ARM_TOKEN.md section 12 (line 395-416) lists an invariant table including \"No burn\" (line 403, \"No function or code path can destroy ARM\") and \"No clawback\" (line 405, \"No code path can move ARM out of a holder's wallet without their signature\").\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Read ArmadaToken.sol lines 18, 142-143, 154-155, 178-193, 236-237 at armada-poc integrated. Read scripts/deploy_governance.ts lines 211 and 422 for the constructor argument. Read ARM_TOKEN.md at the repo root in full, and specs/ARM_TOKEN.md lines 395-416, at the same commit.\nWhat constraints apply? State them in plain prose. contracts/governance/ArmadaToken.sol, ARM_TOKEN.md.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) ArmadaToken.sol lines 18, 142, 154, 178, 190, 236; ARM_TOKEN.md (root); specs/ARM_TOKEN.md lines 395-416.\n\nDecomposed child: What must hold: ShieldedRagequit is the only address that ever calls ArmadaToken.burn. The set of authorized burners cannot change after deploy. Current state at armada-poc integrated (1f07f220): contracts/governance/ArmadaToken.sol declares an immutable timelock address (line 18). The deployer registers ShieldedRagequit one time through initBurners (deployer-only, one-shot; scripts/summon-baal-safe.ts step 8). But addBurner (line 178-179) requires only msg.sender == timelock. addBurner adds an address to the authorizedBurner mapping with no cap on the count and with no removal function. scripts/deploy_governance.ts line 211 and line 422 pass the Safe's address as timelockController, and the constructor call at line 222 stores it as ArmadaToken's immutable timelock. So the Safe can add any number of further burners after deploy. burn (line 190) requires only authorizedBurner[msg.sender] (line 191), and burn takes no allowance or signature from the account whose balance it reduces (line 190-193). A burner that the timelock adds later can therefore destroy ARM from any holder's wallet. Required outcome: after the one-shot burner registration, no caller (the timelock/Safe, the deployer, or any other address) can add an address to authorizedBurner. A call from the timelock address that tries to authorize a new burner must fail, and authorizedBurner for that new address must stay false. ShieldedRagequit must still be able to call burn. Any other address that calls burn must revert with \"ArmadaToken: not authorized burner\". Constraints: change contracts/governance/ArmadaToken.sol, and update any deploy script, task, or test that calls addBurner. Where: ArmadaToken.sol lines 18, 178, 190. Acceptance: a forge test proves that the timelock cannot add a burner after deploy, that ShieldedRagequit can still burn, and that a non-burner call to burn reverts.",
+  "restatement": "ArmadaToken.burn destroys ARM from any holder's balance and needs no allowance or signature from that holder. Thus the set of addresses that may call burn is a trust boundary. The intent is that this set is fixed at deploy: the deployer registers ShieldedRagequit one time through the one-shot initBurners, and after that registration no address can extend the set. Today addBurner lets the immutable timelock address (the Safe, per scripts/deploy_governance.ts) authorize any number of further burners, and each new burner could destroy ARM from any wallet. The fix removes that post-deploy path in contracts/governance/ArmadaToken.sol. It also updates every deploy script, task, or test that calls addBurner. After the change, a call from the timelock that tries to authorize a new burner fails, and authorizedBurner for that address stays false. The deployer and every other address also cannot add a burner after the one-shot registration, and a second initBurners call fails. ShieldedRagequit still burns ARM successfully. Any other caller of burn reverts with \"ArmadaToken: not authorized burner\". A forge test proves these outcomes.",
+  "restatement_clauses": [
+    {
+      "id": "C1",
+      "text": "After the one-shot burner registration, a call from the timelock address that tries to authorize a new burner must fail, and authorizedBurner for that new address must stay false."
+    },
+    {
+      "id": "C2",
+      "text": "After the one-shot burner registration, no caller (the timelock/Safe, the deployer, or any other address) can add an address to authorizedBurner. A second initBurners call fails."
+    },
+    {
+      "id": "C3",
+      "text": "ShieldedRagequit must still be able to call burn, and the call reduces the target account's ARM balance by the burned amount."
+    },
+    {
+      "id": "C4",
+      "text": "Any other address that calls burn must revert with \"ArmadaToken: not authorized burner\"."
+    },
+    {
+      "id": "C5",
+      "text": "Every deploy script, task, or test that called addBurner is updated, so the deploy flow and the existing test suites still register ShieldedRagequit through initBurners alone and pass."
+    }
+  ],
+  "goal": "After the one-shot burner registration, the set of ArmadaToken burners is frozen to ShieldedRagequit. No address, the timelock/Safe included, can add a burner.",
+  "acceptance_criteria": [
+    "After deploy, the timelock (the Safe) tries to give burn rights to a new address. The attempt fails, and the new address still has no burn rights.",
+    "After the one-time burner registration, the deployer and an unrelated address each try to give burn rights to a new address, and the deployer tries the registration a second time. Every attempt fails, and the new address has no burn rights.",
+    "ShieldedRagequit burns an amount of ARM from a holder. The call succeeds, and the holder's ARM balance and the total supply both drop by that amount.",
+    "An address that is not ShieldedRagequit (the timelock, the deployer, or a random address) tries to burn a holder's ARM. Each call fails with the message \"ArmadaToken: not authorized burner\", and the holder's balance does not change.",
+    "The existing shielded-ragequit tests in test-foundry/ShieldedRagequit.t.sol set up the token with the one-time registration only, and a member ragequit still burns that member's ARM."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "After deploy, the timelock (the Safe) tries to give burn rights to a new address. The attempt fails, and the new address still has no burn rights."
+    },
+    {
+      "id": "c2",
+      "text": "After the one-time burner registration, the deployer and an unrelated address each try to give burn rights to a new address, and the deployer tries the registration a second time. Every attempt fails, and the new address has no burn rights."
+    },
+    {
+      "id": "c3",
+      "text": "ShieldedRagequit burns an amount of ARM from a holder. The call succeeds, and the holder's ARM balance and the total supply both drop by that amount."
+    },
+    {
+      "id": "c4",
+      "text": "An address that is not ShieldedRagequit (the timelock, the deployer, or a random address) tries to burn a holder's ARM. Each call fails with the message \"ArmadaToken: not authorized burner\", and the holder's balance does not change."
+    },
+    {
+      "id": "c5",
+      "text": "The existing shielded-ragequit tests in test-foundry/ShieldedRagequit.t.sol set up the token with the one-time registration only, and a member ragequit still burns that member's ARM."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C1",
+      "test": "test_BurnerSetFrozen_TimelockCannotAddBurner",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "After deploy, the timelock (the Safe) tries to give burn rights to a new address. The attempt fails, and the new address still has no burn rights.",
+      "proves": "The timelock cannot extend the burner set after the one-shot registration (C1).",
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C2",
+      "test": "test_BurnerSetFrozen_NoCallerCanAddBurner",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "After the one-time burner registration, the deployer and an unrelated address each try to give burn rights to a new address, and the deployer tries the registration a second time. Every attempt fails, and the new address has no burn rights.",
+      "proves": "No address can add a burner after the one-shot registration, and the registration cannot run twice (C2).",
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C3",
+      "test": "test_BurnerSetFrozen_ShieldedRagequitCanBurn",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "ShieldedRagequit burns an amount of ARM from a holder. The call succeeds, and the holder's ARM balance and the total supply both drop by that amount.",
+      "proves": "The one registered burner keeps its ability to burn after the change (C3).",
+      "clause_id": "c3"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C4",
+      "test": "test_BurnerSetFrozen_NonBurnerBurnReverts",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "An address that is not ShieldedRagequit (the timelock, the deployer, or a random address) tries to burn a holder's ARM. Each call fails with the message \"ArmadaToken: not authorized burner\", and the holder's balance does not change.",
+      "proves": "Only ShieldedRagequit can burn; every other caller is refused with the stated message (C4).",
+      "clause_id": "c4"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "C5",
+      "test": "test_RagequitBurnsArm",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "description": "The existing shielded-ragequit tests in test-foundry/ShieldedRagequit.t.sol set up the token with the one-time registration only, and a member ragequit still burns that member's ARM.",
+      "proves": "The callers of the removed post-deploy path are updated, and the real ragequit flow still works through the one-shot registration (C5).",
+      "clause_id": "c5"
+    }
+  ],
+  "criticality": "critical"
+}
