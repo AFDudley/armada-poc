@@ -1,0 +1,112 @@
+{
+  "id": "derived-arp-a0d",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. After the Baal-on-Safe redesign deleted the custom governor, Treasury Steward, Wind-Down, Election and Treasury Outflow Limit features (G6, arp-93a), no config file defines a parameter for those removed features, and no spec references a GOVERNANCE.md section that describes them. Config for deleted code is an error, not documentation.\nWhat holds now? Describe the current, observed state. At armada-poc integrated (c45e3fbe), config/mainnet.env exports STEWARD_BUDGET_USDC, STEWARD_BUDGET_WINDOW, OUTFLOW_USDC/ARM/ETH_WINDOW/BPS/ABSOLUTE/FLOOR and WINDDOWN_REVENUE_THRESHOLD; config/networks.ts sets defaults for the treasury outflow limits and the steward budget; config/networks.test.ts asserts these to the GOVERNANCE.md spec values. G6 (arp-93a) deleted ArmadaTreasuryGov, the Treasury Steward, ArmadaWindDown and ArmadaGovernor and removed their deploy steps, so these parameters feed no live contract. specs/CROWDFUND.md, specs/MONITORING.md, specs/OPERATIONS.md, specs/PARAMETER_MANIFEST.md and specs/REVENUE_LOCK.md reference GOVERNANCE.md sections (Treasury Steward, Wind-Down, Election, Treasury Outflow Limits) that the canonical specs/GOVERNANCE.md no longer contains.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run: grep -nE 'STEWARD_BUDGET|OUTFLOW_|WINDDOWN_REVENUE' config/mainnet.env config/networks.ts config/networks.test.ts. Run: grep -rn 'GOVERNANCE.md' specs/. Confirm no script under scripts/ reads these parameters: the governor, steward and wind-down deploy steps were removed in G6 (arp-93a).\nWhat constraints apply? State them in plain prose. For each dead parameter, measure its consumer first. Remove the parameter and any test that asserts it when no live Baal-on-Safe contract reads it. Keep and correct the citation of any parameter that still feeds a live contract. Repoint or remove the specs references to removed GOVERNANCE.md sections. No contract change is expected.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) config/mainnet.env, config/networks.ts, config/networks.test.ts; specs/CROWDFUND.md, specs/MONITORING.md, specs/OPERATIONS.md, specs/PARAMETER_MANIFEST.md, specs/REVENUE_LOCK.md.",
+  "restatement": "After the Baal-on-Safe redesign (G6, arp-93a) deleted the custom governor, Treasury Steward, Wind-Down, Election and Treasury Outflow Limit features, no config file may define a parameter for those features. No spec may cite a GOVERNANCE.md section that describes them. Config for deleted code is an error. The dead parameters are STEWARD_BUDGET_USDC, STEWARD_BUDGET_WINDOW, OUTFLOW_USDC/ARM/ETH_WINDOW/BPS/ABSOLUTE/FLOOR and WINDDOWN_REVENUE_THRESHOLD. They must go from config/mainnet.env, config/networks.ts and config/networks.test.ts. The five spec files must stop citing the removed GOVERNANCE.md sections. No contract changes.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "config/mainnet.env does not export STEWARD_BUDGET_USDC, STEWARD_BUDGET_WINDOW, OUTFLOW_USDC/ARM/ETH_WINDOW/BPS/ABSOLUTE/FLOOR or WINDDOWN_REVENUE_THRESHOLD."
+    },
+    {
+      "id": "c2",
+      "text": "config/networks.ts sets no defaults for the treasury outflow limits or the steward budget."
+    },
+    {
+      "id": "c3",
+      "text": "config/networks.test.ts asserts no value for the steward budget, outflow limit or wind-down revenue threshold parameters."
+    },
+    {
+      "id": "c4",
+      "text": "specs/CROWDFUND.md, specs/MONITORING.md, specs/OPERATIONS.md, specs/PARAMETER_MANIFEST.md and specs/REVENUE_LOCK.md do not reference GOVERNANCE.md sections for Treasury Steward, Wind-Down, Election or Treasury Outflow Limits."
+    }
+  ],
+  "goal": "Remove dead governance configuration and dead spec citations left behind by the G6 deletion of the governor, steward, wind-down and outflow-limit features.",
+  "acceptance_criteria": [
+    "The mainnet environment file no longer sets any steward budget, outflow limit or wind-down revenue threshold variable.",
+    "The network configuration file no longer defines steward budget or treasury outflow limit defaults.",
+    "The network configuration test no longer checks any steward budget, outflow limit or wind-down value.",
+    "None of the five spec files points to a GOVERNANCE.md section about the Treasury Steward, Wind-Down, Election or Treasury Outflow Limits."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The mainnet environment file no longer sets any steward budget, outflow limit or wind-down revenue threshold variable."
+    },
+    {
+      "id": "c2",
+      "text": "The network configuration file no longer defines steward budget or treasury outflow limit defaults."
+    },
+    {
+      "id": "c3",
+      "text": "The network configuration test no longer checks any steward budget, outflow limit or wind-down value."
+    },
+    {
+      "id": "c4",
+      "text": "None of the five spec files points to a GOVERNANCE.md section about the Treasury Steward, Wind-Down, Election or Treasury Outflow Limits."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "grep_absent",
+      "description": "The mainnet environment file no longer sets any steward budget, outflow limit or wind-down revenue threshold variable.",
+      "proves": "The dead parameters are gone from config/mainnet.env.",
+      "restatement_clause_id": "c1",
+      "pattern": "STEWARD_BUDGET|OUTFLOW_|WINDDOWN_REVENUE",
+      "files": [
+        "config/mainnet.env"
+      ],
+      "clause_id": "c1"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The network configuration file no longer defines steward budget or treasury outflow limit defaults.",
+      "proves": "The dead defaults are gone from config/networks.ts.",
+      "restatement_clause_id": "c2",
+      "pattern": "STEWARD_BUDGET|OUTFLOW_|WINDDOWN_REVENUE",
+      "additional_patterns": [
+        "steward[A-Z]\\w*",
+        "outflow[A-Z]\\w*",
+        "[Oo]utflowLimit"
+      ],
+      "files": [
+        "config/networks.ts"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The network configuration test no longer checks any steward budget, outflow limit or wind-down value.",
+      "proves": "No test asserts the removed parameters in config/networks.test.ts.",
+      "restatement_clause_id": "c3",
+      "pattern": "STEWARD_BUDGET|OUTFLOW_|WINDDOWN_REVENUE",
+      "additional_patterns": [
+        "steward[A-Z]\\w*",
+        "outflow[A-Z]\\w*",
+        "[Oo]utflowLimit"
+      ],
+      "files": [
+        "config/networks.test.ts"
+      ],
+      "clause_id": "c3"
+    },
+    {
+      "type": "grep_absent",
+      "description": "None of the five spec files points to a GOVERNANCE.md section about the Treasury Steward, Wind-Down, Election or Treasury Outflow Limits.",
+      "proves": "The specs no longer cite sections that the canonical GOVERNANCE.md lacks.",
+      "restatement_clause_id": "c4",
+      "pattern": "GOVERNANCE\\.md[^\\n]*(Treasury Steward|Wind-Down|Election|Outflow)",
+      "additional_patterns": [
+        "Treasury Outflow Limits?[^\\n]*GOVERNANCE\\.md",
+        "(Treasury Steward|Wind-Down|Election)[^\\n]*GOVERNANCE\\.md"
+      ],
+      "files": [
+        "specs/CROWDFUND.md",
+        "specs/MONITORING.md",
+        "specs/OPERATIONS.md",
+        "specs/PARAMETER_MANIFEST.md",
+        "specs/REVENUE_LOCK.md"
+      ],
+      "clause_id": "c4"
+    }
+  ]
+}
