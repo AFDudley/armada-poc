@@ -1,0 +1,134 @@
+{
+  "id": "derived-arp-aba",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. ArmadaToken.sol has no wind-down contract, no wind-down setter, and no caller gated on a wind-down contract. Its transfer allowlist is set once at construction and does not accept new addresses after deployment.\nWhat holds now? Describe the current, observed state. At armada-poc integrated (1f07f220), ArmadaToken.sol line 3 reads \"Transfer-restricted until wind-down\". Line 33-36 declares windDownContractSet and windDownContract state variables. Line 103 defines setWindDownContract, a one-time setter for windDownContract. Line 237 is inside setTransferable and reads \"require(msg.sender == windDownContract || msg.sender == timelock, ...)\". Line 142 defines addToWhitelist, callable after deployment. The G1 brief, docs/tasks/G1-arm-shares-token.md S3 (lines 36-42), orders a forge test that addToWhitelist by the timelock adds a fourth address after deployment. This differs from decision 5 in the lab book at armada-laconic, labbook/2026-10-18-treasury-governance-baal-safe-shielded.md, which states the allowlist is fixed at construction. Decision 1 in the same lab book states Armada drops wind-down.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run: git show integrated:contracts/governance/ArmadaToken.sol | sed -n '1,10p;95,145p;230,245p'. Compare docs/tasks/G1-arm-shares-token.md S3 (lines 36-42) against decision 5 in armada-laconic labbook/2026-10-18-treasury-governance-baal-safe-shielded.md section 3.\nWhat constraints apply? State them in plain prose. This report concerns only contracts/governance/ArmadaToken.sol and its tests. It does not concern the separate ArmadaWindDown.sol contract, which a prior filing, arp-93a, already tracks as removed.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/governance/ArmadaToken.sol lines 3, 33-36, 68, 103-110, 142, 236-237. docs/tasks/G1-arm-shares-token.md S3, lines 36-42.",
+  "restatement": "ArmadaToken.sol must carry no wind-down concept and must have a transfer allowlist that is fixed at construction. The contract must not declare windDownContractSet or windDownContract, must not define setWindDownContract, and must not mention wind-down in its header comment (line 3 now reads \"Transfer-restricted until wind-down\"). The setTransferable check must no longer accept windDownContract, so only the timelock may call it. The contract must not define addToWhitelist, so no address can join the allowlist after deployment. The G1 brief docs/tasks/G1-arm-shares-token.md S3 (lines 36-42) must stop ordering a forge test that adds a fourth address through addToWhitelist. A forge test must show that the timelock cannot add an address after deployment. The scope is ArmadaToken.sol and its tests only. ArmadaWindDown.sol (tracked by arp-93a) is out of scope.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "ArmadaToken.sol does not declare windDownContractSet or windDownContract, does not define setWindDownContract, and has no caller check on windDownContract."
+    },
+    {
+      "id": "c2",
+      "text": "ArmadaToken.sol no longer says \"wind-down\" anywhere, including the line 3 header comment \"Transfer-restricted until wind-down\"."
+    },
+    {
+      "id": "c3",
+      "text": "setTransferable in ArmadaToken.sol is still gated, and only msg.sender == timelock is allowed to call it."
+    },
+    {
+      "id": "c4",
+      "text": "ArmadaToken.sol does not define addToWhitelist, so the allowlist accepts no new address after deployment."
+    },
+    {
+      "id": "c5",
+      "text": "docs/tasks/G1-arm-shares-token.md S3 no longer orders a forge test that adds a fourth address through addToWhitelist after deployment."
+    },
+    {
+      "id": "c6",
+      "text": "A forge test shows that the transfer allowlist set at construction cannot grow after deployment, even when the timelock tries."
+    }
+  ],
+  "goal": "ArmadaToken.sol has no wind-down contract, no wind-down setter, and no caller gated on a wind-down contract. Its transfer allowlist is fixed at construction.",
+  "acceptance_criteria": [
+    "The token contract has no wind-down contract variables, no wind-down setter, and no check on a wind-down caller.",
+    "The token contract file does not mention wind-down in any form, including its header comment.",
+    "The token contract still restricts the transfer switch so that only the timelock may use it.",
+    "The token contract has no function that adds an address to the allowlist after deployment.",
+    "The G1 task brief no longer asks for a test that adds an address with addToWhitelist.",
+    "A test shows that the timelock cannot add a new address to the allowlist after the token is deployed, and the check catches deliberate code breakage."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The token contract has no wind-down contract variables, no wind-down setter, and no check on a wind-down caller."
+    },
+    {
+      "id": "c2",
+      "text": "The token contract file does not mention wind-down in any form, including its header comment."
+    },
+    {
+      "id": "c3",
+      "text": "The token contract still restricts the transfer switch so that only the timelock may use it."
+    },
+    {
+      "id": "c4",
+      "text": "The token contract has no function that adds an address to the allowlist after deployment."
+    },
+    {
+      "id": "c5",
+      "text": "The G1 task brief no longer asks for a test that adds an address with addToWhitelist."
+    },
+    {
+      "id": "c6",
+      "text": "A test shows that the timelock cannot add a new address to the allowlist after the token is deployed, and the check catches deliberate code breakage."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "grep_absent",
+      "description": "The token contract has no wind-down contract variables, no wind-down setter, and no check on a wind-down caller.",
+      "proves": "The wind-down contract concept is gone from the token code.",
+      "restatement_clause_id": "c1",
+      "pattern": "windDownContract|windDownContractSet|setWindDownContract",
+      "files": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "clause_id": "c1"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The token contract file does not mention wind-down in any form, including its header comment.",
+      "proves": "No wind-down wording remains in the token file.",
+      "restatement_clause_id": "c2",
+      "pattern": "[Ww]ind-?[Dd]own",
+      "files": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "grep",
+      "description": "The token contract still restricts the transfer switch so that only the timelock may use it.",
+      "proves": "The timelock is still the gate for setTransferable.",
+      "restatement_clause_id": "c3",
+      "pattern": "msg\\.sender == timelock",
+      "files": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "clause_id": "c3"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The token contract has no function that adds an address to the allowlist after deployment.",
+      "proves": "The allowlist cannot grow after construction.",
+      "restatement_clause_id": "c4",
+      "pattern": "function\\s+addToWhitelist",
+      "files": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "clause_id": "c4"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The G1 task brief no longer asks for a test that adds an address with addToWhitelist.",
+      "proves": "The brief agrees with the fixed-at-construction allowlist decision.",
+      "restatement_clause_id": "c5",
+      "pattern": "addToWhitelist",
+      "files": [
+        "docs/tasks/G1-arm-shares-token.md"
+      ],
+      "clause_id": "c5"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "description": "A test shows that the timelock cannot add a new address to the allowlist after the token is deployed, and the check catches deliberate code breakage.",
+      "proves": "The allowlist stays fixed at the addresses given at construction.",
+      "restatement_clause_id": "c6",
+      "test": "test_allowlistFixedAtConstruction",
+      "mutation_targets": [
+        "contracts/governance/ArmadaToken.sol"
+      ],
+      "clause_id": "c6"
+    }
+  ]
+}
