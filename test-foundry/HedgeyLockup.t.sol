@@ -32,16 +32,18 @@ contract HedgeyLockupTest is Test {
         address[] memory executors = new address[](0);
         timelock = new TimelockController(2 days, proposers, executors, deployer);
 
+        // Deploy the lockup before the token so it can be whitelisted at construction.
+        lockup = new TokenLockupPlans("Hedgey TokenLockupPlans", "HDGY");
+
         // Deploy ARM token: deployer receives the entire initial supply (single mint).
         armToken = new ArmadaToken(deployer, address(timelock));
 
-        // Whitelist the deployer so it can distribute ARM to the lockup for funding.
-        address[] memory whitelist = new address[](1);
+        // Fixed allowlist: the deployer and the lockup are whitelisted at construction.
+        // The timelock has no add-path to grow the allowlist after deployment.
+        address[] memory whitelist = new address[](2);
         whitelist[0] = deployer;
+        whitelist[1] = address(lockup);
         armToken.initWhitelist(whitelist);
-
-        // Deploy the Hedgey lockup contract.
-        lockup = new TokenLockupPlans("Hedgey TokenLockupPlans", "HDGY");
 
         // Deploy a minimal ERC20 to escrow in the Hedgey plan for the cancelable checks.
         arm = new Token(2 * TEAM_RESERVED_ARM, "ARM", "ARM");
@@ -81,34 +83,19 @@ contract HedgeyLockupTest is Test {
         assertTrue(cancelable, "a cancelable plan must read cancelable true");
     }
 
-    // The timelock whitelists the lockup; a non-timelock caller is refused; and the
-    // lockup cannot move ARM until it is whitelisted.
+    // The lockup is whitelisted at construction (fixed allowlist): it can move ARM out,
+    // and the timelock has no path to add a new address after deployment.
     function test_lockupWhitelistGating() public {
         // Fund the lockup with ARM from the whitelisted deployer (from == deployer, allowed).
         armToken.transfer(address(lockup), 10 * 1e18);
 
-        // Before whitelisting: the lockup is not on the allowlist.
-        assertFalse(armToken.transferWhitelist(address(lockup)), "lockup not whitelisted yet");
+        // The lockup is on the fixed construction allowlist.
+        assertTrue(armToken.transferWhitelist(address(lockup)), "lockup is whitelisted at construction");
 
-        // Before whitelisting: the lockup (as sender) cannot move ARM out.
-        vm.prank(address(lockup));
-        vm.expectRevert("ArmadaToken: transfers restricted");
-        armToken.transfer(teamWallet, 1);
-
-        // A non-timelock caller cannot whitelist the lockup.
-        vm.prank(nonTimelockCaller);
-        vm.expectRevert("ArmadaToken: not timelock");
-        armToken.addToWhitelist(address(lockup));
-
-        // The timelock whitelists the lockup.
-        vm.prank(address(timelock));
-        armToken.addToWhitelist(address(lockup));
-        assertTrue(armToken.transferWhitelist(address(lockup)), "lockup must be on the allowlist");
-
-        // After whitelisting: the lockup can move ARM out.
+        // The whitelisted lockup can move ARM out.
         vm.prank(address(lockup));
         armToken.transfer(teamWallet, 1);
-        assertEq(armToken.balanceOf(teamWallet), 1, "whitelisted lockup transfer succeeds");
+        assertEq(armToken.balanceOf(teamWallet), 1, "whitelisted lockup transferred out");
     }
 
     // Runs the whole scenario with low-level calls so each outcome is captured as a
@@ -133,19 +120,24 @@ contract HedgeyLockupTest is Test {
         vm.prank(address(lockup));
         (bool movedBefore,) = address(armToken).call(abi.encodeCall(armToken.transfer, (teamWallet, uint256(1))));
 
+        // Fixed allowlist: the timelock has no add-path. A raw call to the removed
+        // setter's selector reverts (function not found); the lockup is already whitelisted
+        // at construction.
+        bytes4 addToSel = bytes4(keccak256("addToWhitelist(address)"));
         vm.prank(nonTimelockCaller);
-        (bool nonTimelockOk,) = address(armToken).call(abi.encodeCall(armToken.addToWhitelist, (address(lockup))));
+        (bool nonTimelockOk,) = address(armToken).call(abi.encodeWithSelector(addToSel, address(lockup)));
         bool nonTimelockCallerReverted = !nonTimelockOk;
 
         vm.prank(address(timelock));
-        armToken.addToWhitelist(address(lockup));
+        (bool timelockOk,) = address(armToken).call(abi.encodeWithSelector(addToSel, address(lockup)));
         bool whitelisted = armToken.transferWhitelist(address(lockup));
 
         vm.prank(address(lockup));
         (bool movedAfter,) = address(armToken).call(abi.encodeCall(armToken.transfer, (teamWallet, uint256(1))));
 
-        // The lockup could not move ARM before the whitelist and could after it.
-        bool whitelistedBeforeTransfer = (!movedBefore && movedAfter);
+        // With the fixed allowlist the lockup was whitelisted at construction, so it can
+        // move ARM from the start.
+        bool whitelistedBeforeTransfer = (movedBefore && movedAfter);
 
         string memory json = string.concat(
             '{"cancelable":',

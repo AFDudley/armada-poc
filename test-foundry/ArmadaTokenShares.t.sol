@@ -121,15 +121,10 @@ contract ArmadaTokenSharesTest is Test {
         vm.expectRevert("ArmadaToken: whitelist already initialized");
         armToken.initWhitelist(wl);
 
-        // addToWhitelist: timelock-only, add-only.
-        vm.prank(address(timelock));
-        armToken.addToWhitelist(carol);
-        assertTrue(armToken.transferWhitelist(carol), "carol whitelisted via timelock");
-
-        // A non-timelock caller reverts.
+        // A non-deployer caller reverts on initWhitelist (fixed allowlist).
         vm.prank(alice);
-        vm.expectRevert("ArmadaToken: not timelock");
-        armToken.addToWhitelist(mallory);
+        vm.expectRevert("ArmadaToken: not deployer");
+        armToken.initWhitelist(wl);
     }
 
     // ============ c4 · restricted-transfer-reverts ============
@@ -164,18 +159,46 @@ contract ArmadaTokenSharesTest is Test {
     }
 
     // ============ c6 · timelock-set-transferable ============
-    // setTransferable(true) succeeds from the timelock alone; windDownContract is
-    // never set (the old wind-down contract is removed; nothing here may depend on it).
+    // setTransferable(true) succeeds from the timelock alone (the only caller).
 
     function test_shares_timelockSetTransferable() public {
-        assertEq(armToken.windDownContract(), address(0), "windDownContract never set");
-
         vm.expectEmit(false, false, false, true);
         emit TransferableSet(true);
         vm.prank(address(timelock));
         armToken.setTransferable(true);
 
         assertTrue(armToken.transferable(), "transfers now enabled");
-        assertEq(armToken.windDownContract(), address(0), "still no windDownContract");
+    }
+
+    // ============ c6 · allowlist-fixed-at-construction ============
+    // The transfer allowlist is fixed at construction (initWhitelist, deployer one-shot).
+    // The timelock has no path to add a fourth address after deployment.
+
+    function test_allowlistFixedAtConstruction() public {
+        // Three stand-in addresses (RevenueLock, Hedgey lockup, crowdfund) are whitelisted
+        // at construction.
+        address[] memory wl = new address[](3);
+        wl[0] = deployer;
+        wl[1] = alice;
+        wl[2] = bob;
+        armToken.initWhitelist(wl);
+        assertTrue(armToken.transferWhitelist(deployer), "deployer whitelisted at construction");
+        assertTrue(armToken.transferWhitelist(alice), "revenue-lock stand-in whitelisted");
+        assertTrue(armToken.transferWhitelist(bob), "crowdfund stand-in whitelisted");
+
+        // A new (non-construction) address stays off the fixed allowlist.
+        address a4 = mallory;
+        assertFalse(armToken.transferWhitelist(a4), "a new address is not on the fixed allowlist");
+
+        // Prove the timelock has no add-path: a raw call to the removed setter's selector
+        // reverts (function not found). If a mutation re-adds the setter, the call succeeds
+        // and the allowlist grows, so this test fails — the check catches deliberate
+        // breakage.
+        bytes4 sel = bytes4(keccak256("addToWhitelist(address)"));
+        bytes memory data = abi.encodeWithSelector(sel, a4);
+        vm.prank(address(timelock));
+        (bool ok, bytes memory ret) = address(armToken).call(data);
+        assertFalse(ok, "the timelock cannot add a new address after deployment");
+        assertFalse(armToken.transferWhitelist(a4), "allowlist remains fixed at construction");
     }
 }

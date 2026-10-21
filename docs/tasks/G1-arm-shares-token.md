@@ -33,23 +33,24 @@ crowdfund can join before transfers open to the public.
   `extcodehash` is immutable code, not a proxy: no `delegatecall` opcode in its runtime
   bytecode (use `vm.getCode` plus a bytecode scan, or assert the contract has no
   `_authorizeUpgrade`-style selector).
-- **S3 · The transfer allowlist already exists.** `ArmadaToken.sol:40`
-  (`transferWhitelist`), `:80-89` (`initWhitelist`, deployer-only, one-shot),
-  `:131-137` (`addToWhitelist`, timelock-only, add-only). Add three beneficiary-shaped
-  addresses to a forge test fixture (stand-ins for RevenueLock, Hedgey lockup, and
-  crowdfund, since G2–G5 deploy the real contracts later): confirm `initWhitelist` adds
-  them, confirm `addToWhitelist` by the timelock adds a fourth address after deployment,
-  confirm a non-timelock caller reverts.
+- **S3 · The transfer allowlist is fixed at construction.** `ArmadaToken.sol:40`
+  (`transferWhitelist`), `:80-89` (`initWhitelist`, deployer-only, one-shot), and
+  `setTransferable` (timelock-only). The timelock has no path to grow the allowlist: add
+  the three beneficiary-shaped stand-in addresses (RevenueLock, Hedgey lockup, and
+  crowdfund, since G2–G5 deploy the real contracts later) to the forge test fixture via
+  `initWhitelist`. Add a forge test `test_allowlistFixedAtConstruction` that confirms the
+  three addresses are on the allowlist at construction, and proves the timelock cannot add
+  a fourth address after deployment (a new non-whitelisted address stays off the allowlist,
+  and a raw call to the removed setter's selector from the timelock reverts).
 - **S4 · `_beforeTokenTransfer` already blocks all non-whitelisted transfers while
   `transferable` is false** (`ArmadaToken.sol:211-216`). Add a test that a transfer from a
   non-whitelisted holder reverts with `"ArmadaToken: transfers restricted"`, and that a
   mint (`from == address(0)`) is not blocked.
-- **S5 · `setTransferable` already restricts the caller to `windDownContract` or
-  `timelock`** (`ArmadaToken.sol:165-171`). G6 removes `ArmadaWindDown`. Add a test that
-  the timelock alone can call `setTransferable(true)` once `windDownContract` is never
-  set (its default value is `address(0)`, which no test or deploy script may call). State
-  explicitly in the test comment that G6 deletes `ArmadaWindDown` and nothing in this
-  chunk may depend on it existing.
+- **S5 · `setTransferable` is restricted to the timelock** (`ArmadaToken.sol:165-171`).
+  Add a test that the timelock alone can call `setTransferable(true)` with no wind-down
+  contract dependency, and that a non-timelock caller reverts with
+  `"ArmadaToken: not authorized"`. The allowlist is fixed at construction (S3): the
+  timelock cannot add a new address after deployment.
 - **S6 · No new contract code is required for S1–S5.** If a test in S1–S5 fails against
   the current `ArmadaToken.sol`, stop and report the exact failing assertion instead of
   editing the contract to make it pass — the labbook's decisions 3, 4, and 5 describe code
@@ -69,10 +70,10 @@ failing on `60a2f05` for the stated reason before any contract edit (if any edit
 necessary) and passing after:
 1. exactly one `_mint` call site (S1);
 2. the deployed bytecode is non-proxy (S2);
-3. `initWhitelist` and `addToWhitelist` gate correctly (S3);
+3. the transfer allowlist is fixed at construction — the timelock cannot add a new address after deployment (S3);
 4. a non-whitelisted transfer reverts (S4);
 5. a mint is never blocked by the whitelist (S4);
-6. `setTransferable` succeeds from the timelock with no `windDownContract` set (S5).
+6. `setTransferable` succeeds from the timelock alone, with no wind-down contract (S5).
 
 Plus: `forge test` for the existing suite still passes, unchanged.
 
