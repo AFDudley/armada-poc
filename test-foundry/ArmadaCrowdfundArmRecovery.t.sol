@@ -138,18 +138,25 @@ contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy {
         // Bound to range from MAX_SALE to 10M tokens (loadArm requires >= MAX_SALE)
         funding = bound(funding, 1_800_000 * 1e18, 10_000_000 * 1e18);
 
-        // Deploy fresh crowdfund with fuzzed funding
+        // Fixed allowlist: deploy a fresh token, then a fresh crowdfund pointing to it,
+        // and whitelist the crowdfund at construction — the timelock has no path to add
+        // it later.
+        ArmadaToken fuzzToken = new ArmadaToken(admin, admin);
         ArmadaCrowdfund fuzzCrowdfund = new ArmadaCrowdfund(
             address(usdc),
-            address(armToken),
+            address(fuzzToken),
             treasury,
             admin,
             admin, // securityCouncil
             block.timestamp,
             address(pool)
         );
-        armToken.addToWhitelist(address(fuzzCrowdfund));
-        armToken.transfer(address(fuzzCrowdfund), funding);
+        address[] memory wl = new address[](2);
+        wl[0] = admin;
+        wl[1] = address(fuzzCrowdfund);
+        fuzzToken.initWhitelist(wl);
+
+        fuzzToken.transfer(address(fuzzCrowdfund), funding);
         fuzzCrowdfund.loadArm();
 
         address[] memory seeds = new address[](1);
@@ -160,9 +167,9 @@ contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy {
         fuzzCrowdfund.cancel();
 
         // Recover
-        uint256 treasuryBefore = armToken.balanceOf(treasury);
+        uint256 treasuryBefore = fuzzToken.balanceOf(treasury);
         fuzzCrowdfund.withdrawUnallocatedArm();
-        uint256 recovered = armToken.balanceOf(treasury) - treasuryBefore;
+        uint256 recovered = fuzzToken.balanceOf(treasury) - treasuryBefore;
 
         assertEq(recovered, funding, "should recover exact funding amount");
     }
