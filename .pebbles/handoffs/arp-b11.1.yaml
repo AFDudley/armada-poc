@@ -1,0 +1,144 @@
+status: completed
+pebble_id: arp-b11.1
+summary: >-
+  Added test-foundry/HubPoolOwnerGuard.t.sol (PoolOwnerAuthorityTest) proving the four spec-named properties of the Hub PrivacyPool: no upgradeTo/upgradeToAndCall entry point (c1), owner set once in initialize and not the governor/treasury/wind-down (c2), owner-only setVerificationKey with non-owner reverts and owner call stores the key (c3), and the owner key path kept with testing mode off (c4). Verified with `forge test --match-contract PoolOwnerAuthorityTest` (4/4 pass) and the full forge suite (487 pass, 0 fail). Mutation sanity: mutating the router's owner assignment (PrivacyPool.sol) or the verifier module's gate (VerifierModule.sol) turns the tests RED, so the suite catches single-operator mutations in its targets. Only the test file is added; the pool contracts are unchanged (issue #349: setVerificationKey remains owner-callable).
+cost: ~40k tokens
+commits:
+- "94aa0a29"
+files_changed:
+- test-foundry/HubPoolOwnerGuard.t.sol
+tests_added:
+- test-foundry/HubPoolOwnerGuard.t.sol
+verify_transcript:
+  hooks:
+  - name: New source directory carries its CLAUDE.md
+    outcome: passed
+    duration_s: 1
+  - name: Refuse a direct commit on main; reroute it to a worker branch
+    outcome: passed
+    duration_s: 1
+  - name: Anvil address / secrets / .env / beneficiary-label safety checks
+    outcome: passed
+    duration_s: 1
+  - name: trim trailing whitespace
+    outcome: passed
+    duration_s: 1
+  - name: fix end of files
+    outcome: passed
+    duration_s: 1
+  - name: check yaml
+    outcome: skipped
+    duration_s: 0
+  - name: check for added large files
+    outcome: passed
+    duration_s: 1
+  - name: check for merge conflicts
+    outcome: passed
+    duration_s: 0
+  - name: check for case conflicts
+    outcome: passed
+    duration_s: 0
+  - name: mixed line ending
+    outcome: passed
+    duration_s: 0
+  - name: eslint
+    outcome: skipped
+    duration_s: 0
+  - name: prettier
+    outcome: skipped
+    duration_s: 0
+  - name: 'Commit message carries a Tested-Behavior: or TDD-Exempt: trailer'
+    outcome: passed
+    duration_s: 0
+  - name: Subtree-path edits carry a git-subtree-dir trailer
+    outcome: passed
+    duration_s: 0
+  - name: Stamp every commit with the session that produced it
+    outcome: passed
+    duration_s: 0
+  - name: forge fmt
+    outcome: passed
+    duration_s: 2
+e2e_gate:
+  spec: contracts/specs/derived-arp-b11.1.spec.json
+  command: forge test --match-contract PoolOwnerAuthorityTest
+  result: passed
+  ran_at_sha: "94aa0a29"
+  mocks_in_path: false
+discrimination:
+  - mechanism: mutation_kill
+    oracle: forge test --match-contract PoolOwnerAuthorityTest (the e2e_gate command)
+    target: 'contracts/privacy-pool/PrivacyPool.sol line 118: `owner = _owner;`'
+    perturbation: Replaced the pool router's owner assignment `owner = _owner;` with `owner = address(0x10A1);` (the governor) in the committed file, then re-ran the e2e_gate command
+    took:
+      applied:
+        observable: line 118 of contracts/privacy-pool/PrivacyPool.sol, re-read after the edit
+        moved:
+        - owner = _owner;
+        - owner = address(0x10A1);
+      observed:
+        observable: exit code of the e2e_gate command
+        moved:
+        - exit 0 (4 passed)
+        - exit 1 (4 failing)
+    assertions_fired:
+      - assertion: test_PoolOwnerAuthority_OwnerSetOnceNotDao fails when the owner no longer equals the initialize owner
+        moved:
+        - test_PoolOwnerAuthority_OwnerSetOnceNotDao passed (owner equals initialize owner)
+        - 'test_PoolOwnerAuthority_OwnerSetOnceNotDao failed: ''c2: pool owner must equal the initialize owner'''
+      - assertion: test_PoolOwnerAuthority_OnlyOwnerSetsVerificationKey fails when the owner address changed
+        moved:
+        - owner's setVerificationKey succeeds; stored key reads back equal
+        - 'FAIL: PrivacyPool: Only owner'
+    pinned_at:
+      - test-foundry/HubPoolOwnerGuard.t.sol
+      - contracts/privacy-pool/PrivacyPool.sol
+    exit_code_before: 0
+    exit_code_after: 1
+    reverted: restored_and_verified
+    negative_control:
+      variant: same e2e_gate command run on the unperturbed committed tree — the arm that must stay green
+      applied:
+        observable: line 118 of contracts/privacy-pool/PrivacyPool.sol, re-read after reverting
+        moved:
+        - owner = _owner;
+        - owner = _owner; (re-read on the unperturbed control run)
+      observable: exit code of the e2e_gate command
+      unmoved: 0 (4/4 pass)
+      exit_code: 0
+  - mechanism: mutation_kill
+    oracle: forge test --match-contract PoolOwnerAuthorityTest (the e2e_gate command)
+    target: 'contracts/privacy-pool/modules/VerifierModule.sol line 42: require(msg.sender == owner, "VerifierModule: Only owner")'
+    perturbation: Replaced the verifier module's gate `require(msg.sender == owner)` with `require(msg.sender == address(0xBAD)` in the committed module, then re-ran the e2e_gate command
+    took:
+      applied:
+        observable: line 42 of contracts/privacy-pool/modules/VerifierModule.sol, re-read after the edit
+        moved:
+        - 'require(msg.sender == owner, "VerifierModule: Only owner");'
+        - 'require(msg.sender == address(0xBAD), "VerifierModule: Only owner");'
+      observed:
+        observable: exit code of the e2e_gate command
+        moved:
+        - exit 0 (4 passed)
+        - exit 1 (4 failed)
+    assertions_fired:
+      - assertion: test_PoolOwnerAuthority_OnlyOwnerSetsVerificationKey fails when the verifier gate no longer checks the owner
+        moved:
+        - owner's setVerificationKey succeeds; stored key reads back equal
+        - 'FAIL: VerifierModule: Only owner'
+    pinned_at:
+      - test-foundry/HubPoolOwnerGuard.t.sol
+      - contracts/privacy-pool/modules/VerifierModule.sol
+    exit_code_before: 0
+    exit_code_after: 1
+    reverted: restored_and_verified
+    negative_control:
+      variant: same e2e_gate command run on the unperturbed committed tree — the arm that must stay green
+      applied:
+        observable: line 42 of contracts/privacy-pool/modules/VerifierModule.sol, re-read after reverting
+        moved:
+        - 'require(msg.sender == owner, "VerifierModule: Only owner");'
+        - 'require(msg.sender == owner, "VerifierModule: Only owner"); (re-read on the unperturbed control run)'
+      observable: exit code of the e2e_gate command
+      unmoved: 0 (4/4 pass)
+      exit_code: 0
