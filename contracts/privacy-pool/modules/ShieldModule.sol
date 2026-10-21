@@ -69,6 +69,9 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
             // plaintext the pool just hashed into insertionLeaves[i], so the registry and
             // the running total rest on a value the pool itself computed.
             preimageOf[insertionLeaves[i]] = commitments[i];
+            // arp-caf: record the held value of the pool-owned note at (npk, token), so
+            // the ShieldedRagequit payout base (the note's value) is observable on-chain.
+            _ownedNoteValues[commitments[i].npk][commitments[i].token.tokenAddress] = uint256(commitments[i].value);
             _recognizeFee(commitments[i], insertionLeaves[i]);
 
             // Store ciphertext for event
@@ -134,6 +137,7 @@ contract ShieldModule is PrivacyPoolStorage, IShieldModule {
             insertionLeaves[i] = _hashCommitment(adjustedPreimage);
             // P2b: registry + fee recognition for cross-chain shield outputs, as in shield().
             preimageOf[insertionLeaves[i]] = adjustedPreimage;
+            // arp-caf: record the held value of the pool-owned note at (npk, token).
             _recognizeFee(adjustedPreimage, insertionLeaves[i]);
         }
 

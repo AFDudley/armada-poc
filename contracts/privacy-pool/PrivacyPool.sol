@@ -601,6 +601,16 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    /**
+     * @notice The value held in the pool-owned note for (npk, token) (arp-caf).
+     * @dev The ShieldedRagequit payout is computed from this held value, not the
+     *      Safe's public ERC-20 balance. The map is maintained by the shield paths and
+     *      the contract-owned outputs (TransactModule.transactOwned).
+     */
+    function ownedNoteValue(bytes32 npk, address tokenAddr) external view returns (uint256) {
+        return _ownedNoteValues[npk][tokenAddr];
+    }
+
     // MERKLE MODULE PROXIED FUNCTIONS
     // ══════════════════════════════════════════════════════════════════════════
 

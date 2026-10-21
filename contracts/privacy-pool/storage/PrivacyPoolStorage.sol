@@ -247,6 +247,12 @@ abstract contract PrivacyPoolStorage {
     ///         note's token and value from its commitment with no off-chain index.
     mapping(bytes32 => CommitmentPreimage) public preimageOf;
 
+    /// @notice The value held in the pool-owned note for (npk, token) (arp-caf).
+    /// @dev The ShieldedRagequit payout is computed from this held value, not the Safe's
+    ///      public ERC-20 balance. The shield paths (ShieldModule) and the contract-owned
+    ///      outputs (TransactModule.transactOwned) maintain this map.
+    mapping(bytes32 => mapping(address => uint256)) internal _ownedNoteValues;
+
     /// @notice Verification keys for the owned circuit shapes, kept disjoint from
     ///         `verificationKeys` so a plain-shape proof can never verify against an
     ///         owned-shape key or the reverse: nullifierCount -> commitmentCount ->

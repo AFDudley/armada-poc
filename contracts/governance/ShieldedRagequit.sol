@@ -24,6 +24,7 @@ import {
     SNARK_SCALAR_FIELD
 } from "../privacy-pool/types/PoolTypes.sol";
 import {PoseidonT4} from "../privacy-pool/types/PoseidonLibs.sol";
+import "forge-std/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -90,10 +91,14 @@ contract ShieldedRagequit {
 
         for (uint256 i = 0; i < tokens.length; i++) {
             address tokenAddr = tokens[i];
-            IERC20 token = IERC20(tokenAddr);
-            uint256 safeBal = token.balanceOf(address(safe));
-            // S4: never pay more than burned/totalSupply * the Safe's balance of this token.
-            uint256 payout = armAmount * safeBal / armToken.totalSupply();
+            // arp-caf: the payout base is the value of the Safe-owned pool note
+            // (observed on-chain via the pool's ownedNoteValue view), NOT the Safe's public
+            // ERC-20 balance. A raw transfer straight to the Safe must not change the payout.
+            bytes32 safeNpk = bytes32(uint256(uint160(address(safe))));
+            uint256 noteValue = pool.ownedNoteValue(safeNpk, tokenAddr);
+            console.log("DEBUG contract noteValue", noteValue);
+            // S4: never pay more than burned/totalSupply * the owned note's value.
+            uint256 payout = armAmount * noteValue / armToken.totalSupply();
             payouts[i] = payout;
 
             txns[i] = _buildOwnedTxn(tokenAddr, npk, payout);
