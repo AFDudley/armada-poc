@@ -9,7 +9,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 GOV_MANIFEST="deployments/governance-hub.json"
-GOV_DOC="GOVERNANCE.md"
+GOV_DOC="specs/GOVERNANCE.md"
 VENDORED_LIBS=(lib/baal lib/safe-contracts lib/hedgey)
 LOCK_SOL="contracts/governance/RevenueLock.sol"
 

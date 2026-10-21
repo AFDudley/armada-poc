@@ -8,8 +8,8 @@ treasury. This document describes the contracts that remain.
 Baal is the DAO. It holds the proposals, the votes, and the execution. ARM is Baal's
 shares token (see ARM_TOKEN.md): one ARM is one vote.
 
-The Gnosis Safe is the treasury. The Safe holds every protocol asset. Baal is the Safe's
-sole owner, and its threshold is one. No human is a Safe owner. A treasury movement is an
+The Gnosis Safe is the treasury. The Safe holds every protocol asset.
+Baal is the Safe's sole owner, and its threshold is one. No human is a Safe owner. A treasury movement is an
 ordinary Baal proposal that Baal executes through the Safe. No other treasury role
 or gate contract exists.
 
