@@ -208,7 +208,9 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy {
 
         pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         ArmadaCrowdfund cf = new ArmadaCrowdfund(
-            address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, address(pool)
+            address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, 
+            1814400,  // 21 days (production)
+            address(pool)
         );
         maliciousArm.mint(address(cf), ARM_FUNDING);
         cf.loadArm();
@@ -277,7 +279,9 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy {
 
         pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         ArmadaCrowdfund cf = new ArmadaCrowdfund(
-            address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, address(pool)
+            address(usdc), address(maliciousArm), treasury, admin, admin, block.timestamp, 
+            1814400,  // 21 days (production)
+            address(pool)
         );
         maliciousArm.mint(address(cf), ARM_FUNDING);
         cf.loadArm();
@@ -338,7 +342,9 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy {
 
         pool2 = _deployPool(address(maliciousUsdc), treasury, address(this), bytes32(0));
         ArmadaCrowdfund cf = new ArmadaCrowdfund(
-            address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool2)
+            address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, 
+            1814400,  // 21 days (production)
+            address(pool2)
         );
 
         armToken.transfer(address(cf), ARM_FUNDING);
@@ -398,7 +404,9 @@ contract CrowdfundReentrancyTest is Test, CrowdfundPoolDeploy {
         MaliciousERC20 maliciousUsdc = new MaliciousERC20("Bad USDC", "BUSDC", 6);
 
         ArmadaCrowdfund cf = new ArmadaCrowdfund(
-            address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool2)
+            address(maliciousUsdc), address(armToken), treasury, admin, admin, block.timestamp, 
+            1814400,  // 21 days (production)
+            address(pool2)
         );
 
         armToken.transfer(address(cf), ARM_FUNDING);

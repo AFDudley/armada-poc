@@ -200,6 +200,7 @@ async function main() {
     launchTeamAddress,
     securityCouncilAddress,
     openTimestamp,
+    config.crowdfundWindowDuration,
     poolAddress,
     nm.override(),
   );

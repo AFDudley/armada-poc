@@ -40,6 +40,7 @@ contract ArmadaCrowdfundRefundModeTest is Test, CrowdfundPoolDeploy {
             admin,
             admin, // securityCouncil
             block.timestamp,
+            1814400,  // 21 days (production)
             address(pool)
         );
 
@@ -232,7 +233,9 @@ contract ArmadaCrowdfundRefundModeTest is Test, CrowdfundPoolDeploy {
     function test_refundMode_canHappenAfterExpansion() public {
         // Deploy a fresh crowdfund with 100 seeds to reach ELASTIC_TRIGGER
         ArmadaCrowdfund cf2 = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, 
+            1814400,  // 21 days (production)
+            address(pool)
         );
         armToken.transfer(address(cf2), ARM_FUNDING);
         cf2.loadArm();

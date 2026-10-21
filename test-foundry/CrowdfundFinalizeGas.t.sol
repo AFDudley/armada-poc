@@ -105,7 +105,9 @@ contract CrowdfundFinalizeGasTest is Test, CrowdfundPoolDeploy {
     function _deploy() internal returns (ArmadaCrowdfund cf) {
         pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         cf = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, 
+            1814400,  // 21 days (production)
+            address(pool)
         );
         armToken.transfer(address(cf), ARM_FUNDING);
         cf.loadArm();

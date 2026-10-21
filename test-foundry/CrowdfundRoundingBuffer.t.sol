@@ -32,7 +32,9 @@ contract CrowdfundRoundingBufferTest is Test, CrowdfundPoolDeploy {
         armToken = new ArmadaToken(admin, admin);
         pool = _deployPool(address(usdc), treasury, address(this), SAFE_NPK);
         crowdfund = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, 
+            1814400,  // 21 days (production)
+            address(pool)
         );
 
         address[] memory wl = new address[](2);

@@ -51,7 +51,8 @@ contract CrowdfundMulticallTest is Test, CrowdfundPoolDeploy {
             treasury,
             admin, // launchTeam
             admin, // securityCouncil
-            block.timestamp, // window opens immediately
+            block.timestamp, // window opens immediately,
+            1814400,  // 21 days (production)
             address(pool)
         );
 
@@ -487,7 +488,9 @@ contract CrowdfundMulticallTest is Test, CrowdfundPoolDeploy {
         ArmadaToken arm2 = new ArmadaToken(admin, admin);
         pool2 = _deployPool(address(usdc2), treasury, address(this), bytes32(0));
         ArmadaCrowdfund c2 =
-            new ArmadaCrowdfund(address(usdc2), address(arm2), treasury, admin, admin, futureOpen, address(pool2));
+            new ArmadaCrowdfund(address(usdc2), address(arm2), treasury, admin, admin, futureOpen,
+            1814400,  // 21 days (production)
+            address(pool2));
         address[] memory wl = new address[](2);
         wl[0] = admin;
         wl[1] = address(c2);

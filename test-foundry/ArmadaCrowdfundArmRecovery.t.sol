@@ -36,6 +36,7 @@ contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy {
             admin,
             admin, // securityCouncil
             block.timestamp,
+            1814400,  // 21 days (production)
             address(pool)
         );
 
@@ -107,6 +108,7 @@ contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy {
             admin,
             admin, // securityCouncil
             block.timestamp,
+            1814400,  // 21 days (production)
             address(pool)
         );
 
@@ -149,6 +151,7 @@ contract ArmadaCrowdfundArmRecoveryTest is Test, CrowdfundPoolDeploy {
             admin,
             admin, // securityCouncil
             block.timestamp,
+            1814400,  // 21 days (production)
             address(pool)
         );
         address[] memory wl = new address[](2);

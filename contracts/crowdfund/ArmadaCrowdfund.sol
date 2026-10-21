@@ -73,11 +73,9 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     uint16 public constant HOP1_MAX_INVITES_RECEIVED = 10;
     uint16 public constant HOP2_MAX_INVITES_RECEIVED = 20;
 
-    uint256 public constant WINDOW_DURATION = 21 days;
-    // The launch-team invite window spans the full commitment window. launchTeamInvite/addSeed use a
-    // strict `< launchTeamInviteEnd` check, so the launch team is closed out at exactly windowEnd while
-    // participant invite/commit (`<= windowEnd`) remain open for that final second.
-    uint256 public constant LAUNCH_TEAM_INVITE_PERIOD = WINDOW_DURATION;
+    // WINDOW_DURATION is no longer a constant: the active-window length is a constructor
+    // argument stored as an immutable (`windowDuration`), so the deployer chooses it (21 days in
+    // production, a short value on fixture nets).
     uint256 public constant CLAIM_DEADLINE_DURATION = 1095 days; // 3 years
     uint256 public constant MIN_COMMIT = 50 * 1e6; // $50 USDC minimum per commit
     // Per-hop invite stacking caps are stored in hopConfigs[].maxInvitesReceived (1, 10, 20)
@@ -118,6 +116,9 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
     uint256 public immutable windowStart;
     uint256 public immutable windowEnd;
     uint256 public immutable launchTeamInviteEnd;
+    /// @notice Active-window length in seconds; the deployer chooses it (21 days in production,
+    ///          a short value on fixture nets).
+    uint256 public immutable windowDuration;
 
     // Hop configuration (set in constructor)
     HopConfig[3] public hopConfigs;
@@ -189,7 +190,8 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
 
     // ============ Constructor ============
 
-    /// @param _openTimestamp When the 3-week active window begins (must be >= block.timestamp)
+    /// @param _openTimestamp When the active window begins (must be >= block.timestamp)
+    /// @param _windowDuration Active-window length in seconds; zero reverts (the 21-day default is now a deployer choice)
     constructor(
         address _usdc,
         address _armToken,
@@ -197,6 +199,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         address _launchTeam,
         address _securityCouncil,
         uint256 _openTimestamp,
+        uint256 _windowDuration,
         address _pool
     ) EIP712("ArmadaCrowdfund", "1") {
         require(_usdc != address(0), "ArmadaCrowdfund: zero usdc");
@@ -205,6 +208,7 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         require(_launchTeam != address(0), "ArmadaCrowdfund: zero launchTeam");
         require(_securityCouncil != address(0), "ArmadaCrowdfund: zero securityCouncil");
         require(_openTimestamp >= block.timestamp, "ArmadaCrowdfund: openTimestamp in past");
+        require(_windowDuration > 0, "ArmadaCrowdfund: zero duration");
         usdc = IERC20(_usdc);
         armToken = IERC20(_armToken);
         treasury = _treasury;
@@ -213,8 +217,9 @@ contract ArmadaCrowdfund is ReentrancyGuard, EIP712, Multicall {
         securityCouncil = _securityCouncil;
 
         windowStart = _openTimestamp;
-        windowEnd = _openTimestamp + WINDOW_DURATION;
-        launchTeamInviteEnd = _openTimestamp + LAUNCH_TEAM_INVITE_PERIOD;
+        windowDuration = _windowDuration;
+        windowEnd = _openTimestamp + _windowDuration;
+        launchTeamInviteEnd = _openTimestamp + _windowDuration;
         // phase defaults to Phase.Active (value 0)
 
         hopConfigs[0] = HopConfig({
