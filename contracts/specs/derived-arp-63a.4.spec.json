@@ -1,0 +1,199 @@
+{
+  "id": "derived-arp-63a.4",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. ArmadaCrowdfund takes the active-window duration as a constructor argument and stores it as an immutable, replacing the 21-day constant. LAUNCH_TEAM_INVITE_PERIOD (currently = WINDOW_DURATION) follows the same immutable. The constructor rejects a zero duration. The production deploy path passes 21 days, and a deploy check rejects any other value for a mainnet config (with a forge or script test of that check). The fixturenet deploy (the arn-d36 governance-stack harness) reads a short window from its config, so deploy -> commit -> finalize -> claim can complete within the 1800s gate. Every caller and test of the constructor is updated.\nWhat holds now? Describe the current, observed state. contracts/crowdfund/ArmadaCrowdfund.sol:76 declares WINDOW_DURATION = 21 days as a constant; :80 LAUNCH_TEAM_INVITE_PERIOD = WINDOW_DURATION (constant); windowEnd (:119) and launchTeamInviteEnd (:120) are immutable, set in the constructor as openTimestamp + the constant; :473 finalize() requires block.timestamp > windowEnd. A real geth+lighthouse fixturenet has no time-travel RPC, so finalize cannot run for 21 real days, which blocks the G7a gate (arn-da4). CLAIM_DEADLINE_DURATION (:81, 3 years) is a constant but an upper bound satisfied immediately at claim, so it is not a blocking wait. Baal votingPeriod/gracePeriod are set at summon (deploy-configurable, so the fixturenet summon can use short values), not contract constants.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. On the fixturenet, deploy ArmadaCrowdfund with a short window (e.g. 60s), commit, wait out the short window, finalize, claim -- all within 1800s. Read ArmadaCrowdfund.windowEnd and confirm it equals openTimestamp + the passed duration. Attempt a mainnet-config deploy with a non-21-day duration and confirm the deploy check rejects it. Deploy with a zero duration and confirm the constructor reverts.\nWhat constraints apply? State them in plain prose. Fund-moving Solidity: red-first forge tests. One file at a time (collision lesson). Production deploys MUST pass 21 days; a deploy check enforces 21 days for mainnet configs. The fixturenet short window is config-only, never the production value. Update every caller and test of the ArmadaCrowdfund constructor (deploy_crowdfund.ts, test-foundry, the governance-stack gate scripts).\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/crowdfund/ArmadaCrowdfund.sol (constructor, WINDOW_DURATION, LAUNCH_TEAM_INVITE_PERIOD); scripts/deploy_crowdfund.ts; test-foundry; env/gates/governance-stack (armada-nitro, after re-pin).\n\nDecomposed child: In contracts/crowdfund/ArmadaCrowdfund.sol, replace the constant WINDOW_DURATION = 21 days (line 76) with a value that the constructor takes as an argument and stores as an immutable. LAUNCH_TEAM_INVITE_PERIOD (line 80, currently = WINDOW_DURATION) follows the same immutable. windowEnd must equal openTimestamp + the passed duration. launchTeamInviteEnd must equal openTimestamp + the same passed duration. finalize() continues to require block.timestamp > windowEnd. The constructor reverts when the duration is zero. CLAIM_DEADLINE_DURATION (3 years) stays a constant. Fund-moving Solidity: write the forge tests red-first. The tests must prove three things: (1) windowEnd == openTimestamp + duration for a non-21-day duration, (2) the constructor reverts on a zero duration, (3) finalize reverts at windowEnd and succeeds after windowEnd for a short duration. Update every caller and test of the ArmadaCrowdfund constructor in this repo (test-foundry, Hardhat tests, scripts/deploy_crowdfund.ts) to pass the duration. Production callers pass 21 days. Edit one file at a time.",
+  "restatement": "The crowdfund commitment window length must stop being fixed at 21 days inside ArmadaCrowdfund. The deployer supplies the window length to the constructor, and the contract stores it as an immutable value in place of the constant WINDOW_DURATION = 21 days. The contract sets windowEnd to openTimestamp + the passed duration. The contract sets launchTeamInviteEnd to openTimestamp + the same passed duration, so LAUNCH_TEAM_INVITE_PERIOD follows the same immutable. The constructor rejects a zero duration. finalize() still requires block.timestamp > windowEnd, so a short window can finalize only after its end. CLAIM_DEADLINE_DURATION stays a 3-year (1095 days) constant. Every caller of the constructor in this repo (Foundry tests, Hardhat tests, scripts/deploy_crowdfund.ts and other scripts) passes the duration, and production callers pass 21 days. The forge tests for the new behavior are written red-first.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "windowEnd == openTimestamp + duration for a non-21-day duration passed to the ArmadaCrowdfund constructor; the passed duration replaces the constant WINDOW_DURATION = 21 days."
+    },
+    {
+      "id": "c2",
+      "text": "launchTeamInviteEnd == openTimestamp + the same passed duration (LAUNCH_TEAM_INVITE_PERIOD follows the same immutable)."
+    },
+    {
+      "id": "c3",
+      "text": "The ArmadaCrowdfund constructor reverts when the duration is zero."
+    },
+    {
+      "id": "c4",
+      "text": "For a short duration, finalize() reverts at block.timestamp == windowEnd and succeeds at a block.timestamp after windowEnd (finalize continues to require block.timestamp > windowEnd)."
+    },
+    {
+      "id": "c5",
+      "text": "CLAIM_DEADLINE_DURATION stays a constant equal to 1095 days (3 years), whatever window duration the constructor receives."
+    },
+    {
+      "id": "c6",
+      "text": "The production deployment through scripts/deploy_crowdfund.ts passes 21 days, so the deployed crowdfund has windowEnd - windowStart == 21 days (1814400 seconds)."
+    },
+    {
+      "id": "c7",
+      "text": "Every caller and test of the ArmadaCrowdfund constructor in this repo (test-foundry, Hardhat tests, scripts, tasks) passes the duration, so the Solidity and TypeScript code builds with the new constructor signature."
+    }
+  ],
+  "goal": "Make the ArmadaCrowdfund commitment window length a constructor argument stored as an immutable, with zero rejected and all callers updated.",
+  "acceptance_criteria": [
+    "A crowdfund deployed with a window length other than 21 days reports a window end exactly that length after the opening time, and the check catches every small deliberate fault put into the contract.",
+    "A crowdfund deployed with a window length other than 21 days reports a launch-team invite end exactly that length after the opening time.",
+    "An attempt to deploy a crowdfund with a window length of zero fails.",
+    "With a short window, an attempt to finalize at the exact window end fails, and an attempt one second later succeeds.",
+    "A crowdfund deployed with a short window still reports a claim deadline length of 1095 days.",
+    "A deployment run through the production crowdfund deploy flow on a local chain produces a crowdfund whose window and launch-team invite period each last 21 days (1814400 seconds).",
+    "The Foundry build, the Hardhat compile, and a TypeScript type check of the tests, scripts and tasks all finish without errors with the new crowdfund constructor."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "A crowdfund deployed with a window length other than 21 days reports a window end exactly that length after the opening time, and the check catches every small deliberate fault put into the contract."
+    },
+    {
+      "id": "c2",
+      "text": "A crowdfund deployed with a window length other than 21 days reports a launch-team invite end exactly that length after the opening time."
+    },
+    {
+      "id": "c3",
+      "text": "An attempt to deploy a crowdfund with a window length of zero fails."
+    },
+    {
+      "id": "c4",
+      "text": "With a short window, an attempt to finalize at the exact window end fails, and an attempt one second later succeeds."
+    },
+    {
+      "id": "c5",
+      "text": "A crowdfund deployed with a short window still reports a claim deadline length of 1095 days."
+    },
+    {
+      "id": "c6",
+      "text": "A deployment run through the production crowdfund deploy flow on a local chain produces a crowdfund whose window and launch-team invite period each last 21 days (1814400 seconds)."
+    },
+    {
+      "id": "c7",
+      "text": "The Foundry build, the Hardhat compile, and a TypeScript type check of the tests, scripts and tasks all finish without errors with the new crowdfund constructor."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c1",
+      "test": "test_WindowDuration_windowEndMatchesPassedDuration",
+      "description": "A crowdfund deployed with a window length other than 21 days reports a window end exactly that length after the opening time, and the check catches every small deliberate fault put into the contract.",
+      "proves": "The window end follows the length the deployer passes, not a fixed 21 days.",
+      "clause_id": "c1"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c2",
+      "test": "test_WindowDuration_launchTeamInviteEndMatchesPassedDuration",
+      "description": "A crowdfund deployed with a window length other than 21 days reports a launch-team invite end exactly that length after the opening time.",
+      "proves": "The launch-team invite period uses the same passed length as the commitment window.",
+      "clause_id": "c2"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c3",
+      "test": "test_WindowDuration_zeroDurationReverts",
+      "description": "An attempt to deploy a crowdfund with a window length of zero fails.",
+      "proves": "The contract rejects a zero window length at deploy time.",
+      "clause_id": "c3"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c4",
+      "test": "test_WindowDuration_finalizeOnlyAfterWindowEnd",
+      "description": "With a short window, an attempt to finalize at the exact window end fails, and an attempt one second later succeeds.",
+      "proves": "finalize() still requires the time to be strictly after the passed-length window end.",
+      "clause_id": "c4"
+    },
+    {
+      "type": "forge_mutation_gated_test",
+      "restatement_clause_id": "c5",
+      "test": "test_WindowDuration_claimDeadlineStaysThreeYears",
+      "description": "A crowdfund deployed with a short window still reports a claim deadline length of 1095 days.",
+      "proves": "The claim deadline stays a fixed 3-year value and does not follow the window length.",
+      "clause_id": "c5"
+    },
+    {
+      "type": "behavior",
+      "restatement_clause_id": "c6",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/report_deployed_crowdfund_window.sh",
+        "args": [],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "window_seconds",
+          "op": "eq",
+          "value": 1814400
+        },
+        {
+          "observe": "stdout_json",
+          "field": "launch_team_invite_seconds",
+          "op": "eq",
+          "value": 1814400
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 900,
+      "description": "A deployment run through the production crowdfund deploy flow on a local chain produces a crowdfund whose window and launch-team invite period each last 21 days (1814400 seconds).",
+      "proves": "Production deployment keeps the 21-day window after the change.",
+      "clause_id": "c6"
+    },
+    {
+      "type": "behavior",
+      "restatement_clause_id": "c7",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/verify_crowdfund_window_duration_callers.sh",
+        "args": [],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "forge_build_exit",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "hardhat_compile_exit",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "typescript_typecheck_exit",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 1800,
+      "description": "The Foundry build, the Hardhat compile, and a TypeScript type check of the tests, scripts and tasks all finish without errors with the new crowdfund constructor.",
+      "proves": "Every caller of the crowdfund constructor in the repo passes the new window-length argument.",
+      "clause_id": "c7"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/report_deployed_crowdfund_window.sh",
+    "scripts/verify_crowdfund_window_duration_callers.sh"
+  ]
+}
