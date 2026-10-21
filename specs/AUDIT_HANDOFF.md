@@ -243,7 +243,7 @@ armada-crowdfund-audit/
 - `CROWDFUND_ADDITIONS.md` — historical only, excluded
 - Frontend code — out of audit scope
 - ARM token contract — separate audit scope (if applicable)
-- Governance contracts — separate audit scope (see GOVERNANCE.md)
+- Governance contracts — separate audit scope (see specs/GOVERNANCE.md)
 
 **Notable inclusions** (documents auditors may not expect):
 - `PARAMETER_MANIFEST.md` — exact deployment values with decimal encodings; auditors should verify constructor args match this document

@@ -783,7 +783,7 @@ describe("RevenueLock max revenue increase per day", () => {
   }
 });
 
-// GOVERNANCE.md §Treasury Outflow Limits: 30-day rolling window; limit is the greater of the
+// specs/GOVERNANCE.md §Treasury Outflow Limits: 30-day rolling window; limit is the greater of the
 // absolute amount and the percentage of treasury balance; no floor (it is fixed at deploy).
 const SPEC_OUTFLOW = {
   usdc: {
@@ -812,7 +812,7 @@ describe("treasury outflow limits", () => {
 
   // WHY: initOutflowConfig is one-shot per token and its floor can never be lowered, so a
   // deploy that omits the OUTFLOW_* env must still install the spec limits, not looser ones.
-  it("defaults USDC, ARM and ETH to the GOVERNANCE.md spec values", () => {
+  it("defaults USDC, ARM and ETH to the specs/GOVERNANCE.md spec values", () => {
     const c = freshConfig({ DEPLOY_ENV: "local" }).getNetworkConfig();
     expect(c.outflowConfig).to.deep.equal(SPEC_OUTFLOW);
   });
@@ -853,7 +853,7 @@ describe("initial steward and USDC steward budget", () => {
     ).to.equal(undefined);
   });
 
-  // WHY: GOVERNANCE.md §Treasury Steward sets the launch budget at $60,000 per rolling 30 days;
+  // WHY: specs/GOVERNANCE.md §Treasury Steward sets the launch budget at $60,000 per rolling 30 days;
   // a configured steward must get exactly that budget when the budget env is omitted.
   it("defaults the budget to the $60,000 / 30-day spec value", () => {
     const c = freshConfig({
@@ -1004,7 +1004,7 @@ describe("committed mainnet.env", () => {
   });
 
   // WHY: the freeze sheet (PARAMETER_MANIFEST.md §8.2) reads the wind-down threshold from the
-  // committed template; it must state the $10,000 spec value (GOVERNANCE.md §Wind-Down), in
+  // committed template; it must state the $10,000 spec value (specs/GOVERNANCE.md §Wind-Down), in
   // whole USD (#550).
   it("sets the wind-down revenue threshold to the $10,000 spec value", () => {
     expect(MAINNET_ENV.WINDDOWN_REVENUE_THRESHOLD).to.equal("10000");
@@ -1012,7 +1012,7 @@ describe("committed mainnet.env", () => {
 
   // WHY: the launch freeze sheet reads the outflow limits from the committed template; it
   // must state the spec values explicitly rather than rely on code defaults (#348).
-  it("sets USDC, ARM and ETH outflow limits to the GOVERNANCE.md spec values", () => {
+  it("sets USDC, ARM and ETH outflow limits to the specs/GOVERNANCE.md spec values", () => {
     for (const token of ["USDC", "ARM", "ETH"]) {
       for (const key of ["WINDOW", "BPS", "ABSOLUTE", "FLOOR"]) {
         expect(MAINNET_ENV).to.have.property(`OUTFLOW_${token}_${key}`);
@@ -1031,7 +1031,7 @@ describe("committed mainnet.env", () => {
   });
 
   // WHY: the freeze sheet (PARAMETER_MANIFEST.md §8.2) reads the steward budget from the
-  // committed template; it must state the GOVERNANCE.md spec values explicitly (#222).
+  // committed template; it must state the specs/GOVERNANCE.md spec values explicitly (#222).
   it("sets the USDC steward budget to the $60,000 / 30-day spec value", () => {
     expect(MAINNET_ENV.STEWARD_BUDGET_USDC).to.equal("60000");
     expect(MAINNET_ENV.STEWARD_BUDGET_WINDOW).to.equal("2592000");

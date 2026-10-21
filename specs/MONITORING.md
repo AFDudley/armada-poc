@@ -543,7 +543,7 @@ Each alert must include:
 
 **What:** Alert if ARM balance of the deployment multisig (bootstrap holder) becomes non-zero at any point after the distribution transaction completes.
 
-**Why:** The bootstrap holder's ARM whitelist entry persists permanently (add-only whitelist, no removal path). The post-distribution security property is that the entry is inert while the balance is zero. Any non-zero balance re-activates the whitelist entry, allowing the bootstrap holder to transfer ARM while global transfers are restricted. See ARM_TOKEN.md §3 for the full security framing.
+**Why:** The bootstrap holder's ARM whitelist entry persists permanently (add-only whitelist, no removal path). The post-distribution security property is that the entry is inert while the balance is zero. Any non-zero balance re-activates the whitelist entry, allowing the bootstrap holder to transfer ARM while global transfers are restricted. See specs/ARM_TOKEN.md §3 for the full security framing.
 
 **Signal:** `Transfer` event on the ARM token where `to == bootstrapHolderAddress` and `value > 0`, at any time after the distribution transaction block.
 
@@ -579,7 +579,7 @@ Each alert must include:
 
 **What:** Alert on every `ProposalCreated` event from the governor with `proposalType == 3` (Steward), from deploy onward.
 
-**Why:** The initial steward and its USDC budget ($60,000 per 30 days) are set at deploy (GOVERNANCE.md §Election). During the sale nobody holds voting power, so a steward spend proposal created then cannot be voted down and the steward cannot be removed; it queues against the empty treasury and pays out once `finalize()` pushes the proceeds. The Security Council veto is the defence, and it only works on **Queued** proposals. The launch-team policy is no steward proposals before the post-finalize quiet period ends, so any steward proposal before then is unexpected.
+**Why:** The initial steward and its USDC budget ($60,000 per 30 days) are set at deploy (specs/GOVERNANCE.md §Election). During the sale nobody holds voting power, so a steward spend proposal created then cannot be voted down and the steward cannot be removed; it queues against the empty treasury and pays out once `finalize()` pushes the proceeds. The Security Council veto is the defence, and it only works on **Queued** proposals. The launch-team policy is no steward proposals before the post-finalize quiet period ends, so any steward proposal before then is unexpected.
 
 **Signal:** `ProposalCreated(proposalId, proposer, proposalType = 3, …)`; then `ProposalQueued(proposalId, …)` for the same id.
 

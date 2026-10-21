@@ -179,7 +179,7 @@ export interface NetworkConfig {
   /**
    * Treasury outflow rate-limit config per token, applied at deploy via
    * initOutflowConfig so the treasury is protected from launch rather than via a
-   * fragile first governance vote. Values follow GOVERNANCE.md (issue #348). Amounts are in each token's smallest unit (USDC 6dp, ARM/ETH 18dp).
+   * fragile first governance vote. Values follow specs/GOVERNANCE.md (issue #348). Amounts are in each token's smallest unit (USDC 6dp, ARM/ETH 18dp).
    */
   outflowConfig: {
     usdc: OutflowParams;
@@ -284,7 +284,7 @@ export const USDC_DECIMALS = 6;
 /**
  * Read the deploy-time steward election + USDC budget (#221, #222). INITIAL_STEWARD_ADDRESS
  * enables both; it is required on mainnet, and STEWARD_BUDGET_* without it is refused. The
- * budget is whole USD (default $60,000 per GOVERNANCE.md §Treasury Steward) and may not exceed
+ * budget is whole USD (default $60,000 per specs/GOVERNANCE.md §Treasury Steward) and may not exceed
  * the USDC outflow absolute limit: a larger value is a units mistake, not a real budget.
  */
 function buildInitialSteward(
@@ -556,7 +556,7 @@ export function getNetworkConfig(): NetworkConfig {
     );
   }
 
-  // Treasury outflow limits, env-overridable per token. Defaults are the GOVERNANCE.md
+  // Treasury outflow limits, env-overridable per token. Defaults are the specs/GOVERNANCE.md
   // §Treasury Outflow Limits values: 30-day rolling window, limit = greater of the
   // absolute amount and the % of treasury balance, no floor (the floor is fixed at deploy).
   const outflowConfig: NetworkConfig["outflowConfig"] = {

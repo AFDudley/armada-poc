@@ -232,7 +232,7 @@ async function main() {
   };
   saveDeploymentInProgress(outputFile, deployment);
 
-  // 4. Set the ARM transfer allowlist (one-shot). Per ARM_TOKEN.md: crowdfund,
+  // 4. Set the ARM transfer allowlist (one-shot). Per specs/ARM_TOKEN.md: crowdfund,
   //    treasury, RevenueLock, deployer, and the reserve distributor when present.
   console.log("4. Setting ARM transfer whitelist...");
   await (

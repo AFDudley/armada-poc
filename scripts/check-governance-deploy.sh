@@ -9,7 +9,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 GOV_MANIFEST="deployments/governance-hub.json"
-GOV_DOC="GOVERNANCE.md"
+GOV_DOC="specs/GOVERNANCE.md"
 VENDORED_LIBS=(lib/baal lib/safe-contracts lib/hedgey)
 LOCK_SOL="contracts/governance/RevenueLock.sol"
 
@@ -179,7 +179,7 @@ PY
     ;;
 
   governance-doc)
-    # c6: GOVERNANCE.md says the Safe is the treasury, the Baal is its sole owner, and
+    # c6: specs/GOVERNANCE.md says the Safe is the treasury, the Baal is its sole owner, and
     #     ShieldedRagequit is the one exit.
     doc_states_safe_treasury=false
     doc_states_baal_sole_owner=false

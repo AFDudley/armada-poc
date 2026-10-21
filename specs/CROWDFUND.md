@@ -409,7 +409,7 @@ Crowdfund tokens are not revenue-gated, but voting power only becomes active onc
 
 **Governance quiet period: 10 days after finalization.** No governance proposals may be submitted until day 11 post-finalization. This gives the community time to claim, delegate, and orient before governance begins. Any emergency during this window is handled by the Security Council (veto, coordinated response) — it does not require a governance vote. The quiet period is a one-time bootstrapping measure — a compile-time governor constant that applies once and has no effect after expiry.
 
-**Early-claim governance risk.** Voting power uses Compound-style point-in-time checkpointing — there is no time-weighted average. An address that claims and delegates immediately after finalization has its full balance active with no averaging period. Quorum at proposal creation is measured against circulating ARM at that block — which, immediately after finalization, is essentially only the ARM that has been claimed, since unclaimed ARM in the crowdfund contract and unreleased ARM in the revenue-lock contract are excluded from the denominator (see GOVERNANCE.md §Quorum denominator). If very few participants have claimed, a single early claimer with 5,000+ ARM could meet proposal threshold and create a vote where quorum is a fraction of the full crowdfund supply. The 48-hour proposal delay and 10-day quiet period are the only buffers. Participants are strongly encouraged to claim and delegate promptly after finalization. **This is an accepted design choice, not an unsolved problem** — additional mechanical buffers (e.g., time-weighted voting, minimum claimed supply before governance activates) would add complexity to the ARM token or governor that contradicts the "~50 lines of custom code on OZ primitives" constraint. The Security Council provides emergency response during this window if needed.
+**Early-claim governance risk.** Voting power uses Compound-style point-in-time checkpointing — there is no time-weighted average. An address that claims and delegates immediately after finalization has its full balance active with no averaging period. Quorum at proposal creation is measured against circulating ARM at that block — which, immediately after finalization, is essentially only the ARM that has been claimed, since unclaimed ARM in the crowdfund contract and unreleased ARM in the revenue-lock contract are excluded from the denominator (see specs/GOVERNANCE.md §Quorum denominator). If very few participants have claimed, a single early claimer with 5,000+ ARM could meet proposal threshold and create a vote where quorum is a fraction of the full crowdfund supply. The 48-hour proposal delay and 10-day quiet period are the only buffers. Participants are strongly encouraged to claim and delegate promptly after finalization. **This is an accepted design choice, not an unsolved problem** — additional mechanical buffers (e.g., time-weighted voting, minimum claimed supply before governance activates) would add complexity to the ARM token or governor that contradicts the "~50 lines of custom code on OZ primitives" constraint. The Security Council provides emergency response during this window if needed.
 
 **Claim deadline: 3 years from finalization.** The deadline is fixed and cannot be extended — it is a predeclared term of participation, not a governance parameter. Exact boundary: `claim()` is permitted when `block.timestamp <= finalizationTimestamp + 3 years`; `withdrawUnallocatedArm()` may sweep unclaimed ARM only when `block.timestamp > finalizationTimestamp + 3 years`.
 
@@ -481,7 +481,7 @@ where `acceptedUsdc` is the participant's share of the hop ceiling (full effecti
 
 The crowdfund contract includes an emergency cancel mechanism for catastrophic pre-finalization scenarios: a critical contract bug, a regulatory injunction, or another event that would make proceeding harmful to participants.
 
-**Authority:** Security Council (2-of-3 multisig — see GOVERNANCE.md)
+**Authority:** Security Council (2-of-3 multisig — see specs/GOVERNANCE.md)
 
 **Process:**
 1. Security Council invokes `cancel()` — takes effect immediately
@@ -512,7 +512,7 @@ Early network tokens cannot be unlocked by governance. They unlock only via reve
 
 Treasury tokens (65–70%) are controlled by governance but do not vote.
 
-See GOVERNANCE.md for full specification: voting mechanics, delegation, quorum, proposal lifecycle, Treasury Steward, Security Council, and wind-down.
+See specs/GOVERNANCE.md for full specification: voting mechanics, delegation, quorum, proposal lifecycle, Treasury Steward, Security Council, and wind-down.
 
 ---
 
@@ -537,7 +537,7 @@ The protocol triggers an automatic wind-down if the revenue threshold is not rea
 
 The intent is to give the protocol approximately 6 months after the **shielded pool launch** to demonstrate traction. Protocol revenue only accrues through the shielded pool's fee module, which launches separately after the crowdfund, on a date not yet known. The deadline is fixed when the wind-down contract is deployed with the crowdfund, so December 31, 2027 is a deliberately conservative initial value. Once the shielded pool launch date is known, governance is expected to set the deadline to roughly 6 months after it; if the shielded pool launch slips, governance should extend the deadline before it becomes binding.
 
-The trade-off of a conservative initial deadline: if the shielded pool is delayed or never ships, participants wait longer before the permissionless wind-down becomes available. Governance can still trigger wind-down at any time via extended proposal (see GOVERNANCE.md §Wind-Down).
+The trade-off of a conservative initial deadline: if the shielded pool is delayed or never ships, participants wait longer before the permissionless wind-down becomes available. Governance can still trigger wind-down at any time via extended proposal (see specs/GOVERNANCE.md §Wind-Down).
 
 If cumulative protocol revenue does not reach the threshold by the deadline, wind-down initiates automatically — no governance vote required. Governance may adjust either parameter before the deadline, or vote to wind down early at any time.
 
@@ -548,7 +548,7 @@ If cumulative protocol revenue does not reach the threshold by the deadline, win
 3. Shielded pool enters withdraw-only mode (immediate — `shield()` and shielded `transfer()` disabled; `unshield()` always available indefinitely with no deadline)
 4. Governance ends permanently — no new proposals, no steward proposals, no parameter changes
 5. Non-ARM treasury assets are swept to the redemption contract via permissionless `sweepToken(address)` calls (one per token; `sweepToken(ARM)` reverts — treasury ARM stays locked permanently)
-6. ARM holders deposit ARM into the redemption contract and receive their pro-rata share of non-ARM treasury assets. No snapshot, no deadline — deposit whenever you want. See GOVERNANCE.md §Wind-Down for the full redemption mechanism.
+6. ARM holders deposit ARM into the redemption contract and receive their pro-rata share of non-ARM treasury assets. No snapshot, no deadline — deposit whenever you want. See specs/GOVERNANCE.md §Wind-Down for the full redemption mechanism.
 7. Early network tokens have no treasury claim unless released via revenue milestones before wind-down. Unreleased ARM stays in the revenue-lock contract permanently.
 
 **Unclaimed ARM after wind-down.** Participants may claim their ARM at any time after wind-down (subject to the 3-year deadline). Once claimed, they can deposit it into the redemption contract to receive their treasury share. The 3-year ARM claim deadline continues to apply. Unclaimed ARM in the crowdfund contract is excluded from the redemption denominator, so it does not dilute redeemers.

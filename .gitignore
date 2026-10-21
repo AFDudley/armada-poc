@@ -96,3 +96,6 @@ nodes/
 
 # omp worker-session router config dropped into each worktree by the omp harness
 .omp-config.yml
+
+# Python bytecode (acceptance-oracle scripts are run in-place, not built)
+__pycache/

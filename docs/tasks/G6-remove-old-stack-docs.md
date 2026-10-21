@@ -34,8 +34,8 @@ Read first:
 ## Goal
 
 The repository contains no governor, treasury-governor, steward, wind-down, or
-redemption contract. Baal (G2) and the Safe are the only governance surface. `GOVERNANCE.md`
-and `ARM_TOKEN.md` describe the code that remains.
+redemption contract. Baal (G2) and the Safe are the only governance surface. `specs/GOVERNANCE.md`
+and `specs/ARM_TOKEN.md` describe the code that remains.
 
 ## Deliver
 
@@ -57,12 +57,12 @@ and `ARM_TOKEN.md` describe the code that remains.
   `scripts.setup` chain (the governor/treasury-gov/steward/wind-down/redemption deploy
   calls) and any `scripts/deploy_governance*.ts` that only deployed them. G2's Baal/Safe
   summon script (already added) takes their place in the chain.
-- **S4 · `GOVERNANCE.md` rewrite.** If `GOVERNANCE.md` exists, rewrite it to describe Baal
+- **S4 · `specs/GOVERNANCE.md` rewrite.** If `specs/GOVERNANCE.md` exists, rewrite it to describe Baal
   + Safe (G2), `ShieldedRagequit` (G3), `RevenueLock` on `cumulativeFees` (G4), and the
   Hedgey lockup (G5), with no section describing the deleted contracts. If it does not
   exist, create it at the repo root, same shape as a comparable doc you find in the repo
   (check `docs/` and the root for an existing pattern before inventing one).
-- **S5 · `ARM_TOKEN.md` rewrite.** Describe `ArmadaToken` as the Baal shares token (G1):
+- **S5 · `specs/ARM_TOKEN.md` rewrite.** Describe `ArmadaToken` as the Baal shares token (G1):
   fixed 12M supply, non-upgradeable, transfer allowlist, no wind-down-gated
   `setTransferable` caller (G1 S5 already removed the dependency on
   `windDownContract`). Remove any existing description of `ArmadaRedemption`'s
@@ -79,7 +79,7 @@ or `RevenueCounter.sol` unless S1's grep shows them with no surviving caller.
 `forge build` succeeds with zero references to the deleted contracts (`grep -rl
 "ArmadaGovernor\|ArmadaTreasuryGov\|TreasurySteward\|ArmadaWindDown\|ArmadaRedemption"
 contracts/ scripts/` returns nothing). `forge test` runs with no failing import. A diff of
-`GOVERNANCE.md` and `ARM_TOKEN.md` pasted in the report.
+`specs/GOVERNANCE.md` and `specs/ARM_TOKEN.md` pasted in the report.
 
 ## Husband review
 
