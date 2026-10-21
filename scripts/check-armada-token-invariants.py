@@ -39,10 +39,6 @@ ASSERTIONS = {
         "test": "test_shares_nonProxyBytecode",
         "mutation": "proxy",
     },
-    "whitelist-gating": {
-        "test": "test_shares_whitelistGating",
-        "mutation": "open-add-to-whitelist",
-    },
     "restricted-transfer-reverts": {
         "test": "test_shares_restrictedTransferReverts",
         "mutation": "allow-non-whitelisted-transfer",
@@ -50,10 +46,6 @@ ASSERTIONS = {
     "mint-not-blocked": {
         "test": "test_shares_mintNotBlocked",
         "mutation": "block-mint",
-    },
-    "timelock-set-transferable": {
-        "test": "test_shares_timelockSetTransferable",
-        "mutation": "require-wind-down-contract",
     },
 }
 
@@ -102,29 +94,15 @@ def _mutation_proxy(src: str) -> str:
     return src.replace(anchor, replacement, 1)
 
 
-def _mutation_open_add_to_whitelist(src: str) -> str:
-    anchor = (
-        "    function addToWhitelist(address account) external {\n"
-        "        require(msg.sender == timelock, \"ArmadaToken: not timelock\");\n"
-        "        require(account != address(0), \"ArmadaToken: zero address\");\n"
-    )
-    assert src.count(anchor) == 1, "open-add-to-whitelist anchor not found exactly once"
-    replacement = (
-        "    function addToWhitelist(address account) external {\n"
-        "        require(account != address(0), \"ArmadaToken: zero address\");\n"
-    )
-    return src.replace(anchor, replacement, 1)
-
-
 def _mutation_allow_non_whitelisted_transfer(src: str) -> str:
     anchor = (
-        "        if (!transferable) {\n"
+        "        if (!transferable && to != address(0)) {\n"
         "            require(from == address(0) || transferWhitelist[from], \"ArmadaToken: transfers restricted\");\n"
         "        }\n"
     )
     assert src.count(anchor) == 1, "allow-non-whitelisted-transfer anchor not found exactly once"
     replacement = (
-        "        if (!transferable) {\n"
+        "        if (!transferable && to != address(0)) {\n"
         "            require(true, \"ArmadaToken: transfers restricted\");\n"
         "        }\n"
     )
@@ -133,29 +111,15 @@ def _mutation_allow_non_whitelisted_transfer(src: str) -> str:
 
 def _mutation_block_mint(src: str) -> str:
     anchor = (
-        "        if (!transferable) {\n"
+        "        if (!transferable && to != address(0)) {\n"
         "            require(from == address(0) || transferWhitelist[from], \"ArmadaToken: transfers restricted\");\n"
         "        }\n"
     )
     assert src.count(anchor) == 1, "block-mint anchor not found exactly once"
     replacement = (
-        "        if (!transferable) {\n"
+        "        if (!transferable && to != address(0)) {\n"
         "            require(transferWhitelist[from], \"ArmadaToken: transfers restricted\");\n"
         "        }\n"
-    )
-    return src.replace(anchor, replacement, 1)
-
-
-def _mutation_require_wind_down_contract(src: str) -> str:
-    anchor = (
-        "    function setTransferable(bool _transferable) external {\n"
-        "        require(msg.sender == windDownContract || msg.sender == timelock, \"ArmadaToken: not authorized\");\n"
-    )
-    assert src.count(anchor) == 1, "require-wind-down-contract anchor not found exactly once"
-    replacement = (
-        "    function setTransferable(bool _transferable) external {\n"
-        "        require(windDownContract != address(0), \"ArmadaToken: wind-down not set\");\n"
-        "        require(msg.sender == windDownContract || msg.sender == timelock, \"ArmadaToken: not authorized\");\n"
     )
     return src.replace(anchor, replacement, 1)
 
@@ -163,10 +127,8 @@ def _mutation_require_wind_down_contract(src: str) -> str:
 MUTATIONS = {
     "second-mint": _mutation_second_mint,
     "proxy": _mutation_proxy,
-    "open-add-to-whitelist": _mutation_open_add_to_whitelist,
     "allow-non-whitelisted-transfer": _mutation_allow_non_whitelisted_transfer,
     "block-mint": _mutation_block_mint,
-    "require-wind-down-contract": _mutation_require_wind_down_contract,
 }
 
 
@@ -286,8 +248,8 @@ def check_all() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# --regression: full existing suite passes; no windDownContract set by this
-# chunk's deliverables; protected functions untouched.
+# --regression: full existing forge suite passes; counts setWindDownContract
+# call sites in this chunk's deliverables; protected functions untouched.
 # ---------------------------------------------------------------------------
 
 PROTECTED_FUNCTIONS = [

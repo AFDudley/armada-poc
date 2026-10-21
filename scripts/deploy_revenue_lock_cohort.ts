@@ -7,8 +7,9 @@
  * Deploys a new RevenueLock contract with its own beneficiary list and amounts,
  * reusing the ARM token and RevenueCounter from an existing governance deployment.
  *
- * After deployment, a governance proposal must register the cohort with the token
- * (addToWhitelist + addAuthorizedDelegator) and fund it via treasury.distribute().
+ * The ARM token allowlist is fixed at deploy via initWhitelist; the governance
+ * proposal authorizes the cohort (addAuthorizedDelegator) and funds it via
+ * treasury.distribute().
  *
  * Usage:
  *   source config/sepolia.env
@@ -217,11 +218,13 @@ async function main() {
   console.log(`\nCohort manifest saved: deployments/${outFile}`);
 
   console.log("\n=== Cohort deployment complete ===");
-  console.log("\nNext steps (via governance proposal):");
-  console.log(`  1. armToken.addToWhitelist(${lockAddress})`);
-  console.log(`  2. armToken.addAuthorizedDelegator(${lockAddress})`);
   console.log(
-    `  3. treasury.distribute(armToken, ${lockAddress}, ${ethers.formatUnits(totalAllocation, 18)} ARM)`,
+    "\nNote: the ARM token allowlist is fixed at deploy via initWhitelist; no allowlist step is required.",
+  );
+  console.log("\nNext steps (via governance proposal):");
+  console.log(`  1. armToken.addAuthorizedDelegator(${lockAddress})`);
+  console.log(
+    `  2. treasury.distribute(armToken, ${lockAddress}, ${ethers.formatUnits(totalAllocation, 18)} ARM)`,
   );
   console.log(
     "\nOr use the 'Register Revenue Lock Cohort' template in the governance-ui.",
