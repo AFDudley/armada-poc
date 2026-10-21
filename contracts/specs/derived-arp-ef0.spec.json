@@ -1,0 +1,211 @@
+{
+  "id": "derived-arp-ef0",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. The armada-poc tree carries exactly one governance specification file and exactly one ARM token specification file, and every reference to them in scripts, config and docs resolves to that one canonical copy of each.\nWhat holds now? Describe the current, observed state. At integrated, two copies of each file exist with the same Baal-on-Safe content: root GOVERNANCE.md and specs/GOVERNANCE.md, and root ARM_TOKEN.md and specs/ARM_TOKEN.md. arp-f02 rewrote the specs/ copies to the Baal-on-Safe design but left the root copies and did not consolidate references. References to GOVERNANCE.md and ARM_TOKEN.md appear in config/mainnet.env, config/networks.ts, config/networks.test.ts, scripts/check-governance-deploy.sh, scripts/deploy_crowdfund.ts and several specs/*.md, and which copy each names is ambiguous.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. Run: git ls-files | grep -E '(^|/)(GOVERNANCE|ARM_TOKEN)[.]md$'. It lists four files. A check asserts exactly one GOVERNANCE.md and one ARM_TOKEN.md in the tree, and that no tracked reference points to a path that no longer exists.\nWhat constraints apply? State them in plain prose. The one canonical copy of each describes the Baal-on-Safe design: the treasury is the Safe, the Baal is its sole owner, and ShieldedRagequit is the one exit. The arp-67a governance-doc check in scripts/check-governance-deploy.sh reads the governance document, so that reference must still resolve after the consolidation. No contract file changes.\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) GOVERNANCE.md, ARM_TOKEN.md, specs/GOVERNANCE.md, specs/ARM_TOKEN.md, and their references in config/, scripts/, docs/ and specs/.",
+  "restatement": "The tree must hold exactly one governance specification and exactly one ARM token specification. Today each exists twice with the same Baal-on-Safe content, at the repo root and under specs/. The request does not name the surviving copy. This spec picks specs/GOVERNANCE.md and specs/ARM_TOKEN.md, because arp-f02 rewrote them and specs/ is the home for specifications. The root copies are removed. Every tracked reference in config/, scripts/, docs/ and specs/ must point to a path that exists. The surviving copies keep the Baal-on-Safe design: the treasury is the Safe, the Baal is its sole owner, and ShieldedRagequit is the one exit. The governance-doc check in scripts/check-governance-deploy.sh (arp-67a) must still find the governance document. No contract file changes.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "Exactly one GOVERNANCE.md and one ARM_TOKEN.md are tracked in the tree. The canonical copies are specs/GOVERNANCE.md and specs/ARM_TOKEN.md. The root GOVERNANCE.md and root ARM_TOKEN.md no longer exist."
+    },
+    {
+      "id": "c2",
+      "text": "No tracked reference to GOVERNANCE.md or ARM_TOKEN.md (in config/mainnet.env, config/networks.ts, config/networks.test.ts, scripts/check-governance-deploy.sh, scripts/deploy_crowdfund.ts, docs/ and specs/*.md) points to a path that does not exist."
+    },
+    {
+      "id": "c3",
+      "text": "The canonical copies describe the Baal-on-Safe design: the treasury is the Safe, the Baal is its sole owner, and ShieldedRagequit is the one exit."
+    },
+    {
+      "id": "c4",
+      "text": "The arp-67a governance-doc check in scripts/check-governance-deploy.sh reads specs/GOVERNANCE.md, so that reference still resolves after the consolidation."
+    },
+    {
+      "id": "c5",
+      "text": "No contract file changes: no .sol file under contracts/ is modified by this work."
+    }
+  ],
+  "goal": "Keep one governance spec and one ARM token spec in the armada-poc tree, with every reference resolving to them.",
+  "acceptance_criteria": [
+    "The governance spec no longer exists at the repo root.",
+    "The ARM token spec no longer exists at the repo root.",
+    "The governance spec still exists under specs/.",
+    "The ARM token spec still exists under specs/.",
+    "A reference check lists the tracked GOVERNANCE.md and ARM_TOKEN.md files and every tracked reference to them. It reports one file of each kind and no reference to a missing path.",
+    "The canonical governance spec mentions the Safe, the Baal and ShieldedRagequit.",
+    "The governance deploy check script names specs/GOVERNANCE.md as the document it reads.",
+    "A check counts changed Solidity files under contracts/ against the base branch. It reports zero."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The governance spec no longer exists at the repo root."
+    },
+    {
+      "id": "c2",
+      "text": "The ARM token spec no longer exists at the repo root."
+    },
+    {
+      "id": "c3",
+      "text": "The governance spec still exists under specs/."
+    },
+    {
+      "id": "c4",
+      "text": "The ARM token spec still exists under specs/."
+    },
+    {
+      "id": "c5",
+      "text": "A reference check lists the tracked GOVERNANCE.md and ARM_TOKEN.md files and every tracked reference to them. It reports one file of each kind and no reference to a missing path."
+    },
+    {
+      "id": "c6",
+      "text": "The canonical governance spec mentions the Safe, the Baal and ShieldedRagequit."
+    },
+    {
+      "id": "c7",
+      "text": "The governance deploy check script names specs/GOVERNANCE.md as the document it reads."
+    },
+    {
+      "id": "c8",
+      "text": "A check counts changed Solidity files under contracts/ against the base branch. It reports zero."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "file_absent",
+      "description": "The governance spec no longer exists at the repo root.",
+      "proves": "The duplicate root GOVERNANCE.md is gone.",
+      "restatement_clause_id": "c1",
+      "path": "GOVERNANCE.md",
+      "clause_id": "c1"
+    },
+    {
+      "type": "file_absent",
+      "description": "The ARM token spec no longer exists at the repo root.",
+      "proves": "The duplicate root ARM_TOKEN.md is gone.",
+      "restatement_clause_id": "c1",
+      "path": "ARM_TOKEN.md",
+      "clause_id": "c2"
+    },
+    {
+      "type": "file_exists",
+      "description": "The governance spec still exists under specs/.",
+      "proves": "The one canonical governance spec survives.",
+      "restatement_clause_id": "c1",
+      "path": "specs/GOVERNANCE.md",
+      "clause_id": "c3"
+    },
+    {
+      "type": "file_exists",
+      "description": "The ARM token spec still exists under specs/.",
+      "proves": "The one canonical ARM token spec survives.",
+      "restatement_clause_id": "c1",
+      "path": "specs/ARM_TOKEN.md",
+      "clause_id": "c4"
+    },
+    {
+      "type": "behavior",
+      "description": "A reference check lists the tracked GOVERNANCE.md and ARM_TOKEN.md files and every tracked reference to them. It reports one file of each kind and no reference to a missing path.",
+      "proves": "Every reference to the two spec files resolves, and only one copy of each exists.",
+      "restatement_clause_id": "c2",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/check_spec_references.py",
+        "args": [],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "governance_files",
+          "op": "eq",
+          "value": 1
+        },
+        {
+          "observe": "stdout_json",
+          "field": "arm_token_files",
+          "op": "eq",
+          "value": 1
+        },
+        {
+          "observe": "stdout_json",
+          "field": "dangling_references",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 60,
+      "clause_id": "c5"
+    },
+    {
+      "type": "grep",
+      "description": "The canonical governance spec mentions the Safe, the Baal and ShieldedRagequit.",
+      "proves": "The surviving governance spec keeps the Baal-on-Safe design.",
+      "restatement_clause_id": "c3",
+      "pattern": "Baal",
+      "additional_patterns": [
+        "Safe",
+        "ShieldedRagequit"
+      ],
+      "files": [
+        "specs/GOVERNANCE.md"
+      ],
+      "count": {
+        "unit": "patterns",
+        "op": "eq",
+        "value": 3
+      },
+      "clause_id": "c6"
+    },
+    {
+      "type": "grep",
+      "description": "The governance deploy check script names specs/GOVERNANCE.md as the document it reads.",
+      "proves": "The arp-67a governance-doc check still resolves to the canonical file.",
+      "restatement_clause_id": "c4",
+      "pattern": "specs/GOVERNANCE\\.md",
+      "files": [
+        "scripts/check-governance-deploy.sh"
+      ],
+      "clause_id": "c7"
+    },
+    {
+      "type": "behavior",
+      "description": "A check counts changed Solidity files under contracts/ against the base branch. It reports zero.",
+      "proves": "No contract file changed.",
+      "restatement_clause_id": "c5",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/check-no-contract-changes.sh",
+        "args": [],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "changed_sol_files",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 60,
+      "clause_id": "c8"
+    }
+  ],
+  "declared_new_entrypoints": [
+    "scripts/check-no-contract-changes.sh",
+    "scripts/check_spec_references.py"
+  ]
+}
