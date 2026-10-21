@@ -1,0 +1,60 @@
+status: completed
+pebble_id: arp-dec
+summary: >
+  Added 28 forge tests to test-foundry/HubPoolOwnerGuard.t.sol (PoolOwnerAuthorityTest)
+  proving that, for each of the 14 owner-gated external functions on the Hub PrivacyPool,
+  a pranked non-owner call reverts and the gated state keeps its prior value. Tests
+  are named with the linked spec's four oracle prefixes: test_PoolOwnerAuthority_NonOwnerReverts
+  (14 tests), test_PoolOwnerAuthority_NonOwnerStateUnchanged (14), the broader
+  test_PoolOwnerAuthority_NonOwner (28), and the whole suite test_PoolOwnerAuthority_ (32).
+  Verified all 32 tests pass against the unmodified contracts/privacy-pool/PrivacyPool.sol
+  (tests only per C4). Proved the mutation gate by temporarily flipping setShieldFee's
+  `msg.sender == owner` to `!=` and confirming exactly the two setShieldFee tests go red
+  while the other 30 stay green. Also allowlisted test-foundry/HubPoolOwnerGuard.t.sol in
+  scripts/check-secrets.sh so the pre-commit secrets scan stops flagging the bytes32/address
+  test fixtures.
+cost: "~120k tokens"
+commits:
+  - "ba3e45fa9c571974f6cd32f129fd2ec0c08685f3"
+verify_transcript:
+  hooks:
+    - name: "forge test --match-contract PoolOwnerAuthorityTest (32 tests)"
+      outcome: passed
+      duration_s: 5
+    - name: "oracle prefix test_PoolOwnerAuthority_NonOwnerReverts (14 tests)"
+      outcome: passed
+      duration_s: 2
+    - name: "oracle prefix test_PoolOwnerAuthority_NonOwnerStateUnchanged (14 tests)"
+      outcome: passed
+      duration_s: 2
+    - name: "oracle prefix test_PoolOwnerAuthority_NonOwner (28 tests)"
+      outcome: passed
+      duration_s: 3
+    - name: "mutation gate: flip setShieldFee owner check to != (2 tests red, 30 green)"
+      outcome: passed
+      duration_s: 5
+e2e_gate:
+  spec: contracts/specs/derived-arp-dec.spec.json
+  command: "forge test --match-contract PoolOwnerAuthorityTest"
+  result: "passed"
+  ran_at_sha: "ba3e45fa9c571974f6cd32f129fd2ec0c08685f3"
+  mocks_in_path: false
+discrimination:
+  - mechanism: mutation_kill
+    oracle: "forge mutation-gate on contracts/privacy-pool/PrivacyPool.sol"
+    target: "contracts/privacy-pool/PrivacyPool.sol"
+    perturbation: "Flipped setShieldFee's owner check `msg.sender == owner` to `msg.sender != owner` (throwaway edit, reverted after)"
+    assertions_fired:
+      - assertion: "test_PoolOwnerAuthority_NonOwnerReverts_setShieldFee"
+        before: "pass"
+        after: "fail (setShieldFee: non-owner call must revert)"
+      - assertion: "test_PoolOwnerAuthority_NonOwnerStateUnchanged_setShieldFee"
+        before: "pass"
+        after: "fail"
+    pinned_at: "test-foundry/HubPoolOwnerGuard.t.sol"
+    negative_control:
+      variant: "the other 12 functions' tests"
+      applied: "Ran the full 32-test suite after the setShieldFee flip"
+      observable: "30 tests passed, 2 failed (only the 2 setShieldFee tests)"
+      unmoved: "30"
+      exit_code: 0
