@@ -86,6 +86,11 @@ contract ShieldedRagequit {
         // straight to the Safe (which credits no note) cannot change the payout.
         require(tokens.length == safeNotes.length, "ShieldedRagequit: notes length mismatch");
 
+        // E2 (arp-6cc): read the ARM supply ONCE before the burn. The payout divisor is the
+        // pre-burn supply, so a holder who burns a share s of the supply receives exactly s of
+        // each Safe-owned note, not s/(1-s). Reading totalSupply() after the burn would pay more.
+        uint256 preBurnSupply = armToken.totalSupply();
+
         // c1: burn the caller's ARM via ArmadaToken.burn (callable only by this shaman).
         armToken.burn(msg.sender, armAmount);
 
@@ -101,8 +106,9 @@ contract ShieldedRagequit {
             // the pool registry (require it to be a Safe-owned note of this token).
             uint256 base = _safeNoteValue(safeNotes[i], tokens[i]);
 
-            // S4: never pay more than burned/totalSupply * the Safe-owned note value.
-            uint256 payout = armAmount * base / armToken.totalSupply();
+            // S4: never pay more than burned/preBurnSupply * the Safe-owned note value. The
+            // divisor is the pre-burn supply captured above, the same value for every token.
+            uint256 payout = armAmount * base / preBurnSupply;
             payouts[i] = payout;
 
             txns[i] = _buildOwnedTxn(tokens[i], npk, safeNotes[i], base, payout);
