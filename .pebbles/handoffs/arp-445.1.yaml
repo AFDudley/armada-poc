@@ -1,0 +1,39 @@
+status: completed
+pebble_id: arp-445.1
+summary: >
+  Froze the ArmadaToken burner set at deploy so only ShieldedRagequit can burn.
+  Added a one-shot frozen gate to ArmadaToken.addBurner
+  (contracts/governance/ArmadaToken.sol): after the deployer's one-shot
+  initBurners registers ShieldedRagequit, the timelock/Safe can no longer
+  call addBurner to extend the set (it reverts with "ArmadaToken: burner
+  set frozen"), the deployer's second initBurners call reverts
+  ("ArmadaToken: burners already initialized"), and every non-burner calling
+  burn reverts with "ArmadaToken: not authorized burner". Added
+  test-foundry/BurnerSetFrozen.t.sol with three tests (c1 timelock cannot
+  add a burner, c2 no caller can add a burner + second initBurners fails,
+  c4 non-burners cannot burn), and appended two tests to the existing
+  ShieldedRagequit.t.sol (c3 the real ShieldedRagequit still burns, c5 a
+  member ragequit burns that member's ARM). Verified with forge: the new
+  BurnerSetFrozen tests pass, the full forge suite (474 tests) passes with
+  0 failures, and the deploy flow (scripts/summon-baal-safe.ts) and existing
+  tests still register ShieldedRagequit through initBurners alone.
+cost: "~120k tokens"
+commits:
+  - "f707f1a9"
+verify_transcript:
+  hooks:
+    - name: "forge test --match-path test-foundry/BurnerSetFrozen.t.sol"
+      outcome: passed
+      duration_s: 6
+    - name: "forge test --match-path test-foundry/ShieldedRagequit.t.sol"
+      outcome: passed
+      duration_s: 11
+    - name: "forge test --offline (full suite, 474 tests)"
+      outcome: passed
+      duration_s: 68
+e2e_gate:
+  spec: contracts/specs/derived-arp-445.1.spec.json
+  command: "forge test --match-path test-foundry/BurnerSetFrozen.t.sol && forge test --match-path test-foundry/ShieldedRagequit.t.sol"
+  result: passed
+  ran_at_sha: "f707f1a9"
+  mocks_in_path: false
