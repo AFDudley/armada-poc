@@ -166,6 +166,36 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         assertEq(arm.totalSupply(), supplyBefore - armAmt, "c1: totalSupply must drop by armAmount");
     }
 
+    // c3 · The registered burner (ShieldedRagequit) keeps its ability to burn after the change.
+    function test_BurnerSetFrozen_ShieldedRagequitCanBurn() public {
+        uint256 armAmt = 100;
+        bytes32 safeNote = _shieldToSafe(1000);
+        uint256 balBefore = arm.balanceOf(holder);
+        uint256 supplyBefore = arm.totalSupply();
+
+        // ShieldedRagequit burns an amount of ARM from the holder.
+        vm.prank(holder);
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
+
+        assertEq(arm.balanceOf(holder), balBefore - armAmt, "c3: caller ARM balance drops by armAmount");
+        assertEq(arm.totalSupply(), supplyBefore - armAmt, "c3: totalSupply drops by armAmount");
+    }
+
+    // c5 · The existing shielded-ragequit tests register the token with the one-time
+    //      registration only, and a member ragequit still burns that member's ARM.
+    function test_RagequitBurnsArm() public {
+        uint256 armAmt = 100;
+        bytes32 safeNote = _shieldToSafe(1000);
+        uint256 balBefore = arm.balanceOf(holder);
+        uint256 supplyBefore = arm.totalSupply();
+
+        vm.prank(holder);
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
+
+        assertEq(arm.balanceOf(holder), balBefore - armAmt, "c5: member ARM balance drops by the burn amount");
+        assertEq(arm.totalSupply(), supplyBefore - armAmt, "c5: totalSupply drops by the burn amount");
+    }
+
     // c2 · The exit creates a contract-owned note at the caller's npk with the bounded payout,
     //      debited from the Safe's pool-owned note (owner-derived npk).
     function test_RagequitCreatesOwnedNoteAtCallerNpk() public {
