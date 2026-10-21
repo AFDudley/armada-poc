@@ -200,5 +200,15 @@ contract ArmadaTokenSharesTest is Test {
         (bool ok, bytes memory ret) = address(armToken).call(data);
         assertFalse(ok, "the timelock cannot add a new address after deployment");
         assertFalse(armToken.transferWhitelist(a4), "allowlist remains fixed at construction");
+
+        // The one-shot init flag cannot be re-opened: a second initWhitelist reverts. If a
+        // mutation leaves whitelistInitialized false after the first call, the second call
+        // would succeed and grow the allowlist, so this check catches that breakage.
+        address[] memory wl2 = new address[](1);
+        wl2[0] = a4;
+        vm.prank(deployer);
+        vm.expectRevert("ArmadaToken: whitelist already initialized");
+        armToken.initWhitelist(wl2);
+        assertFalse(armToken.transferWhitelist(a4), "a second initWhitelist must not grow the allowlist");
     }
 }
