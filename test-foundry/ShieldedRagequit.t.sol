@@ -169,21 +169,88 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
     // c2 · The exit creates a contract-owned note at the caller's npk with the bounded payout,
     //      debited from the Safe's pool-owned note (owner-derived npk).
     function test_RagequitCreatesOwnedNoteAtCallerNpk() public {
+        // c3: the expected payout is computed from the ARM supply captured BEFORE the
+        // ragequit call burns the caller's ARM, not from the (smaller) post-burn supply.
+        uint256 supplyBefore = arm.totalSupply();
         bytes32 safeNote = _shieldToSafe(1000);
         uint256 armAmt = 100;
         vm.prank(holder);
         ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
 
         // The preimage registry now holds the output note's preimage (the caller's note at npk).
-        bytes32 commitment = _commitment(_npk(holder), address(usdc), armAmt, 1000, arm.totalSupply());
+        bytes32 commitment = _commitment(_npk(holder), address(usdc), armAmt, 1000, supplyBefore);
         (bytes32 npk, TokenData memory tokenData, uint256 value) = pool.preimageOf(commitment);
-        assertEq(npk, _npk(holder), "c2: the note must be at the caller's npk");
-        assertEq(uint8(tokenData.tokenType), uint8(TokenType.ERC20), "c2: payout is denominated in the treasury token");
-        assertEq(tokenData.tokenAddress, address(usdc), "c2: payout token is the treasury USDC");
-        assertEq(value, armAmt * 1000 / arm.totalSupply(), "c2: payout equals the bounded share");
+        assertEq(npk, _npk(holder), "c3: the note must be at the caller's npk");
+        assertEq(uint8(tokenData.tokenType), uint8(TokenType.ERC20), "c3: payout is denominated in the treasury token");
+        assertEq(tokenData.tokenAddress, address(usdc), "c3: payout token is the treasury USDC");
+        assertEq(value, armAmt * 1000 / supplyBefore, "c3: payout uses the pre-burn supply");
     }
 
     // c3 · The exit succeeds with a single direct call — no Safe signature, no Baal proposal.
+    // arp-6cc c1 · Payout divisor is the pre-burn total supply (100/100/50 -> 50, not 100).
+    function test_RagequitPayoutUsesPreBurnSupply() public {
+        // c1: capture the pre-burn supply before the call.
+        uint256 supplyBefore = arm.totalSupply();
+        uint256 base = 100; // 100 USDC in the treasury Safe
+        bytes32 safeNote = _shieldToSafe(base);
+        // Burn armAmt so the concrete case is the 100/100/50 scenario (payout = 50).
+        uint256 armAmt = 50 * supplyBefore / 100;
+
+        vm.prank(holder);
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
+
+        // Payout = armAmt * base / supplyBefore (pre-burn supply).
+        uint256 expected = armAmt * base / supplyBefore;
+        assertEq(expected, 50, "c1: 100/100/50 must yield 50, not 100");
+        bytes32 commitment = PoseidonT4.poseidon([_npk(holder), _tokenID(address(usdc)), bytes32(expected)]);
+        (bytes32 npk, TokenData memory tokenData, uint256 value) = pool.preimageOf(commitment);
+        assertEq(npk, _npk(holder), "c1: the payout note is at the caller's npk");
+        assertEq(tokenData.tokenAddress, address(usdc), "c1: payout is denominated in the treasury token");
+        assertEq(value, expected, "c1: payout = burn * base / pre-burn supply");
+    }
+
+    // arp-6cc c2 · Multi-token ragequit: every listed token uses the same pre-burn supply divisor.
+    function test_RagequitMultiTokenPayoutsUsePreBurnSupply() public {
+        // c2: one call, two treasury tokens, same pre-burn divisor.
+        uint256 supplyBefore = arm.totalSupply();
+
+        // Second treasury token (a DAI mock) + a Safe-owned note for it.
+        MockUSDCV2 dai = new MockUSDCV2("Mock DAI", "DAI");
+        uint256 usdcBase = 80;
+        uint256 daiBase = 200;
+        bytes32 usdcNote = _shieldToSafe(usdcBase);
+        bytes32 daiNote = _shieldToSafeFor(dai, daiBase);
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(usdc);
+        tokens[1] = address(dai);
+        bytes32[] memory notes = new bytes32[](2);
+        notes[0] = usdcNote;
+        notes[1] = daiNote;
+
+        // Burn armAmt = 50% of the pre-burn supply.
+        uint256 armAmt = 50 * supplyBefore / 100;
+
+        vm.prank(holder);
+        ragequit.ragequit(armAmt, _npk(holder), tokens, notes);
+
+        // Each token's payout = armAmt * noteValue / supplyBefore (the same pre-burn divisor).
+        uint256 usdcExpected = armAmt * usdcBase / supplyBefore;
+        uint256 daiExpected = armAmt * daiBase / supplyBefore;
+
+        bytes32 usdcCommitment = PoseidonT4.poseidon([_npk(holder), _tokenID(address(usdc)), bytes32(usdcExpected)]);
+        (bytes32 usdcNpk, TokenData memory usdcTd, uint256 usdcValue) = pool.preimageOf(usdcCommitment);
+        bytes32 daiCommitment = PoseidonT4.poseidon([_npk(holder), _tokenID(address(dai)), bytes32(daiExpected)]);
+        (bytes32 daiNpk, TokenData memory daiTd, uint256 daiValue) = pool.preimageOf(daiCommitment);
+
+        assertEq(usdcNpk, _npk(holder), "c2: USDC payout note at the caller's npk");
+        assertEq(usdcValue, usdcExpected, "c2: USDC payout = burn * base / pre-burn supply");
+        assertEq(daiNpk, _npk(holder), "c2: DAI payout note at the caller's npk");
+        assertEq(daiValue, daiExpected, "c2: DAI payout = burn * base / pre-burn supply");
+        // Both tokens use the same pre-burn supply: scaling each payout by its base must agree.
+        assertEq(usdcValue * 100 / usdcBase, daiValue * 100 / daiBase, "c2: both payouts derive from the same pre-burn supply");
+    }
+
     function test_RagequitNeedsNoSafeSignatureOrProposal() public {
         bytes32 safeNote = _shieldToSafe(1000);
         uint256 supplyBefore = arm.totalSupply();
@@ -436,6 +503,21 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         });
         pool.shield(reqs, address(0));
         commitment = PoseidonT4.poseidon([_safeNpk(), _tokenID(address(usdc)), bytes32(value)]);
+    }
+
+    /// @dev Shields `value` of an arbitrary treasury token into one Safe-owned pool note and
+    ///      returns its commitment. Generalizes _shieldToSafe so a multi-token ragequit can
+    ///      shield notes for each listed token.
+    function _shieldToSafeFor(MockUSDCV2 token, uint256 value) internal returns (bytes32 commitment) {
+        token.mint(address(this), value);
+        token.approve(address(pool), value);
+        ShieldRequest[] memory reqs = new ShieldRequest[](1);
+        reqs[0] = ShieldRequest({
+            preimage: CommitmentPreimage({npk: _safeNpk(), token: TokenData({tokenType: TokenType.ERC20, tokenAddress: address(token), tokenSubID: 0}), value: uint120(value)}),
+            ciphertext: ShieldCiphertext({encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)], shieldKey: bytes32(0)})
+        );
+        pool.shield(reqs, address(0));
+        commitment = PoseidonT4.poseidon([_safeNpk(), _tokenID(address(token)), bytes32(value)]);
     }
 
     /// @dev A single-element Safe-note commitment list, parallel to a single-token list.
