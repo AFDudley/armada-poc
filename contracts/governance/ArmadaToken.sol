@@ -251,11 +251,16 @@ contract ArmadaToken is ERC20Votes {
 
     // ============ Transfer Restriction ============
 
-    /// @dev Restrict transfers when transferable is false: only whitelisted senders
-    ///      or mints (from == address(0)) are allowed.
+    /// @dev When transferable is false:
+    ///      - the exit path (burn: to == address(0)) is open for every holder, so a captured
+    ///        majority that keeps ARM transfers locked cannot block ragequit (E1).
+    ///      - ordinary transfers (to != address(0)) stay restricted to whitelisted senders
+    ///        (or mints from == address(0)).
+    ///      Burns reach _burn only through burn(account, amount), which is authorized-burner
+    ///      only, so opening to == address(0) creates no public burn path.
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         super._beforeTokenTransfer(from, to, amount);
-        if (!transferable) {
+        if (!transferable && to != address(0)) {
             require(from == address(0) || transferWhitelist[from], "ArmadaToken: transfers restricted");
         }
     }

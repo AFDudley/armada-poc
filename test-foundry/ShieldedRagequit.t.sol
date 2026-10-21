@@ -386,6 +386,58 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         assertEq(uint256(cvalue), change, "caf-c4: the Safe note value falls by exactly the payout");
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // arp-3e7 (E1) · A captured majority that keeps ARM transfers locked cannot block an exit.
+
+    // e1-c1 · While transfers are restricted, a non-whitelisted holder still exits via ragequit;
+    //      the exit burns their ARM (balance and supply drop) and does not revert on the gate.
+    function test_RagequitSucceedsForNonWhitelistedHolderWhileRestricted() public {
+        bytes32 safeNote = _shieldToSafe(1000);
+        address nonWhitelisted = address(0xC1);
+        uint256 burnAmt = 100;
+        // The whitelisted holder moves ARM to the non-whitelisted holder while transfers are locked.
+        vm.prank(holder);
+        arm.transfer(nonWhitelisted, burnAmt);
+
+        uint256 balBefore = arm.balanceOf(nonWhitelisted);
+        uint256 supplyBefore = arm.totalSupply();
+
+        // The exit must NOT revert with "ArmadaToken: transfers restricted".
+        vm.prank(nonWhitelisted);
+        ragequit.ragequit(burnAmt, _npk(nonWhitelisted), _tokenList(address(usdc)), _safeNotes(safeNote));
+
+        assertEq(arm.balanceOf(nonWhitelisted), balBefore - burnAmt, "e1-c1: holder ARM balance drops by the burn");
+        assertEq(arm.totalSupply(), supplyBefore - burnAmt, "e1-c1: totalSupply drops by the burn");
+    }
+
+    // e1-c2 · While transfers are restricted, a non-whitelisted holder cannot make an ordinary
+    //      ARM transfer; the send is refused.
+    function test_TransferStillRestrictedForNonWhitelistedHolderWhileRestricted() public {
+        address nonWhitelisted = address(0xC2);
+        address dest = address(0xC3);
+        vm.prank(holder);
+        arm.transfer(nonWhitelisted, 100);
+
+        vm.prank(nonWhitelisted);
+        vm.expectRevert("ArmadaToken: transfers restricted");
+        arm.transfer(dest, 50);
+    }
+
+    // e1-c3 · Opening the transfer gate for burns (to == address(0)) creates no public burn path:
+    //      a non-burner cannot burn even while transfers are restricted. Burns reach _burn only
+    //      through the authorized-burner-only burn(account, amount).
+    function test_NonBurnerCannotBurnWhileTransfersRestricted() public {
+        address stranger = address(0xDEAD);
+        vm.prank(holder);
+        arm.transfer(stranger, 100); // the stranger holds ARM but is not an authorized burner
+        assertFalse(arm.transferable(), "precondition: transfers are restricted");
+
+        vm.prank(stranger);
+        vm.expectRevert("ArmadaToken: not authorized burner");
+        arm.burn(stranger, 100);
+        assertEq(arm.balanceOf(stranger), 100, "e1-c3: the stranger's ARM is unchanged");
+    }
+
     // ============ Helpers ============
 
     function _npk(address a) public pure returns (bytes32) {
