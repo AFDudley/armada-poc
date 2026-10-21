@@ -1,0 +1,137 @@
+{
+  "id": "derived-arp-943",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. No armada-poc script references the removed ArmadaToken addToWhitelist function or the removed wind-down code. E6 (arp-6bc) deleted both from contracts/governance/ArmadaToken.sol. A grep of scripts/check-armada-token-invariants.py finds no addToWhitelist text and no windDownContract text. A grep of scripts/deploy_revenue_lock_cohort.ts finds no addToWhitelist text. The check-armada-token-invariants.py module still imports without error and its remaining mutations still apply. Contracts stay unchanged; this touches scripts only.\nWhat holds now? Describe the current, observed state. Three sites keep dead references. scripts/check-armada-token-invariants.py keeps _mutation_open_add_to_whitelist (lines 105-116) and its open-add-to-whitelist MUTATIONS entry (line 166), and _mutation_require_wind_down_contract (lines 149-160) and its require-wind-down-contract entry (line 169). Both anchor on source text that no longer exists, so each raises AssertionError if invoked. scripts/deploy_revenue_lock_cohort.ts line 221 prints an armToken.addToWhitelist next-step instruction that reverts. The allowlist is now fixed at deploy via initWhitelist.",
+  "restatement": "The scripts in armada-poc must stop referring to the ArmadaToken addToWhitelist function and the wind-down code, which E6 (arp-6bc) removed from contracts/governance/ArmadaToken.sol. The invariant checker scripts/check-armada-token-invariants.py must lose its two dead mutations: the open-add-to-whitelist one and the require-wind-down-contract one. Each helper function and each MUTATIONS entry goes. The deploy script scripts/deploy_revenue_lock_cohort.ts must stop printing the next-step instruction that calls armToken.addToWhitelist, because that call reverts. The allowlist is now fixed at deploy through initWhitelist. After the cleanup, the checker module must still import without error and its remaining mutations must still apply. No contract file changes. Only scripts change.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "A grep of scripts/check-armada-token-invariants.py finds no addToWhitelist text. The _mutation_open_add_to_whitelist function and the open-add-to-whitelist MUTATIONS entry are removed."
+    },
+    {
+      "id": "c2",
+      "text": "A grep of scripts/check-armada-token-invariants.py finds no windDownContract text. The _mutation_require_wind_down_contract function and the require-wind-down-contract MUTATIONS entry are removed."
+    },
+    {
+      "id": "c3",
+      "text": "A grep of scripts/deploy_revenue_lock_cohort.ts finds no addToWhitelist text. The reverting armToken.addToWhitelist next-step instruction is no longer printed."
+    },
+    {
+      "id": "c4",
+      "text": "The check-armada-token-invariants.py module still imports without error and its remaining mutations still apply."
+    }
+  ],
+  "goal": "Remove the dead addToWhitelist and wind-down references from the two scripts without breaking the invariant checker.",
+  "acceptance_criteria": [
+    "The invariant checker script contains no addToWhitelist text and no open-add-to-whitelist entry.",
+    "The invariant checker script contains no windDownContract text and no require-wind-down-contract entry.",
+    "The cohort deploy script contains no addToWhitelist text.",
+    "The invariant checker loads without error, and every mutation still listed in it applies to the token source without raising an error."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "The invariant checker script contains no addToWhitelist text and no open-add-to-whitelist entry."
+    },
+    {
+      "id": "c2",
+      "text": "The invariant checker script contains no windDownContract text and no require-wind-down-contract entry."
+    },
+    {
+      "id": "c3",
+      "text": "The cohort deploy script contains no addToWhitelist text."
+    },
+    {
+      "id": "c4",
+      "text": "The invariant checker loads without error, and every mutation still listed in it applies to the token source without raising an error."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "grep_absent",
+      "description": "The invariant checker script contains no addToWhitelist text and no open-add-to-whitelist entry.",
+      "proves": "The dead add-to-whitelist mutation and its list entry are gone from the checker.",
+      "restatement_clause_id": "c1",
+      "pattern": "addToWhitelist",
+      "additional_patterns": [
+        "open-add-to-whitelist",
+        "_mutation_open_add_to_whitelist"
+      ],
+      "files": [
+        "scripts/check-armada-token-invariants.py"
+      ],
+      "clause_id": "c1"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The invariant checker script contains no windDownContract text and no require-wind-down-contract entry.",
+      "proves": "The dead wind-down mutation and its list entry are gone from the checker.",
+      "restatement_clause_id": "c2",
+      "pattern": "windDownContract",
+      "additional_patterns": [
+        "require-wind-down-contract",
+        "_mutation_require_wind_down_contract"
+      ],
+      "files": [
+        "scripts/check-armada-token-invariants.py"
+      ],
+      "clause_id": "c2"
+    },
+    {
+      "type": "grep_absent",
+      "description": "The cohort deploy script contains no addToWhitelist text.",
+      "proves": "The deploy script no longer tells the operator to run a call that reverts.",
+      "restatement_clause_id": "c3",
+      "pattern": "addToWhitelist",
+      "files": [
+        "scripts/deploy_revenue_lock_cohort.ts"
+      ],
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "The invariant checker loads without error, and every mutation still listed in it applies to the token source without raising an error.",
+      "proves": "The cleanup left the checker working: it imports, and none of its remaining mutations fails to apply.",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "python3",
+        "script": "scripts/verify_armada_token_invariants_mutations.py",
+        "args": [
+          "--apply-all"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "exit_code",
+          "field": "exit_code",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "import_ok",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "observe": "stdout_json",
+          "field": "mutations_failed",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "observe": "stdout_json",
+          "field": "mutations_total",
+          "op": "gt",
+          "value": 0
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 120,
+      "clause_id": "c4"
+    }
+  ],
+  "declared_new_entrypoints": [
+    "scripts/verify_armada_token_invariants_mutations.py"
+  ]
+}
