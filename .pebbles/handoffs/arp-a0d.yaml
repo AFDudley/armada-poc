@@ -1,0 +1,15 @@
+status: completed
+pebble_id: arp-a0d
+summary: >
+  Remove dead governance config and dead spec citations left by G6 (arp-93a).
+  All four acceptance clauses (c1-c4) verified passing.
+commit_shas:
+  - "ba8c81be"
+verify_transcript:
+  - "c1: STEWARD_BUDGET|OUTFLOW_|WINDDOWN_REVENUE absent from config/mainnet.env"
+  - "c2: STEWARD_BUDGET|OUTFLOW_|WINDDOWN_REVENUE, steward[A-Z]\w*, outflow[A-Z]\w*, [Oo]utflowLimit absent from config/networks.ts"
+  - "c3: same four patterns absent from config/networks.test.ts"
+  - "c4: c4 patterns absent from 5 spec files"
+e2e_gate: "config/networks.test.ts (48 passing)"
+e2e_exempt: "docs-only c4 changes"
+cost: "low"
