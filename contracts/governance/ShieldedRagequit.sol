@@ -76,6 +76,10 @@ contract ShieldedRagequit {
     /// @param npk The caller's note public key; the payout note is created at this npk
     /// @param tokens The treasury tokens to receive a pro-rata payout
     function ragequit(uint256 armAmount, bytes32 npk, address[] calldata tokens) external {
+        // c2: the GOVERNANCE.md bound reads totalSupply() *before* the burn, so the
+        // pre-burn supply is the divisor for every listed token in one call.
+        uint256 supplyBefore = armToken.totalSupply();
+
         // c1: burn the caller's ARM via ArmadaToken.burn (callable only by this shaman).
         armToken.burn(msg.sender, armAmount);
 
@@ -92,8 +96,8 @@ contract ShieldedRagequit {
             address tokenAddr = tokens[i];
             IERC20 token = IERC20(tokenAddr);
             uint256 safeBal = token.balanceOf(address(safe));
-            // S4: never pay more than burned/totalSupply * the Safe's balance of this token.
-            uint256 payout = armAmount * safeBal / armToken.totalSupply();
+            // S4: never pay more than burned/pre-burn supply * the Safe's balance of this token.
+            uint256 payout = armAmount * safeBal / supplyBefore;
             payouts[i] = payout;
 
             txns[i] = _buildOwnedTxn(tokenAddr, npk, payout);

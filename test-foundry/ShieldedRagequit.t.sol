@@ -5,6 +5,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
+import "forge-std/console.sol";
 
 import {PrivacyPool} from "../contracts/privacy-pool/PrivacyPool.sol";
 import {ShieldModule} from "../contracts/privacy-pool/modules/ShieldModule.sol";
@@ -163,19 +164,101 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
     function test_RagequitCreatesOwnedNoteAtCallerNpk() public {
         usdc.mint(address(safe), 1000);
         uint256 armAmt = 100;
+        // c3: the GOVERNANCE.md bound reads totalSupply() BEFORE the burn. Record it first,
+        // then perform the ragequit call that burns armAmt of the caller's ARM.
+        uint256 supplyBefore = arm.totalSupply();
         vm.prank(holder);
         ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)));
 
         // The preimage registry now holds the output note's preimage (the caller's note at npk).
         bytes32 commitment =
-            _commitment(_npk(holder), address(usdc), armAmt, usdc.balanceOf(address(safe)), arm.totalSupply());
+            _commitment(_npk(holder), address(usdc), armAmt, usdc.balanceOf(address(safe)), supplyBefore);
         (bytes32 npk, TokenData memory tokenData, uint256 value) = pool.preimageOf(commitment);
         assertEq(npk, _npk(holder), "c2: the note must be at the caller's npk");
         assertEq(uint8(tokenData.tokenType), uint8(TokenType.ERC20), "c2: payout is denominated in the treasury token");
         assertEq(tokenData.tokenAddress, address(usdc), "c2: payout token is the treasury USDC");
         assertEq(
-            value, armAmt * usdc.balanceOf(address(safe)) / arm.totalSupply(), "c2: payout equals the bounded share"
+            value, armAmt * usdc.balanceOf(address(safe)) / supplyBefore, "c2: payout equals the bounded share"
         );
+    }
+
+    // c1 · 100/100/50 → 50 USDC: with the ARM supply at 100 and the Safe holding 100 USDC,
+    //      burning 50 ARM must pay exactly 50 USDC (pre-burn supply), not 100.
+    function test_RagequitPayoutUsesPreBurnSupply() public {
+        usdc.mint(address(safe), 100);
+
+        // Bring the ARM supply down to exactly 100.
+        console.log("supply before any burn", arm.totalSupply());
+        vm.prank(holder);
+        ragequit.ragequit(arm.balanceOf(holder), _npk(holder), _tokenList(address(usdc)));
+        console.log("supply after holder burn", arm.totalSupply());
+        vm.prank(holder2);
+        ragequit.ragequit(100, _npk(holder2), _tokenList(address(usdc)));
+        console.log("supply after holder2 burn", arm.totalSupply());
+        assertEq(arm.totalSupply(), 100, "c1: starting supply is exactly 100 ARM");
+        assertEq(usdc.balanceOf(address(safe)), 100, "c1: the Safe holds 100 USDC");
+        console.log("final: supply must be 100");
+
+        // c1: record the pre-burn supply, then burn 50 ARM through ragequit.
+        uint256 supplyBefore = arm.totalSupply();
+        uint256 safeBal = usdc.balanceOf(address(safe));
+
+        vm.prank(holder2);
+        ragequit.ragequit(50, _npk(holder2), _tokenList(address(usdc)));
+
+        // The note at the caller's npk must hold exactly the bounded share: 50 * 100 / 100 = 50
+        // USDC (pre-burn supply 100 as the divisor). A post-burn supply of 50 would give
+        // 50 * 100 / 50 = 100 USDC, which is too much.
+        (bytes32 npk, TokenData memory tokenData, uint256 value) = pool.preimageOf(
+            _commitment(_npk(holder2), address(usdc), 50, safeBal, supplyBefore)
+        );
+        assertEq(npk, _npk(holder2), "c1: the note is at the caller's npk");
+        assertEq(uint8(tokenData.tokenType), uint8(TokenType.ERC20), "c1: payout is denominated in the treasury token");
+        assertEq(tokenData.tokenAddress, address(usdc), "c1: payout token is the treasury USDC");
+        assertEq(value, 50 * safeBal / supplyBefore, "c1: the payout uses the pre-burn supply");
+        assertEq(value, 50, "c1: 50 * 100 / 100 = 50 USDC, not 100");
+    }
+
+    // c2 · Two treasury tokens in one call: each payout = burned * safe.balanceOf(token) /
+    //      pre-burn supply (the same supplyBefore divides every listed token).
+    function test_RagequitMultiTokenPayoutsUsePreBurnSupply() public {
+        usdc.mint(address(safe), 100);
+        // Bring the ARM supply down to 100 (same authorized burns as c1).
+        vm.prank(holder);
+        ragequit.ragequit(arm.balanceOf(holder), _npk(holder), _tokenList(address(usdc)));
+        vm.prank(holder2);
+        ragequit.ragequit(100, _npk(holder2), _tokenList(address(usdc)));
+        assertEq(arm.totalSupply(), 100, "c2: starting supply is exactly 100 ARM");
+
+        // A second treasury token listed alongside USDC in one call.
+        MockUSDCV2 usdc2 = new MockUSDCV2("Mock USDC2", "USDC2");
+        usdc2.mint(address(safe), 100);
+
+        // c2: record the pre-burn supply, then burn 50 ARM with both tokens listed.
+        uint256 supplyBefore = arm.totalSupply();
+        uint256 safeBal1 = usdc.balanceOf(address(safe));
+        uint256 safeBal2 = usdc2.balanceOf(address(safe));
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(usdc);
+        tokens[1] = address(usdc2);
+
+        vm.prank(holder2);
+        ragequit.ragequit(50, _npk(holder2), tokens);
+
+        // Every token's payout uses the same pre-burn supply as its divisor.
+        (bytes32 npk, TokenData memory td, uint256 v1) = pool.preimageOf(
+            _commitment(_npk(holder2), address(usdc), 50, safeBal1, supplyBefore)
+        );
+        assertEq(npk, _npk(holder2), "c2: note at the caller's npk (token 1)");
+        assertEq(v1, 50 * safeBal1 / supplyBefore, "c2: token 1 payout uses the pre-burn supply");
+        assertEq(v1, 50, "c2: 50 * 100 / 100 = 50 USDC");
+
+        (npk, td, v1) = pool.preimageOf(
+            _commitment(_npk(holder2), address(usdc2), 50, safeBal2, supplyBefore)
+        );
+        assertEq(npk, _npk(holder2), "c2: note at the caller's npk (token 2)");
+        assertEq(v1, 50 * safeBal2 / supplyBefore, "c2: token 2 payout uses the same pre-burn supply");
+        assertEq(v1, 50, "c2: 50 * 100 / 100 = 50 USDC for the second token");
     }
 
     // c3 · The exit succeeds with a single direct call — no Safe signature, no Baal proposal.
