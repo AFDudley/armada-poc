@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // ABOUTME: Baal manager shaman — lets any ARM holder exit the treasury alone: burns their ARM
 // ABOUTME: and receives, as a contract-owned note at their own npk, exactly burned/totalSupply
-// ABOUTME: times the Safe's balance of each listed token, paid via PrivacyPool.transactOwned
+// ABOUTME: times the Safe-owned pool note value of each token, paid via PrivacyPool.transactOwned
 // ABOUTME: (P2a) and debited from a Safe-owned pool note. No Safe signature, no quorum.
 // ABOUTME: See docs/tasks/G3-shielded-ragequit.md and the G3 check in the armada-laconic
 // ABOUTME: labbook 2026-10-18-treasury-governance-baal-safe-shielded.
@@ -28,7 +28,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title ShieldedRagequit — Baal manager shaman for the shielded treasury exit.
-/// @notice Any ARM holder can call ragequit(armAmount, npk, tokens) to burn their ARM and
+/// @notice Any ARM holder can call ragequit(armAmount, npk, tokens, safeNotes) to burn their ARM and
 ///         receive a bounded pro-rata payout as a contract-owned note at their own npk. The
 ///         payout is paid through the pool's contract-owned spend path (transactOwned) and is
 ///         debited from the Safe's existing pool-owned note. No Safe signature, no Baal
@@ -68,40 +68,48 @@ contract ShieldedRagequit {
     // ============ Ragequit (S2) ============
 
     /// @notice Burns `armAmount` of the caller's own ARM and, for each listed token, pays
-    ///         exactly `armAmount * safe.balanceOf(token) / armToken.totalSupply()` as a
-    ///         contract-owned note at the caller's `npk`, debited from the Safe's pool-owned
-    ///         note via the pool's transactOwned. Succeeds with no Safe signature and no
-    ///         Baal proposal (S3).
+    ///         exactly `armAmount * (Safe-owned pool note value) / armToken.totalSupply()` as a
+    ///         contract-owned note at the caller's `npk`. The payout base is the value of the
+    ///         Safe-owned pool note of that token, read from the pool's preimage registry, not
+    ///         the Safe's public ERC-20 balance. The spend debits that note and returns the
+    ///         remainder to the Safe as a change note. No Safe signature, no Baal proposal (S3).
     /// @param armAmount Units of the caller's ARM to burn
     /// @param npk The caller's note public key; the payout note is created at this npk
     /// @param tokens The treasury tokens to receive a pro-rata payout
-    function ragequit(uint256 armAmount, bytes32 npk, address[] calldata tokens) external {
+    /// @param safeNotes The commitment of the Safe-owned pool note spent for each token, in the
+    ///        same order as `tokens`. Each must be an unspent Safe-owned note of that token.
+    function ragequit(uint256 armAmount, bytes32 npk, address[] calldata tokens, bytes32[] calldata safeNotes)
+        external
+    {
+        // arp-caf: the caller names the Safe-owned pool note it spends per token. The payout
+        // base is that note's value, not the Safe's public ERC-20 balance, so a raw transfer
+        // straight to the Safe (which credits no note) cannot change the payout.
+        require(tokens.length == safeNotes.length, "ShieldedRagequit: notes length mismatch");
+
         // c1: burn the caller's ARM via ArmadaToken.burn (callable only by this shaman).
         armToken.burn(msg.sender, armAmount);
 
-        // c4: compute the bounded payout per token from balances read in this same
-        // transaction. The bound is `armAmount * safe.balanceOf(token) / totalSupply()`.
         uint256[] memory payouts = new uint256[](tokens.length);
 
         // One contract-owned transaction per listed token: input note = the Safe's pool-owned
-        // note (owner-derived npk), output note = the caller's note at `npk` with the bounded
-        // payout.
+        // note (named by its commitment), outputs = the caller's payout note at `npk` plus a
+        // change note that returns the remainder to the Safe.
         Transaction[] memory txns = new Transaction[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            address tokenAddr = tokens[i];
-            IERC20 token = IERC20(tokenAddr);
-            uint256 safeBal = token.balanceOf(address(safe));
-            // S4: never pay more than burned/totalSupply * the Safe's balance of this token.
-            uint256 payout = armAmount * safeBal / armToken.totalSupply();
+            // The payout base is the value of the Safe-owned pool note of this token, read from
+            // the pool registry (require it to be a Safe-owned note of this token).
+            uint256 base = _safeNoteValue(safeNotes[i], tokens[i]);
+
+            // S4: never pay more than burned/totalSupply * the Safe-owned note value.
+            uint256 payout = armAmount * base / armToken.totalSupply();
             payouts[i] = payout;
 
-            txns[i] = _buildOwnedTxn(tokenAddr, npk, payout);
+            txns[i] = _buildOwnedTxn(tokens[i], npk, safeNotes[i], base, payout);
         }
 
         // Pay out through the pool's contract-owned spend path (P2a). The caller of
-        // transactOwned is this shaman, so the owned proof's ownerField binds to this shaman;
-        // the input note's npk is the owner-derived (Safe) key (P2-CONTRACT item 6).
+        // transactOwned is this shaman, so the owned proof's ownerField binds to this shaman.
         pool.transactOwned(txns);
 
         // S9: publish the public record of the holdings change.
@@ -111,15 +119,16 @@ contract ShieldedRagequit {
     // ============ Internals ============
 
     /// @dev Assembles one contract-owned transaction: input = the Safe's pool-owned note
-    ///      (owner-derived npk = Safe address), output = the caller's note at `npk`. The
-    ///      `ownerField` binds to this shaman (the msg.sender of transactOwned).
-    function _buildOwnedTxn(address tokenAddr, bytes32 npk, uint256 payout) internal view returns (Transaction memory) {
+    ///      (named by `inputCommitment`), outputs = the caller's payout note at `npk` and, when
+    ///      the payout is less than the note value, a change note that returns the remainder to
+    ///      the Safe. The `ownerField` binds to this shaman (the msg.sender of transactOwned).
+    function _buildOwnedTxn(address tokenAddr, bytes32 npk, bytes32 inputCommitment, uint256 base, uint256 payout)
+        internal
+        view
+        returns (Transaction memory)
+    {
         TokenData memory tokenData = TokenData({tokenType: TokenType.ERC20, tokenAddress: tokenAddr, tokenSubID: 0});
-
-        // The Safe's pool-owned input note (the note the exit debits).
         bytes32 safeNpk = bytes32(uint256(uint160(address(safe))));
-        CommitmentPreimage memory inputNote =
-            CommitmentPreimage({npk: safeNpk, token: tokenData, value: uint120(payout)});
 
         // The caller's output note at their own npk.
         CommitmentPreimage memory outputNote = CommitmentPreimage({npk: npk, token: tokenData, value: uint120(payout)});
@@ -131,21 +140,28 @@ contract ShieldedRagequit {
         // ownerField binds the caller of transactOwned (this shaman) to the owned circuit.
         bytes32 ownerField = bytes32(uint256(uint160(address(this))));
 
-        CommitmentPreimage[] memory publicOutputs = new CommitmentPreimage[](1);
-        publicOutputs[0] = outputNote;
-
-        bytes32 outputCommitment = _hashCommitment(outputNote);
-        bytes32 inputCommitment = _hashCommitment(inputNote);
-
+        // Nullify the Safe's named input note.
         bytes32[] memory nullifiers = new bytes32[](1);
         nullifiers[0] = keccak256(abi.encode(inputCommitment, "nullifier"));
 
-        bytes32[] memory commitments = new bytes32[](1);
-        commitments[0] = outputCommitment;
+        // Output set: the payout note, plus a change note to the Safe when payout < base.
+        uint256 change = base - payout;
+        uint256 outCount = change > 0 ? 2 : 1;
+
+        CommitmentPreimage[] memory publicOutputs = new CommitmentPreimage[](outCount);
+        bytes32[] memory commitments = new bytes32[](outCount);
+        publicOutputs[0] = outputNote;
+        commitments[0] = _hashCommitment(outputNote);
+        if (change > 0) {
+            CommitmentPreimage memory changeNote =
+                CommitmentPreimage({npk: safeNpk, token: tokenData, value: uint120(change)});
+            publicOutputs[1] = changeNote;
+            commitments[1] = _hashCommitment(changeNote);
+        }
 
         CommitmentCiphertext[] memory ciphertext = new CommitmentCiphertext[](commitments.length);
-        if (commitments.length > 0) {
-            ciphertext[0] = CommitmentCiphertext({
+        for (uint256 j = 0; j < commitments.length; j++) {
+            ciphertext[j] = CommitmentCiphertext({
                 ciphertext: [bytes32(0), bytes32(0), bytes32(0), bytes32(0)],
                 blindedSenderViewingKey: bytes32(0),
                 blindedReceiverViewingKey: bytes32(0),
@@ -180,5 +196,15 @@ contract ShieldedRagequit {
             ? bytes32(uint256(uint160(note.token.tokenAddress)))
             : bytes32(uint256(keccak256(abi.encode(note.token))) % SNARK_SCALAR_FIELD);
         return PoseidonT4.poseidon([note.npk, tokenID, bytes32(uint256(note.value))]);
+    }
+
+    /// @dev Reads the value of the Safe-owned pool note named by `commitment`, the payout base.
+    ///      Requires the note to belong to the Safe and to be of `tokenAddr`.
+    function _safeNoteValue(bytes32 commitment, address tokenAddr) internal view returns (uint256) {
+        (bytes32 noteNpk, TokenData memory noteToken, uint120 noteValue) = pool.preimageOf(commitment);
+        require(noteNpk == bytes32(uint256(uint160(address(safe)))), "ShieldedRagequit: note not Safe-owned");
+        require(noteToken.tokenAddress == tokenAddr, "ShieldedRagequit: note token mismatch");
+        require(noteValue > 0, "ShieldedRagequit: empty Safe note");
+        return uint256(noteValue);
     }
 }

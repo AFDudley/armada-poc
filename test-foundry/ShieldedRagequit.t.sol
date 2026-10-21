@@ -11,7 +11,14 @@ import {ShieldModule} from "../contracts/privacy-pool/modules/ShieldModule.sol";
 import {TransactModule} from "../contracts/privacy-pool/modules/TransactModule.sol";
 import {MerkleModule} from "../contracts/privacy-pool/modules/MerkleModule.sol";
 import {VerifierModule} from "../contracts/privacy-pool/modules/VerifierModule.sol";
-import {CommitmentPreimage, TokenData, TokenType, UnshieldType} from "../contracts/privacy-pool/types/PoolTypes.sol";
+import {
+    CommitmentPreimage,
+    TokenData,
+    TokenType,
+    UnshieldType,
+    ShieldRequest,
+    ShieldCiphertext
+} from "../contracts/privacy-pool/types/PoolTypes.sol";
 import {PoseidonT4} from "../contracts/privacy-pool/types/PoseidonLibs.sol";
 import {MockUSDCV2} from "../contracts/cctp/MockUSDCV2.sol";
 import {MockTokenMessengerV2, MockMessageTransmitterV2} from "../contracts/cctp/MockCCTPV2.sol";
@@ -148,11 +155,12 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
     //      drop by armAmount.
     function test_RagequitBurnsCallerArm() public {
         uint256 armAmt = 100;
+        bytes32 safeNote = _shieldToSafe(1000);
         uint256 balBefore = arm.balanceOf(holder);
         uint256 supplyBefore = arm.totalSupply();
 
         vm.prank(holder);
-        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)));
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
 
         assertEq(arm.balanceOf(holder), balBefore - armAmt, "c1: caller ARM balance must drop by armAmount");
         assertEq(arm.totalSupply(), supplyBefore - armAmt, "c1: totalSupply must drop by armAmount");
@@ -161,32 +169,29 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
     // c2 · The exit creates a contract-owned note at the caller's npk with the bounded payout,
     //      debited from the Safe's pool-owned note (owner-derived npk).
     function test_RagequitCreatesOwnedNoteAtCallerNpk() public {
-        usdc.mint(address(safe), 1000);
+        bytes32 safeNote = _shieldToSafe(1000);
         uint256 armAmt = 100;
         vm.prank(holder);
-        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)));
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
 
         // The preimage registry now holds the output note's preimage (the caller's note at npk).
-        bytes32 commitment =
-            _commitment(_npk(holder), address(usdc), armAmt, usdc.balanceOf(address(safe)), arm.totalSupply());
+        bytes32 commitment = _commitment(_npk(holder), address(usdc), armAmt, 1000, arm.totalSupply());
         (bytes32 npk, TokenData memory tokenData, uint256 value) = pool.preimageOf(commitment);
         assertEq(npk, _npk(holder), "c2: the note must be at the caller's npk");
         assertEq(uint8(tokenData.tokenType), uint8(TokenType.ERC20), "c2: payout is denominated in the treasury token");
         assertEq(tokenData.tokenAddress, address(usdc), "c2: payout token is the treasury USDC");
-        assertEq(
-            value, armAmt * usdc.balanceOf(address(safe)) / arm.totalSupply(), "c2: payout equals the bounded share"
-        );
+        assertEq(value, armAmt * 1000 / arm.totalSupply(), "c2: payout equals the bounded share");
     }
 
     // c3 · The exit succeeds with a single direct call — no Safe signature, no Baal proposal.
     function test_RagequitNeedsNoSafeSignatureOrProposal() public {
-        usdc.mint(address(safe), 1000);
+        bytes32 safeNote = _shieldToSafe(1000);
         uint256 supplyBefore = arm.totalSupply();
         uint256 armAmt = 100;
 
         // A single call from the holder succeeds: no Safe multisig, no Baal proposal needed.
         vm.prank(holder);
-        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)));
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
 
         // Proof the exit needed no Safe signature or Baal proposal: the holder's own call
         // burned ARM (totalSupply dropped) and the exit path ran through transactOwned.
@@ -199,14 +204,14 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
 
     // c4 · A crafted call claiming more than the bound reverts; the treasury keeps its funds.
     function test_RagequitRevertsWhenClaimExceedsBound() public {
-        usdc.mint(address(safe), 1000);
+        bytes32 safeNote = _shieldToSafe(1000);
         uint256 armAmt = 100;
-        uint256 safeBal = usdc.balanceOf(address(safe));
+        uint256 safeBal = 1000;
         uint256 supply = arm.totalSupply();
         uint256 bound = armAmt * safeBal / supply;
 
         vm.prank(holder);
-        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)));
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
 
         // The exit pays out exactly the bound — never more.
         (,, uint256 value) = pool.preimageOf(_commitment(_npk(holder), address(usdc), armAmt, safeBal, supply));
@@ -217,13 +222,14 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
     // c5 · A caller with no ARM reverts; no note created; Safe balance + totalSupply unchanged.
     function test_RagequitRevertsForNonHolder() public {
         usdc.mint(address(safe), 1000);
+        bytes32 safeNote = _shieldToSafe(1000);
         uint256 balBefore = arm.balanceOf(nonHolder);
         uint256 supplyBefore = arm.totalSupply();
         uint256 safeBalBefore = usdc.balanceOf(address(safe));
 
         // The non-holder's call must revert (burnFrom: insufficient balance).
         vm.prank(nonHolder);
-        try ragequit.ragequit(100, _npk(nonHolder), _tokenList(address(usdc))) {
+        try ragequit.ragequit(100, _npk(nonHolder), _tokenList(address(usdc)), _safeNotes(safeNote)) {
             revert("c5: ragequit should have reverted for non-holder");
         } catch {
             // expected revert
@@ -267,7 +273,7 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
 
     // c8 · Two holders exit the same token in the same block; total paid <= Safe balance.
     function test_TwoRagequitsSameBlockStayWithinBound() public {
-        usdc.mint(address(safe), 1000);
+        bytes32 safeNote = _shieldToSafe(1000);
         uint256 supplyBefore = arm.totalSupply();
         uint256 aAmt = 100; // ~10% of supply (holder)
         uint256 bAmt = 200; // ~20% of supply (holder2)
@@ -277,9 +283,9 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         uint256 holder2BalBefore = arm.balanceOf(holder2);
 
         vm.prank(holder);
-        ragequit.ragequit(aAmt, _npk(holder), _tokenList(address(usdc)));
+        ragequit.ragequit(aAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
         vm.prank(holder2);
-        try ragequit.ragequit(bAmt, _npk(holder2), _tokenList(address(usdc))) {
+        try ragequit.ragequit(bAmt, _npk(holder2), _tokenList(address(usdc)), _safeNotes(safeNote)) {
             revert("c8: second ragequit should have reverted (shared note)");
         } catch {
             // expected revert
@@ -287,9 +293,9 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
 
         // The bound holds: total paid = aAmt*bal/S0 + bAmt*bal/(S0-aAmt) must be <= the
         // Safe's held balance.
-        uint256 safeBal = usdc.balanceOf(address(safe));
-        uint256 totalPaid = aAmt * safeBal / supplyBefore + bAmt * safeBal / (supplyBefore - aAmt);
-        assertLe(totalPaid, safeBal, "c8: total paid must not exceed the Safe's held balance");
+        uint256 base = 1000;
+        uint256 totalPaid = aAmt * base / supplyBefore + bAmt * base / (supplyBefore - aAmt);
+        assertLe(totalPaid, base, "c8: total paid must not exceed the Safe-owned note value");
         // holder burned aAmt of its own ARM; holder2's exit reverted (Note already spent).
         assertEq(arm.balanceOf(holder), holderBalBefore - aAmt, "c8: holder balance drops by exactly the burn amount");
         assertEq(arm.balanceOf(holder2), holder2BalBefore, "c8: holder2 balance unchanged after reverted exit");
@@ -297,18 +303,87 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
 
     // c9 · Every holdings change (the exit) emits RagequitExecuted with the correct fields.
     function test_RagequitEmitsRagequitExecuted() public {
-        usdc.mint(address(safe), 100);
+        bytes32 safeNote = _shieldToSafe(100);
         uint256 armAmt = 100;
         address[] memory tokens = _tokenList(address(usdc));
         // The event's payout must match the bounded share the contract computes.
         uint256[] memory payouts = new uint256[](1);
-        payouts[0] = armAmt * usdc.balanceOf(address(safe)) / arm.totalSupply();
+        payouts[0] = armAmt * 100 / arm.totalSupply();
 
         // expectEmit on the event signature (fields must match).
         vm.expectEmit(true, false, false, false);
         emit RagequitExecuted(holder, armAmt, _npk(holder), tokens, payouts);
         vm.prank(holder);
-        ragequit.ragequit(armAmt, _npk(holder), tokens);
+        ragequit.ragequit(armAmt, _npk(holder), tokens, _safeNotes(safeNote));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // arp-caf (E3) · The payout base is the Safe-owned pool note value, not balanceOf(safe).
+
+    // caf-c1 · payout = burned ARM * Safe-owned note value / supply.
+    function test_RagequitPayoutBaseIsSafeOwnedNoteValue() public {
+        uint256 noteValue = 1000;
+        bytes32 safeNote = _shieldToSafe(noteValue);
+        uint256 armAmt = arm.totalSupply() / 4;
+
+        vm.prank(holder);
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
+
+        uint256 expected = armAmt * noteValue / arm.totalSupply();
+        (,, uint120 value) =
+            pool.preimageOf(PoseidonT4.poseidon([_npk(holder), _tokenID(address(usdc)), bytes32(expected)]));
+        assertGt(expected, 0, "caf-c1: a nonzero pro-rata share");
+        assertEq(uint256(value), expected, "caf-c1: payout base is the Safe-owned note value");
+    }
+
+    // caf-c2 · A fully shielded treasury (zero public balance) still pays a nonzero share.
+    function test_RagequitPaysNonzeroFromFullyShieldedTreasury() public {
+        uint256 noteValue = 1000;
+        bytes32 safeNote = _shieldToSafe(noteValue);
+        assertEq(usdc.balanceOf(address(safe)), 0, "caf-c2: the treasury is fully shielded (zero public balance)");
+        uint256 armAmt = arm.totalSupply() / 4;
+
+        vm.prank(holder);
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
+
+        uint256 expected = armAmt * noteValue / arm.totalSupply();
+        (,, uint120 value) =
+            pool.preimageOf(PoseidonT4.poseidon([_npk(holder), _tokenID(address(usdc)), bytes32(expected)]));
+        assertGt(uint256(value), 0, "caf-c2: nonzero payout from a fully shielded treasury");
+        assertEq(uint256(value), expected, "caf-c2: payout is the bounded share of the note value");
+    }
+
+    // caf-c3 · A raw ERC-20 transfer straight to the Safe does not change the payout.
+    function test_RagequitPayoutIgnoresRawTransferToSafe() public {
+        uint256 noteValue = 1000;
+        bytes32 safeNote = _shieldToSafe(noteValue);
+        usdc.mint(address(safe), 500); // tainted dust, credited to no note
+        uint256 armAmt = arm.totalSupply() / 4;
+
+        vm.prank(holder);
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
+
+        uint256 expected = armAmt * noteValue / arm.totalSupply();
+        (,, uint120 value) =
+            pool.preimageOf(PoseidonT4.poseidon([_npk(holder), _tokenID(address(usdc)), bytes32(expected)]));
+        assertEq(uint256(value), expected, "caf-c3: the raw transfer to the Safe does not change the payout");
+    }
+
+    // caf-c4 · The Safe-owned note falls by exactly the payout (the change note holds base - payout).
+    function test_RagequitDebitsSafeOwnedNoteByPayout() public {
+        uint256 noteValue = 1000;
+        bytes32 safeNote = _shieldToSafe(noteValue);
+        uint256 armAmt = arm.totalSupply() / 4;
+
+        vm.prank(holder);
+        ragequit.ragequit(armAmt, _npk(holder), _tokenList(address(usdc)), _safeNotes(safeNote));
+
+        uint256 payout = armAmt * noteValue / arm.totalSupply();
+        uint256 change = noteValue - payout;
+        (bytes32 cnpk,, uint120 cvalue) =
+            pool.preimageOf(PoseidonT4.poseidon([_safeNpk(), _tokenID(address(usdc)), bytes32(change)]));
+        assertEq(cnpk, _safeNpk(), "caf-c4: the change note belongs to the Safe");
+        assertEq(uint256(cvalue), change, "caf-c4: the Safe note value falls by exactly the payout");
     }
 
     // ============ Helpers ============
@@ -333,6 +408,40 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         bytes32 tokenID = bytes32(uint256(uint160(tokenAddr)));
         bytes32 value = bytes32(uint256(armAmt * safeBal / supply));
         return PoseidonT4.poseidon([npk, tokenID, value]);
+    }
+
+    /// @dev Token ID the pool uses for an ERC20 (its address in the field element).
+    function _tokenID(address t) internal pure returns (bytes32) {
+        return bytes32(uint256(uint160(t)));
+    }
+
+    function _usdcTokenData() internal view returns (TokenData memory) {
+        return TokenData({tokenType: TokenType.ERC20, tokenAddress: address(usdc), tokenSubID: 0});
+    }
+
+    function _safeNpk() internal view returns (bytes32) {
+        return bytes32(uint256(uint160(address(safe))));
+    }
+
+    /// @dev Shields `value` USDC into a Safe-owned pool note (the fixture's shield fee is 0, so
+    ///      the recorded note value equals `value`) and returns its commitment. The USDC moves
+    ///      into the pool, so the Safe's public ERC-20 balance is unchanged.
+    function _shieldToSafe(uint256 value) internal returns (bytes32 commitment) {
+        usdc.mint(address(this), value);
+        usdc.approve(address(pool), value);
+        ShieldRequest[] memory reqs = new ShieldRequest[](1);
+        reqs[0] = ShieldRequest({
+            preimage: CommitmentPreimage({npk: _safeNpk(), token: _usdcTokenData(), value: uint120(value)}),
+            ciphertext: ShieldCiphertext({encryptedBundle: [bytes32(0), bytes32(0), bytes32(0)], shieldKey: bytes32(0)})
+        });
+        pool.shield(reqs, address(0));
+        commitment = PoseidonT4.poseidon([_safeNpk(), _tokenID(address(usdc)), bytes32(value)]);
+    }
+
+    /// @dev A single-element Safe-note commitment list, parallel to a single-token list.
+    function _safeNotes(bytes32 c) internal pure returns (bytes32[] memory list) {
+        list = new bytes32[](1);
+        list[0] = c;
     }
 }
 
