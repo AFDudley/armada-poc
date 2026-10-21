@@ -1,0 +1,194 @@
+{
+  "id": "derived-arp-63a.5",
+  "original_statement": "What must hold? State the invariant or expectation this concerns. ArmadaCrowdfund takes the active-window duration as a constructor argument and stores it as an immutable, replacing the 21-day constant. LAUNCH_TEAM_INVITE_PERIOD (currently = WINDOW_DURATION) follows the same immutable. The constructor rejects a zero duration. The production deploy path passes 21 days, and a deploy check rejects any other value for a mainnet config (with a forge or script test of that check). The fixturenet deploy (the arn-d36 governance-stack harness) reads a short window from its config, so deploy -> commit -> finalize -> claim can complete within the 1800s gate. Every caller and test of the constructor is updated.\nWhat holds now? Describe the current, observed state. contracts/crowdfund/ArmadaCrowdfund.sol:76 declares WINDOW_DURATION = 21 days as a constant; :80 LAUNCH_TEAM_INVITE_PERIOD = WINDOW_DURATION (constant); windowEnd (:119) and launchTeamInviteEnd (:120) are immutable, set in the constructor as openTimestamp + the constant; :473 finalize() requires block.timestamp > windowEnd. A real geth+lighthouse fixturenet has no time-travel RPC, so finalize cannot run for 21 real days, which blocks the G7a gate (arn-da4). CLAIM_DEADLINE_DURATION (:81, 3 years) is a constant but an upper bound satisfied immediately at claim, so it is not a blocking wait. Baal votingPeriod/gracePeriod are set at summon (deploy-configurable, so the fixturenet summon can use short values), not contract constants.\nHow do you see it? Describe exactly how to observe this for yourself \u2014 the steps to reproduce, or how you would demo it. On the fixturenet, deploy ArmadaCrowdfund with a short window (e.g. 60s), commit, wait out the short window, finalize, claim -- all within 1800s. Read ArmadaCrowdfund.windowEnd and confirm it equals openTimestamp + the passed duration. Attempt a mainnet-config deploy with a non-21-day duration and confirm the deploy check rejects it. Deploy with a zero duration and confirm the constructor reverts.\nWhat constraints apply? State them in plain prose. Fund-moving Solidity: red-first forge tests. One file at a time (collision lesson). Production deploys MUST pass 21 days; a deploy check enforces 21 days for mainnet configs. The fixturenet short window is config-only, never the production value. Update every caller and test of the ArmadaCrowdfund constructor (deploy_crowdfund.ts, test-foundry, the governance-stack gate scripts).\nWhere does this apply? (e.g. gateway route, mobile screen, CLI verb) contracts/crowdfund/ArmadaCrowdfund.sol (constructor, WINDOW_DURATION, LAUNCH_TEAM_INVITE_PERIOD); scripts/deploy_crowdfund.ts; test-foundry; env/gates/governance-stack (armada-nitro, after re-pin).\n\nDecomposed child: scripts/deploy_crowdfund.ts (the production deploy path) passes 21 days (1814400 seconds) as the ArmadaCrowdfund window duration constructor argument. A deploy check rejects any window duration other than 21 days for a mainnet config, and the deploy then does not start. A mainnet-config deploy with a non-21-day duration fails with an error that names the window duration. A mainnet-config deploy with exactly 21 days passes the check. A non-mainnet (fixturenet/local) config can pass a shorter duration. The short window is config-only and is never the production value. Add a forge or script test that proves the check rejects a non-21-day value for a mainnet config and accepts 21 days. This part requires the ArmadaCrowdfund constructor to take the window duration as an argument.",
+  "restatement": "The production crowdfund deploy script, scripts/deploy_crowdfund.ts, must pass a window duration of 21 days (1814400 seconds) to the ArmadaCrowdfund constructor. Before the deploy starts, the script checks the window duration against the target config. For a mainnet config, any value other than 1814400 seconds stops the deploy before it sends a transaction, with an error that names the window duration. For a mainnet config, exactly 1814400 seconds passes the check. For a non-mainnet config (fixturenet or local), a shorter window duration passes the check. A short window is a config value for test networks only and is never the production value. A test proves that the check rejects a non-21-day value and accepts 21 days for a mainnet config. This part depends on a sibling part that changes the ArmadaCrowdfund constructor to take the window duration as an argument.",
+  "restatement_clauses": [
+    {
+      "id": "c1",
+      "text": "scripts/deploy_crowdfund.ts (the production deploy path) passes 21 days (1814400 seconds) as the ArmadaCrowdfund window duration constructor argument."
+    },
+    {
+      "id": "c2",
+      "text": "A deploy check rejects any window duration other than 21 days for a mainnet config, and the deploy then does not start. A mainnet-config deploy with a non-21-day duration fails with an error that names the window duration."
+    },
+    {
+      "id": "c3",
+      "text": "A mainnet-config deploy with exactly 21 days (1814400 seconds) passes the check."
+    },
+    {
+      "id": "c4",
+      "text": "A non-mainnet (fixturenet/local) config can pass a shorter duration; the short window is config-only and is never the production value."
+    },
+    {
+      "id": "c5",
+      "text": "A forge or script test proves the check rejects a non-21-day value for a mainnet config and accepts 21 days."
+    }
+  ],
+  "goal": "Make the production crowdfund deploy refuse to start on a mainnet config unless the window duration is exactly 21 days (1814400 seconds), while test networks can use a shorter window.",
+  "acceptance_criteria": [
+    "When asked for the window duration that the production deploy uses for a mainnet config, the deploy script reports 1814400 seconds.",
+    "When the window check runs for a mainnet config with a 14-day window (1209600 seconds), it refuses, no deploy starts, and the error message names the window duration.",
+    "When the window check runs for a mainnet config with exactly 1814400 seconds, it accepts the value.",
+    "When the window check runs for a local config with a 1-hour window (3600 seconds), it accepts the value.",
+    "The test for the window check passes, and it fails when any comparison or true/false value in the check is changed."
+  ],
+  "request_clauses": [
+    {
+      "id": "c1",
+      "text": "When asked for the window duration that the production deploy uses for a mainnet config, the deploy script reports 1814400 seconds."
+    },
+    {
+      "id": "c2",
+      "text": "When the window check runs for a mainnet config with a 14-day window (1209600 seconds), it refuses, no deploy starts, and the error message names the window duration."
+    },
+    {
+      "id": "c3",
+      "text": "When the window check runs for a mainnet config with exactly 1814400 seconds, it accepts the value."
+    },
+    {
+      "id": "c4",
+      "text": "When the window check runs for a local config with a 1-hour window (3600 seconds), it accepts the value."
+    },
+    {
+      "id": "c5",
+      "text": "The test for the window check passes, and it fails when any comparison or true/false value in the check is changed."
+    }
+  ],
+  "acceptance_tests": [
+    {
+      "type": "behavior",
+      "description": "When asked for the window duration that the production deploy uses for a mainnet config, the deploy script reports 1814400 seconds.",
+      "proves": "The production deploy path supplies the 21-day window value to the crowdfund contract.",
+      "restatement_clause_id": "c1",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/verify_crowdfund_window_check.sh",
+        "args": [
+          "production-value",
+          "mainnet"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "window_duration",
+          "op": "eq",
+          "value": 1814400
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 180,
+      "clause_id": "c1"
+    },
+    {
+      "type": "behavior",
+      "description": "When the window check runs for a mainnet config with a 14-day window (1209600 seconds), it refuses, no deploy starts, and the error message names the window duration.",
+      "proves": "A mainnet deploy with a wrong window duration stops before deploy and reports the window duration as the cause.",
+      "restatement_clause_id": "c2",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/verify_crowdfund_window_check.sh",
+        "args": [
+          "check",
+          "mainnet",
+          "1209600"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "accepted",
+          "op": "eq",
+          "value": false
+        },
+        {
+          "observe": "stdout_json",
+          "field": "deploy_started",
+          "op": "eq",
+          "value": false
+        },
+        {
+          "observe": "stdout_json",
+          "field": "error_mentions_window_duration",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 180,
+      "clause_id": "c2"
+    },
+    {
+      "type": "behavior",
+      "description": "When the window check runs for a mainnet config with exactly 1814400 seconds, it accepts the value.",
+      "proves": "A mainnet deploy with exactly 21 days passes the check.",
+      "restatement_clause_id": "c3",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/verify_crowdfund_window_check.sh",
+        "args": [
+          "check",
+          "mainnet",
+          "1814400"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "accepted",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 180,
+      "clause_id": "c3"
+    },
+    {
+      "type": "behavior",
+      "description": "When the window check runs for a local config with a 1-hour window (3600 seconds), it accepts the value.",
+      "proves": "A non-mainnet config can use a shorter window than the production value.",
+      "restatement_clause_id": "c4",
+      "when": {
+        "interpreter": "bash",
+        "script": "scripts/verify_crowdfund_window_check.sh",
+        "args": [
+          "check",
+          "local",
+          "3600"
+        ],
+        "stdin": ""
+      },
+      "then": [
+        {
+          "observe": "stdout_json",
+          "field": "accepted",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "max_runs": 1,
+      "timeout_seconds": 180,
+      "clause_id": "c4"
+    },
+    {
+      "type": "ts_mutation_gated_test",
+      "description": "The test for the window check passes, and it fails when any comparison or true/false value in the check is changed.",
+      "proves": "A real test proves the check rejects a non-21-day mainnet value and accepts 21 days, and the test is strong enough to catch a broken check.",
+      "restatement_clause_id": "c5",
+      "test": "npx mocha -r ts-node/register test/deploy-crowdfund-window-check.test.ts",
+      "mutation_targets": [
+        "scripts/deploy_crowdfund.ts"
+      ],
+      "clause_id": "c5"
+    }
+  ],
+  "criticality": "marginal",
+  "verification_level": "bounded_model_check",
+  "declared_new_entrypoints": [
+    "scripts/verify_crowdfund_window_check.sh"
+  ]
+}
