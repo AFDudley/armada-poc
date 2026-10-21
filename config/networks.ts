@@ -141,6 +141,10 @@ export interface NetworkConfig {
    *  (unset or empty = the 6h default). Validated, including the 1h floor, by
    *  resolveCrowdfundOpenMinLead (scripts/deploy-utils.ts). */
   crowdfundOpenMinLead: string | undefined;
+  /** Active-window length in seconds for the crowdfund commitment window. Production
+   *  default is 21 days (1814400s); fixture nets may pass a short value (e.g. 60s) so the
+   *  full deploy -> commit -> finalize -> claim completes within the 1800s gate. */
+  crowdfundWindowDuration: number;
   /** Wind-down deadline as ISO 8601 date string. Required on mainnet (WINDDOWN_DEADLINE);
    *  local/Sepolia default "2027-12-31T00:00:00Z". */
   windDownDeadline: string;
@@ -509,6 +513,7 @@ export function getNetworkConfig(): NetworkConfig {
         : process.env.CROWDFUND_OPEN_TIME || undefined,
     crowdfundOpenMinLead:
       process.env.CROWDFUND_OPEN_MIN_LEAD_SECONDS || undefined,
+    crowdfundWindowDuration: numEnv("CROWDFUND_WINDOW_DURATION", 1814400),
     // No mainnet default: the deadline arms the permissionless, terminal wind-down trigger
     // and is fixed at the crowdfund deploy, so it must be chosen deliberately (#381 C2).
     windDownDeadline:

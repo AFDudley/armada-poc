@@ -90,7 +90,14 @@ contract CrowdfundShieldedProceedsTest is Test, CrowdfundPoolDeploy {
         pool = _deployPool(address(usdc), poolTreasury, admin, SAFE_NPK);
 
         crowdfund = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+            address(usdc),
+            address(armToken),
+            treasury,
+            admin,
+            admin,
+            block.timestamp,
+            1814400, // 21 days (production)
+            address(pool)
         );
 
         address[] memory wl = new address[](2);
@@ -151,7 +158,14 @@ contract CrowdfundShieldedProceedsTest is Test, CrowdfundPoolDeploy {
         ArmadaToken armToken2 = new ArmadaToken(admin, admin);
         PrivacyPool pool2 = _deployPool(address(maliciousUsdc), poolTreasury, admin, SAFE_NPK);
         ArmadaCrowdfund cf2 = new ArmadaCrowdfund(
-            address(maliciousUsdc), address(armToken2), treasury, admin, admin, block.timestamp, address(pool2)
+            address(maliciousUsdc),
+            address(armToken2),
+            treasury,
+            admin,
+            admin,
+            block.timestamp,
+            1814400, // 21 days (production)
+            address(pool2)
         );
 
         // Whitelist admin + cf2 on the fresh ARM token, then fund it.

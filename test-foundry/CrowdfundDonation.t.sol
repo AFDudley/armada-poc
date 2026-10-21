@@ -32,7 +32,14 @@ contract CrowdfundDonationTest is Test, CrowdfundPoolDeploy {
         armToken = new ArmadaToken(admin, admin);
         pool = _deployPool(address(usdc), treasury, address(this), bytes32(0));
         crowdfund = new ArmadaCrowdfund(
-            address(usdc), address(armToken), treasury, admin, admin, block.timestamp, address(pool)
+            address(usdc),
+            address(armToken),
+            treasury,
+            admin,
+            admin,
+            block.timestamp,
+            1814400, // 21 days (production)
+            address(pool)
         );
 
         address[] memory wl = new address[](2);
