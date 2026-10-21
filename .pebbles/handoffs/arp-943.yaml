@@ -1,0 +1,106 @@
+status: completed
+pebble_id: arp-943
+summary: >
+  Removed the dead ArmadaToken addToWhitelist and wind-down code
+  references from the two armada-poc scripts, per E6 (arp-6bc) which
+  deleted both from contracts/governance/ArmadaToken.sol.
+  scripts/check-armada-token-invariants.py lost its two dead mutations
+  (_mutation_open_add_to_whitelist and _mutation_require_wind_down_contract)
+  and their ASSERTIONS/MUTATIONS entries (open-add-to-whitelist and
+  require-wind-down-contract), plus a stale comment; the two transfer
+  mutation anchors were refreshed to the live token's `if (!transferable
+  && to != address(0))` guard. scripts/deploy_revenue_lock_cohort.ts
+  no longer prints the reverting armToken.addToWhitelist next-step
+  (renumbered to addAuthorizedDelegator + treasury.distribute) and now
+  notes the allowlist is fixed at deploy via initWhitelist. New harness
+  scripts/verify_armada_token_invariants_mutations.py --apply-all imports
+  the checker module and applies every remaining mutation to the token
+  source; it reports import_ok=true, mutations_total=4, mutations_failed=0,
+  exit 0. All four spec acceptance tests (c1-c4) pass; only scripts
+  changed (contracts untouched).
+cost: "~40k tokens"
+commits:
+  - "1a821c81"
+verify_transcript:
+  hooks:
+    - name: "New source directory carries its CLAUDE.md"
+      outcome: passed
+      duration_s: 1
+    - name: "Refuse a direct commit on main; reroute it to a worker branch"
+      outcome: passed
+      duration_s: 1
+    - name: "Anvil address / secrets / .env / beneficiary-label safety checks"
+      outcome: passed
+      duration_s: 2
+    - name: "trim trailing whitespace"
+      outcome: passed
+      duration_s: 1
+    - name: "fix end of files"
+      outcome: passed
+      duration_s: 1
+    - name: "check yaml"
+      outcome: skipped
+      duration_s: 0
+    - name: "check for added large files"
+      outcome: passed
+      duration_s: 1
+    - name: "check for merge conflicts"
+      outcome: passed
+      duration_s: 0
+    - name: "check for case conflicts"
+      outcome: passed
+      duration_s: 0
+    - name: "mixed line ending"
+      outcome: passed
+      duration_s: 0
+    - name: "eslint"
+      outcome: passed
+      duration_s: 2
+    - name: "prettier"
+      outcome: passed
+      duration_s: 1
+    - name: "Commit message carries a Tested-Behavior: or TDD-Exempt: trailer"
+      outcome: passed
+      duration_s: 0
+    - name: "Subtree-path edits carry a git-subtree-dir trailer"
+      outcome: passed
+      duration_s: 0
+    - name: "Stamp every commit with the session that produced it"
+      outcome: passed
+      duration_s: 0
+e2e_gate:
+  spec: contracts/specs/derived-arp-943.spec.json
+  command: "python3 scripts/verify_armada_token_invariants_mutations.py --apply-all"
+  result: passed
+  ran_at_sha: "1a821c81"
+  mocks_in_path: false
+discrimination:
+  - mechanism: red_first
+    oracle: "eslint (wired via .pre-commit-config.yaml's TS/JS hook, entry `npx --no-install eslint --fix --max-warnings=0`, files `.(ts|tsx|js|mjs|cjs)$`)"
+    target: "scripts/deploy_revenue_lock_cohort.ts"
+    perturbation: >
+      Inserted an invalid import line `import { lockAddress } as unused;`
+      after the hardhat import in the committed deploy script (a syntax
+      error eslint's parser must catch); then re-ran the same eslint
+      command against the committed, clean file.
+    took:
+      applied:
+        observable: "line 27 of scripts/deploy_revenue_lock_cohort.ts, re-read after the edit"
+        moved:
+          - "valid hardhat import (committed)"
+          - "invalid `import { lockAddress } as unused;` present (perturbed)"
+      observed:
+        observable: "eslint exit code for scripts/deploy_revenue_lock_cohort.ts"
+        moved:
+          - "exit 0 on the committed clean file"
+          - "exit 1 on the perturbed file (Parsing error: 'from' expected)"
+    assertions_fired:
+      - assertion: "eslint reports a parsing error on the perturbed file"
+        moved:
+          - "no eslint errors on the committed file"
+          - "1 error: 27:23 Parsing error: 'from' expected"
+    pinned_at:
+      - "scripts/deploy_revenue_lock_cohort.ts"
+    exit_code_before: 0
+    exit_code_after: 1
+    reverted: true
