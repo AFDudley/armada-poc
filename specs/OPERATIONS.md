@@ -21,7 +21,7 @@ Complete this table before deployment. Every address must be confirmed before an
 | Treasury | Receives net USDC proceeds + unsold/unclaimed ARM | `[TBD]` (from the governance manifest) | Contract: `ArmadaTreasuryGov`, deployed by the launch and controlled by governance through the timelock; not a wallet | — |
 | ROOT / Launch team | `addSeed()`, `launchTeamInvite()` | `[TBD]` | Safe multisig, every signer on a hardware wallet | 1-of-3 |
 | Security Council | `cancel()` authority | `[TBD]` | Safe multisig | 2-of-3 |
-| Treasury Steward | Elected at deploy with the USDC steward budget; `proposeStewardSpend()` (GOVERNANCE.md §Treasury Steward) | `[TBD]` | Safe multisig | 2-of-3 |
+| Treasury Steward | Elected at deploy with the USDC steward budget; `proposeStewardSpend()` | `[TBD]` | Safe multisig | 2-of-3 |
 | ARM token contract | Source of preloaded ARM | `[TBD]` | — | — |
 | USDC token contract | Committed currency | Circle mainnet USDC | — | — |
 

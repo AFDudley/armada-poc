@@ -512,7 +512,7 @@ Early network tokens cannot be unlocked by governance. They unlock only via reve
 
 Treasury tokens (65–70%) are controlled by governance but do not vote.
 
-See GOVERNANCE.md for full specification: voting mechanics, delegation, quorum, proposal lifecycle, Treasury Steward, Security Council, and wind-down.
+See GOVERNANCE.md for full specification: voting mechanics, delegation, quorum, and proposal lifecycle.
 
 ---
 
@@ -537,7 +537,7 @@ The protocol triggers an automatic wind-down if the revenue threshold is not rea
 
 The intent is to give the protocol approximately 6 months after the **shielded pool launch** to demonstrate traction. Protocol revenue only accrues through the shielded pool's fee module, which launches separately after the crowdfund, on a date not yet known. The deadline is fixed when the wind-down contract is deployed with the crowdfund, so December 31, 2027 is a deliberately conservative initial value. Once the shielded pool launch date is known, governance is expected to set the deadline to roughly 6 months after it; if the shielded pool launch slips, governance should extend the deadline before it becomes binding.
 
-The trade-off of a conservative initial deadline: if the shielded pool is delayed or never ships, participants wait longer before the permissionless wind-down becomes available. Governance can still trigger wind-down at any time via extended proposal (see GOVERNANCE.md §Wind-Down).
+The trade-off of a conservative initial deadline: if the shielded pool is delayed or never ships, participants wait longer before the permissionless wind-down becomes available. Governance can still trigger wind-down at any time via extended proposal.
 
 If cumulative protocol revenue does not reach the threshold by the deadline, wind-down initiates automatically — no governance vote required. Governance may adjust either parameter before the deadline, or vote to wind down early at any time.
 
@@ -548,7 +548,7 @@ If cumulative protocol revenue does not reach the threshold by the deadline, win
 3. Shielded pool enters withdraw-only mode (immediate — `shield()` and shielded `transfer()` disabled; `unshield()` always available indefinitely with no deadline)
 4. Governance ends permanently — no new proposals, no steward proposals, no parameter changes
 5. Non-ARM treasury assets are swept to the redemption contract via permissionless `sweepToken(address)` calls (one per token; `sweepToken(ARM)` reverts — treasury ARM stays locked permanently)
-6. ARM holders deposit ARM into the redemption contract and receive their pro-rata share of non-ARM treasury assets. No snapshot, no deadline — deposit whenever you want. See GOVERNANCE.md §Wind-Down for the full redemption mechanism.
+6. ARM holders deposit ARM into the redemption contract and receive their pro-rata share of non-ARM treasury assets. No snapshot, no deadline — deposit whenever you want.
 7. Early network tokens have no treasury claim unless released via revenue milestones before wind-down. Unreleased ARM stays in the revenue-lock contract permanently.
 
 **Unclaimed ARM after wind-down.** Participants may claim their ARM at any time after wind-down (subject to the 3-year deadline). Once claimed, they can deposit it into the redemption contract to receive their treasury share. The 3-year ARM claim deadline continues to apply. Unclaimed ARM in the crowdfund contract is excluded from the redemption denominator, so it does not dilute redeemers.

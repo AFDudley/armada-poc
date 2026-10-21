@@ -58,19 +58,6 @@ export interface RevenueLockBeneficiary {
   label: string; // human-readable label for deploy logs
 }
 
-/** Treasury per-token outflow rate-limit parameters (ArmadaTreasuryGov.initOutflowConfig). */
-export interface OutflowParams {
-  /** Rolling window length in seconds (must be >= 1 day). */
-  windowDuration: number;
-  /** Per-window limit as basis points of treasury balance (1..10000). */
-  limitBps: number;
-  /** Absolute per-window amount, in the token's smallest unit. Not a cap: the effective
-   * limit is the greater of this and limitBps × balance, raised to at least floorAbsolute. */
-  limitAbsolute: string;
-  /** Immutable minimum the absolute amount can never be reduced below, smallest unit. */
-  floorAbsolute: string;
-}
-
 export interface NetworkConfig {
   env: DeployEnv;
   cctpMode: CCTPMode;
@@ -157,9 +144,6 @@ export interface NetworkConfig {
   /** Wind-down deadline as ISO 8601 date string. Required on mainnet (WINDDOWN_DEADLINE);
    *  local/Sepolia default "2027-12-31T00:00:00Z". */
   windDownDeadline: string;
-  /** Wind-down revenue threshold in whole USD (18-decimal). Required on mainnet
-   *  (WINDDOWN_REVENUE_THRESHOLD); local/Sepolia default "10000". */
-  windDownRevenueThreshold: string;
   /** RevenueLock MAX_REVENUE_INCREASE_PER_DAY in whole USD, scaled to 18 decimals at deploy
    *  (RevenueCounter.recognizedRevenueUsd is 18-decimal USD). Immutable per RevenueLock.
    *  Default "10000" ($10k/day — issue #225: a malicious RevenueCounter upgrade needs
@@ -176,33 +160,6 @@ export interface NetworkConfig {
    * elsewhere; disabling it on mainnet is refused. See issue #347.
    */
   hardenTimelock: boolean;
-  /**
-   * Treasury outflow rate-limit config per token, applied at deploy via
-   * initOutflowConfig so the treasury is protected from launch rather than via a
-   * fragile first governance vote. Values follow GOVERNANCE.md (issue #348). Amounts are in each token's smallest unit (USDC 6dp, ARM/ETH 18dp).
-   */
-  outflowConfig: {
-    usdc: OutflowParams;
-    arm: OutflowParams;
-    eth: OutflowParams;
-  };
-  /**
-   * Initial Treasury Steward elected at deploy, with its USDC steward budget (#221, #222).
-   * deploy_crowdfund calls TreasurySteward.electSteward and treasury.addStewardBudgetToken
-   * through the timelock bootstrap window. Required on mainnet (INITIAL_STEWARD_ADDRESS);
-   * unset elsewhere means no deploy-time election or budget.
-   */
-  initialSteward?: InitialStewardConfig;
-}
-
-/** Deploy-time steward election + USDC steward budget (see NetworkConfig.initialSteward). */
-export interface InitialStewardConfig {
-  /** Steward address. Must be a 2-of-3 Safe on non-local networks (checked on-chain pre-flight). */
-  address: string;
-  /** Budget per window in WHOLE USDC, scaled by USDC's 6 decimals at deploy. */
-  budgetUsdc: string;
-  /** Rolling budget window in seconds (>= 1 day). */
-  budgetWindow: number;
 }
 
 // ============================================================================
@@ -280,51 +237,6 @@ function buildRevenueReserve(
 /** Decimals the whole-USD steward budget is scaled by. deploy_crowdfund confirms the hub USDC
  *  reports this before it authorizes the budget. */
 export const USDC_DECIMALS = 6;
-
-/**
- * Read the deploy-time steward election + USDC budget (#221, #222). INITIAL_STEWARD_ADDRESS
- * enables both; it is required on mainnet, and STEWARD_BUDGET_* without it is refused. The
- * budget is whole USD (default $60,000 per GOVERNANCE.md §Treasury Steward) and may not exceed
- * the USDC outflow absolute limit: a larger value is a units mistake, not a real budget.
- */
-function buildInitialSteward(
-  env: DeployEnv,
-  usdcOutflowAbsolute: string,
-): InitialStewardConfig | undefined {
-  const address = process.env.INITIAL_STEWARD_ADDRESS?.trim();
-  const budgetUsdc = process.env.STEWARD_BUDGET_USDC?.trim();
-  const budgetWindow = process.env.STEWARD_BUDGET_WINDOW?.trim();
-  if (!address) {
-    if (env === "mainnet") requireEnv("INITIAL_STEWARD_ADDRESS");
-    if (budgetUsdc || budgetWindow) {
-      throw new Error(
-        "STEWARD_BUDGET_* is set but INITIAL_STEWARD_ADDRESS is not; set the steward too, or neither",
-      );
-    }
-    return undefined;
-  }
-  if (!/^0x[0-9a-fA-F]{40}$/.test(address) || /^0x0{40}$/.test(address)) {
-    throw new Error(
-      `INITIAL_STEWARD_ADDRESS must be a non-zero 20-byte hex address, got "${address}"`,
-    );
-  }
-  const budget = budgetUsdc || "60000";
-  const maxBudgetUsd =
-    BigInt(usdcOutflowAbsolute) / 10n ** BigInt(USDC_DECIMALS);
-  if (!/^[1-9]\d*$/.test(budget) || BigInt(budget) > maxBudgetUsd) {
-    throw new Error(
-      `STEWARD_BUDGET_USDC must be a whole-USD integer between 1 and ${maxBudgetUsd} ` +
-        `(the USDC outflow absolute limit; not 6-decimal scaled), got "${budget}"`,
-    );
-  }
-  const window = budgetWindow || "2592000";
-  if (!/^\d+$/.test(window) || Number(window) < 86400) {
-    throw new Error(
-      `STEWARD_BUDGET_WINDOW must be whole seconds >= 86400 (1 day), got "${window}"`,
-    );
-  }
-  return { address, budgetUsdc: budget, budgetWindow: Number(window) };
-}
 
 function boolEnv(key: string, defaultValue: boolean): boolean {
   const value = process.env[key];
@@ -556,36 +468,6 @@ export function getNetworkConfig(): NetworkConfig {
     );
   }
 
-  // Treasury outflow limits, env-overridable per token. Defaults are the GOVERNANCE.md
-  // §Treasury Outflow Limits values: 30-day rolling window, limit = greater of the
-  // absolute amount and the % of treasury balance, no floor (the floor is fixed at deploy).
-  const outflowConfig: NetworkConfig["outflowConfig"] = {
-    usdc: {
-      windowDuration: numEnv("OUTFLOW_USDC_WINDOW", 2592000), // 30 days
-      limitBps: numEnv("OUTFLOW_USDC_BPS", 1000), // 10%
-      limitAbsolute: optionalEnv("OUTFLOW_USDC_ABSOLUTE", "100000000000"), // 100,000 USDC (6dp)
-      floorAbsolute: optionalEnv("OUTFLOW_USDC_FLOOR", "0"), // none
-    },
-    arm: {
-      windowDuration: numEnv("OUTFLOW_ARM_WINDOW", 2592000), // 30 days
-      limitBps: numEnv("OUTFLOW_ARM_BPS", 300), // 3%
-      limitAbsolute: optionalEnv(
-        "OUTFLOW_ARM_ABSOLUTE",
-        "250000000000000000000000",
-      ), // 250,000 ARM (18dp)
-      floorAbsolute: optionalEnv("OUTFLOW_ARM_FLOOR", "0"), // none
-    },
-    eth: {
-      windowDuration: numEnv("OUTFLOW_ETH_WINDOW", 2592000), // 30 days
-      limitBps: numEnv("OUTFLOW_ETH_BPS", 1000), // 10%
-      limitAbsolute: optionalEnv(
-        "OUTFLOW_ETH_ABSOLUTE",
-        "25000000000000000000",
-      ), // 25 ETH (18dp)
-      floorAbsolute: optionalEnv("OUTFLOW_ETH_FLOOR", "0"), // none
-    },
-  };
-
   _cachedConfig = {
     env,
     cctpMode,
@@ -633,12 +515,6 @@ export function getNetworkConfig(): NetworkConfig {
       env === "mainnet"
         ? requireEnv("WINDDOWN_DEADLINE")
         : optionalEnv("WINDDOWN_DEADLINE", "2027-12-31T00:00:00Z"),
-    // Paired with the deadline: below-threshold revenue after it arms the terminal trigger,
-    // so mainnet takes no default either.
-    windDownRevenueThreshold:
-      env === "mainnet"
-        ? requireEnv("WINDDOWN_REVENUE_THRESHOLD")
-        : optionalEnv("WINDDOWN_REVENUE_THRESHOLD", "10000"),
     revenueLockMaxIncreasePerDayUsd: revenueLockMaxIncreaseEnv(
       "REVENUE_LOCK_MAX_INCREASE_PER_DAY_USD",
       "10000",
@@ -646,8 +522,6 @@ export function getNetworkConfig(): NetworkConfig {
     cctpFinalityMode: optionalEnv("CCTP_FINALITY_MODE", "fast") as
       "fast" | "standard",
     hardenTimelock,
-    outflowConfig,
-    initialSteward: buildInitialSteward(env, outflowConfig.usdc.limitAbsolute),
   };
 
   return _cachedConfig;
