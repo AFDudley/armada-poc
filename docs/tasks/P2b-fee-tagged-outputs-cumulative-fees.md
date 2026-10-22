@@ -1,3 +1,15 @@
+> **SUPERSEDED (2026-10-22).** The fee-tagged `transact` outputs and the
+> crowdfund-to-`feeRecipient` path in this chunk no longer count as a protocol
+> fee. There is no protocol swap fee (treasury lab book
+> `armada-laconic/labbook/2026-10-18-treasury-governance-baal-safe-shielded.md`
+> §3a T9; decision 23 struck on 2026-10-22 as an agent error). The only protocol
+> fee is the shield-in fee that `ShieldModule` charges. Only `ShieldModule`
+> shield fees raise `cumulativeFees` (§3a T2(a)). Deliverable S3 (fee recognition
+> in the contract-owned-output path) and the swap-fee framing in S1/the F4
+> contract below are void. Keep S2 (`cumulativeFees` storage) and S4 (recognition
+> in `shield`/`processIncomingShield`) only. The crowdfund has no code path into
+> the pool or governance (§3a T3).
+
 Chunk P2b · Family F1 · Points 5 · Route 5090
 Depends on: P2a
 

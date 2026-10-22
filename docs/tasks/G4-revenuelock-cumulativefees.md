@@ -1,3 +1,13 @@
+> **SUPERSEDED IN PART (2026-10-22).** This chunk's `RevenueLock` design holds:
+> `RevenueLock` reads `pool.cumulativeFees(asset)` and bounds its release by it.
+> The SOURCE of `cumulativeFees` narrows. There is no protocol swap fee and no
+> fee-tagged `transact` output (treasury lab book
+> `armada-laconic/labbook/2026-10-18-treasury-governance-baal-safe-shielded.md`
+> §3a T9; decision 23 struck on 2026-10-22 as an agent error). Only the shield-in
+> fee that `ShieldModule` charges raises `cumulativeFees` (§3a T2(a)). Read every
+> "fee-tagged note"/"fee-tagged pool transaction" phrase below as "`ShieldModule`
+> shield fee".
+
 
 # Chunk G4 · Family F3 · Points 6 · Route 5090
 

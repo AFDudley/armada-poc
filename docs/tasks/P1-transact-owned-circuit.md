@@ -89,5 +89,12 @@ Audit-critical. Check:
 The Solidity side (`transactOwned`, `preimageOf`, fee-tagged outputs — P2); the Phase-2 ceremony run for these
 shapes (P4); any shape beyond `1x1_owned`/`1x2_owned`/`1x3_owned`.
 
+> **Note (2026-10-22).** The "fee-tagged outputs" reference above is superseded.
+> There is no protocol swap fee (treasury lab book
+> `armada-laconic/labbook/2026-10-18-treasury-governance-baal-safe-shielded.md`
+> §3a T9; decision 23 struck as an agent error). Only the shield-in fee that
+> `ShieldModule` charges raises `cumulativeFees` (§3a T2(a)). P1's circuit work
+> is unaffected.
+
 ## Handoff
 Moves `armada-laconic/notes/handoff-2026-10-20.md` §0.4, row "F1 pool", chunk P1.

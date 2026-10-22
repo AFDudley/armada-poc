@@ -91,5 +91,12 @@ Audit-critical. Check:
 Fee-tagged outputs, `cumulativeFees`, `feeRecipient`, the `ShieldModule` fee note (P2b); non-upgradeable deployment
 (P3); the Phase-2 ceremony for the owned shapes (P4).
 
+> **Note (2026-10-22).** The fee-tagged outputs and `feeRecipient` recognition
+> of P2b are superseded. There is no protocol swap fee (treasury lab book
+> `armada-laconic/labbook/2026-10-18-treasury-governance-baal-safe-shielded.md`
+> §3a T9; decision 23 struck as an agent error). Only the shield-in fee that
+> `ShieldModule` charges raises `cumulativeFees` (§3a T2(a)). P2a's own
+> `preimageOf` and `transactOwned` work is unaffected.
+
 ## Handoff
 Moves `armada-laconic/notes/handoff-2026-10-20.md` §0.4, row "F1 pool", chunk P2 (first half).

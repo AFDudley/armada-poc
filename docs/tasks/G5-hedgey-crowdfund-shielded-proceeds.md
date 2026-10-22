@@ -1,3 +1,16 @@
+> **SUPERSEDED IN PART (2026-10-22).** The crowdfund has NO code path into the
+> pool or governance (treasury lab book
+> `armada-laconic/labbook/2026-10-18-treasury-governance-baal-safe-shielded.md`
+> §3a T3). So deliverable S1 below — `finalize` shields `proceedsPush` through
+> the pool's shield path to the Safe's `npk` — is void. `finalize` keeps its
+> plain `usdc.safeTransfer(treasury, proceedsPush)`. There is no protocol swap
+> fee (§3a T9; decision 23 struck on 2026-10-22 as an agent error) and no
+> fee-tagged `transact` output. The `finalize`-to-`feeRecipient` shield never
+> raises `cumulativeFees`: only the shield-in fee that `ShieldModule` charges
+> does (§3a T2(a)). Read the P2-CONTRACT `feeRecipient`/`cumulativeFees`
+> references below as not applicable to the crowdfund. The Hedgey lockup
+> deliverables (S3 and after) are unchanged.
+
 
 # Chunk G5 · Family F3 · Points 8 · Route 5090
 
