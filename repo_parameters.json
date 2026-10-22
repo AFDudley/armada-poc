@@ -1,6 +1,6 @@
 {
   "git_remote": "origin",
-  "environment_command": ["npm", "ci", "--legacy-peer-deps", "--offline"],
+  "environment_command": ["npm", "ci", "--legacy-peer-deps", "--ignore-scripts"],
   "subtrees": [],
   "pebble_tracker_prefixes": {
     "root": "arp-"
