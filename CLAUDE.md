@@ -68,13 +68,13 @@ VITE_NETWORK=sepolia VITE_DEPLOYMENT_INSTANCE=medi2 npm run crowdfund:committer
 
 The following are known security shortcuts inherited from the POC phase. They are tracked and will be addressed before production. **Do not create additional shortcuts like these:**
 
-- `setTestingMode()` in PrivacyPool bypasses ZK proof verification
-- `VERIFICATION_BYPASS` at `tx.origin == 0xdead` (constant in `contracts/privacy-pool/types/PoolTypes.sol`, checked in `PrivacyPool.verify`)
+- ~~`setTestingMode()` in PrivacyPool bypasses ZK proof verification~~ (Removed in #633: the pool has no verification bypass)
+- ~~`VERIFICATION_BYPASS` at `tx.origin == 0xdead`~~ (Removed in #633)
 - Hardcoded Anvil private keys in config (acceptable for local only)
-- Shield fee formula mismatch between contract and SDK
+- ~~Shield fee formula mismatch between contract and SDK~~ (Obsolete: the separate Railgun fee code is gone, and the SDK reads after-fee note values from the pool's `Shield` events; see #51)
 - ~~Missing `onlyDelegatecall` guards on pool modules~~ (Fixed: guards added to all module external functions)
 
-**NEVER enable testing mode (`setTestingMode()`) or any SNARK verification bypass without explicit human instruction.** These exist for specific test scenarios and must not be turned on as a convenience shortcut.
+**Proof verification can be skipped only in the test-only `contracts/test/PrivacyPoolProofBypass.sol`** (used by tests that cannot generate proofs). Never deploy it outside tests, and never add a verification bypass to production contracts.
 
 When writing new code, follow production security practices even though these legacy shortcuts exist.
 
@@ -111,11 +111,11 @@ When writing new code, follow production security practices even though these le
 | `lib/` | Foundry deps (forge-std, halmos) + Railgun SDK helpers |
 | `config/` | Environment configs (local.env, sepolia.env, networks.ts) |
 | `deploy/` | Crowdfund indexer deployment infra (Docker, nginx, backup scripts) |
-| `deployments/` | Generated deployment manifests (Sepolia and mainnet ones are committed) |
+| `deployments/` | Generated deployment manifests (only the Sepolia ones are committed; named instances are pulled from the armada-deployments repo via `npm run fetch-deployment`) |
 | `specs/` | Specifications — governance, crowdfund, fee structure, ARM token, operations, monitoring |
 | `docs/` | Operational runbooks (Ledger deploy, Safe launch batches, interrupted-launch recovery, wind-down redemption) |
 | `_legacy/llm-analysis-2026-02/` | LLM-generated security analysis snapshot (Feb 2026, formerly `audit-reports/`) — historical, predates fee module/governance/July review |
-| `reports/` | Threat models, formal verification notes, analysis reports |
+| `reports/` | Threat models (current: `threat-model-privacy-pool-yield.md`, `threat-model-governance-crowdfund.md`), formal verification notes, multicall audits. Files bannered "Historical snapshot (2026-02-17)" are a dated LLM analysis, not current security documentation |
 | `mcp-server/` | MCP server exposing read-only dev tools for AI coding agents |
 | `_legacy/` | Deprecated earlier approach — do not modify |
 
@@ -173,7 +173,7 @@ The following are intentional design decisions or inherited code that may look l
 - **Pool consensus-critical surface** — `contracts/privacy-pool/types/` (struct layouts, `ZERO_VALUE`, Snark types), the router's `verify` public-input assembly, `hashBoundParams`, and Merkle hashing, as specified in `specs/PRIVACY_POOL_CONTRACT.md`. Changes break ZK circuit compatibility silently.
 - **Non-standard ERC-4626 vault** (`ArmadaYieldVault`) — Intentionally deviates from the standard. Do not "fix" it to conform.
 - **Frozen Launch 1 interfaces** (`IShieldPauseController`, `IFeeCollector` in `contracts/governance/`) — These are consumed by immutable governance contracts deployed at the crowdfund launch. Once Launch 1 ships, changing their function signatures or semantics breaks the Launch 2 privacy-pool/fee-module integration. Treat as external ABI. See `.context/two-launch-feasibility.md`.
-- **Testing mode / verification bypass code** — These POC shortcuts exist in the codebase. Do not remove them (they're tracked), but never enable them without human instruction.
+- **`PrivacyPoolProofBypass` (test-only)** — Overrides `PrivacyPool.verify` so tests can transact without proofs. Keep it out of deploy scripts; production deploys `PrivacyPool`.
 - **`_legacy/` directory** — Deprecated earlier approach. Do not modify or reference in new code.
 
 ## Simplifying Assumptions & TODOs

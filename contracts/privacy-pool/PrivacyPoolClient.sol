@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "./interfaces/IPrivacyPoolClient.sol";
 import "./types/CCTPTypes.sol";
+import {SNARK_SCALAR_FIELD} from "./types/PoolTypes.sol";
 import "../cctp/ICCTPV2.sol";
 
 /**
@@ -68,6 +69,11 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
     /// @notice Default finality threshold for outbound CCTP burns (STANDARD=2000, FAST=1000)
     /// @dev Used as fallback when user passes 0 to crossChainShield
     uint32 public defaultFinalityThreshold;
+
+    /// @notice Owner proposed by `transferOwnership`, pending its `acceptOwnership` (issue #349).
+    /// @dev address(0) when no transfer is pending. Ownership moves only when this address accepts,
+    ///      so a mistyped proposal can be replaced or cancelled instead of losing the admin key.
+    address public override pendingOwner;
 
     // ══════════════════════════════════════════════════════════════════════════
     // INITIALIZATION
@@ -164,6 +170,7 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
             shieldKey: shieldKey,
             integrator: integrator
         });
+        _validateNote(notes[0]);
 
         _pullAndBurn(amount, maxFee, minFinalityThreshold, notes);
 
@@ -201,6 +208,8 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
         // strand the (already burned) message on the Hub. Bounding only against `total` is
         // insufficient: it permits maxFee >= userNote.value, an undeliverable configuration.
         require(maxFee < uint256(userNote.value), "PrivacyPoolClient: Fee exceeds user note");
+        _validateNote(userNote);
+        _validateNote(feeNote);
 
         ShieldData[] memory notes = new ShieldData[](2);
         notes[0] = userNote; // recipient note — absorbs the CCTP fee on the Hub
@@ -315,6 +324,18 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
     }
 
     /**
+     * @notice Reject a note the Hub would reject, before anything is burned (#607).
+     * @dev Mirrors the Hub's per-note checks in `ShieldModule.processIncomingShield`. The burned USDC
+     *      can only be delivered through the Hub's hook router (the CCTP destinationCaller), so a note
+     *      the Hub rejects would make the message fail on every delivery attempt and the USDC would
+     *      be lost. USDC is never blocklisted on the Hub, so the blocklist check needs no mirror.
+     */
+    function _validateNote(ShieldData memory note) internal pure {
+        require(note.value > 0, "PrivacyPoolClient: Invalid value");
+        require(uint256(note.npk) < SNARK_SCALAR_FIELD, "PrivacyPoolClient: Invalid npk");
+    }
+
+    /**
      * @notice Pull `total` USDC from the caller, approve the TokenMessenger, and burn it via CCTP with
      *         the encoded shield-note payload (extracted to share the direct + gasless paths and to
      *         avoid stack-too-deep).
@@ -360,6 +381,29 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
+     * @notice Propose a new owner (step 1 of 2)
+     * @dev Ownership does not move until `newOwner` calls `acceptOwnership`, so a mistyped address
+     *      cannot lose the admin key. A new proposal replaces a pending one; address(0) cancels it.
+     * @param newOwner Proposed owner
+     */
+    function transferOwnership(address newOwner) external override {
+        require(msg.sender == owner, "PrivacyPoolClient: Only owner");
+        pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner, newOwner);
+    }
+
+    /**
+     * @notice Accept a pending ownership proposal (step 2 of 2)
+     */
+    function acceptOwnership() external override {
+        require(msg.sender == pendingOwner, "PrivacyPoolClient: not pending owner");
+        address previousOwner = owner;
+        owner = msg.sender;
+        pendingOwner = address(0);
+        emit OwnershipTransferred(previousOwner, msg.sender);
+    }
+
+    /**
      * @notice Update the Hub pool configuration
      * @param _hubDomain Hub chain's CCTP domain ID
      * @param _hubPool Hub PrivacyPool address (as bytes32)
@@ -375,11 +419,18 @@ contract PrivacyPoolClient is IPrivacyPoolClient {
      * @notice Set the CCTP Hook Router address
      * @dev The hook router is authorized to call handleReceiveFinalizedMessage
      *      after atomically calling receiveMessage on the MessageTransmitter
+     *      Set-once (issue #641): callable only while unset and only with a non-zero address. The hub
+     *      pins each outbound unshield's destinationCaller to this router, so re-pointing it with a
+     *      message in flight would strand that message, and the handlers pay out whatever the router
+     *      delivers. Replacing the router means deploying a new client.
      * @param _hookRouter Address of the CCTPHookRouter contract
      */
     function setHookRouter(address _hookRouter) external override {
         require(msg.sender == owner, "PrivacyPoolClient: Only owner");
+        require(hookRouter == address(0), "PrivacyPoolClient: hook router already set");
+        require(_hookRouter != address(0), "PrivacyPoolClient: zero hook router");
         hookRouter = _hookRouter;
+        emit HookRouterSet(_hookRouter);
     }
 
     /**

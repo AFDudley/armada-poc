@@ -96,6 +96,37 @@ original cross-chain vectors used an EOA. Only those three vectors changed in su
 replays 24/24 against the contracts with #606 and the OQ-9 USDC check (gas +795 on the
 cross-chain unshield path, +239 on local unshield).
 
+It was re-captured again on 2026-10-26 for #365, which removed the vault's `setAdapter()` call
+from `deploy_yield.ts`. That is one fewer deployer transaction, so everything deployed after the
+yield step (the fee module and the genesis mocks) lands one nonce lower and the recorded
+addresses no longer matched. No pool contract changed: with addresses mapped by label and
+block numbers, hashes and gas ignored, the vectors are unchanged apart from the PrivacyPool
+creation bytecode's metadata hash in `v2-initialize-nondeployer-revert`. Any deploy-script change
+that adds or removes a deployer transaction before the fee module needs the same re-capture.
+
+It was re-captured on 2026-10-28 for #155 (D-24), which makes `setShieldFee` revert while a fee
+module is wired. The old `v2-admin-set-shield-fee-50` vector said "fee module detached", but the
+capture never detached it, so it recorded a flat-fee change that did nothing. It is replaced by
+`v2-admin-set-shield-fee-fee-module-active-revert`, which records the rejection. Its dependents now
+point at `v2-admin-set-testing-mode-true`, and two shield descriptions now name the fee module
+(50 bps base take) rather than a flat fee. No addresses moved. Apart from that vector, only these
+metadata fields and the PrivacyPool creation bytecode in `v2-initialize-nondeployer-revert` changed.
+
+It was re-captured again on 2026-10-28 for #633, which removed testing mode (and the
+`tx.origin == 0xdead` verification bypass) from the pool. Six vectors went: the two testing-mode
+admin vectors, and the four unshield vectors that relied on the bypass for their dummy proofs
+(`v2-unshield-crosschain-bound`, `-unbound-revert`, `-no-hookrouter-revert`,
+`v2-unshield-to-pool-revert`). Their behavior is covered elsewhere: the bound path by the #608 and
+#616 invariant suites and the integration tests, the unbound and to-pool reverts by
+`test/privacy_pool_adversarial.ts`, and the missing-hook-router revert by
+`test-foundry/CrossChainUnshieldHookRouterRequired.t.sol` (added for this). No v2 vector needs a
+proof any more. CI's single-vector replay now uses `v2-admin-set-remote-pool`.
+
+It was re-captured on 2026-10-28 for #641 (D-28), which makes `setHookRouter` set-once and adds
+the `HookRouterSet` / `ShieldFeeSet` events. `v2-admin-set-hook-router` now records `HookRouterSet`,
+and the PrivacyPool creation bytecode in `v2-initialize-nondeployer-revert` changed. No addresses
+moved; apart from block-derived fields (`lastEventBlock`, hashes, gas), nothing else changed.
+
 CI (`.github/workflows/ci.yml`, job `golden-vector-replay`) replays the full v2 corpus and, on a
 separate fresh fixturenet, one vector selected by `REPLAY_IDS`, on every PR. The v1 corpus is not
 in CI: it intentionally diverges on the D-15/D-16/D-18 surface (see below).
@@ -116,6 +147,10 @@ still match; gas deltas on unchanged paths are now +0..+2,624 (the nonReentrant 
 SSTORE) instead of the pre-port 0..−353.
 
 ## Proof policy (decision: testingMode bypass)
+
+> **Historical (v1 corpus).** Testing mode was removed from the pool in #633, so current contracts
+> cannot reproduce proofless transact vectors: `capture.ts` (v1) targets the pre-#633 contracts
+> and no longer runs against current ones. The v2 corpus contains no proof-gated vectors.
 
 The capture enables the pool's `testingMode` proof bypass early
 (`admin-set-testing-mode-true`, itself a vector). Per spec §5.6 step 1 the
@@ -182,9 +217,10 @@ Compiled at capture time with the repo's bundled solc from inline sources
 
 ## Notes / observed behavior (all consistent with the spec)
 
-- `setTestingMode` emits `TestingModeSet` **twice** per call (OQ-8) — see
-  `admin-set-testing-mode-true.json`.
-- The hub deploy scripts do NOT call `setHookRouter` or configure the mock
+- `setTestingMode` emitted `TestingModeSet` **twice** per call (OQ-8) — see
+  `admin-set-testing-mode-true.json` (v1; the function was removed in #633).
+- The hub deploy scripts do NOT call `setHookRouter` (set-once since #641, so the capture's
+  one call is the only one allowed) or configure the mock
   transmitter's relayer; the capture records both as vectors
   (`admin-set-hook-router`, `cctp-set-mock-relayer`).
 - Cross-chain shield-in pays shield fees out of the pool's own USDC balance

@@ -65,10 +65,11 @@ abstract contract PrivacyPoolStorage {
     ///      custody (Shield/Transact) or proof/tree logic (Verifier/Merkle); a swappable module
     ///      would let the owner redirect funds or accept forged proofs, reintroducing the trust
     ///      assumption rejected in issue #55. Mutable configuration lives in the setters on
-    ///      PrivacyPool (fees, treasury, adapter registry (set-once), hook routers, fee module,
-    ///      pause controller). NOTE: the VerifierModule contract is immutable, but its verification KEYS
+    ///      PrivacyPool (fees, adapter registry (set-once), hook router (set-once), remote hook routers,
+    ///      fee module, pause controller). NOTE: the VerifierModule contract is immutable, but its verification KEYS
     ///      remain owner-settable via setVerificationKey (needed for circuit/key upgrades) — that
-    ///      key-custody risk is tracked separately in issue #349. See .claude/ARCHITECTURE_NOTES.md.
+    ///      key-custody risk depends on who owns the pool: #349 added a two-step ownership transfer,
+    ///      and handing ownership to governance is tracked in #381. See .claude/ARCHITECTURE_NOTES.md.
 
     /// @notice Address of ShieldModule implementation
     address public shieldModule;
@@ -109,7 +110,9 @@ abstract contract PrivacyPoolStorage {
     /// @notice Treasury address for fee collection
     address payable public treasury;
 
-    /// @notice Shield fee in basis points (100 = 1%), default 0 for POC
+    /// @notice Flat shield fee in basis points (100 = 1%), default 0
+    /// @dev Charged only while `feeModule == address(0)`; settable only then (#155). With a fee
+    ///      module wired, this keeps its last value but is not the fee charged.
     uint120 public shieldFee;
 
     /// @notice DEPRECATED — unshield is free per spec.
@@ -180,7 +183,9 @@ abstract contract PrivacyPoolStorage {
     /// @notice Verification keys: nullifierCount -> commitmentCount -> VerifyingKey
     mapping(uint256 => mapping(uint256 => VerifyingKey)) internal verificationKeys;
 
-    /// @notice Testing mode flag - bypasses SNARK verification (POC only, DO NOT USE IN PRODUCTION)
+    /// @notice DEPRECATED — the removed testing-mode proof bypass (#633). Nothing writes it, so it is
+    ///         always false. Retained so no later slot shifts (layout is shared with the modules);
+    ///         the getter is kept for compatibility.
     bool public testingMode;
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -237,6 +242,11 @@ abstract contract PrivacyPoolStorage {
     ///      privilegedShieldCallers flag.
     address public adapterRegistry;
 
+    /// @notice Owner proposed by `transferOwnership`, pending its `acceptOwnership` (issue #349).
+    /// @dev address(0) when no transfer is pending. Ownership moves only when this address accepts,
+    ///      so a mistyped proposal can be replaced or cancelled instead of losing the admin key.
+    address public pendingOwner;
+
     // ══════════════════════════════════════════════════════════════════════════
     // CONTRACT-OWNED NOTES (P2a)
     // ══════════════════════════════════════════════════════════════════════════
@@ -290,5 +300,5 @@ abstract contract PrivacyPoolStorage {
 
     /// @dev Reserved storage slots for future upgrades
     ///      When adding new state variables above, decrement this gap
-    uint256[39] private __gap;
+    uint256[38] private __gap;
 }

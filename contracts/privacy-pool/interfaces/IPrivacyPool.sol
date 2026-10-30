@@ -20,9 +20,6 @@ interface IPrivacyPool is IMessageHandlerV2 {
     event AddToBlocklist(address indexed token);
     event RemoveFromBlocklist(address indexed token);
 
-    /// @notice Emitted when testing mode is changed
-    event TestingModeSet(bool enabled);
-
     /// @notice Emitted when default finality threshold is changed
     event DefaultFinalityThresholdSet(uint32 threshold);
 
@@ -32,11 +29,23 @@ interface IPrivacyPool is IMessageHandlerV2 {
     /// @notice Emitted when fee module is set
     event FeeModuleSet(address indexed feeModule);
 
+    /// @notice Emitted when the CCTP hook router is set (set-once, issue #641)
+    event HookRouterSet(address indexed hookRouter);
+
+    /// @notice Emitted when the flat shield fee (emergency flat-fee mode, D-24) is set
+    event ShieldFeeSet(uint120 feeBps);
+
     /// @notice Emitted when the governance adapter registry is set (set-once, issue #370)
     event AdapterRegistrySet(address indexed adapterRegistry);
 
     /// @notice Emitted when the governance fee-recipient note public key is set (P2b)
     event FeeRecipientSet(bytes32 npk);
+
+    /// @notice Emitted when the owner proposes a new owner (address(0) cancels a pending proposal)
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+
+    /// @notice Emitted when the proposed owner accepts and ownership moves
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     // ══════════════════════════════════════════════════════════════════════════
     // INITIALIZATION
@@ -144,7 +153,20 @@ interface IPrivacyPool is IMessageHandlerV2 {
     function setVerificationKey(uint256 nullifiers, uint256 commitments, VerifyingKey calldata key) external;
 
     /**
-     * @notice Set the shield fee in basis points
+     * @notice Propose a new owner. Ownership moves only when `newOwner` calls `acceptOwnership`.
+     * @dev Replaces any pending proposal; address(0) cancels it (issue #349).
+     * @param newOwner Proposed owner
+     */
+    function transferOwnership(address newOwner) external;
+
+    /**
+     * @notice Accept a pending ownership proposal. Callable only by the proposed owner.
+     */
+    function acceptOwnership() external;
+
+    /**
+     * @notice Set the flat shield fee in basis points. Reverts while a fee module is wired (#155);
+     *         the flat fee applies only without one (emergency mode for a broken fee module).
      * @param feeBps Fee in basis points (50 = 0.50%)
      */
     function setShieldFee(uint120 feeBps) external;
@@ -156,13 +178,6 @@ interface IPrivacyPool is IMessageHandlerV2 {
      * @param npk The Safe's registered note public key (P1's owner-derived formula).
      */
     function setFeeRecipient(bytes32 npk) external;
-
-    /**
-     * @notice Enable or disable testing mode
-     * @dev POC ONLY - bypasses SNARK verification
-     * @param enabled Whether to enable testing mode
-     */
-    function setTestingMode(bool enabled) external;
 
     /**
      * @notice Set the governance adapter registry that determines fee-exempt shield privilege.

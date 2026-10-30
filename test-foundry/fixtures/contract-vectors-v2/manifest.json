@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-10-14T13:56:26.905Z",
+  "generatedAt": "2026-10-29T01:20:13.121Z",
   "generator": "scripts/contract-vectors/capture-v2.ts",
   "network": {
     "name": "local fixturenet (Anvil hub chain, mock CCTP)",
@@ -9,9 +9,7 @@
     "hubDomain": 100
   },
   "proofPolicy": {
-    "summary": "Unshield vectors captured with testingMode proof bypass active; all others need no proofs. Same policy as the v1 corpus.",
-    "bypassEnabledByVector": "v2-admin-set-testing-mode-true",
-    "bypassDisabledByVector": "v2-admin-set-testing-mode-false"
+    "summary": "No vector needs a proof. The unshield vectors, which ran under the pool's testing-mode proof bypass, were dropped when testing mode was removed (#633); their behavior is covered by the Foundry and Hardhat suites."
   },
   "bootCommands": [
     "anvil --port 8545 --chain-id 31337 --block-time 1 --accounts 200",
@@ -38,12 +36,12 @@
     "TOKEN_MESSENGER": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
     "MESSAGE_TRANSMITTER": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
     "USDC": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    "FEE_MODULE": "0xc351628EB244ec633d5f21fBD6621e1a683B1181",
+    "FEE_MODULE": "0x7bc06c482DEAd17c0e297aFbC32f6e63d3846650",
     "CLIENT_POOL": "0x0000000000000000000000000000000000C11EA7",
-    "MOCK_PAUSE": "0x922D6956C99E12DFeB3224DEA977D0939758A1Fe",
-    "MOCK_FEE_MODULE": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
-    "MOCK_ADAPTER_REGISTRY": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
-    "MALICIOUS_TOKEN": "0xdbC43Ba45381e02825b14322cDdd15eC4B3164E6"
+    "MOCK_PAUSE": "0x162A433068F51e18b7d13932F27e66a3f99E6890",
+    "MOCK_FEE_MODULE": "0x922D6956C99E12DFeB3224DEA977D0939758A1Fe",
+    "MOCK_ADAPTER_REGISTRY": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
+    "MALICIOUS_TOKEN": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d"
   },
   "notes": [
     "Delta corpus for the post-drift behavior (main absorbed M0-era fixes after the v1 corpus): replay against the rewritten contracts is the post-drift equivalence gate.",
@@ -52,24 +50,14 @@
   ],
   "vectors": [
     {
-      "id": "v2-admin-set-testing-mode-true",
-      "file": "v2-admin-set-testing-mode-true.json",
+      "id": "v2-admin-set-shield-fee-fee-module-active-revert",
+      "file": "v2-admin-set-shield-fee-fee-module-active-revert.json",
       "category": "admin",
       "dependsOn": [],
       "proofsBypassed": false,
-      "outcome": "success",
-      "description": "Owner enables testingMode proof bypass so the unshield vectors replay without circuit artifacts (same policy as v1 corpus)."
-    },
-    {
-      "id": "v2-admin-set-shield-fee-50",
-      "file": "v2-admin-set-shield-fee-50.json",
-      "category": "admin",
-      "dependsOn": [
-        "v2-admin-set-testing-mode-true"
-      ],
-      "proofsBypassed": false,
-      "outcome": "success",
-      "description": "Owner sets the flat shield fee to 50 bps (fee module detached on a fresh fixturenet)."
+      "outcome": "revert",
+      "revertReason": "PrivacyPool: use fee module",
+      "description": "Owner's flat shield-fee change is rejected while the fee module is wired (D-24, #155): the flat fee applies only without a fee module."
     },
     {
       "id": "v2-admin-set-remote-pool",
@@ -104,9 +92,7 @@
       "id": "v2-admin-set-adapter-registry",
       "file": "v2-admin-set-adapter-registry.json",
       "category": "admin",
-      "dependsOn": [
-        "v2-admin-set-shield-fee-50"
-      ],
+      "dependsOn": [],
       "proofsBypassed": false,
       "outcome": "success",
       "description": "Owner sets the timelock-governed adapter registry (set-once). Setup tx authorizes CAROL in the mock registry — CAROL's next shield pays no fee."
@@ -132,7 +118,7 @@
       ],
       "proofsBypassed": false,
       "outcome": "success",
-      "description": "CAROL (authorized in the registry) shields 20 USDC with 50bps flat fee configured: fee = 0, full value committed (D-18 registry-derived exemption)."
+      "description": "CAROL (authorized in the registry) shields 20 USDC with the fee module wired (50 bps base take): fee = 0, full value committed (D-18 registry-derived exemption)."
     },
     {
       "id": "v2-shield-unprivileged-with-registry",
@@ -143,15 +129,13 @@
       ],
       "proofsBypassed": false,
       "outcome": "success",
-      "description": "BOB (NOT in the registry) shields 20 USDC with the registry set: flat 50bps fee charged and sent to treasury — proves the retired privilegedShieldCallers map is inert (D-18)."
+      "description": "BOB (NOT in the registry) shields 20 USDC with the registry set: the fee module's 50 bps fee is charged and sent to treasury — proves the retired privilegedShieldCallers map is inert (D-18)."
     },
     {
       "id": "v2-admin-add-to-blocklist",
       "file": "v2-admin-add-to-blocklist.json",
       "category": "admin",
-      "dependsOn": [
-        "v2-admin-set-shield-fee-50"
-      ],
+      "dependsOn": [],
       "proofsBypassed": false,
       "outcome": "success",
       "description": "Owner blocklists the MOCK_PAUSE address (standing in for a token). Emits AddToBlocklist; blocked tokens cannot be SHIELDED but existing notes stay exitable."
@@ -237,60 +221,6 @@
       "description": "Empty ShieldData[] reverts (spec §7.2 step 2)."
     },
     {
-      "id": "v2-unshield-crosschain-bound",
-      "file": "v2-unshield-crosschain-bound.json",
-      "category": "unshield",
-      "dependsOn": [
-        "v2-admin-set-testing-mode-true",
-        "v2-admin-set-remote-pool",
-        "v2-shieldin-multi-note"
-      ],
-      "proofsBypassed": true,
-      "outcome": "success",
-      "description": "Bound atomic cross-chain unshield (D-16): adaptParams = CCTPBindingLib.encode(recipient, domain, maxFee); destinationCaller pinned to remoteHookRouters[101] in the burn call; uniqueNonce echoed in hookData; nonce=0 returned."
-    },
-    {
-      "id": "v2-unshield-crosschain-unbound-revert",
-      "file": "v2-unshield-crosschain-unbound-revert.json",
-      "category": "unshield",
-      "dependsOn": [
-        "v2-admin-set-testing-mode-true",
-        "v2-admin-set-remote-pool",
-        "v2-shieldin-multi-note"
-      ],
-      "proofsBypassed": true,
-      "outcome": "revert",
-      "revertReason": "TransactModule: destination not bound to proof",
-      "description": "Unbound cross-chain unshield (adaptParams = 0) reverts — a relayer cannot resubmit a victim's proof with a redirected recipient (D-16)."
-    },
-    {
-      "id": "v2-unshield-crosschain-no-hookrouter-revert",
-      "file": "v2-unshield-crosschain-no-hookrouter-revert.json",
-      "category": "unshield",
-      "dependsOn": [
-        "v2-admin-set-testing-mode-true",
-        "v2-admin-set-remote-pool",
-        "v2-shieldin-multi-note"
-      ],
-      "proofsBypassed": true,
-      "outcome": "revert",
-      "revertReason": "TransactModule: Hook router not configured",
-      "description": "Cross-chain unshield to domain 102 (remote pool registered, hook router NOT pinned) reverts before proof validation (D-16)."
-    },
-    {
-      "id": "v2-unshield-to-pool-revert",
-      "file": "v2-unshield-to-pool-revert.json",
-      "category": "unshield",
-      "dependsOn": [
-        "v2-admin-set-testing-mode-true",
-        "v2-shieldin-multi-note"
-      ],
-      "proofsBypassed": true,
-      "outcome": "revert",
-      "revertReason": "TransactModule: unshield to pool",
-      "description": "Local unshield whose npk encodes the pool address reverts (D-18): blocks replaying an xchain-unshield proof through plain transact() (pool->pool payout would strand funds)."
-    },
-    {
       "id": "v2-initialize-nondeployer-revert",
       "file": "v2-initialize-nondeployer-revert.json",
       "category": "admin",
@@ -304,24 +234,11 @@
       "id": "v2-shield-reentrancy-revert",
       "file": "v2-shield-reentrancy-revert.json",
       "category": "edge",
-      "dependsOn": [
-        "v2-admin-set-shield-fee-50"
-      ],
+      "dependsOn": [],
       "proofsBypassed": false,
       "outcome": "revert",
       "revertReason": "PrivacyPool: reentrant call",
       "description": "Shield with MaliciousReentrantToken: the token's transferFrom re-enters pool.shield mid-deposit; the router's nonReentrant guard fires (D-18)."
-    },
-    {
-      "id": "v2-admin-set-testing-mode-false",
-      "file": "v2-admin-set-testing-mode-false.json",
-      "category": "admin",
-      "dependsOn": [
-        "v2-unshield-crosschain-bound"
-      ],
-      "proofsBypassed": false,
-      "outcome": "success",
-      "description": "Owner disables testingMode (cleanup): real SNARK verification restored."
     }
   ]
 }

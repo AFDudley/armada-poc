@@ -41,8 +41,17 @@ interface IPrivacyPoolClient is IMessageHandlerV2 {
     /// @notice Emitted when default finality threshold is changed
     event DefaultFinalityThresholdSet(uint32 threshold);
 
+    /// @notice Emitted when this chain's CCTP hook router is set (set-once, issue #641)
+    event HookRouterSet(address indexed hookRouter);
+
     /// @notice Emitted when the Hub CCTP hook router is set
     event HubHookRouterSet(bytes32 hubHookRouter);
+
+    /// @notice Emitted when the owner proposes a new owner (address(0) cancels a pending proposal)
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+
+    /// @notice Emitted when the proposed owner accepts and ownership moves
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     // ══════════════════════════════════════════════════════════════════════════
     // INITIALIZATION
@@ -119,6 +128,18 @@ interface IPrivacyPoolClient is IMessageHandlerV2 {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
+     * @notice Propose a new owner. Ownership moves only when `newOwner` calls `acceptOwnership`.
+     * @dev Replaces any pending proposal; address(0) cancels it (issue #349).
+     * @param newOwner Proposed owner
+     */
+    function transferOwnership(address newOwner) external;
+
+    /**
+     * @notice Accept a pending ownership proposal. Callable only by the proposed owner.
+     */
+    function acceptOwnership() external;
+
+    /**
      * @notice Update the Hub pool configuration
      * @param _hubDomain Hub chain's CCTP domain ID
      * @param _hubPool Hub PrivacyPool address (as bytes32)
@@ -167,6 +188,9 @@ interface IPrivacyPoolClient is IMessageHandlerV2 {
 
     /// @notice Contract owner
     function owner() external view returns (address);
+
+    /// @notice Owner proposed by `transferOwnership`, pending acceptance (address(0) if none)
+    function pendingOwner() external view returns (address);
 
     /// @notice CCTP Hook Router address
     function hookRouter() external view returns (address);

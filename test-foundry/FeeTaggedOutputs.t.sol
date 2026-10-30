@@ -4,7 +4,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../contracts/privacy-pool/PrivacyPool.sol";
+import "../contracts/test/PrivacyPoolProofBypass.sol";
 import "../contracts/privacy-pool/modules/ShieldModule.sol";
 import "../contracts/privacy-pool/modules/TransactModule.sol";
 import "../contracts/privacy-pool/modules/MerkleModule.sol";
@@ -21,7 +21,7 @@ import "./helpers/PoseidonLinker.sol";
 ///      nothing a caller asserts can inflate the counter. The shield path runs for real
 ///      (real token transfer, shieldFee defaults to 0).
 contract FeeTaggedOutputsTest is Test, PoseidonLinker {
-    PrivacyPool public pool;
+    PrivacyPoolProofBypass public pool;
     ShieldModule public shieldModule;
     TransactModule public transactModule;
     MerkleModule public merkleModule;
@@ -53,7 +53,7 @@ contract FeeTaggedOutputsTest is Test, PoseidonLinker {
         merkleModule = new MerkleModule();
         verifierModule = new VerifierModule();
 
-        pool = new PrivacyPool();
+        pool = new PrivacyPoolProofBypass();
         pool.initialize(
             address(shieldModule),
             address(transactModule),
@@ -66,7 +66,7 @@ contract FeeTaggedOutputsTest is Test, PoseidonLinker {
             owner,
             payable(treasury)
         );
-        pool.setTestingMode(true);
+        pool.setSkipProofVerification(true);
         pool.setFeeRecipient(feeNpk);
     }
 

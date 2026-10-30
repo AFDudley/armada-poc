@@ -14,13 +14,15 @@
  * Covered:
  *   - adapterRegistry privilege (set-once, registry-derived fee exemption)
  *   - token blocklist admin + blocked-shield revert + USDC unblockable
- *   - remoteHookRouters pinning + "Hook router not configured" revert
+ *   - remoteHookRouters pinning (admin)
  *   - multi-note cross-chain shield-in (recipient absorbs CCTP fee; fee notes
  *     at full value; single batched Shield event)
- *   - atomic cross-chain unshield destination binding (CCTPBindingLib) +
- *     uniqueNonce echo + unbound/hijack reverts
  *   - deployer-gated initialize (non-deployer revert)
  *   - reentrancy guard on shield (MaliciousReentrantToken)
+ *
+ * No vector needs a proof. The cross-chain and local unshield vectors ran under the pool's
+ * testing-mode proof bypass and were dropped when testing mode was removed (#633); that behavior
+ * is covered by the Foundry and Hardhat suites.
  *
  * Prerequisites: identical boot to the v1 corpus (see README.md), then:
  *   npx hardhat run scripts/contract-vectors/capture-v2.ts --network hub
@@ -36,13 +38,7 @@ import { d32, npkFromSeed, toHex, writeJSON } from "./lib/util";
 import { Recorder } from "./lib/recorder";
 import { deployMock } from "./lib/mock-contracts";
 import { encodeBurnMessageV2, encodeMessageV2 } from "./lib/cctp-message";
-import {
-  UnshieldType,
-  erc20Token,
-  initPoseidon,
-  makeShieldRequest,
-  makeTransaction,
-} from "./lib/builders";
+import { erc20Token, initPoseidon, makeShieldRequest } from "./lib/builders";
 
 const OUT_DIR = process.env.CAPTURE_OUT_DIR
   ? path.resolve(process.env.CAPTURE_OUT_DIR)
@@ -60,23 +56,6 @@ const HUB_DOMAIN = 100;
 const CLIENT_DOMAIN = 101;
 const CLIENT_DOMAIN_B = 102;
 const CLIENT_POOL_DUMMY = "0x0000000000000000000000000000000000C11EA7";
-
-/** Matches contracts/privacy-pool/CCTPBindingLib.sol (DOMAIN_TAG + encode). */
-const CCTP_DOMAIN_TAG = ethers.keccak256(
-  ethers.toUtf8Bytes("ArmadaCCTPUnshield.v1"),
-);
-function encodeCctpBinding(
-  recipient: string,
-  domain: number,
-  maxFee: bigint,
-): string {
-  return ethers.keccak256(
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      ["bytes32", "address", "uint32", "uint256"],
-      [CCTP_DOMAIN_TAG, recipient, domain, maxFee],
-    ),
-  );
-}
 
 const BALANCE_TRACKED = (book: Record<string, string>) =>
   (
@@ -198,10 +177,6 @@ async function main() {
   });
 
   const balances = () => BALANCE_TRACKED(book);
-  const treePos = async () => ({
-    merkleRoot: await pool.merkleRoot(),
-    treeNumber: Number(await pool.treeNumber()),
-  });
 
   const admin = async (
     id: string,
@@ -236,30 +211,21 @@ async function main() {
     });
   };
 
-  // ═══ 1. testingMode on (proof bypass for the unshield vectors) ═══
+  // ═══ 1. Flat fee is not settable while the fee module is wired (D-24, #155) ═══
+  // The deploy sequence wires the fee module, so shields below are priced by it (50 bps base take).
   await admin(
-    "v2-admin-set-testing-mode-true",
-    "Owner enables testingMode proof bypass so the unshield vectors replay without circuit artifacts (same policy as v1 corpus).",
-    "setTestingMode",
-    [true],
-    {
-      postReads: [{ key: "pool.testingMode", read: () => pool.testingMode() }],
-    },
-  );
-
-  // ═══ 2. Flat fee 50bps (fee behavior observability) ═══
-  await admin(
-    "v2-admin-set-shield-fee-50",
-    "Owner sets the flat shield fee to 50 bps (fee module detached on a fresh fixturenet).",
+    "v2-admin-set-shield-fee-fee-module-active-revert",
+    "Owner's flat shield-fee change is rejected while the fee module is wired (D-24, #155): the flat fee applies only without a fee module.",
     "setShieldFee",
     [50],
     {
-      dependsOn: ["v2-admin-set-testing-mode-true"],
+      expectRevert: true,
+      expectReason: "PrivacyPool: use fee module",
       postReads: [{ key: "pool.shieldFee", read: () => pool.shieldFee() }],
     },
   );
 
-  // ═══ 3. Remote pool + hook router wiring for cross-chain vectors ═══
+  // ═══ 2. Remote pool + hook router wiring for cross-chain vectors ═══
   await admin(
     "v2-admin-set-remote-pool",
     "Owner registers a remote pool on domain 101 (client chain).",
@@ -299,7 +265,7 @@ async function main() {
     [CLIENT_DOMAIN_B, ethers.zeroPadValue(CLIENT_POOL_DUMMY, 32)],
   );
 
-  // ═══ 4. Adapter registry privilege (D-18) ═══
+  // ═══ 3. Adapter registry privilege (D-18) ═══
   await recorder.capture({
     meta: {
       id: "v2-admin-set-adapter-registry",
@@ -307,34 +273,11 @@ async function main() {
       description:
         "Owner sets the timelock-governed adapter registry (set-once). Setup tx authorizes CAROL in the mock registry — CAROL's next shield pays no fee.",
       specRefs: ["§5.4", "§7.3"],
-      dependsOn: ["v2-admin-set-shield-fee-50"],
+      dependsOn: [],
       setup: [
         ...FUNDING_SETUP,
         "MockAdapterRegistry.setAuthorized(CAROL, true)",
       ],
-    },
-    setupTxs: [
-      {
-        from: deployer,
-        fromLabel: "DEPLOYER",
-        to: mockRegistry.address,
-        toLabel: "MOCK_ADAPTER_REGISTRY",
-        calldata: (
-          mockRegistry.contract.interface as Interface
-        ).encodeFunctionData("setAuthorized", [carol.address, true]),
-        description: "authorize CAROL in the mock registry",
-      },
-    ],
-    from: deployer,
-    fromLabel: "DEPLOYER",
-    to: book.POOL,
-    toLabel: "POOL",
-    calldata: poolIface.encodeFunctionData("setAdapterRegistry", [
-      mockRegistry.address,
-    ]),
-    decodedCall: {
-      function: "setAdapterRegistry",
-      args: { registry: mockRegistry.address },
     },
     balancesOf: balances(),
     postReads: [
@@ -354,7 +297,7 @@ async function main() {
     },
   );
 
-  // ═══ 5. Privilege-derived shields ═══
+  // ═══ 4. Privilege-derived shields ═══
   {
     const req = makeShieldRequest(
       "v2-shield-privileged-adapter",
@@ -366,7 +309,7 @@ async function main() {
         id: "v2-shield-privileged-adapter",
         category: "shield",
         description:
-          "CAROL (authorized in the registry) shields 20 USDC with 50bps flat fee configured: fee = 0, full value committed (D-18 registry-derived exemption).",
+          "CAROL (authorized in the registry) shields 20 USDC with the fee module wired (50 bps base take): fee = 0, full value committed (D-18 registry-derived exemption).",
         specRefs: ["§7.1", "§7.3"],
         dependsOn: ["v2-admin-set-adapter-registry"],
         setup: FUNDING_SETUP,
@@ -397,7 +340,7 @@ async function main() {
         id: "v2-shield-unprivileged-with-registry",
         category: "shield",
         description:
-          "BOB (NOT in the registry) shields 20 USDC with the registry set: flat 50bps fee charged and sent to treasury — proves the retired privilegedShieldCallers map is inert (D-18).",
+          "BOB (NOT in the registry) shields 20 USDC with the registry set: the fee module's 50 bps fee is charged and sent to treasury — proves the retired privilegedShieldCallers map is inert (D-18).",
         specRefs: ["§7.1", "§7.3"],
         dependsOn: ["v2-shield-privileged-adapter"],
         setup: FUNDING_SETUP,
@@ -418,14 +361,14 @@ async function main() {
     });
   }
 
-  // ═══ 6. Token blocklist (D-18) ═══
+  // ═══ 5. Token blocklist (D-18) ═══
   await admin(
     "v2-admin-add-to-blocklist",
     "Owner blocklists the MOCK_PAUSE address (standing in for a token). Emits AddToBlocklist; blocked tokens cannot be SHIELDED but existing notes stay exitable.",
     "addToBlocklist",
     [[mockPause.address]],
     {
-      dependsOn: ["v2-admin-set-shield-fee-50"],
+      dependsOn: [],
       postReads: [
         {
           key: `pool.tokenBlocklist[${mockPause.address}]`,
@@ -497,7 +440,7 @@ async function main() {
     },
   );
 
-  // ═══ 7. Multi-note cross-chain shield-in (D-15) ═══
+  // ═══ 6. Multi-note cross-chain shield-in (D-15) ═══
   const shieldInMessageV2 = (
     seed: string,
     notes: { value: bigint; npk?: string; integrator?: string }[],
@@ -655,151 +598,7 @@ async function main() {
     });
   }
 
-  // ═══ 8. Bound atomic cross-chain unshield (D-16) ═══
-  const atomicUnshieldVector = async (
-    id: string,
-    description: string,
-    domain: number,
-    bindCorrectly: boolean,
-    expectReason?: string,
-  ) => {
-    const pos = await treePos();
-    const base = 10n * ONE_USDC;
-    const maxFee = ONE_USDC;
-    const uniqueNonce = d32(`${id}:nonce`);
-    const tx = makeTransaction({
-      seed: id,
-      nullifierCount: 1,
-      commitmentCount: 2,
-      merkleRoot: pos.merkleRoot,
-      treeNumber: pos.treeNumber,
-      chainId,
-      unshield: UnshieldType.NORMAL,
-      unshieldPreimage: {
-        // A cross-chain unshield always pays out to the pool, which then burns via CCTP; the
-        // pool rejects any other npk on this path (D-21). The final recipient is bound in adaptParams.
-        npk: ethers.zeroPadValue(book.POOL, 32),
-        token: erc20Token(book.USDC),
-        value: base,
-      },
-    });
-    tx.boundParams.adaptParams = bindCorrectly
-      ? encodeCctpBinding(bob.address, domain, maxFee)
-      : ethers.ZeroHash;
-    await recorder.capture({
-      meta: {
-        id,
-        category: "unshield",
-        description,
-        specRefs: ["§8.2"],
-        proofsBypassed: true,
-        dependsOn: [
-          "v2-admin-set-testing-mode-true",
-          "v2-admin-set-remote-pool",
-          "v2-shieldin-multi-note",
-        ],
-        setup: [
-          "testingMode = true (proof bypass)",
-          "remotePools[101] + remoteHookRouters[101] registered",
-          "Pool USDC balance covers the bridged amount from prior shield-ins",
-        ],
-      },
-      from: deployer,
-      fromLabel: "DEPLOYER",
-      to: book.POOL,
-      toLabel: "POOL",
-      calldata: poolIface.encodeFunctionData("atomicCrossChainUnshield", [
-        tx,
-        domain,
-        bob.address,
-        maxFee,
-        uniqueNonce,
-      ]),
-      decodedCall: {
-        function: "atomicCrossChainUnshield",
-        args: {
-          tx,
-          destinationDomain: domain,
-          finalRecipient: bob.address,
-          maxFee: toHex(maxFee),
-          uniqueNonce,
-        },
-      },
-      expectRevert: !!expectReason,
-      expectReason,
-      captureReturnData: !expectReason,
-      balancesOf: balances(),
-    });
-  };
-
-  await atomicUnshieldVector(
-    "v2-unshield-crosschain-bound",
-    "Bound atomic cross-chain unshield (D-16): adaptParams = CCTPBindingLib.encode(recipient, domain, maxFee); destinationCaller pinned to remoteHookRouters[101] in the burn call; uniqueNonce echoed in hookData; nonce=0 returned.",
-    CLIENT_DOMAIN,
-    true,
-  );
-  await atomicUnshieldVector(
-    "v2-unshield-crosschain-unbound-revert",
-    "Unbound cross-chain unshield (adaptParams = 0) reverts — a relayer cannot resubmit a victim's proof with a redirected recipient (D-16).",
-    CLIENT_DOMAIN,
-    false,
-    "TransactModule: destination not bound to proof",
-  );
-  await atomicUnshieldVector(
-    "v2-unshield-crosschain-no-hookrouter-revert",
-    "Cross-chain unshield to domain 102 (remote pool registered, hook router NOT pinned) reverts before proof validation (D-16).",
-    CLIENT_DOMAIN_B,
-    true,
-    "TransactModule: Hook router not configured",
-  );
-
-  // ═══ 8b. Local unshield to the pool itself (cross-path replay guard, D-18) ═══
-  {
-    const pos = await treePos();
-    const tx = makeTransaction({
-      seed: "v2-unshield-to-pool-revert",
-      nullifierCount: 1,
-      commitmentCount: 2,
-      merkleRoot: pos.merkleRoot,
-      treeNumber: pos.treeNumber,
-      chainId,
-      unshield: UnshieldType.NORMAL,
-      unshieldPreimage: {
-        npk: ethers.zeroPadValue(book.POOL, 32), // recipient decodes to the pool itself
-        token: erc20Token(book.USDC),
-        value: ONE_USDC,
-      },
-    });
-    await recorder.capture({
-      meta: {
-        id: "v2-unshield-to-pool-revert",
-        category: "unshield",
-        description:
-          "Local unshield whose npk encodes the pool address reverts (D-18): blocks replaying an xchain-unshield proof through plain transact() (pool->pool payout would strand funds).",
-        specRefs: ["§8.5"],
-        proofsBypassed: true,
-        dependsOn: ["v2-admin-set-testing-mode-true", "v2-shieldin-multi-note"],
-        setup: [
-          "testingMode = true (proof bypass)",
-          "Pool USDC balance covers the amount (revert fires before any transfer)",
-        ],
-      },
-      from: deployer,
-      fromLabel: "DEPLOYER",
-      to: book.POOL,
-      toLabel: "POOL",
-      calldata: poolIface.encodeFunctionData("transact", [[tx]]),
-      decodedCall: {
-        function: "transact",
-        args: { note: "1x2 tx with unshield preimage npk = POOL" },
-      },
-      expectRevert: true,
-      expectReason: "TransactModule: unshield to pool",
-      balancesOf: balances(),
-    });
-  }
-
-  // ═══ 9. Deployer-gated initialize (D-18) ═══
+  // ═══ 7. Deployer-gated initialize (D-18) ═══
   {
     const freshFactory = await ethers.getContractFactory("PrivacyPool");
     // Deploy the fresh pool as a setupTx (creation tx) so replay reproduces it
@@ -858,7 +657,7 @@ async function main() {
     });
   }
 
-  // ═══ 10. Reentrancy guard (D-18) ═══
+  // ═══ 8. Reentrancy guard (D-18) ═══
   {
     await recorder.capture({
       meta: {
@@ -867,7 +666,7 @@ async function main() {
         description:
           "Shield with MaliciousReentrantToken: the token's transferFrom re-enters pool.shield mid-deposit; the router's nonReentrant guard fires (D-18).",
         specRefs: ["§5.2", "D-18"],
-        dependsOn: ["v2-admin-set-shield-fee-50"],
+        dependsOn: [],
         setup: [
           ...FUNDING_SETUP,
           "MaliciousReentrantToken.setAttack(POOL, 1=shield)",
@@ -913,18 +712,6 @@ async function main() {
     });
   }
 
-  // ═══ Cleanup: restore production-like verification ═══
-  await admin(
-    "v2-admin-set-testing-mode-false",
-    "Owner disables testingMode (cleanup): real SNARK verification restored.",
-    "setTestingMode",
-    [false],
-    {
-      dependsOn: ["v2-unshield-crosschain-bound"],
-      postReads: [{ key: "pool.testingMode", read: () => pool.testingMode() }],
-    },
-  );
-
   // ═══ Manifest ═══
   const manifest = {
     version: 2,
@@ -938,9 +725,7 @@ async function main() {
     },
     proofPolicy: {
       summary:
-        "Unshield vectors captured with testingMode proof bypass active; all others need no proofs. Same policy as the v1 corpus.",
-      bypassEnabledByVector: "v2-admin-set-testing-mode-true",
-      bypassDisabledByVector: "v2-admin-set-testing-mode-false",
+        "No vector needs a proof. The unshield vectors, which ran under the pool's testing-mode proof bypass, were dropped when testing mode was removed (#633); their behavior is covered by the Foundry and Hardhat suites.",
     },
     bootCommands: [
       "anvil --port 8545 --chain-id 31337 --block-time 1 --accounts 200",

@@ -54,7 +54,7 @@ describe("StepBeforeYouStart resource links", () => {
     render(<StepBeforeYouStart onBack={vi.fn()} onContinue={vi.fn()} />);
     expect(
       screen.getByRole("link", { name: /Discord/ }).getAttribute("href"),
-    ).toBe("https://discord.com/invite/ship-armada");
+    ).toBe("https://armada.blue/discord");
     expect(
       screen.getByRole("link", { name: /^X\b/ }).getAttribute("href"),
     ).toBe("https://x.com/ship_armada");

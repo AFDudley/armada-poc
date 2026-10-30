@@ -6,6 +6,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../../contracts/privacy-pool/PrivacyPool.sol";
+import "../../contracts/test/PrivacyPoolProofBypass.sol";
 import "../../contracts/privacy-pool/modules/ShieldModule.sol";
 import "../../contracts/privacy-pool/modules/TransactModule.sol";
 import "../../contracts/privacy-pool/modules/MerkleModule.sol";
@@ -30,8 +31,8 @@ abstract contract CrowdfundPoolDeploy is PoseidonLinker {
         // Deploy the pool, its four modules, and the mock CCTP. The two CCTP mocks are
         // built through private helpers so no nested `new` temporaries coexist in the
         // 10-argument initialize call — this avoids a "stack too deep" without via-IR.
-        pool = new PrivacyPool();
-        pool.initialize(
+        PrivacyPoolProofBypass bypassPool = new PrivacyPoolProofBypass();
+        bypassPool.initialize(
             address(new ShieldModule()),
             address(new TransactModule()),
             address(new MerkleModule()),
@@ -43,10 +44,11 @@ abstract contract CrowdfundPoolDeploy is PoseidonLinker {
             owner,
             payable(treasury)
         );
-        pool.setTestingMode(true);
+        bypassPool.setSkipProofVerification(true);
         if (safeNpk != bytes32(0)) {
-            pool.setFeeRecipient(safeNpk);
+            bypassPool.setFeeRecipient(safeNpk);
         }
+        pool = bypassPool;
     }
 
     /// @dev Deploys a mock CCTP token messenger wrapping its own mock transmitter.

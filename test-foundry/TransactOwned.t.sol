@@ -5,6 +5,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/privacy-pool/PrivacyPool.sol";
+import "../contracts/test/PrivacyPoolProofBypass.sol";
 import "../contracts/privacy-pool/modules/ShieldModule.sol";
 import "../contracts/privacy-pool/modules/TransactModule.sol";
 import "../contracts/privacy-pool/modules/MerkleModule.sol";
@@ -21,7 +22,7 @@ import "./helpers/PoseidonLinker.sol";
 ///      publicOutputs hash binding, and the preimageOf registry writes — the rules
 ///      the derivation could not express as an oracle (fund-moving Solidity reverts).
 contract TransactOwnedTest is Test, PoseidonLinker {
-    PrivacyPool public pool;
+    PrivacyPoolProofBypass public pool;
     ShieldModule public shieldModule;
     TransactModule public transactModule;
     MerkleModule public merkleModule;
@@ -51,7 +52,7 @@ contract TransactOwnedTest is Test, PoseidonLinker {
         merkleModule = new MerkleModule();
         verifierModule = new VerifierModule();
 
-        pool = new PrivacyPool();
+        pool = new PrivacyPoolProofBypass();
         pool.initialize(
             address(shieldModule),
             address(transactModule),
@@ -66,7 +67,7 @@ contract TransactOwnedTest is Test, PoseidonLinker {
         );
         // POC testing mode bypasses only the SNARK proof; every other check (merkle
         // root, caller authorization, publicOutputs hashing) runs for real.
-        pool.setTestingMode(true);
+        pool.setSkipProofVerification(true);
     }
 
     // ── helpers ────────────────────────────────────────────────────────────────

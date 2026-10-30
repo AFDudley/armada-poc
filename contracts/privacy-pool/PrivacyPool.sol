@@ -297,6 +297,29 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
+     * @notice Propose a new owner (step 1 of 2)
+     * @dev Ownership does not move until `newOwner` calls `acceptOwnership`, so a mistyped address
+     *      cannot lose the admin key. A new proposal replaces a pending one; address(0) cancels it.
+     * @param newOwner Proposed owner
+     */
+    function transferOwnership(address newOwner) external override {
+        require(msg.sender == owner, "PrivacyPool: Only owner");
+        pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner, newOwner);
+    }
+
+    /**
+     * @notice Accept a pending ownership proposal (step 2 of 2)
+     */
+    function acceptOwnership() external override {
+        require(msg.sender == pendingOwner, "PrivacyPool: not pending owner");
+        address previousOwner = owner;
+        owner = msg.sender;
+        pendingOwner = address(0);
+        emit OwnershipTransferred(previousOwner, msg.sender);
+    }
+
+    /**
      * @notice Set the address of a remote PrivacyPool/Client
      * @param domain CCTP domain ID of the remote chain
      * @param poolAddress Address of the remote contract (as bytes32)
@@ -385,13 +408,19 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
     }
 
     /**
-     * @notice Set the shield fee in basis points
+     * @notice Set the flat shield fee in basis points
+     * @dev Only while no fee module is wired (#155): the flat fee applies only then, so setting it
+     *      while a fee module is active would do nothing and leave `shieldFee()` disagreeing with
+     *      the fee charged. Detaching the fee module (`setFeeModule(address(0))`) is the emergency
+     *      mode for a broken fee module: shields then pay this flat fee, and it can be set again.
      * @param _feeBps Fee in basis points (50 = 0.50%)
      */
     function setShieldFee(uint120 _feeBps) external override {
         require(msg.sender == owner, "PrivacyPool: Only owner");
+        require(feeModule == address(0), "PrivacyPool: use fee module");
         require(_feeBps <= MAX_SHIELD_FEE_BPS, "PrivacyPool: Fee too high");
         shieldFee = _feeBps;
+        emit ShieldFeeSet(_feeBps);
     }
 
     /**
@@ -402,17 +431,6 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
         require(msg.sender == owner, "PrivacyPool: Only owner");
         feeRecipient = _npk;
         emit FeeRecipientSet(_npk);
-    }
-
-    /**
-     * @notice Enable or disable testing mode
-     * @dev POC ONLY - bypasses SNARK verification
-     * @param _enabled Whether to enable testing mode
-     */
-    function setTestingMode(bool _enabled) external override {
-        require(msg.sender == owner, "PrivacyPool: Only owner");
-        _delegatecall(verifierModule, abi.encodeCall(IVerifierModule.setTestingMode, (_enabled)));
-        emit TestingModeSet(_enabled);
     }
 
     /**
@@ -436,11 +454,18 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
      * @notice Set the CCTP Hook Router address
      * @dev The hook router is authorized to call handleReceiveFinalizedMessage
      *      after atomically calling receiveMessage on the MessageTransmitter
+     *      Set-once (issue #641): callable only while unset and only with a non-zero address. The
+     *      CCTP handlers credit shield notes for whatever the hook router delivers without checking
+     *      that USDC arrived, so a re-pointable router would let the owner key mint unbacked notes.
+     *      After the one-time wiring at link time, replacing the router means deploying a new pool.
      * @param _hookRouter Address of the CCTPHookRouter contract
      */
     function setHookRouter(address _hookRouter) external override {
         require(msg.sender == owner, "PrivacyPool: Only owner");
+        require(hookRouter == address(0), "PrivacyPool: hook router already set");
+        require(_hookRouter != address(0), "PrivacyPool: zero hook router");
         hookRouter = _hookRouter;
+        emit HookRouterSet(_hookRouter);
     }
 
     /**
@@ -499,16 +524,13 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
     /**
      * @notice Verify a transaction's SNARK proof
      * @dev Called by TransactModule during delegatecall via staticcall to this router.
-     *      Performs the verification directly using stored verification keys and testingMode.
+     *      Performs the verification directly using the stored verification keys. There is no
+     *      bypass of any kind (#633). `virtual` only so the test-only PrivacyPoolProofBypass
+     *      (contracts/test/) can override it; production deploys never use that contract.
      * @param _transaction The transaction to verify
      * @return True if proof is valid
      */
-    function verify(Transaction calldata _transaction) external view returns (bool) {
-        // POC: Bypass verification in testing mode
-        if (testingMode) {
-            return true;
-        }
-
+    function verify(Transaction calldata _transaction) public view virtual returns (bool) {
         uint256 nullifiersLength = _transaction.nullifiers.length;
         uint256 commitmentsLength = _transaction.commitments.length;
 
@@ -539,16 +561,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
         }
 
         // Verify the SNARK proof
-        bool validity = Snark.verify(verifyingKey, _transaction.proof, inputs);
-
-        // Always return true in gas estimation transactions
-        // This allows relayer fee calculation without computing a proof
-        // solhint-disable-next-line avoid-tx-origin
-        if (tx.origin == VERIFICATION_BYPASS) {
-            return true;
-        }
-
-        return validity;
+        return Snark.verify(verifyingKey, _transaction.proof, inputs);
     }
 
     /**
@@ -559,12 +572,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
      * @param _transaction The transaction to verify
      * @return True if proof is valid
      */
-    function verifyOwned(Transaction calldata _transaction) external view returns (bool) {
-        // POC: Bypass verification in testing mode
-        if (testingMode) {
-            return true;
-        }
-
+    function verifyOwned(Transaction calldata _transaction) public view virtual returns (bool) {
         uint256 nullifiersLength = _transaction.nullifiers.length;
         uint256 commitmentsLength = _transaction.commitments.length;
 
@@ -589,15 +597,7 @@ contract PrivacyPool is PrivacyPoolStorage, IPrivacyPool {
         // Final input: the circuit's public owner field
         inputs[2 + nullifiersLength + commitmentsLength] = uint256(_transaction.boundParams.ownerField);
 
-        bool validity = Snark.verify(verifyingKey, _transaction.proof, inputs);
-
-        // Always return true in gas estimation transactions
-        // solhint-disable-next-line avoid-tx-origin
-        if (tx.origin == VERIFICATION_BYPASS) {
-            return true;
-        }
-
-        return validity;
+        return Snark.verify(verifyingKey, _transaction.proof, inputs);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -305,22 +305,6 @@ contract PoolOwnerAuthorityTest is Test, PoseidonLinker {
         require(pool.feeRecipient() == bytes32(0), "setFeeRecipient: gated state must stay at prior value");
     }
 
-    // ── setTestingMode ───────────────────────────────────────────────────────────────────
-    function test_PoolOwnerAuthority_NonOwnerReverts_setTestingMode() public {
-        vm.prank(stranger);
-        vm.expectRevert(bytes("PrivacyPool: Only owner"));
-        pool.setTestingMode(true);
-    }
-
-    function test_PoolOwnerAuthority_NonOwnerStateUnchanged_setTestingMode() public {
-        require(!pool.testingMode(), "setTestingMode: pre-state must be at prior value");
-        vm.prank(stranger);
-        try pool.setTestingMode(true) {
-            fail("setTestingMode: non-owner call must revert");
-        } catch {}
-        require(!pool.testingMode(), "setTestingMode: gated state must stay at prior value");
-    }
-
     // ── setAdapterRegistry ───────────────────────────────────────────────────────────────────
     function test_PoolOwnerAuthority_NonOwnerReverts_setAdapterRegistry() public {
         vm.prank(stranger);

@@ -116,14 +116,15 @@ Governance can grant specific integrators custom terms:
 setIntegratorTerms(
     address integrator,
     uint256 customArmadaTakeBps,
-    uint256 customVolumeThreshold,
-    bool hasCustomTerms
+    bool active
 )
 ```
 
+While active, the custom take applies to every shield the integrator routes, from the first dollar, and overrides the volume tiers. Custom terms carry no volume threshold of their own: volume-based discounts come from the global tiers.
+
 Use cases:
 - Strategic partnerships (reduced Armada take for integrator's users)
-- Ecosystem grants (waived volume threshold)
+- Ecosystem grants (a tier-level discount without reaching the tier's volume)
 - Promotional periods
 
 ### Safety Bounds
@@ -140,6 +141,10 @@ The contract hard-caps every governance-tunable fee input. All setters revert ou
 
 Harvest cadence is separately bounded by `MIN_HARVEST_INTERVAL`/`MAX_HARVEST_INTERVAL` (`setHarvestInterval`).
 
+**Pool-side check.** The privacy pool doesn't trust the fee module's numbers. On every fee-module shield it reverts unless `armadaTake + integratorFee == totalFee`, there is no integrator fee without an integrator, and `totalFee` is at most 15% of the shield (`MAX_FEE_MODULE_SHIELD_FEE_BPS = 1500` in `ShieldModule`, the worst case these bounds allow: 10% take + 5% integrator fee). Raising the fee module's caps beyond a 15% total therefore also needs a new pool (#640, deviation D-27).
+
+**Emergency flat-fee mode.** If the fee module breaks or misbehaves, the pool owner can detach it (`PrivacyPool.setFeeModule(address(0))`). Shields then pay the pool's flat `shieldFee` (capped at 10%, all to treasury, no integrator split) instead of the fee module's rates. The flat fee can be set only in this mode: `setShieldFee` reverts while a fee module is wired (#155).
+
 ---
 
 ## On-Chain Queries
@@ -147,7 +152,7 @@ Harvest cadence is separately bounded by `MIN_HARVEST_INTERVAL`/`MAX_HARVEST_INT
 ```solidity
 // Integrator stats & terms
 // IntegratorInfo bundles { baseFee, cumulativeVolume, cumulativeEarnings, registered };
-// CustomTerms bundles { customArmadaTakeBps, customVolumeThreshold, active }.
+// CustomTerms bundles { customArmadaTakeBps, active }.
 function getIntegratorInfo(address integrator) external view returns (IntegratorInfo memory);
 function getIntegratorTerms(address integrator) external view returns (CustomTerms memory);
 function getIntegratorBonus(address integrator) external view returns (uint256);
@@ -169,21 +174,13 @@ function getHarvestInterval() external view returns (uint256);
 
 ## Events
 
-```solidity
-// NOTE: the canonical home/name of the per-shield event is an OPEN design question (issue #167).
-// The fee module currently emits `ShieldFeeRecorded` (below) rather than this `Shield` shape; the
-// pool's ShieldModule separately emits its own `Shield` event. This block is not yet reconciled.
-event Shield(
-    address indexed asset,
-    uint256 amount,
-    address indexed integrator,
-    uint256 integratorCumulativeVolume,
-    uint256 armadaTakeBps,
-    uint256 integratorFeeEarned
-);
+All fee module events, as declared in `IArmadaFeeModule`. The per-shield fee event is `ShieldFeeRecorded`
+(#167). It is separate from the pool's own `Shield` event (emitted by `ShieldModule` with the new
+commitments, which wallets scan), so the two are deliberately not given the same name.
 
-// As implemented on the fee module today. Emitted for every shielded asset; only USDC shields
-// update cumulativeArmadaFees, cumulativeIntegratorFees and integrator volume/earnings (#605).
+```solidity
+// Emitted for every shielded asset; only USDC shields update cumulativeArmadaFees,
+// cumulativeIntegratorFees and integrator volume/earnings (#605).
 event ShieldFeeRecorded(
     address indexed asset,
     address indexed integrator,
@@ -214,6 +211,14 @@ event TierUpdated(
 event TierRemoved(
     uint256 index
 );
+
+event YieldFeeRecorded(uint256 amount);
+event BaseArmadaTakeUpdated(uint256 oldBps, uint256 newBps);
+event YieldFeeUpdated(uint256 oldBps, uint256 newBps);
+event HarvestIntervalUpdated(uint256 oldInterval, uint256 newInterval);
+event IntegratorTermsSet(address indexed integrator, uint256 takeBps, bool active);
+event PrivacyPoolUpdated(address indexed oldPool, address indexed newPool);
+event YieldVaultUpdated(address indexed oldVault, address indexed newVault);
 ```
 
 ---

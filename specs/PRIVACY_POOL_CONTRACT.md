@@ -40,12 +40,13 @@ Out of scope for this document: `PrivacyPoolClient` (client-chain contract), CCT
 | `initialize` | Permissionless, exactly once (first call wins) — **OQ-7** |
 | `shield`, `transact`, `atomicCrossChainUnshield` | Permissionless |
 | `handleReceiveFinalizedMessage`, `handleReceiveUnfinalizedMessage` | `msg.sender == hookRouter` **or** `msg.sender == tokenMessenger` |
-| All admin setters (§5.2) | `msg.sender == owner` |
+| All admin setters (§5.2), `transferOwnership` | `msg.sender == owner` |
+| `acceptOwnership` | `msg.sender == pendingOwner` |
 | `insertLeaves` (router) | `msg.sender == address(this)` (self-call only) |
 | `verify`, `getVerificationKey`, `getInsertionTreeNumberAndStartingIndex` | Permissionless views |
 | Every module external function | `onlyDelegatecall` (reachable only through the router) |
 
-`owner` is a single `address` set at `initialize`. There is **no** ownership-transfer or renounce function.
+`owner` is a single `address` set at `initialize`. It moves by a two-step transfer (D-23, #349): the owner proposes with `transferOwnership(newOwner)` (recorded in `pendingOwner`; a new proposal replaces it, `address(0)` cancels), and ownership changes only when the proposed owner calls `acceptOwnership()`. There is **no** renounce function.
 
 ---
 
@@ -54,7 +55,6 @@ Out of scope for this document: `PrivacyPoolClient` (client-chain contract), CCT
 | Name | Value | Notes |
 |---|---|---|
 | `SNARK_SCALAR_FIELD` | `21888242871839275222246405745257275088548364400416034343698204186575808495617` | BN254 scalar field order. All field-valued inputs must be `<` this. |
-| `VERIFICATION_BYPASS` | `0x000000000000000000000000000000000000dEaD` | If `tx.origin` equals this address, `verify` returns `true` (gas-estimation escape hatch — **OQ-4**). |
 | `ZERO_VALUE` | `0x0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc` (decimal `2051258411002736885948763699317990061539314419500486054347250703186609807356`) | Level-0 zero leaf of the Merkle tree. **This exact value is a consensus fact** — the tree's empty root and every zero node derive from it. Its derivation is recorded in the deviation register (D-1); implementations MUST hard-code the value above. |
 | `TREE_DEPTH` | `16` | Binary tree; 65,536 (`2**16`) leaves per tree. |
 | `BASIS_POINTS` | `10000` | Fee denominator (module-private constant in ShieldModule). |
@@ -110,7 +110,7 @@ The verifying key is selected by the pair `(N, M)` (§9). The circuit shapes in 
   ```
   This is the function modeled and proven in `armada-lean/ArmadaLean/Fee.lean` (`shieldFee`, `shieldBase`; theorems: boundedness at any rate ≤ 10000 bps, exact conservation `base + fee = amount`, monotonicity, zero-fee below 200 base units at 50 bps, and `shieldFee 50 amount = amount / 200`). The Lean file is the **normative reference** for rounding behavior.
 - **Exclusive variant** (`base = amount`, `fee = (10000 * amount) / (10000 - feeBP) - amount`): present in the code but **never invoked** by any live path (**OQ-5**).
-- **Fee-module path** — when `feeModule != address(0)`: `(armadaTake, integratorFee, totalFee) = IArmadaFeeModule(feeModule).calculateShieldFee(integrator, amount)`; `base = amount - totalFee`. Tiering/integrator economics: `specs/FEE_STRUCTURE.md`.
+- **Fee-module path** — when `feeModule != address(0)`: `(armadaTake, integratorFee, totalFee) = IArmadaFeeModule(feeModule).calculateShieldFee(integrator, amount)`; the split is validated (D-27: parts sum to the total, no integrator fee without an integrator, `totalFee ≤ 15%` of `amount`); `base = amount - totalFee`. Tiering/integrator economics: `specs/FEE_STRUCTURE.md`.
 - **Unshields are always free** (fee constant 0; see deviation register D-2).
 
 ---
@@ -241,7 +241,7 @@ Defined in `PrivacyPoolStorage` and inherited identically by the router and all 
 | 50 | — | — | `rootHistory` | `mapping(uint256 => mapping(bytes32 => bool))` | public |
 | 51 | — | — | `nullifiers` | `mapping(uint256 => mapping(bytes32 => bool))` | public |
 | 52 | — | — | `verificationKeys` | `mapping(uint256 => mapping(uint256 => VerifyingKey))` | internal |
-| 53 | 0 | 1 | `testingMode` | `bool` | public |
+| 53 | 0 | 1 | `testingMode` | `bool` (deprecated, always false: testing mode removed, D-26) | public |
 | 54 | — | — | `snarkSafetyVector` | `mapping(uint256 => bool)` | public (**never read or written** — reserved) |
 | 55 | 0 | 32 | `lastEventBlock` | `uint256` | public |
 | 56 | 0 | 20 | `owner` | `address` | public |
@@ -254,7 +254,8 @@ Defined in `PrivacyPoolStorage` and inherited identically by the router and all 
 | 60 | — | — | `remoteHookRouters` | `mapping(uint32 => bytes32)` | public (added post-drift, D-16) |
 | 61 | 0 | 32 | `_reentrancyStatus` | `uint256` (0 = not entered) | internal (added post-drift, D-18) |
 | 62 | 0 | 20 | `adapterRegistry` | `address` (timelock-governed privilege source) | public (added post-drift, D-18) |
-| 63–105 | — | — | `__gap` | `uint256[43]` | private (reserved) |
+| 63 | 0 | 20 | `pendingOwner` | `address` (proposed owner, `address(0)` if none) | public (added D-23, #349) |
+| 64–105 | — | — | `__gap` | `uint256[42]` | private (reserved) |
 
 Slot 11 (`privilegedShieldCallers`) is **retired but retained** (never removed/reordered): shield-fee exemption is now derived from `adapterRegistry` (slot 62), and the legacy mapping is always the zero default.
 
@@ -285,7 +286,7 @@ Behavior, in order:
 4. `delegatecall` `merkleModule.initializeMerkle()` (§6.1).
 5. Set `initialized = true`.
 
-No event is emitted. `treasury` has no setter (documented as immutable after init); `owner` has no setter either.
+No event is emitted. `treasury` has no setter (documented as immutable after init); `owner` changes only through the two-step transfer in §5.4.
 
 ### 5.2 User-facing operations
 
@@ -316,16 +317,17 @@ All revert with `"PrivacyPool: Only owner"` unless `msg.sender == owner`.
 |---|---|---|---|
 | `setRemotePool(uint32 domain, bytes32 poolAddress)` | `0x37bc0324` | `remotePools[domain] = poolAddress` | `RemotePoolSet(domain, poolAddress)` |
 | `setVerificationKey(uint256 n, uint256 m, VerifyingKey calldata key)` | `0x2ec0f359` | `delegatecall` → `VerifierModule.setVerificationKey` (§9.1; owner re-checked inside the module) | `VerifyingKeySet` (from module) |
-| `setShieldFee(uint120 feeBps)` | `0x47338389` | `require(feeBps <= MAX_SHIELD_FEE_BPS (1000 = 10%), "PrivacyPool: Fee too high")`; sets `shieldFee` | none |
-| `setTestingMode(bool enabled)` | `0x596d7a68` | `delegatecall` → `VerifierModule.setTestingMode`, then emits `TestingModeSet` **again** — two identical events per call (**OQ-8**) | `TestingModeSet` ×2 |
-| `setHookRouter(address)` | `0xdf4af94b` | sets `hookRouter` | none |
-| `setRemoteHookRouter(uint32 domain, bytes32 routerAddress)` | `0x7c1cc0ed` | sets `remoteHookRouters[domain]` (pin for outbound burn `destinationCaller`, D-16) | none |
-| `setAdapterRegistry(address)` | `0x5b34b823` | set-once: `require(adapterRegistry == address(0))` + non-zero arg (D-18) | none |
+| `setShieldFee(uint120 feeBps)` | `0x47338389` | `require(feeModule == address(0), "PrivacyPool: use fee module")` (D-24: the flat fee is live only without a fee module), then `require(feeBps <= MAX_SHIELD_FEE_BPS (1000 = 10%), "PrivacyPool: Fee too high")`; sets `shieldFee` | `ShieldFeeSet(feeBps)` (D-28) |
+| `setHookRouter(address)` | `0xdf4af94b` | set-once (D-28): `require(hookRouter == address(0), "PrivacyPool: hook router already set")` + `require(arg != address(0), "PrivacyPool: zero hook router")`; sets `hookRouter` | `HookRouterSet(addr)` |
+| `setRemoteHookRouter(uint32 domain, bytes32 routerAddress)` | `0x7c1cc0ed` | sets `remoteHookRouters[domain]` (pin for outbound burn `destinationCaller`, D-16) | `RemoteHookRouterSet(domain, routerAddress)` |
+| `setAdapterRegistry(address)` | `0x5b34b823` | set-once: `require(adapterRegistry == address(0))` + non-zero arg (D-18) | `AdapterRegistrySet(addr)` |
 | `addToBlocklist(address[])` | `0xf71a55f8` | sets `tokenBlocklist[t] = true`, skips already-blocked; reverts `"PrivacyPool: cannot block USDC"` on the core asset (blocking it would strand in-flight cross-chain shields) | `AddToBlocklist(token)` per newly blocked token |
 | `removeFromBlocklist(address[])` | `0xab63e69c` | clears `tokenBlocklist[t]` | `RemoveFromBlocklist(token)` per newly unblocked token |
 | `setDefaultFinalityThreshold(uint32 threshold)` | `0x50fe9314` | `require(threshold == 1000 \|\| threshold == 2000, "PrivacyPool: Invalid threshold")` | `DefaultFinalityThresholdSet(threshold)` |
 | `setShieldPauseContract(address)` | `0x6960c7da` | sets `shieldPauseContract` (note: declared on the contract but absent from the router interface) | `ShieldPauseContractSet(addr)` |
-| `setFeeModule(address)` | `0x2088df1b` | sets `feeModule` (`address(0)` = flat-fee fallback) | `FeeModuleSet(addr)` |
+| `setFeeModule(address)` | `0x2088df1b` | sets `feeModule` (`address(0)` = flat-fee fallback, the emergency mode for a broken fee module; `setShieldFee` is then settable again, D-24) | `FeeModuleSet(addr)` |
+| `transferOwnership(address newOwner)` | `0xf2fde38b` | sets `pendingOwner = newOwner` (replaces a pending proposal; `address(0)` cancels); `owner` unchanged (D-23) | `OwnershipTransferStarted(owner, newOwner)` |
+| `acceptOwnership()` | `0x79ba5097` | **not owner-gated:** `require(msg.sender == pendingOwner, "PrivacyPool: not pending owner")`; `owner = msg.sender`, `pendingOwner = address(0)` (D-23) | `OwnershipTransferred(previousOwner, newOwner)` |
 
 ### 5.5 Views and self-call functions implemented directly on the router
 
@@ -340,13 +342,12 @@ Plus all auto-generated storage getters listed in §4.
 
 ### 5.6 `verify` semantics (router — normative)
 
-1. If `testingMode` is `true`, return `true` immediately.
-2. `N = nullifiers.length`, `M = commitments.length`. Load `verificationKeys[N][M]`.
-3. `require(key.alpha1.x != 0, "PrivacyPool: Verification key not set")`.
-4. Build the public-input vector per §2.3.
-5. `validity = Snark.verify(key, proof, inputs)` (Groth16 pairing check, §10.5).
-6. If `tx.origin == VERIFICATION_BYPASS`, return `true` — **after** steps 2–5 have already run (so estimation still pays verification cost and reverts for unregistered shapes; **OQ-4**).
-7. Return `validity`.
+1. `N = nullifiers.length`, `M = commitments.length`. Load `verificationKeys[N][M]`.
+2. `require(key.alpha1.x != 0, "PrivacyPool: Verification key not set")`.
+3. Build the public-input vector per §2.3.
+4. Return `Snark.verify(key, proof, inputs)` (Groth16 pairing check, §10.5).
+
+There is no bypass of any kind: the testing-mode flag and the `tx.origin == 0x…dEaD` escape hatch were removed (D-26). `verify` is `public view virtual` only so the test-only `PrivacyPoolProofBypass` (`contracts/test/`) can override it; production deploys never use that contract.
 
 ### 5.7 `_delegatecall` helper (all router forwards)
 
@@ -430,14 +431,14 @@ Invoked by the router's CCTP handler after USDC has already been minted to the p
 | Branch | Condition | Token movements (all from `msg.sender` unless noted) | Commitment value |
 |---|---|---|---|
 | Privileged | `_isPrivilegedShieldCaller(msg.sender)` — post-drift (D-18): derived from the timelock-governed `adapterRegistry` (`authorizedAdapters(c) || withdrawOnlyAdapters(c)`); when the registry is unset, no caller is privileged. The owner-set `privilegedShieldCallers` map is retired (inert slot). | pull full `value` to pool; `fee = 0` | `value` |
-| Fee module | `feeModule != address(0)` | `(armadaTake, integratorFee, totalFee) = feeModule.calculateShieldFee(integrator, value)`; pull `base = value - totalFee` to pool; pull `armadaTake` → `treasury` (if `> 0` and `treasury != 0`); pull `integratorFee` → `integrator` (if `> 0` and `integrator != 0`); then `feeModule.recordShieldFee(token, integrator, value, armadaTake, integratorFee)` | `base` |
+| Fee module | `feeModule != address(0)` | `(armadaTake, integratorFee, totalFee) = feeModule.calculateShieldFee(integrator, value)`; `_requireValidFeeSplit` (D-27) reverts unless `armadaTake + integratorFee == totalFee`, `integratorFee == 0 \|\| integrator != 0`, and `totalFee * 10000 ≤ value * 1500`; pull `base = value - totalFee` to pool; pull `armadaTake` → `treasury` (if `> 0` and `treasury != 0`); pull `integratorFee` → `integrator` (if `> 0` and `integrator != 0`); then `feeModule.recordShieldFee(token, integrator, value, armadaTake, integratorFee)` | `base` |
 | Flat fee | otherwise | `(base, fee) = _getFee(value, inclusive=true, shieldFee)`; pull `base` to pool; pull `fee` → `treasury` (if `> 0` and `treasury != 0`) | `base` |
 
 Every pull of the pool's own balance is balance-delta checked: `balanceAfter - balanceBefore == expected`, else revert `"ShieldModule: Transfer failed"` (rejects fee-on-transfer/rebasing tokens). Fee pulls to treasury/integrator are **not** delta-checked. All ERC20 movements use SafeERC20. `base` is narrowed to `uint120` via explicit cast (the upstream subtraction is checked arithmetic).
 
 ### 7.4 `_applyShieldFee(preimage, integrator)` (cross-chain path)
 
-Same fee selection as §7.3 but for notes whose tokens are ALREADY in the contract: if privileged → no fee; else if `feeModule != 0` → `calculateShieldFee`, set `value = amount - totalFee`, **safeTransfer** `armadaTake` → treasury and `integratorFee` → integrator from the pool's balance, then `recordShieldFee`; else if `shieldFee > 0` → flat inclusive fee, safeTransfer fee → treasury. Returns the fee-adjusted preimage + fee; hashing/insertion/event emission are batched by the caller (§7.2 step 6).
+Same fee selection as §7.3 but for notes whose tokens are ALREADY in the contract: if privileged → no fee; else if `feeModule != 0` → `calculateShieldFee`, validate the split (`_requireValidFeeSplit`, as §7.3, D-27), set `value = amount - totalFee`, **safeTransfer** `armadaTake` → treasury and `integratorFee` → integrator from the pool's balance, then `recordShieldFee`; else if `shieldFee > 0` → flat inclusive fee, safeTransfer fee → treasury. Returns the fee-adjusted preimage + fee; hashing/insertion/event emission are batched by the caller (§7.2 step 6).
 
 ### 7.5 Helpers
 
@@ -533,7 +534,6 @@ For each nullifier `n`: `require(!nullifiers[boundParams.treeNumber][n], "Transa
 | `getVerificationKey(uint256 n, uint256 m) returns (VerifyingKey)` | `0x7b12ae83` | none (view) | Returns mapping entry. Unreachable via router (router has its own); harmless. |
 | `verify(Transaction calldata) returns (bool)` | `0xee990783` | `onlyDelegatecall` view | **Reverts** `"VerifierModule: verify handled by PrivacyPool router"`. Post-drift (D-17): verification is centralized on the router (§5.6); the module-level copy was removed to kill silent-drift risk between two implementations. **OQ-2 RESOLVED.** |
 | `hashBoundParams(BoundParams calldata) returns (uint256)` | `0x28f89c3a` | none (pure) | `uint256(keccak256(abi.encode(bp))) % SNARK_SCALAR_FIELD`. |
-| `setTestingMode(bool)` | `0x596d7a68` | `onlyDelegatecall` + owner (`"VerifierModule: Only owner"`) | Sets `testingMode`; `emit TestingModeSet(enabled)`. |
 
 ### 9.2 VK registry semantics
 
@@ -555,7 +555,7 @@ For each nullifier `n`: `require(!nullifiers[boundParams.treeNumber][n], "Transa
 | CCTP `ITokenMessengerV2` | `depositForBurnWithHook(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken, bytes32 destinationCaller, uint256 maxFee, uint32 minFinalityThreshold, bytes hookData)` | Burns `amount` of `burnToken` (approval pulled); emits a V2 message. No return value used. |
 | CCTP `IMessageTransmitterV2` | `receiveMessage(bytes message, bytes attestation) returns (bool)`, `localDomain()` | Drives the hook handlers on this contract (via hook router). Generic `sendMessage` is permissionless, so anyone can get an attested message with an arbitrary body delivered to a recipient of their choosing; the hook router (`CCTPHookRouter(messageTransmitter, tokenMessenger)`) therefore dispatches only messages addressed to the local TokenMessenger. |
 | Burn message V2 decoding | fixed-offset decoding of `amount` (offset in the burn-message body), `feeExecuted`, `hookData`; reverts `"BurnMessageV2: message too short"` below minimum length | Layout must match Circle's MessageTransmitterV2 byte-for-byte. |
-| `IArmadaFeeModule` (`feeModule`) | `calculateShieldFee(address integrator, uint256 amount) returns (uint256 armadaTake, uint256 integratorFee, uint256 totalFee)` (view); `recordShieldFee(address asset, address integrator, uint256 amount, uint256 armadaTakePaid, uint256 integratorFeePaid)` | `totalFee == armadaTake + integratorFee ≤ amount` (upstream subtraction is checked); `recordShieldFee` accepts the pool as an authorized caller. See `specs/FEE_STRUCTURE.md`. |
+| `IArmadaFeeModule` (`feeModule`) | `calculateShieldFee(address integrator, uint256 amount) returns (uint256 armadaTake, uint256 integratorFee, uint256 totalFee)` (view); `recordShieldFee(address asset, address integrator, uint256 amount, uint256 armadaTakePaid, uint256 integratorFeePaid)` | `totalFee == armadaTake + integratorFee`, `integratorFee == 0` without an integrator, and `totalFee ≤ 15%` of `amount`: enforced by the pool, which reverts otherwise (D-27); `recordShieldFee` accepts the pool as an authorized caller. See `specs/FEE_STRUCTURE.md`. |
 | `IShieldPauseController` (`shieldPauseContract`) | `shieldsPaused()`, `withdrawOnlyMode()`, `emergencyPaused()` (all view) | `address(0)` disables all three checks. |
 | Poseidon libraries | `PoseidonT3.poseidon(bytes32[2])`, `PoseidonT4.poseidon(bytes32[3])` (pure) | Bytecode-generated circomlib-compatible Poseidon over BN254; must reproduce identical digests. |
 | `Snark` library | `verify(VerifyingKey, SnarkProof, uint256[] inputs) returns (bool)` | Groth16 over BN254 via `ecAdd`/`ecMul`/`ecPairing` precompiles; reverts `"Snark: Input > SNARK_SCALAR_FIELD"` if any input ≥ field; `ic` length must equal `inputs.length + 1`; returns the pairing-check boolean. |
@@ -573,13 +573,18 @@ For each nullifier `n`: `require(!nullifiers[boundParams.treeNumber][n], "Transa
 | `Nullified(uint16 treeNumber, bytes32[] nullifier)` | `0x781745c57906dc2f175fec80a9c691744c91c48a34a83672c41c2604774eb11f` | §8.4 — even for empty nullifier arrays |
 | `CrossChainUnshieldInitiated(uint32 indexed destinationDomain, address indexed recipient, uint256 amount, uint64 nonce)` | `0x9a8234aef148991bd0f1e08df206eb275078881051bd92a2d81a1afd0ff37f4a` | §8.2 (`nonce` always 0) |
 | `RemotePoolSet(uint32 indexed domain, bytes32 poolAddress)` | `0x019190ca21b03575fe0ef686ebc94279721ca06510c186ee3a8d26cfa5d70023` | §5.4 |
-| `TestingModeSet(bool enabled)` | `0x21f67800fb06e35b87566708fd49f2a7cc96bf3a74ca56e175b23e6f35b10248` | §5.4 (emitted twice per call — **OQ-8**) |
 | `DefaultFinalityThresholdSet(uint32 threshold)` | `0xe58be3486b5925aab80f886258894ea495baffc3fdd4f7432efd0cb26a3f1314` | §5.4 |
 | `ShieldPauseContractSet(address indexed)` | `0xd944792a6be77df7bcf2b336a0c0af6fb2e715460c8f79e90264f4966fbc74c6` | §5.4 |
 | `FeeModuleSet(address indexed)` | `0xfd559fabeec56b489dcf6cf0c7a8c863ed2dd88016bf8d905c72dbdfdc685d29` | §5.4 |
+| `RemoteHookRouterSet(uint32 indexed domain, bytes32 routerAddress)` | `0x6dceb092bf089bac7367a6c14cc9c893966c60c8f90557b28b267402aa16d21e` | §5.4 (D-16) |
+| `AdapterRegistrySet(address indexed)` | `0xa171d8fb18a12bf1de13705d955959f7d7581ae025e856e8bfa2c80febbdca32` | §5.4 (D-18) |
+| `HookRouterSet(address indexed)` | `0x1890b06f40ba99d925ca5bce3e12108c320b041cde0eda65f006d39eb148f6ae` | §5.4 (D-28) |
+| `ShieldFeeSet(uint120 feeBps)` | `0x6cee15266afce2d541339ee91ba942dce0986a356d0bbfb2d8eb2195ba9188db` | §5.4 (D-28) |
 | `VerifyingKeySet(uint256 nullifiers, uint256 commitments, VerifyingKey key)` | `0x3d09e10d1c966d01c4a2c14d0ac9af253486aa5e99b6cffe9019c4d43eb1fb23` | §9.1 |
 | `AddToBlocklist(address indexed token)` | `0x46742f555939247f80b50a8ca895a561933c48bc9a06ccb0c812e97ac723d33f` | §5.4 (post-drift, D-18) |
 | `RemoveFromBlocklist(address indexed token)` | `0x2ef13bd1aff17b0f9c85afaf228e84266c8394d9d381735e83fe23f607113e2e` | §5.4 (post-drift, D-18) |
+| `OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner)` | `0x38d16b8cac22d99fc7c124b9cd0de2d3fa1faef420bfe791d8c362d765e22700` | §5.4 (D-23) |
+| `OwnershipTransferred(address indexed previousOwner, address indexed newOwner)` | `0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0` | §5.4 (D-23) |
 
 `lastEventBlock = block.number` is written on every successful `shield`, `processIncomingShield`, `transact`, and `atomicCrossChainUnshield` (wallet-sync support).
 
@@ -608,14 +613,14 @@ For each nullifier `n`: `require(!nullifiers[boundParams.treeNumber][n], "Transa
 | **OQ-1** | ~~`Shield`/`Transact` events report the **pre-insertion** `(treeNumber, startIndex)` from the router's argument-ignoring view. If a batch triggers tree rollover, the events name the old tree/index while leaves land in `treeNumber + 1` at index 0.~~ **RESOLVED on main (#372):** the router's view applies the same rollover rule as the module (§5.5, §6.4), so events name the tree/index the leaves actually land in. Guarded by `test-foundry/RolloverDesyncPoC.t.sol`. | Events report the post-rollover position. |
 | **OQ-2** | ~~Verification logic exists twice: live copy on the router and a dead copy in VerifierModule.~~ **RESOLVED post-drift (D-17):** verification centralized on the router; the module's `verify` reverts. | Router copy is the only path. |
 | **OQ-3** | ~~The CCTP handlers ignore the envelope `sender`; a generic CCTP message (`sendMessage` is permissionless) with a burn-shaped body could reach them without any USDC minted.~~ **RESOLVED:** `CCTPHookRouter.relayWithHook` reverts `"CCTPHookRouter: not a burn message"` unless the envelope recipient is the local TokenMessenger, which authenticates the source TokenMessenger and mints before dispatch. The handlers additionally authenticate the source domain and the burn message's `messageSender`. | Only TokenMessenger-processed burn messages reach the handlers. |
-| **OQ-4** | `tx.origin == VERIFICATION_BYPASS` returns `true` only *after* full verification and the VK-set check — it neither saves gas nor tolerates unset keys, and `tx.origin` semantics are deprecated-adjacent. Keep, move earlier, or drop? | Bypass checked last. |
+| **OQ-4** | ~~`tx.origin == VERIFICATION_BYPASS` returns `true` only *after* full verification and the VK-set check — it neither saves gas nor tolerates unset keys, and `tx.origin` semantics are deprecated-adjacent. Keep, move earlier, or drop?~~ **RESOLVED (D-26, #633):** removed from the pool. | No bypass. |
 | **OQ-5** | `_getFee`'s exclusive (non-inclusive) branch is unreachable (unshield fee is gone). Drop it, or keep for parity? | Dead code present. |
 | **OQ-6** | ERC721/ERC1155 validation branches, `tokenIDMapping`, and `nftFee` are unreachable (both token in/out paths require ERC20). Keep types for ABI/event compatibility but drop the dead checks? | Dead NFT paths present. |
 | **OQ-7** | ~~`initialize` is permissionless first-call; if not invoked atomically at deployment it is front-runnable.~~ **RESOLVED post-drift (D-18):** `initialize` is gated to the deployer (private immutable captured in the constructor). | Deployer-only. |
-| **OQ-8** | `setTestingMode` emits `TestingModeSet` twice (once inside the module delegatecall, once on the router). Intentional or bug? | Double emission. |
+| **OQ-8** | ~~`setTestingMode` emits `TestingModeSet` twice (once inside the module delegatecall, once on the router). Intentional or bug?~~ **RESOLVED (D-26, #633):** removed from the pool. | Event removed. |
 | **OQ-9** | ~~`atomicCrossChainUnshield` does not require `unshieldPreimage.token == USDC` — a proof over a non-USDC note would still burn USDC.~~ **RESOLVED:** the unshield note must be an ERC-20 USDC note (§8.2), else `"TransactModule: Cross-chain unshield is USDC-only"`. The pool stays multi-asset; other tokens unshield locally. | USDC-only cross-chain exit. |
 | **OQ-10** | ~~`setShieldFee` allows up to 10000 bps (100%). Intended cap?~~ **RESOLVED post-drift:** `MAX_SHIELD_FEE_BPS = 1000` (10%) hard cap on the flat fee; the fee module caps every component at 10% (`MAX_BPS`) and the yield fee at 1–50%. | 10% cap. |
-| **OQ-11** | `testingMode` exists as a full proof bypass. Production expectation is removal (see deviation register D-3). Confirm removal plan and any staging-net needs. | Owner-toggleable bypass. |
+| **OQ-11** | ~~`testingMode` exists as a full proof bypass. Production expectation is removal (see deviation register D-3). Confirm removal plan and any staging-net needs.~~ **RESOLVED (D-26, #633):** removed from the pool. | No bypass. |
 | **OQ-12** | `snarkSafetyVector` storage (slot 54) is never read or written. Retain as reserved (slot must stay either way) but drop the getter? | Dead public mapping. |
 
 ---

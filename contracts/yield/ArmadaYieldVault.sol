@@ -67,6 +67,19 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
     ///      from `IArmadaFeeModule.getHarvestInterval()` and this constant is unused.
     uint256 public constant FALLBACK_HARVEST_INTERVAL = 7 days;
 
+    /// @notice Shares the first deposit locks forever (1 ayUSDC; worth 1 USDC when minted).
+    /// @dev Defense against the first-depositor share-inflation attack (#365). `totalAssets` is
+    ///      donatable (anyone can supply to the spoke on the vault's behalf), so a holder of a few
+    ///      shares could inflate one share's price and make the next deposit lose up to a whole
+    ///      share to rounding. With these shares locked, total supply never drops below
+    ///      LOCKED_SHARES, so a donation is spread mostly over shares nobody can redeem: the
+    ///      attacker loses nearly all of it, and a depositor loses at most ~donation / LOCKED_SHARES.
+    uint256 public constant LOCKED_SHARES = 1e6;
+
+    /// @notice Holder of the locked shares: an address nobody holds a key for, so its shares can
+    ///         never be redeemed, transferred or approved.
+    address public constant LOCKED_SHARES_HOLDER = 0x000000000000000000000000000000000000dEaD;
+
     /// @notice Yield fee in basis points, governable via extended proposal.
     uint256 public yieldFeeBps = 1000; // 10% at launch
 
@@ -89,33 +102,15 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
     /// @notice Contract owner
     address public owner;
 
-    /// @notice Privileged adapter (can bypass fees)
-    address public adapter;
-
     /// @notice Fee module address (ArmadaFeeModule proxy) for centralized yield fee config.
     /// @dev When address(0), uses local yieldFeeBps. When set, reads fee from fee module.
     address public feeModule;
-
-    /// @notice Aggregate cost-basis principal of outstanding shares.
-    /// @dev Informational only (paired with per-user cost basis for `getUserYield`); the protocol
-    ///      fee is computed from lifetime flows, not from cost basis (see `_lifetimeYield`).
-    uint256 public totalPrincipal;
 
     /// @notice Lifetime protocol fee swept to treasury (in underlying units).
     uint256 public cumulativeProtocolFee;
 
     /// @notice Timestamp of the last protocol fee settle (via redeem or external harvest).
     uint256 public lastHarvestTime;
-
-    /// @notice Per-user cost basis per share, scaled by 1e18
-    /// @dev Tracks weighted average deposit price. On deposit, the cost basis is updated
-    ///      as a weighted average of existing and new shares. On redeem, principal is
-    ///      computed as shares * costBasis / COST_BASIS_PRECISION, which is independent
-    ///      of balanceOf() and works correctly with the ArmadaYieldAdapter pattern.
-    mapping(address => uint256) public userCostBasisPerShare;
-
-    /// @notice Precision scalar for cost basis (1e18)
-    uint256 internal constant COST_BASIS_PRECISION = 1e18;
 
     /// @notice Lifetime underlying deposited by all depositors.
     uint256 public totalDeposited;
@@ -144,7 +139,6 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
         uint256 yieldFee
     );
 
-    event AdapterUpdated(address indexed oldAdapter, address indexed newAdapter);
     event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
     event YieldFeeUpdated(uint256 oldFeeBps, uint256 newFeeBps);
     event FeeModuleUpdated(address indexed oldModule, address indexed newModule);
@@ -182,15 +176,6 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
     }
 
     // ============ Admin Functions ============
-
-    /**
-     * @notice Set privileged adapter address
-     * @param _adapter New adapter address (can be zero to disable)
-     */
-    function setAdapter(address _adapter) external onlyOwner {
-        emit AdapterUpdated(adapter, _adapter);
-        adapter = _adapter;
-    }
 
     /**
      * @notice Transfer ownership
@@ -281,20 +266,14 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
         shares = _convertToShares(assets);
         require(shares > 0, "ArmadaYieldVault: zero shares");
 
-        totalDeposited += assets;
-
-        // Track principal via weighted average cost basis (informational; see totalPrincipal)
-        totalPrincipal += assets;
-        uint256 existingShares = balanceOf(receiver);
-        if (existingShares == 0) {
-            // First deposit: cost basis = assets per share
-            userCostBasisPerShare[receiver] = (assets * COST_BASIS_PRECISION) / shares;
-        } else {
-            // Weighted average: ((oldBasis * oldShares) + (assets * PRECISION)) / (oldShares + newShares)
-            uint256 oldBasis = userCostBasisPerShare[receiver];
-            userCostBasisPerShare[receiver] =
-                (oldBasis * existingShares + assets * COST_BASIS_PRECISION) / (existingShares + shares);
+        // The first deposit pays for the permanent share lock (#365, see LOCKED_SHARES).
+        if (totalSupply() == 0) {
+            require(shares > LOCKED_SHARES, "ArmadaYieldVault: first deposit too small");
+            _mint(LOCKED_SHARES_HOLDER, LOCKED_SHARES);
+            shares -= LOCKED_SHARES;
         }
+
+        totalDeposited += assets;
 
         // Transfer underlying from caller
         underlying.safeTransferFrom(msg.sender, address(this), assets);
@@ -335,16 +314,6 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
 
         // Now compute payout against the post-settle share price.
         assets = _convertToAssets(shares);
-
-        // Decrement aggregate principal by the user's cost-basis portion. The per-user
-        // cost basis (userCostBasisPerShare) is intentionally NOT decremented — it is
-        // an average price that stays valid for the user's remaining shares.
-        uint256 costBasis = userCostBasisPerShare[owner_];
-        uint256 principalPortion = (shares * costBasis) / COST_BASIS_PRECISION;
-        if (principalPortion > totalPrincipal) {
-            principalPortion = totalPrincipal;
-        }
-        totalPrincipal -= principalPortion;
 
         totalPaidOut += assets;
 
@@ -471,18 +440,6 @@ contract ArmadaYieldVault is ERC20, ReentrancyGuard {
      */
     function getUserAssets(address user) external view returns (uint256) {
         return _convertToAssets(balanceOf(user));
-    }
-
-    /**
-     * @notice Get user's accrued yield
-     * @param user User address
-     * @return yield_ User's yield (assets - principal)
-     */
-    function getUserYield(address user) external view returns (uint256 yield_) {
-        uint256 userShares = balanceOf(user);
-        uint256 assets = _convertToAssets(userShares);
-        uint256 principal = (userShares * userCostBasisPerShare[user]) / COST_BASIS_PRECISION;
-        yield_ = assets > principal ? assets - principal : 0;
     }
 
     /**

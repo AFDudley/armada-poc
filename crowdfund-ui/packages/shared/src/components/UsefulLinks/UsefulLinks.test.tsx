@@ -11,7 +11,7 @@ describe("UsefulLinks", () => {
     render(<UsefulLinks />);
     expect(
       screen.getByRole("link", { name: /Discord/ }).getAttribute("href"),
-    ).toBe("https://discord.com/invite/ship-armada");
+    ).toBe("https://armada.blue/discord");
     expect(
       screen.getByRole("link", { name: /Twitter/ }).getAttribute("href"),
     ).toBe("https://x.com/ship_armada");

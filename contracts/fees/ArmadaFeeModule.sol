@@ -284,18 +284,13 @@ contract ArmadaFeeModule is Initializable, UUPSUpgradeable, OwnableUpgradeable, 
     }
 
     /// @inheritdoc IArmadaFeeModule
-    function setIntegratorTerms(address integrator, uint256 takeBps, uint256 threshold, bool active)
-        external
-        override
-        onlyOwner
-    {
+    function setIntegratorTerms(address integrator, uint256 takeBps, bool active) external override onlyOwner {
         require(integrator != address(0), "ArmadaFeeModule: zero integrator");
         require(takeBps <= MAX_BPS, "ArmadaFeeModule: custom take too high");
 
-        _customTerms[integrator] =
-            CustomTerms({customArmadaTakeBps: takeBps, customVolumeThreshold: threshold, active: active});
+        _customTerms[integrator] = CustomTerms({customArmadaTakeBps: takeBps, active: active});
 
-        emit IntegratorTermsSet(integrator, takeBps, threshold, active);
+        emit IntegratorTermsSet(integrator, takeBps, active);
     }
 
     /// @inheritdoc IArmadaFeeModule

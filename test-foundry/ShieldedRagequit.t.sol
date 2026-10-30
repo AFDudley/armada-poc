@@ -6,7 +6,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 
-import {PrivacyPool} from "../contracts/privacy-pool/PrivacyPool.sol";
+import {PrivacyPoolProofBypass} from "../contracts/test/PrivacyPoolProofBypass.sol";
 import {ShieldModule} from "../contracts/privacy-pool/modules/ShieldModule.sol";
 import {TransactModule} from "../contracts/privacy-pool/modules/TransactModule.sol";
 import {MerkleModule} from "../contracts/privacy-pool/modules/MerkleModule.sol";
@@ -40,7 +40,7 @@ import {PoseidonLinker} from "./helpers/PoseidonLinker.sol";
 ///      exercised for real: authorization (ownerField), bounded payout, preimageOf registry.
 contract ShieldedRagequitTest is Test, PoseidonLinker {
     // ── Pool fixture (P2a) ──
-    PrivacyPool public pool;
+    PrivacyPoolProofBypass public pool;
     ShieldModule public shieldModule;
     TransactModule public transactModule;
     MerkleModule public merkleModule;
@@ -81,7 +81,7 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
         merkleModule = new MerkleModule();
         verifierModule = new VerifierModule();
 
-        pool = new PrivacyPool();
+        pool = new PrivacyPoolProofBypass();
         pool.initialize(
             address(shieldModule),
             address(transactModule),
@@ -94,7 +94,7 @@ contract ShieldedRagequitTest is Test, PoseidonLinker {
             poolOwner,
             payable(poolTreasury)
         );
-        pool.setTestingMode(true);
+        pool.setSkipProofVerification(true);
 
         // ── G1 ARM token: the holder receives the entire initial supply (single mint). ──
         address[] memory proposers = new address[](0);

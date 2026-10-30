@@ -5,6 +5,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/privacy-pool/PrivacyPool.sol";
+import "../contracts/test/PrivacyPoolProofBypass.sol";
 import "../contracts/privacy-pool/modules/ShieldModule.sol";
 import "../contracts/privacy-pool/modules/TransactModule.sol";
 import "../contracts/privacy-pool/modules/MerkleModule.sol";
@@ -54,7 +55,7 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
         verifierModule = new VerifierModule();
 
         // Deploy and initialize pool
-        pool = new PrivacyPool();
+        pool = new PrivacyPoolProofBypass(); // test-only: proofs are not generated here
         pool.initialize(
             address(shieldModule),
             address(transactModule),
@@ -67,7 +68,7 @@ contract TransactModuleWindDownTest is Test, PoseidonLinker {
             owner,
             payable(treasury)
         );
-        pool.setTestingMode(true);
+        PrivacyPoolProofBypass(address(pool)).setSkipProofVerification(true);
 
         // Deploy ShieldPauseController
         pauseController = new ShieldPauseController(securityCouncil, owner);
