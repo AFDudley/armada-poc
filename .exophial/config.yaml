@@ -19,12 +19,17 @@ dispatcher:
 # a network, a running chain, Docker or secrets (hardhat `test:all`, real-proof
 # e2e, golden-vector replay, indexer Docker build, Slither) stay out: they do
 # not belong in an offline commit-boundary gate.
+# No `npm ci` here: the gate image's build already runs `npm ci` on the judged
+# tree (.exophial/gate/Dockerfile), and the gate runs in that image's /gate. A
+# second `npm ci` cost 131 s, and its reinstall forced hardhat and forge to
+# rebuild from scratch; with it the gate took 331 s against the 300 s timeout,
+# without it 158 s (measured 2026-11-09 in the gate image, offline).
 gate:
   command:
     [
       "bash",
       "-c",
-      "npm ci --legacy-peer-deps --offline --no-audit --no-fund && pre-commit run --all-files && ./scripts/check-anvil-addresses.sh && npm run compile && npm run check:sizes && npx tsc --noEmit --project tsconfig.ci.json && forge test --offline",
+      "pre-commit run --all-files && ./scripts/check-anvil-addresses.sh && npm run compile && npm run check:sizes && npx tsc --noEmit --project tsconfig.ci.json && forge test --offline",
     ]
   timeout: 300
 
