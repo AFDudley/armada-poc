@@ -9,7 +9,6 @@
 # own ENV / HOME / WORKDIR are all the container sees (D49.5/D49.6).
 #
 # The gate.command (.exophial/config.yaml) is, in order:
-#   npm ci --legacy-peer-deps --offline --no-audit --no-fund
 #   pre-commit run --all-files
 #   ./scripts/check-anvil-addresses.sh
 #   npm run compile          (hardhat compile)
@@ -22,12 +21,12 @@
 #   python 3.12 + uv + git + the exophial wheel  -> from exophial-e2e-base
 #       (the local hooks claude-md-coverage and reroute-main-commit call the
 #        console scripts exophial-check-claude-md, exophial-reroute-main-commit)
-#   node 24.18.0 + npm 11.16.0                    -> npm ci, eslint, prettier,
+#   node 24.18.0 + npm 11.16.0                    -> npm ci (image build), eslint, prettier,
 #                                                    hardhat compile, tsc
 #   foundry forge/cast/anvil v1.8.3               -> forge fmt, forge test
-#   the npm cache                                 -> npm ci --offline
-#   the hardhat solc 0.8.17 + 0.8.20 cache        -> hardhat compile offline
-#   the forge svm solc 0.8.17 + 0.8.20 cache      -> forge test --offline
+#   node_modules (npm ci at image build)          -> every npm/npx step
+#   the hardhat solc 0.8.31 cache                 -> hardhat compile offline
+#   the forge svm solc 0.8.31 cache                -> forge test --offline
 #   the pre-commit hook environments              -> pre-commit run --all-files
 #
 # armada-poc carries NO git submodules (no .gitmodules, no foundry.lock): lib/*
@@ -67,19 +66,19 @@ COPY . .
 # and prints the log tail only on failure. This makes the build deterministic
 # under the exact `--quiet` invocation the gate uses.
 
-# --- npm cache + node_modules so the gate's own `npm ci --offline` resolves.
-#     npm ci writes every fetched tarball into the image's ~/.npm cache, which
-#     the offline ci at gate time then restores from. ---
+# --- node_modules for the judged tree. The gate.command runs no `npm ci` of
+#     its own: the gate runs in this image's /gate, so this install is the one
+#     the gate uses. ---
 RUN npm ci --legacy-peer-deps --no-audit --no-fund --loglevel=error \
         > /tmp/npm-ci.log 2>&1 || { tail -c 40000 /tmp/npm-ci.log; exit 1; }
 
-# --- hardhat solc 0.8.17 + 0.8.20 cache. `hardhat compile` downloads the
+# --- hardhat solc 0.8.31 cache. `hardhat compile` downloads the
 #     pinned solc builds into ~/.cache/hardhat-nodejs here, where the build has
 #     network; the gate run's `npm run compile` is then offline. ---
 RUN npm run compile > /tmp/compile.log 2>&1 \
         || { tail -c 40000 /tmp/compile.log; exit 1; }
 
-# --- forge svm solc 0.8.17 + 0.8.20 cache. `forge build` compiles contracts/,
+# --- forge svm solc 0.8.31 cache. `forge build` compiles contracts/,
 #     test-foundry/ and script/ and downloads the pinned solc builds into
 #     ~/.svm here; the gate run's `forge test --offline` is then offline.
 #     lint_on_build = false (foundry.toml) keeps forge build on its pre-lint
