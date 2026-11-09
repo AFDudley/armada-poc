@@ -4,9 +4,9 @@ test = "test-foundry"
 out = "forge-out"
 libs = ["node_modules", "lib"]
 
-# Solidity config matching hardhat.config.ts
-# Per-path compiler versions mirror hardhat.config.ts: see compilation_restrictions at the end.
-evm_version = "london"
+# Solidity config matching hardhat.config.ts: one compiler, 0.8.31, osaka (current mainnet fork, Fusaka).
+solc_version = "0.8.31"
+evm_version = "osaka"
 
 # The vendored GnosisSafe (lib/safe-contracts, G2/arp-1f1) has execTransaction/checkSignatures
 # functions with enough locals to hit "stack too deep" without the optimizer. Enabling it only
@@ -56,22 +56,7 @@ fail_on_revert = false
 [lint]
 lint_on_build = false
 
-# Mirrors hardhat.config.ts: the privacy pool, yield, fees, CCTP and other out-of-scope contracts stay
-# on 0.8.17; audit-scope governance and crowdfund contracts, and the vendored Hedgey lockup they
-# deploy, compile with 0.8.20 (the highest version that satisfies the bound below). A file shared by
-# both sides (for example contracts/governance/IFeeCollector.sol) compiles in each version.
-[[profile.default.compilation_restrictions]]
-paths = "{contracts/privacy-pool,contracts/yield,contracts/cctp,contracts/fees,contracts/periphery,contracts/aave-mock,contracts/test}/**"
-version = "=0.8.17"
-
-[[profile.default.compilation_restrictions]]
-paths = "contracts/{Faucet,GaslessShieldWrapper,GaslessShieldWrapperClient}.sol"
-version = "=0.8.17"
-
-[[profile.default.compilation_restrictions]]
-paths = "{contracts/governance,contracts/crowdfund,lib,test-foundry,script,node_modules}/**"
-version = "<=0.8.20"
-
+# Mirrors hardhat.config.ts: every contract compiles with 0.8.31.
 # The vendored Hedgey lockup (pragma ^0.8.20) hits "stack too deep" in TokenLockupPlans.sol
 # without the IR pipeline. Only compilation units that contain Hedgey sources use it.
 [[profile.default.compilation_restrictions]]

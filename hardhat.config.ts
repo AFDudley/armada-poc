@@ -90,131 +90,21 @@ function buildClientNetworks(): Record<string, any> {
 
 const config: HardhatUserConfig = {
   solidity: {
+    // One compiler for every contract: 0.8.31, optimizer on (200 runs), osaka.
+    // Osaka is the current Ethereum mainnet fork (Fusaka), the only live
+    // deploy target.
     compilers: [
       {
-        version: "0.8.17",
+        version: "0.8.31",
         settings: {
           optimizer: {
             enabled: true,
             runs: 200,
           },
-        },
-      },
-      {
-        // Audit-scope (governance + crowdfund) compiles with 0.8.20 + shanghai
-        // to enable PUSH0 codegen, freeing bytecode in the size-constrained governor.
-        // Out-of-scope contracts (Railgun internals, privacy pool, yield) remain on
-        // 0.8.17 per the project pin in CLAUDE.md.
-        version: "0.8.20",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-          evmVersion: "shanghai",
+          evmVersion: "osaka",
         },
       },
     ],
-    overrides: {
-      "contracts/governance/AdapterRegistry.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/ArmadaToken.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/IArmadaGovernance.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/IFeeCollector.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/IShieldPauseController.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/MockAdapterRegistry.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/MockFeeCollector.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/ProxyImports.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/RevenueCounter.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/RevenueLock.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/RevenueReserveDistributor.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/governance/ShieldPauseController.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/crowdfund/ArmadaCrowdfund.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-      "contracts/crowdfund/IArmadaCrowdfund.sol": {
-        version: "0.8.20",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "shanghai",
-        },
-      },
-    },
   },
   networks: {
     hardhat: {

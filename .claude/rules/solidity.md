@@ -6,7 +6,7 @@ paths:
 
 # Solidity Rules
 
-- **Solidity version:** 0.8.17. Do not upgrade without discussion — the Railgun contracts have version-specific dependencies.
+- **Solidity version:** 0.8.31. Do not upgrade without discussion — the Railgun contracts have version-specific dependencies.
 - **OpenZeppelin version:** 4.9.3. Same constraint — do not upgrade unilaterally.
 - **PrivacyPool uses delegatecall module architecture.** All state lives in `PrivacyPoolStorage.sol`. Logic is in separate module contracts (`ShieldModule`, `TransactModule`, `MerkleModule`, `VerifierModule`). When modifying pool logic, edit the relevant module — never add state to module contracts directly.
 - **The pool's consensus-critical surface — `contracts/privacy-pool/types/` (struct layouts, `ZERO_VALUE`, Snark types), the router's `verify` public-input assembly, `hashBoundParams`, and Merkle hashing — is specified in `specs/PRIVACY_POOL_CONTRACT.md`.** Modify it with extreme caution. Changes here can break ZK circuit compatibility silently — the contracts will compile fine but ZK proofs will fail at runtime.

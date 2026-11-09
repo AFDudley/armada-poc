@@ -254,9 +254,8 @@ and crowdfund materials. The fallback includes only the unassigned entitlement; 
 unlocked portion is payable and its locked portion stays permanently locked.
 
 Existing governance contract sources remain unchanged. Scripts and documentation are
-updated for integration; the new contract's Hardhat override follows current governance
-settings (Solidity 0.8.20, Shanghai, optimizer 200). The source remains compatible with
-the repository's Solidity 0.8.17 baseline. Durable decisions belong in
+updated for integration; the new contract's Hardhat compiler follows the repository's
+Solidity 0.8.31, Osaka, optimizer 200 setting. Durable decisions belong in
 [the canonical team strategy log](https://github.com/ship-armada/team/blob/main/STRATEGY_LOG.json); migration of the earlier local entry
 is pending. The allocation example is not a converged cap-table decision.
 
@@ -266,7 +265,7 @@ Focused Foundry command, with the repository's locked OpenZeppelin **4.9.6** ins
 
 ```sh
 forge test --match-path 'test-foundry/RevenueReserve*.t.sol' \
-  --use 0.8.20 --evm-version shanghai --optimize --optimizer-runs 200 -vv
+  --use 0.8.31 --evm-version osaka --optimize --optimizer-runs 200 -vv
 ```
 
 The tests use real ArmadaToken, RevenueLock, RevenueCounter (proxy), ArmadaWindDown

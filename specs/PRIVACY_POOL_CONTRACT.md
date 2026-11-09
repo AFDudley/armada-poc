@@ -212,7 +212,7 @@ Encoding helpers: `CCTPPayload = abi.encode((messageType, abi.encode(ShieldData|
 
 ## 4. Storage Layout (hard compatibility constraint)
 
-Defined in `PrivacyPoolStorage` and inherited identically by the router and all four modules. **Slot assignments are frozen.** Compiler-verified layout (solc 0.8.17):
+Defined in `PrivacyPoolStorage` and inherited identically by the router and all four modules. **Slot assignments are frozen.** Compiler-verified layout (solc 0.8.31):
 
 | Slot | Offset | Bytes | Name | Type | Visibility |
 |---:|---:|---:|---|---|---|

@@ -12,7 +12,7 @@ For detailed architecture, see @.claude/ARCHITECTURE_NOTES.md
 
 | Layer | Technology |
 |-------|-----------|
-| Smart Contracts | Solidity 0.8.17, OpenZeppelin 4.9.3 |
+| Smart Contracts | Solidity 0.8.31, OpenZeppelin 4.9.3 |
 | ZK Cryptography | Groth16 SNARKs (snarkjs), Poseidon hash (BN254), EdDSA/BabyJubJub |
 | EVM Tooling | Hardhat (compilation, deploy, integration tests), Foundry (fuzz/invariant tests) |
 | Formal Verification | Halmos (symbolic execution) |

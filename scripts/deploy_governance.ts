@@ -62,9 +62,11 @@ function loadForgeArtifact(
   sourceFile: string,
   contractName: string,
 ): ForgeArtifact {
-  // The forge build produces version-specific artifacts (e.g. `GnosisSafe.0.8.20.json`).
-  // Try the higher version first, then the lower.
-  const versionSuffixes = [".0.8.20", ".0.8.17", ""];
+  // forge names an artifact with a version suffix (e.g. `GnosisSafe.0.8.31.json`)
+  // only when a path's compiler version is ambiguous. The repo now compiles every
+  // path with one version, so the unsuffixed name is the expected hit; the
+  // suffixed form stays as a fallback for a future split build.
+  const versionSuffixes = ["", ".0.8.31"];
   for (const suffix of versionSuffixes) {
     const artifactPath = path.join(
       FORGE_OUT_DIR,
